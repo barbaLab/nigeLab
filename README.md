@@ -3,7 +3,10 @@
 # ePhys_packages #
 Packages for electrophysiology processing and analysis.
 
-## Object-oriented Matlab Data Structures ##
+## orgExp ##
+Keep experiments organized with the [**orgExp**](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp) package.
+
+### Object-oriented Matlab Data Structures ###
 A lot of analysis packages are "by engineers, for engineers." The goal of this package is to extend powerful tools for electrophysiological pre-processing, analysis, and metadata tracking using a relatively simple and straightforward interface. To that end, the two main kinds of objects you need to learn about to get up and running with this package are the "Tank" and "Block" objects (nomenclature shamelessly borrowed from TDT).
 
 * Tank
@@ -12,8 +15,8 @@ A lot of analysis packages are "by engineers, for engineers." The goal of this p
 * Block
 	* A single experimental recording with a preset format. A Tank object could contain multiple Blocks; the Blocks have methods for viewing data specific to a single recording whereas the Tank contains methods for aggregating data from multiple Blocks.
 	
-## Data Pipeline ##
+### Data Pipeline ###
 In progress...
 
-## Block File Structure ##
+### Block File Structure ###
 In progress...
