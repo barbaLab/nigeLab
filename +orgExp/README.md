@@ -44,14 +44,21 @@ A package for keeping experimental data and metadata organized and easily access
 	* Based on naming convention, the Tank will try to pre-populate metadata variables, which can be used to group Block outputs.  
 
 ### Data Pipeline ###
-![alt text][DataPipeline_Overview]  
+![][DataPipeline_Overview]  
+__**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline.__
+  
+  
 
 ### File Structure Hierarchy ###
-![alt text][TankStructure_Overview]  
+![][TankStructure_Overview]  
+__**Figure 2:** Tank folder hierarchy overview.__
+  
+  
 
-![alt text][BlockStructure_Overview]  
-
-
+![][BlockStructure_Overview]  
+__**Figure 3:** Block folder and file hierarchy overview.__
+  
+  
 
 ### Tank Methods Overview ###
 In progress...
@@ -61,6 +68,6 @@ In progress...
 
 
 
-[DataPipeline_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "Generic experimental pipeline"
-[TankStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Overview.JPG "Tank folder hierarchy"
-[BlockStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Overview.JPG "Block file hierarchy"
+[DataPipeline_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "Fig. 1: Generic experimental pipeline"
+[TankStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Overview.JPG "Fig. 2: Tank folder hierarchy"
+[BlockStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Overview.JPG "Fig. 3: Block file hierarchy"
