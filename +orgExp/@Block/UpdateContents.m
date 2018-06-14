@@ -13,22 +13,30 @@ function UpdateContents(obj,fieldname)
 %                 files.
 %
 % By: Max Murphy  v1.1  08/27/2017  (R2017a)
+%                 v1.2  06/13/2018  (R2017b) Added more input parsing.
 
-%% GET CORRECT SYNTAX
-fieldmatch = false(size(obj.Fields));
-for ii = 1:numel(obj.Fields)
-   fieldmatch(ii) = strcmpi(fieldname,obj.Fields{ii});
-end
+%% PARSE INPUT
+if exist('fieldname','var')
+   fieldmatch = false(size(obj.Fields));
+   for ii = 1:numel(obj.Fields)
+      fieldmatch(ii) = strcmpi(fieldname,obj.Fields{ii});
+   end
 
-if sum(fieldmatch) > 1
-   error(['Redundant field names.\n' ...
-      'Check Block_Defaults.mat or %s CPL_BLOCK object.\n'],...
-      obj.Name);
-elseif sum(fieldmatch) < 1
-   error('No matching field in %s. Check CPL_BLOCK object.\n', ...
-      obj.Name);
+   if sum(fieldmatch) > 1
+      error(['Redundant field names.\n' ...
+         'Check Block_Defaults.mat or %s CPL_BLOCK object.\n'],...
+         obj.Name);
+   elseif sum(fieldmatch) < 1
+      error('No matching field in %s. Check CPL_BLOCK object.\n', ...
+         obj.Name);
+   else
+      fieldname = obj.Fields{fieldmatch};
+   end
 else
-   fieldname = obj.Fields{fieldmatch};
+   for ii = 1:numel(obj.Fields)
+      obj.UpdateContents(obj.Fields{ii});
+   end
+   return;
 end
 
 %% UPDATE FILES DEPENDING ON CELL OR STRING CASES

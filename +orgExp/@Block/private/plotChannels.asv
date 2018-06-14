@@ -1,9 +1,6 @@
 function h = plotChannels(varargin)
 %% PLOTCHANNELS Plot all the waveforms of channels in a particular folder.
 %
-%  NOTE: This is OLD/DEPRECATED code which will be altered to be a METHOD
-%        of the BLOCK class.
-%
 %   h = plotChannels('NAME',value,...)
 %
 %   --------
@@ -93,7 +90,7 @@ STIM_WIN = 0.004;               % Stim window + blanking (sec)
 CLOSE_FIG = false;              % Close figure after saving?
 
 % Amount to pull in
-LEN = 0.25;                     % Duration to plot (seconds)
+LEN = 1;                        % Duration to plot (seconds)
 OFFSET = 100;                   % Offset from start (seconds)
 
 % Other params for older file formats
@@ -186,7 +183,6 @@ if exist('SPK','var')==0
 else
     spkf = dir(fullfile(SPK,SPK_ID));
     spkf = [spkf; dir(fullfile(SPK,CLU_ID))];
-    spkf = [spkf; dir(fullfile(SPK,SORT_ID))];
     if isempty(spkf)
         spkts = nan;
     end
@@ -271,6 +267,8 @@ ylim([0-1.5*INCREMENT,...
 %% ADD SPIKES
 ftype = 'NoSpikes';
 if isstruct(spkf)
+    if isempty(spkf)
+       spkf = dir
     if strcmpi(VER,'new')
         tempf = strsplit(spkf(1).folder,filesep);
         tempf = tempf{end};
