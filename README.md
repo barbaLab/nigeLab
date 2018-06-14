@@ -1,4 +1,4 @@
-**UNDER DEVELOPMENT, __PARDON OUR DUST...__**
+**UNDER DEVELOPMENT, PARDON OUR DUST...**
 
 # ePhys_packages #
 Packages for electrophysiology processing and analysis.
@@ -9,6 +9,6 @@ Packages for electrophysiology processing and analysis.
 
 ### orgExp ###
 Keep experiments organized with the [**orgExp**](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp) package.  
-![alt text][logo]
+![orgExp_Pipeline]
 
-[logo]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "orgExp Pipeline Overview"
+[orgExp_Pipeline]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "orgExp Pipeline Overview"
