@@ -62,12 +62,38 @@ Brief summary of main methods used by Tank class. For more detailed descriptions
 ```matlab
 doc orgExp.Tank
 ```
+in the Matlab command window for more detailed documentation. 
+
+* Tank
+	* ```matlab
+		 tank = orgExp.Tank;
+	  ``` 
+	* ```matlab
+		 tank = orgExp.Tank('DIR','C:/Tank/Folder/Path');
+	  ``` 
+* orgExp.List
+* orgExp.MetaData
+
+### MetaData ### 
 
 ### Block Methods Overview ###
 Brief summary of main methods used by Block class. For more detailed descriptions, visit the Block [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block "@Block") or try:  
 ```matlab
 doc orgExp.Block
-```
+```  
+in the Matlab command window for more detailed documentation.  
+
+* orgExp.Block
+* List
+* LoadClusters
+* LoadSorted
+* LoadSpikes
+* PlotSpikes
+* PlotWaves
+* SyncBehavior
+* TakeNotes
+* UpdateContents
+* UpdateID  
 
 [DataPipeline_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "Fig. 1: Generic experimental pipeline"
 [DataPipeline_Recording]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Recording.JPG "Fig. 1a: Data collected during experiments"
