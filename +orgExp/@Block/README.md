@@ -2,7 +2,7 @@
 
 Class with methods for managing data from a single experimental recording.
 
-## Contents ##
+## Table of Contents ##
 [Block](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#block-1)  
 [List](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#list)  
 [LoadClusters](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadclusters)  

@@ -57,15 +57,30 @@ _**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that co
 ![][BlockStructure_Overview]  
 _**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._  
    
-
 ### Tank Methods Overview ###
-In progress...
+Brief summary of main methods used by Tank class. For more detailed descriptions, visit the Tank [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank "@Tank") or try:  
+```matlab
+doc orgExp.Tank
+```
 
 ### Block Methods Overview ###
-In progress...
-
-
+Brief summary of main methods used by Block class. For more detailed descriptions, visit the Block [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block "@Block") or try:  
+```matlab
+doc orgExp.Block
+```
 
 [DataPipeline_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "Fig. 1: Generic experimental pipeline"
+[DataPipeline_Recording]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Recording.JPG "Fig. 1a: Data collected during experiments"
+[DataPipeline_Conversion]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Conversion.JPG "Fig. 1b: Conversion of data from binary to Matlab-compatible file format"
+[DataPipeline_Analysis]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Analysis.JPG "Fig. 1c: Extraction of features of interest and hypothesis-testing"
+
 [TankStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Overview.JPG "Fig. 2: Tank folder hierarchy"
+
 [BlockStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Overview.JPG "Fig. 3: Block file hierarchy"
+[BlockStructure_Base]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Base.JPG "Fig. 3a: Block parent folder"
+[BlockStructure_HighSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_HighSampleRateStreams.JPG "Fig. 3c: High sample rate streams"
+[BlockStructure_LowSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_LowSampleRateStreams.JPG "Fig. 3d: Low sample rate streams"
+[BlockStructure_SnippetFeatures]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_SnippetFeatures.JPG "Fig. 3e: Spike detection, clustering, and sorting"
+[BlockStructure_BehaviorSyncData]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_BehaviorSyncData.JPG "Fig. 3f: Digital inputs for behavioral synchronization to neural data"
+
+[NamingConvention_Example]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/NamingConvention_Example.JPG "Fig. 3b: Naming convention used by the Nudo Lab at KUMC"
