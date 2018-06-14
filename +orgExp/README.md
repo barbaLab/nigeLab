@@ -65,10 +65,11 @@ doc orgExp.Tank
 in the Matlab command window for more detailed documentation. 
 
 * Tank
-	* ```matlab
+	* ```Matlab
 		 tank = orgExp.Tank;
-	  ``` 
-	* ```matlab
+	  ```  
+	  or
+	* ```Matlab
 		 tank = orgExp.Tank('DIR','C:/Tank/Folder/Path');
 	  ``` 
 * orgExp.List
