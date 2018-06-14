@@ -30,8 +30,19 @@ A package for keeping experimental data and metadata organized and easily access
 3. In line with the second point, offering this package through Matlab means that as long as you have Matlab R2017a or beyond (not tested with earlier versions, but probably mostly works), you don't have to go through the hassle of finding the right compiler and debugging everything for your specific software/hardware configuration.
 
 ### Example of how it works ###
-Open the file Tank.m in the Matlab editor and click the green Play button. 
-	
+1. Open the file Tank.m in the Matlab editor and click the green Play button.
+2. Select the parent folder that contains your individual recording files (e.g. Intan *.rhd or *.rhs files, or TDT block folders). This is the [Tank](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank).
+3. A graphical interface (in progress...) will populate with all viable recordings and associated metadata. These are the [Blocks](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block). Dropdown menus will populate with options to configure processing steps such as:
+	* Spike detection (filtering, spatial referencing, unsupervised clustering, etc.) 
+	* LFP analysis (frequency spectrum estimation, phase coupling analyses)
+	* Within-block segmentation into separate epochs
+	* Extraction of behavioral alignment time stamps
+	* Parallel computing options
+4. Clicking the RUN button in the interface begins the specified analyses.
+	* Depending on the length of recording and available computing resources, it may be wise to do this part overnight. 
+5. Once a set of Blocks reaches the same processing state, available figure or statistic export options are populated. 
+	* Based on naming convention, the Tank will try to pre-populate metadata variables, which can be used to group Block outputs.  
+
 ### Data Pipeline ###
 ![alt text][DataPipeline_Overview]  
 
