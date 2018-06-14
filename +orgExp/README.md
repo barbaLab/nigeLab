@@ -51,14 +51,12 @@ _**Figure 1:** Generic overview for behavioral electrophysiology data acquisitio
 
 ### File Structure Hierarchy ###
 ![][TankStructure_Overview]  
-_**Figure 2:** Tank folder hierarchy overview._
+_**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection. The Tank may also contain a file with a general description of the types of experiments as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
   
   
-
 ![][BlockStructure_Overview]  
-_**Figure 3:** Block folder and file hierarchy overview._
-  
-  
+_**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._  
+   
 
 ### Tank Methods Overview ###
 In progress...
