@@ -45,18 +45,18 @@ A package for keeping experimental data and metadata organized and easily access
 
 ### Data Pipeline ###
 ![][DataPipeline_Overview]  
-__**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline.__
+_**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline._
   
   
 
 ### File Structure Hierarchy ###
 ![][TankStructure_Overview]  
-__**Figure 2:** Tank folder hierarchy overview.__
+_**Figure 2:** Tank folder hierarchy overview._
   
   
 
 ![][BlockStructure_Overview]  
-__**Figure 3:** Block folder and file hierarchy overview.__
+_**Figure 3:** Block folder and file hierarchy overview._
   
   
 
