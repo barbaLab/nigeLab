@@ -1,11 +1,11 @@
 classdef Block < handle
 %% BLOCK    Creates datastore for an electrophysiology recording.
 %
-%  obj = BLOCK;
-%  obj = BLOCK('NAME','VALUE',...);
+%  blockObj = BLOCK;
+%  blockObj = BLOCK('NAME','VALUE',...);
 %
 %  ex: 
-%  obj = BLOCK('DIR','P:\Your\Recording\Directory\Here');
+%  blockObj = BLOCK('DIR','P:\Your\Recording\Directory\Here');
 %
 %  BLOCK Properties:
 %     Name - Name of recording BLOCK.
@@ -19,39 +19,47 @@ classdef Block < handle
 %                PLOTSPIKES method. The Waves subfield is only available
 %                after calling the PLOTWAVES method. To recall the
 %                SPIKEIMAGE object once it has been constructed, call as
-%                obj.Graphics.Spikes.Build.
+%                blockObj.Graphics.Spikes.Build.
+%
+%     Status - Completion status for each element of BLOCK/FIELDS.
+%
+%     Channels - List of channels from board, from probe, and masking.
 %
 %  BLOCK Methods:
-%     Block - Class constructor. Call as obj = BLOCK(varargin)
+%     Block - Class constructor. Call as blockObj = BLOCK(varargin)
 %
-%     UpdateID - Update the File or Folder ID for a particular Field, which
-%                is listed in obj.Fields. Call as
-%                obj.UpdateID(name,type,value); name is the name of the
+%     updateID - Update the File or Folder ID for a particular Field, which
+%                is listed in blockObj.Fields. Call as
+%                blockObj.UpdateID(name,type,value); name is the name of the
 %                field, type is the ID type ('File' or 'Folder'), and value
 %                is the new ID. For example:
-%                obj.UpdateID('Spikes','Folder','pca-PT_Spikes') would
+%                blockObj.UpdateID('Spikes','Folder','pca-PT_Spikes') would
 %                change where the BLOCK finds its spikes files.
 %
-%     UpdateContents - Using current information for File and Folder ID
+%     updateContents - Using current information for File and Folder ID
 %                      string identifiers, update the list of files
 %                      associated with a particular information field.
 %
-%     PlotWaves -    Make a preview of the filtered waveform for all 
+%     plotWaves -    Make a preview of the filtered waveform for all 
 %                    channels, and include any sorted, clustered, or 
 %                    detected spikes for those channels as highlighted 
 %                    marks at the appropriate time stamp.
 %
-%     PlotSpikes -   Display all spikes for a particular channel as a
+%     plotSpikes -   Display all spikes for a particular channel as a
 %                    SPIKEIMAGE object.
 %
-%     LoadSpikes -   Call as x = obj.LoadSpikes(channel) to load spikes
+%     loadSpikes -   Call as x = blockObj.LoadSpikes(channel) to load spikes
 %                    file contents to the structure x.
 %
-%     LoadClusters - Call as x = obj.LoadClusters(channel) to load 
+%     loadClusters - Call as x = blockObj.LoadClusters(channel) to load 
 %                    class file contents to the structure x.
 %
-%     LoadSorted -   Call as x = obj.LoadSorted(channel) to load class file
+%     loadSorted -   Call as x = blockObj.LoadSorted(channel) to load class file
 %                    contents to the structure x.
+%
+%     set - Set a specific property of the BLOCK object.
+%
+%     get - Get a specific property of the BLOCK object.
 %
 % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
 
@@ -63,7 +71,7 @@ classdef Block < handle
       
       % Graphics - Graphical objects associated with BLOCK object.
       % -> Spikes : SPIKEIMAGE object. Once constructed, can
-      %             call as obj.Graphics.Spikes.Build to
+      %             call as blockObj.Graphics.Spikes.Build to
       %             recreate the spikes figure.
       % -> Waves : AXES object. Destroyed when figure is
       %            closed.
@@ -88,9 +96,6 @@ classdef Block < handle
       Digital     % "Digital" (extra) input files
       ID          % Identifier structure for different elements
       Notes       % Notes from text file
-   end
-   
-   properties(Access = private)
       DEF = 'P:/Rat'; % Default for UI BLOCK selection
       CH_ID = 'Ch';   % Channel index ID
       CH_FIELDWIDTH = 3; % Number of characters in channel number 
@@ -100,15 +105,16 @@ classdef Block < handle
       REMAP % Mapping of channel numbers to actual numbers on probe
    end
    
+%% PUBLIC METHODS
    methods (Access = public)
-      function obj = Block(varargin)
+      function blockObj = Block(varargin)
          %% BLOCK Create a datastore object based on CPL data structure
          %
-         %  obj = BLOCK;
-         %  obj = BLOCK('NAME',Value,...);
+         %  blockObj = BLOCK;
+         %  blockObj = BLOCK('NAME',Value,...);
          %
          %  ex: 
-         %  obj = BLOCK('DIR','P:\Your\Block\Directory\Here');
+         %  blockObj = BLOCK('DIR','P:\Your\Block\Directory\Here');
          %
          %  List of 'NAME', Value input argument pairs:
          %
@@ -135,14 +141,14 @@ classdef Block < handle
          %               construction.
          %
          %               ex: 
-         %               obj.List('Raw')
+         %               blockObj.List('Raw')
          %               
-         %               Current Raw files stored in [obj.Name]:
+         %               Current Raw files stored in [blockObj.Name]:
          %               -> Example_Raw_Chan_001.mat
          %
          %               In this case, you would specify 'Chan' during
-         %               construction of obj:
-         %               obj = Block('CH_ID','Chan');
+         %               construction of blockObj:
+         %               blockObj = Block('CH_ID','Chan');
          %
          %  -> 'CH_FIELDWIDTH' : (def: 3) Number of characters in the
          %                        channel number in the file name.
@@ -161,47 +167,49 @@ classdef Block < handle
             if ~ischar(varargin{iV})
                continue
             end
-            p = findprop(obj,varargin{iV});
+            p = findprop(blockObj,varargin{iV});
             if isempty(p)
                continue
             end
-            obj.(varargin{iV}) = varargin{iV+1};
+            blockObj.(varargin{iV}) = varargin{iV+1};
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         if isempty(obj.DIR)
-            obj.DIR = uigetdir(obj.DEF,'Select recording BLOCK');
-            if obj.DIR == 0
+         if isempty(blockObj.DIR)
+            blockObj.DIR = uigetdir(blockObj.DEF,'Select recording BLOCK');
+            if blockObj.DIR == 0
                error('No block selected. Object not created.');
             end
          else
-            if exist(obj.DIR,'dir')==0
-               error('%s is not a valid block directory.',obj.DIR);
+            if exist(blockObj.DIR,'dir')==0
+               error('%s is not a valid block directory.',blockObj.DIR);
             end
          end
          
-         %% CONSTRUCT BLOCK OBJECT
-         obj.Init;
+         %% INITIALIZE BLOCK OBJECT
+         blockObj.init;
          
       end
       
-      UpdateID(obj,name,type,value) % Update the file or folder identifier
-      List(obj,name) % List of current associated files for field or fields
-      PlotWaves(obj,WAV,SPK) % Plot stream snippets
-      PlotSpikes(obj,ch) % Show spike clusters for a single channel
-      out = LoadSpikes(obj,ch) % Load spikes for a given channel
-      out = LoadClusters(obj,ch) % Load clusters file for a given channel
-      out = LoadSorted(obj,ch) % Load sorting file for a given channel
-      UpdateContents(obj,fieldname) % Update files for specific field
-      TakeNotes(obj) % View or update notes on current recording
-      
+      updateID(blockObj,name,type,value) % Update the file or folder identifier
+      flag = list(blockObj,name) % List of current associated files for field or fields
+      flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
+      flag = plotSpikes(blockObj,ch) % Show spike clusters for a single channel
+      out = loadSpikes(blockObj,ch) % Load spikes for a given channel
+      out = loadClusters(blockObj,ch) % Load clusters file for a given channel
+      out = loadSorted(blockObj,ch) % Load sorting file for a given channel
+      updateContents(blockObj,fieldname) % Update files for specific field
+      takeNotes(blockObj) % View or update notes on current recording
+      out = blockGet(blockObj,prop) % Get a specific BLOCK property
+      flag = blockSet(blockObj,prop) % Set a specific BLOCK property
    end
    
    methods (Access = public, Hidden = true)
-      UpdateNotes(obj,str) % Update notes for a recording
+      updateNotes(blockObj,str) % Update notes for a recording
    end
-   
+
+%% PRIVATE METHODS
    methods (Access = 'private')
-      Init(obj) % Initializes the BLOCK object
+      init(blockObj) % Initializes the BLOCK object
    end
 end

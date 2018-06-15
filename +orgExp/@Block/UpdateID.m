@@ -1,7 +1,7 @@
-function UpdateID(obj,name,type,value)
+function updateID(blockObj,name,type,value)
 %% UPDATEID Update the file or folder identifier for block
 %
-%  obj.UPDATEID(name,type,value)
+%  blockObj.UPDATEID(name,type,value)
 %
 %  --------
 %   INPUTS
@@ -40,12 +40,12 @@ if (~ischar(name) || ~ischar(type) || ~ischar(value))
       
       str = strjoin(value,' + ');
       fprintf(1,'ID.%s.%s updated to %s\n',name,type,str);
-      obj.ID.(name).(type) = cell(numel(value),1);
+      blockObj.ID.(name).(type) = cell(numel(value),1);
       for ii = 1:numel(value)
-         obj.ID.(name).(type){ii} = value{ii};
+         blockObj.ID.(name).(type){ii} = value{ii};
       end
       
-      obj.UpdateContents(name);
+      blockObj.updateContents(name);
       return;
       
    else
@@ -61,11 +61,11 @@ else
    name(1) = upper(name(1));
    if strcmp(name,'Delimiter')
       % Special case: update delimiter
-      obj.ID.Delimiter = value;
+      blockObj.ID.Delimiter = value;
       fprintf(1,'ID.Delimiter updated to %s\n',value);
       % Must update all fields since all are affected.
-      for iL = 1:numel(obj.Fields)
-         obj.UpdateContents(obj.Fields{iL});
+      for iL = 1:numel(blockObj.Fields)
+         blockObj.updateContents(blockObj.Fields{iL});
       end
       fprintf(1,'Fields changed to reflect updated delimiter.\n');
       return;
@@ -79,29 +79,29 @@ end
 
 %% UPDATE PROPERTY
 if ~iscell(name)
-   obj.ID.(name).(type) = value;
+   blockObj.ID.(name).(type) = value;
    fprintf(1,'ID.%s.%s updated to %s\n',name,type,value);
-   obj.(name).dir = dir(fullfile(obj.DIR,...
-      [obj.Name obj.ID.Delimiter obj.ID.(name).Folder], ...
-      ['*' obj.ID.(name).File '*.mat']));
+   blockObj.(name).dir = dir(fullfile(blockObj.DIR,...
+      [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(name).Folder], ...
+      ['*' blockObj.ID.(name).File '*.mat']));
    
-   obj.(name).ch = [];
-   for ii = 1:numel(obj.(name).dir)
-      temp = strsplit(obj.(name).dir(ii).name,obj.ID.Delimiter);
-      ch_ind = find(ismember(temp,obj.CH_ID),1,'last')+1;
-      obj.(name).ch = [obj.(name).ch; ...
-         str2double(temp{ch_ind}(1:obj.CH_FIELDWIDTH))];
+   blockObj.(name).ch = [];
+   for ii = 1:numel(blockObj.(name).dir)
+      temp = strsplit(blockObj.(name).dir(ii).name,blockObj.ID.Delimiter);
+      ch_ind = find(ismember(temp,blockObj.CH_ID),1,'last')+1;
+      blockObj.(name).ch = [blockObj.(name).ch; ...
+         str2double(temp{ch_ind}(1:blockObj.CH_FIELDWIDTH))];
    end
 else
    % If multiple, update all first:
    for iN = 1:numel(name)
-      obj.ID.(name{iN}).(type{iN}) = value{iN};
+      blockObj.ID.(name{iN}).(type{iN}) = value{iN};
       fprintf(1,'ID.%s.%s updated to %s\n',name{iN},type{iN},value{iN});
    end
    
    % Then update lists
    for iN = 1:numel(name)
-      obj.UpdateContents(name{iN});
+      blockObj.updateContents(name{iN});
    end
 end
 

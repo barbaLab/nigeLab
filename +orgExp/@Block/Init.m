@@ -1,69 +1,69 @@
-function Init(obj)
+function init(blockObj)
 %% INIT Initialize BLOCK object
 %
-%  obj.INIT;
+%  blockObj.INIT;
 %
 %  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
 
 %% LOAD DEFAULT ID SETTINGS
-obj = def_params(obj);
+blockObj = def_params(blockObj);
 
 %% LOOK FOR NOTES
-notes = dir(fullfile(obj.DIR,'*Description.txt'));
+notes = dir(fullfile(blockObj.DIR,'*Description.txt'));
 if ~isempty(notes)
-   obj.Notes.File = fullfile(notes.folder,notes.name);
-   fid = fopen(obj.Notes.File,'r');
-   obj.Notes.String = textscan(fid,'%s',...
+   blockObj.Notes.File = fullfile(notes.folder,notes.name);
+   fid = fopen(blockObj.Notes.File,'r');
+   blockObj.Notes.String = textscan(fid,'%s',...
       'CollectOutput',true,...
       'Delimiter','\n');
    fclose(fid);
 else
-   obj.Notes.File = [];
-   obj.Notes.String = [];
+   blockObj.Notes.File = [];
+   blockObj.Notes.String = [];
 end
 
 %% ADD PUBLIC BLOCK PROPERTIES
-path = strsplit(obj.DIR,filesep);
-obj.Name = path{numel(path)};
-finfo = strsplit(obj.Name,obj.ID.Delimiter);
+path = strsplit(blockObj.DIR,filesep);
+blockObj.Name = path{numel(path)};
+finfo = strsplit(blockObj.Name,blockObj.ID.Delimiter);
 
-for iL = 1:numel(obj.Fields)
-   obj.UpdateContents(obj.Fields{iL});
+for iL = 1:numel(blockObj.Fields)
+   blockObj.updateContents(blockObj.Fields{iL});
 end
 
 %% ADD CHANNEL INFORMATION
-if ismember('CAR',obj.Fields(obj.Status))
-   obj.Channels.Board = sort(obj.CAR.ch,'ascend');
-elseif ismember('Filt',obj.Fields(obj.Status))
-   obj.Channels.Board = sort(obj.Filt.ch,'ascend');
-elseif ismember('Raw',obj.Fields(obj.Status))
-   obj.Channels.Board = sort(obj.Raw.ch,'ascend');
+if ismember('CAR',blockObj.Fields(blockObj.Status))
+   blockObj.Channels.Board = sort(blockObj.CAR.ch,'ascend');
+elseif ismember('Filt',blockObj.Fields(blockObj.Status))
+   blockObj.Channels.Board = sort(blockObj.Filt.ch,'ascend');
+elseif ismember('Raw',blockObj.Fields(blockObj.Status))
+   blockObj.Channels.Board = sort(blockObj.Raw.ch,'ascend');
 end
 
 % Check for user-specified MASKING
-if ~isempty(obj.MASK)
-   if abs(numel(obj.MASK)-numel(obj.Channels.Board))<eps
-      obj.Channels.Mask = obj.MASK;
+if ~isempty(blockObj.MASK)
+   if abs(numel(blockObj.MASK)-numel(blockObj.Channels.Board))<eps
+      blockObj.Channels.Mask = blockObj.MASK;
    else
       warning('Wrong # of elements in specified MASK.');
       fprintf(1,'Using all channels by default.\n');
-      obj.Channels.Mask = true(size(obj.Channels.Board));
+      blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
    end
 else
-   obj.Channels.Mask = true(size(obj.Channels.Board));
+   blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
 end
 
 % Check for user-specified REMAPPING
-if ~isempty(obj.REMAP)
-   if abs(numel(obj.REMAP)-numel(obj.Channels.Board))<eps
-      obj.Channels.Probe = obj.REMAP;
+if ~isempty(blockObj.REMAP)
+   if abs(numel(blockObj.REMAP)-numel(blockObj.Channels.Board))<eps
+      blockObj.Channels.Probe = blockObj.REMAP;
    else
       warning('Wrong # of elements in specified REMAP.');
       fprintf(1,'Using board channels by default.\n');
-      obj.Channels.Probe = obj.Channels.Board;
+      blockObj.Channels.Probe = blockObj.Channels.Board;
    end
 else
-   obj.Channels.Probe = obj.Channels.Board;
+   blockObj.Channels.Probe = blockObj.Channels.Board;
 end
 
 end

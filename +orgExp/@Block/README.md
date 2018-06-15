@@ -3,39 +3,45 @@
 Class with methods for managing data from a single experimental recording.
 
 ## Table of Contents ##
-[Block](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#block-1)  
-[List](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#list)  
-[LoadClusters](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadclusters)  
-[LoadSorted](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadsorted)  
-[LoadSpikes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadspikes)  
-[PlotSpikes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotspikes)  
-[PlotWaves](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotwaves)  
-[SyncBehavior](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#syncbehavior)  
-[TakeNotes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#takenotes)  
-[UpdateContents](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updatecontents)  
-[UpdateID](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updateid)  
+[Block](#block-1)  
+[blockGet](#blockget) 
+[blockSet](#blockset)   
+[list](#list)  
+[loadClusters](#loadclusters)  
+[loadSorted](#loadsorted)  
+[loadSpikes](#loadspikes)  
+[plotSpikes](#plotspikes)  
+[plotWaves](#plotwaves)  
+[syncBehavior](#syncbehavior)  
+[takeNotes](#takenotes)  
+[updateContents](#updatecontents)  
+[updateID](#updateid)  
 
 ## Methods ##
 The following are methods used by the Block object.
 
 ### Block ###
 
-### List ###
+### blockGet ###
 
-### LoadClusters ###
+### blockSet ###
 
-### LoadSorted ###
+### list ###
 
-### LoadSpikes ###
+### loadClusters ###
 
-### PlotSpikes ###
+### loadSorted ###
 
-### PlotWaves ###
+### loadSpikes ###
 
-### SyncBehavior ###
+### plotSpikes ###
 
-### TakeNotes ###
+### plotWaves ###
 
-### UpdateContents ###
+### syncBehavior ###
 
-### UpdateID ###
+### takeNotes ###
+
+### updateContents ###
+
+### updateID ###

@@ -1,38 +1,51 @@
-function List(obj,name)
+function flag = list(blockObj,name)
 %% LIST  Give list of current files associated with field.
 %
-%  obj.LIST;
-%  obj.LIST(name);
+%  flag = blockObj.LIST;
+%  flag = blockObj.LIST(name);
 %
 %  Note: If called without an input argument, returns names of all
 %  associated files for all fields.
 %
-%  -------
-%   INPUT
-%  -------
+%  --------
+%   INPUTS
+%  --------
 %    name   :  Name of a particular field you want to return a
 %              list of files for.
 %
+%  --------
+%   OUTPUT
+%  --------
+%    flag   :  Returns true if no input argument is specified, if ANY file
+%              is associated with the BLOCK. Otherwise returns false. If
+%              name is specified, returns false if no files are associated
+%              with the BLOCK.
+%
 % By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
+%                 v1.1  06/14/2018 Added flag output
 
 %% RETURN LIST OF VALUES
 if nargin == 2
-   if isempty(obj.(name).dir)
-      fprintf(1,'\nNo %s files found for %s.\n',name,obj.Name);
+   if isempty(blockObj.(name).dir)
+      fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
+      flag = false;
    else
       fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-         name, obj.Name, ...
-         strjoin({obj.(name).dir.name},'\n->\t'));
+         name, blockObj.Name, ...
+         strjoin({blockObj.(name).dir.name},'\n->\t'));
+      flag = true;
    end
 else
-   for iL = 1:numel(obj.Fields)
-      name = obj.Fields{iL};
-      if isempty(obj.(name).dir)
-         fprintf(1,'\nNo %s files found for %s.\n',name,obj.Name);
+   flag = false;
+   for iL = 1:numel(blockObj.Fields)
+      name = blockObj.Fields{iL};
+      if isempty(blockObj.(name).dir)
+         fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
       else
          fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-            name, obj.Name, ...
-            strjoin({obj.(name).dir.name},'\n->\t'));
+            name, blockObj.Name, ...
+            strjoin({blockObj.(name).dir.name},'\n->\t'));
+         flag = true;
       end
    end
 end

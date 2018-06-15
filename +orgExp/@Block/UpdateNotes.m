@@ -1,4 +1,4 @@
-function UpdateNotes(obj,str)
+function updateNotes(blockObj,str)
 %% UPDATENOTES Update notes
-obj.Notes.String{1} = str;
+blockObj.Notes.String{1} = str;
 end

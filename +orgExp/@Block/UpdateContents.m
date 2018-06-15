@@ -1,10 +1,11 @@
-function UpdateContents(obj,fieldname)
+function updateContents(blockObj,fieldname)
 %% UPDATECONTENTS    Update files for particular field
 %
-%  obj.UPDATECONTENTS(fieldname)
+%  blockObj.UPDATECONTENTS;
+%  blockObj.UPDATECONTENTS(fieldname);
 %
 %  ex:
-%  obj.UpdateContents('Raw');
+%  blockObj.updateContents('Raw');
 %
 %  --------
 %   INPUTS
@@ -17,190 +18,190 @@ function UpdateContents(obj,fieldname)
 
 %% PARSE INPUT
 if exist('fieldname','var')
-   fieldmatch = false(size(obj.Fields));
-   for ii = 1:numel(obj.Fields)
-      fieldmatch(ii) = strcmpi(fieldname,obj.Fields{ii});
+   fieldmatch = false(size(blockObj.Fields));
+   for ii = 1:numel(blockObj.Fields)
+      fieldmatch(ii) = strcmpi(fieldname,blockObj.Fields{ii});
    end
 
    if sum(fieldmatch) > 1
       error(['Redundant field names.\n' ...
          'Check Block_Defaults.mat or %s CPL_BLOCK object.\n'],...
-         obj.Name);
+         blockObj.Name);
    elseif sum(fieldmatch) < 1
       error('No matching field in %s. Check CPL_BLOCK object.\n', ...
-         obj.Name);
+         blockObj.Name);
    else
-      fieldname = obj.Fields{fieldmatch};
+      fieldname = blockObj.Fields{fieldmatch};
    end
 else
-   for ii = 1:numel(obj.Fields)
-      obj.UpdateContents(obj.Fields{ii});
+   for ii = 1:numel(blockObj.Fields)
+      blockObj.UpdateContents(blockObj.Fields{ii});
    end
    return;
 end
 
 %% UPDATE FILES DEPENDING ON CELL OR STRING CASES
 % Lots of logical combinations for handling cell/non-cell inputs
-if (~iscell(obj.ID.(fieldname).Folder) && ...
-      ~iscell(obj.ID.(fieldname).File))
-   obj.(fieldname).dir = [];
-   obj.(fieldname).dir = [obj.(fieldname).dir; ...
-      dir(fullfile(obj.DIR, ...
-      [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder],...
-      ['*' obj.ID.(fieldname).File '*.mat']))];
+if (~iscell(blockObj.ID.(fieldname).Folder) && ...
+      ~iscell(blockObj.ID.(fieldname).File))
+   blockObj.(fieldname).dir = [];
+   blockObj.(fieldname).dir = [blockObj.(fieldname).dir; ...
+      dir(fullfile(blockObj.DIR, ...
+      [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder],...
+      ['*' blockObj.ID.(fieldname).File '*.mat']))];
    
-   obj.(fieldname).ch = [];
-   for ii = 1:numel(obj.(fieldname).dir)
-      temp = strsplit(obj.(fieldname).dir(ii).name,obj.ID.Delimiter);
-      ch_ind = find(ismember(temp,obj.CH_ID),1,'last')+1;
+   blockObj.(fieldname).ch = [];
+   for ii = 1:numel(blockObj.(fieldname).dir)
+      temp = strsplit(blockObj.(fieldname).dir(ii).name,blockObj.ID.Delimiter);
+      ch_ind = find(ismember(temp,blockObj.CH_ID),1,'last')+1;
       if isempty(ch_ind)
-         obj.(fieldname).ch = [obj.(fieldname).ch; nan];
+         blockObj.(fieldname).ch = [blockObj.(fieldname).ch; nan];
          continue;
       end
-      obj.(fieldname).ch = [obj.(fieldname).ch; ...
-         str2double(temp{ch_ind}(1:obj.CH_FIELDWIDTH))];
+      blockObj.(fieldname).ch = [blockObj.(fieldname).ch; ...
+         str2double(temp{ch_ind}(1:blockObj.CH_FIELDWIDTH))];
    end
-   if isempty(obj.(fieldname).dir)
-      dname = fullfile(obj.DIR,...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder]);
-      if obj.VERBOSE
+   if isempty(blockObj.(fieldname).dir)
+      dname = fullfile(blockObj.DIR,...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder]);
+      if blockObj.VERBOSE
          if exist(dname,'dir')==0
             fprintf(1,'\nMissing %s -- %s:\n->\t[%s not found]\n',...
-               obj.Name,fieldname,dname);
+               blockObj.Name,fieldname,dname);
          else
             fprintf(1,'\nFound %s -- %s:\n->\t[Empty]\n',...
-               obj.Name,fieldname);
+               blockObj.Name,fieldname);
          end
       end
    else
-      if obj.VERBOSE
-         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',obj.Name,fieldname,...
-            strjoin({obj.(fieldname).dir.name},'\n->\t'));
+      if blockObj.VERBOSE
+         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',blockObj.Name,fieldname,...
+            strjoin({blockObj.(fieldname).dir.name},'\n->\t'));
       end
    end
-elseif (iscell(obj.ID.(fieldname).Folder) && ...
-      ~iscell(obj.ID.(fieldname).File))
-   obj.(fieldname).dir = [];
-   for ii = 1:numel(obj.ID.(fieldname).Folder)
-      obj.(fieldname).dir = [obj.(fieldname).dir; ...
-         dir(fullfile(obj.DIR, ...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder{ii}],...
-         ['*' obj.ID.(fieldname).File '*.mat']))];
+elseif (iscell(blockObj.ID.(fieldname).Folder) && ...
+      ~iscell(blockObj.ID.(fieldname).File))
+   blockObj.(fieldname).dir = [];
+   for ii = 1:numel(blockObj.ID.(fieldname).Folder)
+      blockObj.(fieldname).dir = [blockObj.(fieldname).dir; ...
+         dir(fullfile(blockObj.DIR, ...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder{ii}],...
+         ['*' blockObj.ID.(fieldname).File '*.mat']))];
    end
    
-   obj.(fieldname).ch = [];
-   for ii = 1:numel(obj.(fieldname).dir)
-      temp = strsplit(obj.(fieldname).dir(ii).name,obj.ID.Delimiter);
-      ch_ind = find(ismember(temp,obj.CH_ID),1,'last')+1;
+   blockObj.(fieldname).ch = [];
+   for ii = 1:numel(blockObj.(fieldname).dir)
+      temp = strsplit(blockObj.(fieldname).dir(ii).name,blockObj.ID.Delimiter);
+      ch_ind = find(ismember(temp,blockObj.CH_ID),1,'last')+1;
       if isempty(ch_ind)
-         obj.(fieldname).ch = [obj.(fieldname).ch; nan];
+         blockObj.(fieldname).ch = [blockObj.(fieldname).ch; nan];
          continue;
       end
-      obj.(fieldname).ch = [obj.(fieldname).ch; ...
-         str2double(temp{ch_ind}(1:obj.CH_FIELDWIDTH))];
+      blockObj.(fieldname).ch = [blockObj.(fieldname).ch; ...
+         str2double(temp{ch_ind}(1:blockObj.CH_FIELDWIDTH))];
    end
-   if isempty(obj.(fieldname).dir)
-      dname = fullfile(obj.DIR,...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder{ii}]);
-      if obj.VERBOSE
+   if isempty(blockObj.(fieldname).dir)
+      dname = fullfile(blockObj.DIR,...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder{ii}]);
+      if blockObj.VERBOSE
          if exist(dname,'dir')==0
             fprintf(1,'\nMissing %s -- %s:\n->\t[%s not found]\n',...
-               obj.Name,fieldname,dname);
+               blockObj.Name,fieldname,dname);
          else
             fprintf(1,'\nFound %s -- %s:\n->\t[Empty]\n',...
-               obj.Name,fieldname);
+               blockObj.Name,fieldname);
          end
       end
    else
-      if obj.VERBOSE
-         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',obj.Name,fieldname,...
-            strjoin({obj.(fieldname).dir.name},'\n->\t'));
+      if blockObj.VERBOSE
+         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',blockObj.Name,fieldname,...
+            strjoin({blockObj.(fieldname).dir.name},'\n->\t'));
       end
    end
-elseif (iscell(obj.ID.(fieldname).File) && ...
-      ~iscell(obj.ID.(fieldname).Folder))
-   obj.(fieldname).dir = [];
-   for ii = 1:numel(obj.ID.(fieldname).File)
-      obj.(fieldname).dir = [obj.(fieldname).dir; ...
-         dir(fullfile(obj.DIR, ...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder],...
-         ['*' obj.ID.(fieldname).File{ii} '*.mat']))];
+elseif (iscell(blockObj.ID.(fieldname).File) && ...
+      ~iscell(blockObj.ID.(fieldname).Folder))
+   blockObj.(fieldname).dir = [];
+   for ii = 1:numel(blockObj.ID.(fieldname).File)
+      blockObj.(fieldname).dir = [blockObj.(fieldname).dir; ...
+         dir(fullfile(blockObj.DIR, ...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder],...
+         ['*' blockObj.ID.(fieldname).File{ii} '*.mat']))];
    end
    
-   obj.(fieldname).ch = [];
-   for ii = 1:numel(obj.(fieldname).dir)
-      temp = strsplit(obj.(fieldname).dir(ii).name,obj.ID.Delimiter);
-      ch_ind = find(ismember(temp,obj.CH_ID),1,'last')+1;
+   blockObj.(fieldname).ch = [];
+   for ii = 1:numel(blockObj.(fieldname).dir)
+      temp = strsplit(blockObj.(fieldname).dir(ii).name,blockObj.ID.Delimiter);
+      ch_ind = find(ismember(temp,blockObj.CH_ID),1,'last')+1;
       if isempty(ch_ind)
-         obj.(fieldname).ch = [obj.(fieldname).ch; nan];
+         blockObj.(fieldname).ch = [blockObj.(fieldname).ch; nan];
          continue;
       end
-      obj.(fieldname).ch = [obj.(fieldname).ch; ...
-         str2double(temp{ch_ind}(1:obj.CH_FIELDWIDTH))];
+      blockObj.(fieldname).ch = [blockObj.(fieldname).ch; ...
+         str2double(temp{ch_ind}(1:blockObj.CH_FIELDWIDTH))];
    end
-   if isempty(obj.(fieldname).dir)
-      dname = fullfile(obj.DIR,...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder]);
-      if obj.VERBOSE
+   if isempty(blockObj.(fieldname).dir)
+      dname = fullfile(blockObj.DIR,...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder]);
+      if blockObj.VERBOSE
          if exist(dname,'dir')==0
             fprintf(1,'\nMissing %s -- %s:\n->\t[%s not found]\n',...
-               obj.Name,fieldname,dname);
+               blockObj.Name,fieldname,dname);
          else
             fprintf(1,'\nFound %s -- %s:\n->\t[Empty]\n',...
-               obj.Name,fieldname);
+               blockObj.Name,fieldname);
          end
       end
    else
-      if obj.VERBOSE
-         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',obj.Name,fieldname,...
-            strjoin({obj.(fieldname).dir.name},'\n->\t'));
+      if blockObj.VERBOSE
+         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',blockObj.Name,fieldname,...
+            strjoin({blockObj.(fieldname).dir.name},'\n->\t'));
       end
    end
-elseif (iscell(obj.ID.(fieldname).File) && ...
-      iscell(obj.ID.(fieldname).Folder))
-   obj.(fieldname).dir = [];
-   for ii = 1:numel(obj.ID.(fieldname).File)
-      for kk = 1:numel(obj.ID.(fieldname).Folder)
-         obj.(fieldname).dir = [obj.(fieldname).dir; ...
-            dir(fullfile(obj.DIR, ...
-            [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder{kk}],...
-            ['*' obj.ID.(fieldname).File{ii} '*.mat']))];
+elseif (iscell(blockObj.ID.(fieldname).File) && ...
+      iscell(blockObj.ID.(fieldname).Folder))
+   blockObj.(fieldname).dir = [];
+   for ii = 1:numel(blockObj.ID.(fieldname).File)
+      for kk = 1:numel(blockObj.ID.(fieldname).Folder)
+         blockObj.(fieldname).dir = [blockObj.(fieldname).dir; ...
+            dir(fullfile(blockObj.DIR, ...
+            [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder{kk}],...
+            ['*' blockObj.ID.(fieldname).File{ii} '*.mat']))];
       end
    end
    
-   obj.(fieldname).ch = [];
-   for ii = 1:numel(obj.(fieldname).dir)
-      temp = strsplit(obj.(fieldname).dir(ii).name,obj.ID.Delimiter);
-      ch_ind = find(ismember(temp,obj.CH_ID),1,'last')+1;
+   blockObj.(fieldname).ch = [];
+   for ii = 1:numel(blockObj.(fieldname).dir)
+      temp = strsplit(blockObj.(fieldname).dir(ii).name,blockObj.ID.Delimiter);
+      ch_ind = find(ismember(temp,blockObj.CH_ID),1,'last')+1;
       if isempty(ch_ind)
-         obj.(fieldname).ch = [obj.(fieldname).ch; nan];
+         blockObj.(fieldname).ch = [blockObj.(fieldname).ch; nan];
          continue;
       end
-      obj.(fieldname).ch = [obj.(fieldname).ch; ...
-         str2double(temp{ch_ind}(1:obj.CH_FIELDWIDTH))];
+      blockObj.(fieldname).ch = [blockObj.(fieldname).ch; ...
+         str2double(temp{ch_ind}(1:blockObj.CH_FIELDWIDTH))];
    end
-   if isempty(obj.(fieldname).dir)
-      dname = fullfile(obj.DIR,...
-         [obj.Name obj.ID.Delimiter obj.ID.(fieldname).Folder{kk}]);
-      if obj.VERBOSE
+   if isempty(blockObj.(fieldname).dir)
+      dname = fullfile(blockObj.DIR,...
+         [blockObj.Name blockObj.ID.Delimiter blockObj.ID.(fieldname).Folder{kk}]);
+      if blockObj.VERBOSE
          if exist(dname,'dir')==0
             fprintf(1,'\nMissing %s -- %s:\n->\t[%s not found]\n',...
-               obj.Name,fieldname,dname);
+               blockObj.Name,fieldname,dname);
          else
             fprintf(1,'\nFound %s -- %s:\n->\t[Empty]\n',...
-               obj.Name,fieldname);
+               blockObj.Name,fieldname);
          end
       end
    else
-      if obj.VERBOSE
-         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',obj.Name,fieldname,...
-            strjoin({obj.(fieldname).dir.name},'\n->\t'));
+      if blockObj.VERBOSE
+         fprintf(1,'\nFound %s -- %s:\n->\t%s\n',blockObj.Name,fieldname,...
+            strjoin({blockObj.(fieldname).dir.name},'\n->\t'));
       end
    end
 end
-if isempty(obj.(fieldname).dir)
-   obj.Status(fieldmatch) = false;
+if isempty(blockObj.(fieldname).dir)
+   blockObj.Status(fieldmatch) = false;
 else
-   obj.Status(fieldmatch) = true;
+   blockObj.Status(fieldmatch) = true;
 end
 end

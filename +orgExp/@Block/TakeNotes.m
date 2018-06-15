@@ -1,4 +1,4 @@
-function TakeNotes(obj)
+function takeNotes(obj)
 %% TAKENOTES   View or update notes on current BLOCK.
 %
 %  obj.TAKENOTES

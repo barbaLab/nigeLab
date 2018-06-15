@@ -1,9 +1,9 @@
-function PlotWaves(obj,WAV,SPK)
+function flag = plotWaves(blockObj,WAV,SPK)
 %% PLOTWAVES  Uses PLOTCHANNELS for this recording BLOCK
 %
-%  obj.PLOTWAVES
-%  obj.PLOTWAVES(WAV)
-%  obj.PLOTWAVES(WAV,SPK)
+%  flag = blockObj.PLOTWAVES
+%  flag = blockObj.PLOTWAVES(WAV)
+%  flag = blockObj.PLOTWAVES(WAV,SPK)
 %
 %  --------
 %   INPUTS
@@ -13,52 +13,80 @@ function PlotWaves(obj,WAV,SPK)
 %     SPK   :     Folder containing either SORTED, CLUSTERS, or
 %                 SPIKES.
 %
+%  --------
+%   OUTPUT
+%  --------
+%    flag   :     Returns true if the figure is successfully generated.
+%
 %  See also: PLOTCHANNELS
+%
+% By: Max Murphy  v1.1  06/14/2018  Added flag output.
 
 %% PARSE VARARGIN
 if nargin==1
-   if ~isempty(obj.CAR.dir)
-      WAV = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.CAR.Folder]);
-   elseif ~isempty(obj.Filt.dir)
-      WAV = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Filt.Folder]);
+   if ~isempty(blockObj.CAR.dir)
+      WAV = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.CAR.Folder]);
+   elseif ~isempty(blockObj.Filt.dir)
+      WAV = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Filt.Folder]);
    else
-      plotChannels;
+      try
+         plotChannels;
+         flag = true;
+      catch
+         flag = false;
+      end
       return;
    end
    
-   if ~isempty(obj.Sorted.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Sorted.Folder]);
-   elseif ~isempty(obj.Clusters.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Clusters.Folder]);
-   elseif ~isempty(obj.Spikes.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Spikes.Folder]);
+   if ~isempty(blockObj.Sorted.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Sorted.Folder]);
+   elseif ~isempty(blockObj.Clusters.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Clusters.Folder]);
+   elseif ~isempty(blockObj.Spikes.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Spikes.Folder]);
    else
-      plotChannels('DIR',WAV);
+      try
+         plotChannels('DIR',WAV);
+         flag = true;
+      catch
+         flag = false;
+      end
       return;
    end
 end
 
 if nargin==2
-   if ~isempty(obj.Sorted.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Sorted.Folder]);
-   elseif ~isempty(obj.Clusters.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Clusters.Folder]);
-   elseif ~isempty(obj.Spikes.dir)
-      SPK = fullfile(obj.DIR,[obj.Name obj.ID.Delimiter ...
-         obj.ID.Spikes.Folder]);
+   if ~isempty(blockObj.Sorted.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Sorted.Folder]);
+   elseif ~isempty(blockObj.Clusters.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Clusters.Folder]);
+   elseif ~isempty(blockObj.Spikes.dir)
+      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
+         blockObj.ID.Spikes.Folder]);
    else
-      plotChannels('DIR',WAV);
+      try
+         plotChannels('DIR',WAV);
+         flag = true;
+      catch
+         flag = false;
+      end
       return;
    end
 end
-obj.Graphics.Waves = plotChannels('DIR',WAV,'SPK',SPK);
+
+try
+   blockObj.Graphics.Waves = plotChannels('DIR',WAV,'SPK',SPK);
+   flag = true;
+catch
+   flag = false;
+end
 
 
 end
