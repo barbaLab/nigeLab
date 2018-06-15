@@ -97,7 +97,7 @@ doc orgExp.Tank
 	  or
 	* ```Matlab
 		 setFlagArray_1xK = tankGet(tank,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
-										  {propertyVal1,   propertyVal2,  ..., PropertyValK});  
+						  {propertyVal1,   propertyVal2,  ..., PropertyValK});  
 	  ```
 
 ### Block Methods Overview ###
@@ -132,108 +132,124 @@ doc orgExp.Block
 	  ```  
 * blockSet(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#blockset "Set Block property"): Set a specific Block property.
 	* ```Matlab
-		 setFlag = block.blockSet('PropertyName',propertyValue); % Returns true if property set successfully
+		 % Returns true if property set successfully
+		 setFlag = block.blockSet('PropertyName',propertyValue); 
 	  ```  
 	  or
 	* ```Matlab
 		 setFlagArray_1xK = blockGet(block,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
-										    {propertyVal1,   propertyVal2,  ..., PropertyValK});  
+							{propertyVal1,   propertyVal2,  ..., PropertyValK});  
 	  ```
 * list(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#list "List files in Block"): List all the data files associated with this Block.
 	* ```Matlab
-		 flag = block.list; % Will print all files associated with Block to the Command Window. 
-							% flag returns true if ANY file is associated with the Block
+		 % Print all files associated with Block to the Command Window. 
+		 flag = block.list; % true if ANY file is associated with the Block
 	  ```  
 	  or
 	* ```Matlab
-		 fieldname = 'Raw';
-		 flag = list(Block,fieldname);  % Prints files associated of a specific type (here, Raw data streams)
-										% flag is false if no files are present
+		 % Prints files associated of a specific type
+		 fieldname = 'Raw'; 		   % (here: RawData)
+		 flag = list(Block,fieldname); % false if no RawData files 
+							
 	  ```
 * loadClusters(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadclusters "Load spike clusters"): Load unsupervised spike cluster assignments for a single channel.
 	* ```Matlab
+		 % Returns a struct with cluster data for spikes on channel 9.
 		 channel = 9;
-		 out = block.loadClusters(channel); % Returns a struct with cluster data for spikes on channel 9.
+		 out = block.loadClusters(channel); 
 	  ```  
 	  or
 	* ```Matlab
+		 % Returns an array struct with cluster data for spikes on channels 1:16.
 		 channel = 1:16;
-		 out = block.loadClusters(channel); % Returns an array struct with cluster data for spikes on channels 1:16.
+		 out = block.loadClusters(channel); 
 	  ``` 
 	  or
 	* ```Matlab
-		 out = block.loadClusters; % Returns an array struct with cluster data for spikes on all channels.
+		 % Returns an array struct with cluster data for spikes on all channels.
+		 out = block.loadClusters; 
 	  ``` 
 * loadSorted(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadsorted "Load sorted spike classes"): Load manually curated spike cluster assignments for a single channel.
 	* ```Matlab
+		 % Returns a struct with manual sorting data for spikes on channel 9.
 		 channel = 9;
-		 out = block.loadSorted(channel); % Returns a struct with manual sorting data for spikes on channel 9.
+		 out = block.loadSorted(channel); 
 	  ```  
 	  or
 	* ```Matlab
+		 % Returns an array struct with manual sorting data for spikes on channels 1:16.
 		 channel = 1:16;
-		 out = block.loadSorted(channel); % Returns an array struct with manual sorting data for spikes on channels 1:16.
+		 out = block.loadSorted(channel); 
 	  ```
 	  or
 	* ```Matlab
-		 out = block.loadSorted; % Returns an array struct with manual sorting data for spikes on all channels.
+		 % Returns an array struct with manual sorting data for spikes on all channels.
+		 out = block.loadSorted; 
 	  ``` 
 * loadSpikes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadspikes "Load detected spikes"): Load sparse indexing vector of spike peaks and an associated matrix of waveform snippets.
 	* ```Matlab
+		 % Returns a struct with spikes for channel 9.
 		 channel = 9;
-		 out = block.loadSpikes(channel); % Returns a struct with spikes for channel 9.
+		 out = block.loadSpikes(channel); 
 	  ```  
 	  or
 	* ```Matlab
+		 % Returns an array struct with spikes for channels 1:16.
 		 channel = 1:16;
-		 out = block.loadSpikes(channel); % Returns an array struct with spikes for channels 1:16.
+		 out = block.loadSpikes(channel); 
 	  ``` 
 	  or
 	* ```Matlab
-		 out = block.loadSpikes; % Returns an array struct with spikes for all channels.
+		 % Returns an array struct with spikes for all channels.
+		 out = block.loadSpikes; 
 	  ``` 
 * plotSpikes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotspikes "Plot spike cluster waveform snippets"): Plot all spike clusters for a single channel.
 	* ```Matlab
+		 % Makes figure with spikes for channel 9, returns true if successful.
 		 channel = 9;
-		 flag = block.plotSpikes(channel);  % Makes figure with spikes for channel 9, returns true if successful.
+		 flag = block.plotSpikes(channel);  
 	  ``` 
 * plotWaves((https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotwaves "Plot data stream snippet"): Plot a short segment of the data stream from each channel on one plot (can take a long time). Highlights spikes and cluster assignments if spike detection and clustering or sorting has been performed as well. 
 	* ```Matlab
-		 flag = block.plotWaves;  % Returns true if wave stream plot figure is generated successfully.
-								  % Without specifying WAV or SPK, automatically plots the
-								  % most filtered waveform and most curated spikes possible.
+		 % Returns true if wave stream plot figure is generated successfully.
+		 flag = block.plotWaves;  % Plots most-filtered/curated possible.
 	  ``` 
 	  or
 	* ```Matlab
+		 % Returns true if wave stream plot figure is generated successfully.
 		 WAV = 'C:/FILT/or/CARFILT/PATH';
-		 flag = block.plotWaves(WAV);  % Returns true if wave stream plot figure is generated successfully.
+		 flag = block.plotWaves(WAV);  
 	  ``` 
 	  or
 	* ```Matlab
+		 % Returns true if wave stream plot figure is generated successfully.
 		 WAV = 'C:/FILT/or/CARFILT/PATH';
 		 SPK = 'C:/SORTED/CLUSTERS/or/SPIKES/PATH';
-		 flag = block.plotWaves(WAV,SPK);  % Returns true if wave stream plot figure is generated successfully.
+		 flag = block.plotWaves(WAV,SPK);  
 	  ``` 
 * syncBehavior(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#syncbehavior "Synchronize behavioral and neural data"):  
 * takeNotes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#takenotes "View or Add Notes .txt to Block"): 
 	* ```Matlab
-		 block.takeNotes;  % Pulls up NotesUI to view or enter notes
+		 % Pull up NotesUI to view or enter notes
+		 block.takeNotes;  
 	  ``` 
 * updateContents(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updatecontents "Refresh file contents of Block"): 
 	* ```Matlab
-		 blockObj.updateContents;  % Updates files associated with all fields of blockObj.
+		 % Update files associated with all fields of blockObj.
+		 blockObj.updateContents;  
 	  ``` 
 	  or
 	* ```Matlab
+		 % Update files associated with Raw Data streams only.
 		 fieldname = 'Raw';
-		 blockObj.updateContents(fieldname);  % Updates files associated with Raw Data streams.
+		 blockObj.updateContents(fieldname);  
 	  ``` 
 * updateID(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updateid "Modify ID token(s) for Block"):  
 	* ```Matlab
-		 fieldname = 'Filt';			 	  % Update filtered data streams identifier
-		 type = 'File';						  % For .mat files ('File' or 'Folder')
-		 updatedValue = 'filtdata';			  % Now files need to have 'filtdata' in name to be recognized
-		 blockObj.updateID(fieldname,type,updatedValue);  % Updates files associated with Raw Data streams.
+		 fieldname = 'Filt'; % Update filtered data streams identifier
+		 type = 'File';		 % For .mat files ('File' or 'Folder')
+		 updatedValue = 'filtdata';	 % New token for Block to recognize
+		 blockObj.updateID(fieldname,type,updatedValue); % Update file associations.
 	  ``` 
 	  
 [DataPipeline_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "Fig. 1: Generic experimental pipeline"
