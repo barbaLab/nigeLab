@@ -15,7 +15,7 @@ A package for keeping experimental data and metadata organized and easily access
 [How are things organized and why so many redundancies?](#file-structure-hierarchy "Hard drive memory is inexpensive. And I'm not a computer scientist.")  
 [What does a Tank object do?](#tank-methods-overview "Contains methods for groups of recordings.")  
 [What does a Block object do?](#block-methods-overview "Contains methods for processing a single recording.")  
-
+---
 ### Object-oriented Matlab Data Structures ###
 1. As our group has added engineering students and begun collaborations with other engineering groups, it has become evident that we have spent too much time re-inventing the wheel. A major goal of this package is to provide a centralized resource that reflects our data collection process, and which can quickly be learned and added to by new students and collaborators.
 
@@ -28,7 +28,7 @@ A package for keeping experimental data and metadata organized and easily access
 		* A single experimental recording with a preset format. A Tank object could contain multiple Blocks; the Blocks have methods for viewing data specific to a single recording whereas the Tank contains methods for aggregating data from multiple Blocks.  
 		
 3. In line with the second point, offering this package through Matlab means that as long as you have Matlab R2017a or beyond (not tested with earlier versions, but probably mostly works), you don't have to go through the hassle of finding the right compiler and debugging everything for your specific software/hardware configuration.
-
+---
 ### Example of how it works ###
 1. Open the file Tank.m in the Matlab editor and click the green Play button.
 2. Select the parent folder that contains your individual recording files (e.g. Intan *.rhd or *.rhs files, or TDT block folders). This is the [Tank](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank).
@@ -42,12 +42,11 @@ A package for keeping experimental data and metadata organized and easily access
 	* Depending on the length of recording and available computing resources, it may be wise to do this part overnight. 
 5. Once a set of Blocks reaches the same processing state, available figure or statistic export options are populated. 
 	* Based on naming convention, the Tank will try to pre-populate metadata variables, which can be used to group Block outputs.  
-
+---
 ### Data Pipeline ###
 ![][DataPipeline_Overview]  
 _**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline. Moving from performing experiments to data endpoints is easy with orgExp. Thanks to an intuitive user interface, no need to compile anything (everything runs in Matlab), and built-in flexibility that can be easily integrated to your workflow, orgExp is a good choice to move from acquisition to analysis seamlessly._  
-  
-  
+---
 ### File Structure Hierarchy ###
 ![][TankStructure_Overview]  
 _**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection. The Tank may also contain a file with a general description of the types of experiments as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
@@ -55,7 +54,7 @@ _**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that co
   
 ![][BlockStructure_Overview]  
 _**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._  
-   
+---
 ### Tank Methods Overview ###
 Brief example calls to methods used by Tank class. For more detailed descriptions, visit the Tank [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank "@Tank") or try entering the following into the Matlab command window for more detailed documentation:   
 
@@ -114,7 +113,7 @@ setFlag = tank.tankSet('PropertyName',propertyValue); % Returns true if property
 setFlagArray_1xK = tankSet(tank,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
 {propertyVal1,   propertyVal2,  ..., PropertyValK});  
 ```
-
+---
 ### Block Methods Overview ###
 Brief example calls to methods used by Block class. For more detailed descriptions, visit the Block [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block "@Block") or try entering the following into the Matlab command window for more detailed documentation:  
 ```Matlab
