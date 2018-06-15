@@ -17,6 +17,9 @@ A package for keeping experimental data and metadata organized and easily access
 [What does a Block object do?](#block-methods-overview "Contains methods for processing a single recording.")  
 ---
 ### Object-oriented Matlab Data Structures ###
+
+> Why have you done this?
+
 1. As our group has added engineering students and begun collaborations with other engineering groups, it has become evident that we have spent too much time re-inventing the wheel. A major goal of this package is to provide a centralized resource that reflects our data collection process, and which can quickly be learned and added to by new students and collaborators.
 
 2. A lot of analysis packages are "by engineers, for engineers." A personal goal of mine is to create tools "by engineers, for non-engineers." In my mind, one aspect of that is creating tools that allow useful analyses or increase productivity without ever having to enter jargon into a console. The goal of this package is to extend powerful tools for electrophysiological pre-processing, analysis, and metadata tracking using a relatively simple and straightforward interface. To that end, the two main kinds of objects you need to learn about to get up and running with this package are the "Tank" and "Block" objects (nomenclature shamelessly borrowed from TDT).  
@@ -30,6 +33,9 @@ A package for keeping experimental data and metadata organized and easily access
 3. In line with the second point, offering this package through Matlab means that as long as you have Matlab R2017a or beyond (not tested with earlier versions, but probably mostly works), you don't have to go through the hassle of finding the right compiler and debugging everything for your specific software/hardware configuration.
 ---
 ### Example of how it works ###
+
+> How would these tools benefit me (concretely)?
+
 1. Open the file Tank.m in the Matlab editor and click the green Play button.
 2. Select the parent folder that contains your individual recording files (e.g. Intan *.rhd or *.rhs files, or TDT block folders). This is the [Tank](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank).
 3. A graphical interface (in progress...) will populate with all viable recordings and associated metadata. These are the [Blocks](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block). Dropdown menus will populate with options to configure processing steps such as:
@@ -45,18 +51,24 @@ A package for keeping experimental data and metadata organized and easily access
   
 ---
 ## Data Pipeline ##
+
+> Will this package work for my specific experimental pipeline?
+
 ### Overview ###  
 ![][DataPipeline_Overview]  
 _**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline. Moving from performing experiments to data endpoints is easy with orgExp. Thanks to an intuitive user interface, no need to compile anything (everything runs in Matlab), and built-in flexibility that can be easily integrated to your workflow, orgExp is a good choice to move from acquisition to analysis seamlessly._  
   
 ---
 ## File Structure Hierarchy ##
+
+> How are things organized and why so many redundancies?
+
 ### Tank Structure ###  
 ![][TankStructure_Initial]  
 _**Figure 2:** Raw Tank hierarchy with acquisition files or folders. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection._  
   
 ![][TankStructure_Processed]  
-_**Figure 3:** Processed Tank-Block folder hierarchy overview. During the conversion process from raw acquisition file binaries to Matlab single-channel stream files, a second path is used to separate processed data from the initial data location. The file structure is similar to the initial acquisition recording structure, except that certain metadata, such as the Animal ID, are extracted automatically and used to sub-divide the recordings into Block folders. Because implants vary from animal-to-animal in details like the type of array or certain wires that are bad, these metadata can be stored in the individual Animal sub-folder. The Tank-level folder may also contain metadata files with a general description of the overall experiment as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
+_**Figure 3:** Processed Tank-Block folder hierarchy overview. During the conversion process from raw acquisition file binaries to Matlab single-channel stream files, a second path is used to separate processed data from the initial data location. The file structure is similar to the initial acquisition recording structure, except that certain metadata, such as the Animal ID, are extracted automatically and used to sub-divide the recordings into Block folders. Because implants vary from animal-to-animal in details like the type of array or certain wires that are bad, these metadata can be stored in the individual Animal sub-folder. The Tank-level folder may also contain metadata files with a general description of the overall experiment as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses. Although disk memory could be saved by keeping a single stream saved (or even just keeping everything in the raw binary format and reading it out every time), doing it this way makes it faster to work with in Matlab and prevents us from having too much data in the workspace at a given time as well._  
   
 ---  
 ### Block Structure ### 
@@ -65,6 +77,9 @@ _**Figure 4:** Block folder and file hierarchy overview, after data processing a
   
 ---
 ## Tank Methods Overview ##
+
+> What does a Tank object do?
+
 Brief example calls to methods used by Tank class. For more detailed descriptions, visit the Tank [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank "@Tank") or try entering the following into the Matlab command window for more detailed documentation:   
 
 ```Matlab
@@ -143,6 +158,9 @@ setFlagArray_1xK = tankSet(tank,{'PropertyName1','PropertyName2',...,'PropertyNa
 ---  
   
 ## Block Methods Overview ##
+
+> What does a Block object do?
+
 Brief example calls to methods used by Block class. For more detailed descriptions, visit the Block [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block "@Block") or try entering the following into the Matlab command window for more detailed documentation:  
 ```Matlab
 doc orgExp.Block
