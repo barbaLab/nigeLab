@@ -106,14 +106,14 @@ classdef Tank < handle
       end
       
       flag = convert(tankObj,confirm) % Convert raw data to Matlab BLOCK
-      blockList = list(tankObj)    % List Blocks in TANK
-      out = tankGet(tankObj,prop)  % Get a specific TANK property
-      flag = tankSet(tankObj,prop) % Set a specific TANK property
+      blockList = list(tankObj)       % List Blocks in TANK
+      out = tankGet(tankObj,prop)     % Get a specific TANK property
+      flag = tankSet(tankObj,prop)    % Set a specific TANK property
    end
    %% PRIVATE METHODS
    methods (Access = private)
-      init(tankObj) % Initializes the TANK object.
-      
-      setSaveLocation(tankObj) % Set save location for processed TANK.
+      init(tankObj)                 % Initializes the TANK object.
+      intan2Block(tankObj,varargin) % Does the actual data conversion
+      setSaveLocation(tankObj)      % Set save location for processed TANK.
    end
 end
