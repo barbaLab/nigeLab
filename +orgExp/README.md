@@ -1,6 +1,4 @@
-![][orgExp_LogoSmall]  
-
-# orgExp #
+# ![][orgExp_LogoSmall]  orgExp #
 A package for keeping experimental data and metadata organized and easily accessible. Provides access to common types of analyses used in extracellular electrophysiological and behavioral experiments, including (but not yet all pushed):
 
 * Data extraction and filtering algorithms that are extensible for parallel computing
