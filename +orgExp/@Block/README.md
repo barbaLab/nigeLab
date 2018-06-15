@@ -47,7 +47,7 @@ propertyValueArray_1xK = blockGet(block,{'PropertyName1','PropertyName2',...,'Pr
 ```Matlab
 propertyValueArray = blockGet(block); % Return all properties
 ```  
----
+---  
 ### blockSet ###
 Set a specific Block property.
 ```Matlab
@@ -59,7 +59,7 @@ setFlag = block.blockSet('PropertyName',propertyValue);
 setFlagArray_1xK = blockGet(block,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
 	{propertyVal1,   propertyVal2,  ..., PropertyValK});  
 ```
----
+---  
 ### list ###  
 List all the data files associated with this Block.  
 ```Matlab
