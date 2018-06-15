@@ -85,7 +85,7 @@ classdef Tank < handle
          
       end
       
-      flag = convert(tankObj) % Convert raw data to Matlab BLOCK format.
+      flag = convert(tankObj) % Convert raw data file to Matlab BLOCK format.
       blockList = list(tankObj)    % List Blocks in TANK
       out = tankGet(tankObj,prop)  % Get a specific TANK property
       flag = tankSet(tankObj,prop) % Set a specific TANK property

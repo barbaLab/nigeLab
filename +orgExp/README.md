@@ -73,6 +73,13 @@ tank = orgExp.Tank; % Will prompt Tank selection UI
 tank = orgExp.Tank('DIR','C:/Tank/Folder/Path');
 ```  
 
+* [convert](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#convert "Convert raw files"): Convert raw acquisition files to Matlab Block file hierarchical structure.  
+
+```Matlab
+% Begin conversion with current Tank properties
+flag = tank.convert;
+```
+
 * [list](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#list "List of Blocks in Tank"): List all Blocks in the Tank.
 
 ```Matlab
@@ -104,7 +111,7 @@ setFlag = tank.tankSet('PropertyName',propertyValue); % Returns true if property
 ```  
 
 ```Matlab
-setFlagArray_1xK = tankGet(tank,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
+setFlagArray_1xK = tankSet(tank,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
 {propertyVal1,   propertyVal2,  ..., PropertyValK});  
 ```
 
