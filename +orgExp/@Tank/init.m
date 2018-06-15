@@ -9,8 +9,8 @@ function init(tankObj)
 tankObj.Name = strsplit(tankObj.DIR,filesep);
 tankObj.Name = tankObj.Name{end};
 
-if isempty(tankObj.Save_Loc)
-   tankObj.Save_Loc = fullfile('P:\Extracted_Data_To_Move\Rat',...
+if isempty(tankObj.SaveLoc)
+   tankObj.SaveLoc = fullfile(tankObj.DefaultSaveLoc,...
                               tankObj.RecType,tankObj.Name);
    if exist(tankObj.Save_Loc,'dir')==0
       mkdir(tankObj.Save_Loc);
@@ -20,14 +20,12 @@ if isempty(tankObj.Save_Loc)
    end
 end
 
-%% PARSING NAME METADATA DEPENDS ON RECORDING SYSTEM
-switch tankObj.RecType
-   case 'Intan'
-      
-   case 'TDT'
-      
-   otherwise
-      error('Invalid recording system type. Case sensitive.');
+%% DO CONVERSION OR CHECK AND CREATE METADATA FOR TANK
+if tankObj.ExtractFlag
+   tankObj.convert(tankObj.CheckBeforeConversion);
+else
+   tankObj.createMetadata;
 end
+
 
 end

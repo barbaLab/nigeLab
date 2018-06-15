@@ -21,13 +21,12 @@ if isempty(tankObj.Save_Loc)
 end
 
 %% PARSING NAME METADATA DEPENDS ON RECORDING SYSTEM
-switch tankObj.RecType
-   case 'Intan'
-      
-   case 'TDT'
-      
-   otherwise
-      error('Invalid recording system type. Case sensitive.');
+if tankObj.ExtractFlag
+   tankObj.convert;
+else
+   tankObj.createMetadata;
 end
+
+
 
 end

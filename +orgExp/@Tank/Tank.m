@@ -15,6 +15,9 @@ classdef Tank < handle
 %
 %     convert - Convert raw data files to Matlab BLOCK hierarchical format.
 %
+%     createMetadata - Creates metadata file in Processed TANK parent
+%                      folder.
+%
 %     list - List Block objects in the TANK.
 %
 %     tankGet - Get a specific property from the TANK object.
@@ -36,7 +39,9 @@ classdef Tank < handle
       Block                   % Children (BLOCK)
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
-      Default_Tank_Loc        % Default for UI TANK selection
+      CheckBeforeConversion   % Flag to ask for confirmation before convert
+      DefaultSaveLoc          % Default for save location
+      DefaultTankLoc          % Default for UI TANK selection
       Delimiter               % Filename metadata delimiter
       ExtractFlag             % Flag to indicate if extraction is needed
       RecType                 % Acquisition system used for this Tank
@@ -44,7 +49,7 @@ classdef Tank < handle
                               % ---------------------------
                               % Intan  ('Intan')
                               % TDT    ('TDT')                              
-      Save_Loc                % Directory of BLOCK hierarchy parent folder
+      SaveLoc                 % Directory of BLOCK hierarchy parent folder
    end
    
    %% PUBLIC METHODS
@@ -100,7 +105,7 @@ classdef Tank < handle
          
       end
       
-      flag = convert(tankObj) % Convert raw data to Matlab BLOCK format.
+      flag = convert(tankObj,confirm) % Convert raw data to Matlab BLOCK
       blockList = list(tankObj)    % List Blocks in TANK
       out = tankGet(tankObj,prop)  % Get a specific TANK property
       flag = tankSet(tankObj,prop) % Set a specific TANK property
@@ -108,5 +113,7 @@ classdef Tank < handle
    %% PRIVATE METHODS
    methods (Access = private)
       init(tankObj) % Initializes the TANK object.
+      
+      setSaveLocation(tankObj) % Set save location for processed TANK.
    end
 end

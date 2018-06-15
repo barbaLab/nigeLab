@@ -1,4 +1,4 @@
-# orgExp #
+# ![][orgExp_LogoLarge] orgExp #
 A package for keeping experimental data and metadata organized and easily accessible. Provides access to common types of analyses used in extracellular electrophysiological and behavioral experiments, including (but not yet all pushed):
 
 * Data extraction and filtering algorithms that are extensible for parallel computing
@@ -368,3 +368,6 @@ blockObj.updateID(fieldname,type,updatedValue); % Update file associations.
 [BlockStructure_BehaviorSyncData]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_BehaviorSyncData.JPG "Fig. 4f: Digital inputs for behavioral synchronization to neural data"
 
 [NamingConvention_Example]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/NamingConvention_Example.JPG "Fig. 4b: Naming convention used by the Nudo Lab at KUMC"
+
+[orgExp_LogoSmall]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/orgExp_LogoSmall.PNG "orgExp"
+[orgExp_LogoLarge]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/orgExp_Logo.PNG "orgExp"
