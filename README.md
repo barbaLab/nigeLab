@@ -4,7 +4,7 @@
 Packages for electrophysiology processing and analysis.
 
 ## Table of Contents ##
-![][orgExp_LogoSmall] [orgExp](https://github.com/m053m716/ePhys_packages#organize-experiments "ORGanize EXPeriments")  
+[orgExp](https://github.com/m053m716/ePhys_packages#-organize-experiments "ORGanize EXPeriments") ![][orgExp_LogoLarge]  
 
 
 ### ![][orgExp_LogoSmall] ORGanize EXPeriments ###
@@ -14,3 +14,4 @@ _**Figure 1:** Moving from performing experiments to data endpoints is easy with
 
 [orgExp_Pipeline]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Overview.JPG "orgExp Pipeline Overview"
 [orgExp_LogoSmall]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/orgExp_LogoSmall.PNG "orgExp"
+[orgExp_LogoLarge]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/orgExp_Logo.PNG "orgExp"
