@@ -4,7 +4,9 @@
 Packages for electrophysiology processing and analysis.
 
 ## Table of Contents ##
-[orgExp](https://github.com/m053m716/ePhys_packages#-organize-experiments "ORGanize EXPeriments")
+| Package       |               |
+| ------------- | -------------:|
+| [orgExp](https://github.com/m053m716/ePhys_packages#-organize-experiments "ORGanize EXPeriments") | ![][orgExp_LogoSmall] |
 
 
 ### ![][orgExp_LogoSmall] ORGanize EXPeriments ###
