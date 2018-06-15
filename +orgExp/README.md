@@ -55,7 +55,7 @@ _**Figure 1:** Generic overview for behavioral electrophysiology data acquisitio
 ![][TankStructure_Initial]  
 _**Figure 2:** Raw Tank hierarchy with acquisition files or folders. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection._  
   
-![][TankStructure_Overview]  
+![][TankStructure_Processed]  
 _**Figure 3:** Processed Tank-Block folder hierarchy overview. During the conversion process from raw acquisition file binaries to Matlab single-channel stream files, a second path is used to separate processed data from the initial data location. The file structure is similar to the initial acquisition recording structure, except that certain metadata, such as the Animal ID, are extracted automatically and used to sub-divide the recordings into Block folders. Because implants vary from animal-to-animal in details like the type of array or certain wires that are bad, these metadata can be stored in the individual Animal sub-folder. The Tank-level folder may also contain metadata files with a general description of the overall experiment as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
   
 ---  
