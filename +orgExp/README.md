@@ -58,11 +58,13 @@ _**Figure 3:** Block folder and file hierarchy overview, after data processing a
    
 ### Tank Methods Overview ###
 Brief example calls to methods used by Tank class. For more detailed descriptions, visit the Tank [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank "@Tank") or try entering the following into the Matlab command window for more detailed documentation:   
+
 ```Matlab
 doc orgExp.Tank
 ```
 
 * [Tank](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#tank-1 "Tank Class constructor"): Construct the Tank Class object.
+
 ```Matlab
 tank = orgExp.Tank; % Will prompt Tank selection UI
 ```  
@@ -72,6 +74,7 @@ tank = orgExp.Tank('DIR','C:/Tank/Folder/Path');
 ```  
 
 * [list](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#list "List of Blocks in Tank"): List all Blocks in the Tank.
+
 ```Matlab
 blockList = tank.list;
 ```  
@@ -81,6 +84,7 @@ blockList = list(tank);
 ```
 
 * [tankGet](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#tankget "Get Tank property"): Get a specified property of the Tank.
+
 ```Matlab
 propertyValue = tank.tankGet('PropertyName');
 ```  
@@ -93,7 +97,8 @@ propertyValueArray_1xK = tankGet(tank,{'PropertyName1','PropertyName2',...,'Prop
 propertyValueArray = tankGet(tank); % Return all properties
 ```  
 
-* [tankSet](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#tankset "Set Tank property"): Set a specified property of the Tank.  
+* [tankSet](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank#tankset "Set Tank property"): Set a specified property of the Tank.
+  
 ```Matlab
 setFlag = tank.tankSet('PropertyName',propertyValue); % Returns true if property set successfully
 ```  
@@ -110,6 +115,7 @@ doc orgExp.Block
 ```  
 
 * [Block](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#block-1 "Block Class constructor"): Construct the Block Class object.
+
 ```Matlab
 block = tank.Block(1);
 ```  
@@ -123,6 +129,7 @@ block = orgExp.Block('DIR','C:/Block/Folder/Path');
 ```
 
 * [blockGet](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#blockget "Get Block property"): Get a specific Block property.
+
 ```Matlab
 propertyValue = block.blockGet('PropertyName');
 ```  
@@ -135,7 +142,8 @@ propertyValueArray_1xK = blockGet(block,{'PropertyName1','PropertyName2',...,'Pr
 propertyValueArray = blockGet(block); % Return all properties
 ```  
 
-* blockSet(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#blockset "Set Block property"): Set a specific Block property.
+* [blockSet](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#blockset "Set Block property"): Set a specific Block property.
+
 ```Matlab
 % Returns true if property set successfully
 setFlag = block.blockSet('PropertyName',propertyValue); 
@@ -145,7 +153,9 @@ setFlag = block.blockSet('PropertyName',propertyValue);
 setFlagArray_1xK = blockGet(block,{'PropertyName1','PropertyName2',...,'PropertyNameK'},...
 	{propertyVal1,   propertyVal2,  ..., PropertyValK});  
 ```
-* list(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#list "List files in Block"): List all the data files associated with this Block.
+
+* [list](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#list "List files in Block"): List all the data files associated with this Block.
+
 ```Matlab
 % Print all files associated with Block to the Command Window. 
 flag = block.list; % true if ANY file is associated with the Block
@@ -157,7 +167,8 @@ fieldname = 'Raw'; 		   % (here: RawData)
 flag = list(Block,fieldname); % false if no RawData files 
 ```
 
-* loadClusters(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadclusters "Load spike clusters"): Load unsupervised spike cluster assignments for a single channel.
+* [loadClusters](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadclusters "Load spike clusters"): Load unsupervised spike cluster assignments for a single channel.
+
 ```Matlab
 % Returns a struct with cluster data for spikes on channel 9.
 channel = 9;
@@ -175,7 +186,8 @@ out = block.loadClusters(channel);
 out = block.loadClusters; 
 ``` 
 
-* loadSorted(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadsorted "Load sorted spike classes"): Load manually curated spike cluster assignments for a single channel.
+* [loadSorted](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadsorted "Load sorted spike classes"): Load manually curated spike cluster assignments for a single channel.
+
 ```Matlab
 % Returns a struct with manual sorting data for spikes on channel 9.
 channel = 9;
@@ -193,7 +205,8 @@ out = block.loadSorted(channel);
 out = block.loadSorted; 
 ``` 
 
-* loadSpikes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadspikes "Load detected spikes"): Load sparse indexing vector of spike peaks and an associated matrix of waveform snippets.
+* [loadSpikes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#loadspikes "Load detected spikes"): Load sparse indexing vector of spike peaks and an associated matrix of waveform snippets.
+
 ```Matlab
 % Returns a struct with spikes for channel 9.
 channel = 9;
@@ -211,14 +224,16 @@ out = block.loadSpikes(channel);
 out = block.loadSpikes; 
 ``` 
 
-* plotSpikes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotspikes "Plot spike cluster waveform snippets"): Plot all spike clusters for a single channel.
+* [plotSpikes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotspikes "Plot spike cluster waveform snippets"): Plot all spike clusters for a single channel.
+
 ```Matlab
 % Makes figure with spikes for channel 9, returns true if successful.
 channel = 9;
 flag = block.plotSpikes(channel);  
 ``` 
 
-* plotWaves(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotwaves "Plot data stream snippet"): Plot a short segment of the data stream from each channel on one plot. Note that this can take a **long time.** Highlights spikes and cluster assignments if spike detection and clustering or sorting has been performed as well. 
+* [plotWaves](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#plotwaves "Plot data stream snippet"): Plot a short segment of the data stream from each channel on one plot. Note that this can take a **long time.** Highlights spikes and cluster assignments if spike detection and clustering or sorting has been performed as well. 
+
 ```Matlab
 % Returns true if wave stream plot figure is generated successfully.
 flag = block.plotWaves;  % Plots most-filtered/curated possible.
@@ -237,15 +252,17 @@ SPK = 'C:/SORTED/CLUSTERS/or/SPIKES/PATH';
 flag = block.plotWaves(WAV,SPK);  
 ``` 
 
-* syncBehavior(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#syncbehavior "Synchronize behavioral and neural data"):  
+* [syncBehavior](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#syncbehavior "Synchronize behavioral and neural data"):  
 
-* takeNotes(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#takenotes "View or Add Notes .txt to Block"): 
+* [takeNotes](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#takenotes "View or Add Notes .txt to Block"): 
+
 ```Matlab
 % Pull up NotesUI to view or enter notes
 block.takeNotes;  
 ``` 
 
-* updateContents(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updatecontents "Refresh file contents of Block"): 
+* [updateContents](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updatecontents "Refresh file contents of Block"): 
+
 ```Matlab
 % Update files associated with all fields of blockObj.
 blockObj.updateContents;  
@@ -257,7 +274,8 @@ fieldname = 'Raw';
 blockObj.updateContents(fieldname);  
 ``` 
 
-* updateID(https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updateid "Modify ID tokens for Block"):  
+* [updateID](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Block#updateid "Modify ID tokens for Block"):  
+
 ```Matlab
 fieldname = 'Filt'; % Update filtered data streams identifier
 type = 'File';		 % For .mat files ('File' or 'Folder')
