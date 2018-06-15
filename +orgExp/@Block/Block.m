@@ -162,6 +162,9 @@ classdef Block < handle
          %
          % By: Max Murphy  v1.0  08/25/2017
          
+         %% LOAD DEFAULT ID SETTINGS
+         blockObj = def_params(blockObj);
+         
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})

@@ -15,12 +15,12 @@ classdef Tank < handle
 %
 %     convert - Convert raw data files to Matlab BLOCK hierarchical format.
 %
-%     get - Get a specific property from the TANK object.
-%
 %     list - List Block objects in the TANK.
 %
-%     set - Set a specific property of the TANK object. Returns a boolean
-%           flag as true if property is set successfully.
+%     tankGet - Get a specific property from the TANK object.
+%
+%     tankSet - Set a property of the TANK object. Returns a boolean
+%               flag as true if property is set successfully.
 %
 % By: Max Murphy  v1.0  06/14/2018
 
@@ -31,9 +31,20 @@ classdef Tank < handle
    end
    %% PRIVATE PROPERTIES
    properties (Access = private)
-      Block	% Children (BLOCK)
-      DIR   % Directory of the TANK
-      DEF = 'R:/Rat'; % Default for UI TANK selection
+      DIR                     % Directory of the TANK
+      
+      Block                   % Children (BLOCK)
+      BlockNameVars           % Metadata variables from BLOCK names
+      BlockStatusFlag         % Flag to indicate if blocks are at same step
+      Default_Tank_Loc        % Default for UI TANK selection
+      Delimiter               % Filename metadata delimiter
+      ExtractFlag             % Flag to indicate if extraction is needed
+      RecType                 % Acquisition system used for this Tank
+                              % Currently supported formats
+                              % ---------------------------
+                              % Intan  ('Intan')
+                              % TDT    ('TDT')                              
+      Save_Loc                % Directory of BLOCK hierarchy parent folder
    end
    
    %% PUBLIC METHODS
@@ -56,6 +67,9 @@ classdef Tank < handle
          %
          % By: Max Murphy  v1.0  06/14/2018
          
+         %% LOAD OTHER PRIVATE DEFAULT SETTINGS
+         tankObj = def_params(tankObj);
+         
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
@@ -70,7 +84,8 @@ classdef Tank < handle
          
          %% LOOK FOR BLOCK DIRECTORY
          if isempty(tankObj.DIR)
-            tankObj.DIR = uigetdir(tankObj.DEF,'Select recording BLOCK');
+            tankObj.DIR = uigetdir(tankObj.Default_Tank_Loc,...
+                                   'Select TANK folder');
             if tankObj.DIR == 0
                error('No block selected. Object not created.');
             end

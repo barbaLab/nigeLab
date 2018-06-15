@@ -5,9 +5,6 @@ function init(blockObj)
 %
 %  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
 
-%% LOAD DEFAULT ID SETTINGS
-blockObj = def_params(blockObj);
-
 %% LOOK FOR NOTES
 notes = dir(fullfile(blockObj.DIR,'*Description.txt'));
 if ~isempty(notes)

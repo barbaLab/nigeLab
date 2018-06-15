@@ -52,11 +52,16 @@ _**Figure 1:** Generic overview for behavioral electrophysiology data acquisitio
 ---
 ## File Structure Hierarchy ##
 ### Tank Structure ###  
+![][TankStructure_Initial]  
+_**Figure 2:** Raw Tank hierarchy with acquisition files or folders. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection._  
+  
 ![][TankStructure_Overview]  
-_**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection. The Tank may also contain a file with a general description of the types of experiments as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
+_**Figure 3:** Processed Tank-Block folder hierarchy overview. During the conversion process from raw acquisition file binaries to Matlab single-channel stream files, a second path is used to separate processed data from the initial data location. The file structure is similar to the initial acquisition recording structure, except that certain metadata, such as the Animal ID, are extracted automatically and used to sub-divide the recordings into Block folders. Because implants vary from animal-to-animal in details like the type of array or certain wires that are bad, these metadata can be stored in the individual Animal sub-folder. The Tank-level folder may also contain metadata files with a general description of the overall experiment as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
+  
+---  
 ### Block Structure ### 
 ![][BlockStructure_Overview]  
-_**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._   
+_**Figure 4:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._   
   
 ---
 ## Tank Methods Overview ##
@@ -352,13 +357,14 @@ blockObj.updateID(fieldname,type,updatedValue); % Update file associations.
 [DataPipeline_Conversion]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Conversion.JPG "Fig. 1b: Conversion of data from binary to Matlab-compatible file format"
 [DataPipeline_Analysis]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/DataPipeline_Analysis.JPG "Fig. 1c: Extraction of features of interest and hypothesis-testing"
 
-[TankStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Overview.JPG "Fig. 2: Tank folder hierarchy"
+[TankStructure_Initial]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Initial.JPG "Fig. 2: Raw Tank acquisition hierarchy"
+[TankStructure_Processed]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/TankBlockHierarchy_Overview.JPG "Fig. 3: Processed Tank-Block hierarchy"
 
-[BlockStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Overview.JPG "Fig. 3: Block file hierarchy"
-[BlockStructure_Base]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Base.JPG "Fig. 3a: Block parent folder"
-[BlockStructure_HighSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_HighSampleRateStreams.JPG "Fig. 3c: High sample rate streams"
-[BlockStructure_LowSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_LowSampleRateStreams.JPG "Fig. 3d: Low sample rate streams"
-[BlockStructure_SnippetFeatures]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_SnippetFeatures.JPG "Fig. 3e: Spike detection, clustering, and sorting"
-[BlockStructure_BehaviorSyncData]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_BehaviorSyncData.JPG "Fig. 3f: Digital inputs for behavioral synchronization to neural data"
+[BlockStructure_Overview]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Overview.JPG "Fig. 4: Block file hierarchy"
+[BlockStructure_Base]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_Base.JPG "Fig. 4a: Block parent folder"
+[BlockStructure_HighSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_HighSampleRateStreams.JPG "Fig. 4c: High sample rate streams"
+[BlockStructure_LowSampleRateStreams]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_LowSampleRateStreams.JPG "Fig. 4d: Low sample rate streams"
+[BlockStructure_SnippetFeatures]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_SnippetFeatures.JPG "Fig. 4e: Spike detection, clustering, and sorting"
+[BlockStructure_BehaviorSyncData]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/BlockStructure_BehaviorSyncData.JPG "Fig. 4f: Digital inputs for behavioral synchronization to neural data"
 
-[NamingConvention_Example]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/NamingConvention_Example.JPG "Fig. 3b: Naming convention used by the Nudo Lab at KUMC"
+[NamingConvention_Example]: https://github.com/m053m716/ePhys_packages/blob/master/%2BorgExp/img/NamingConvention_Example.JPG "Fig. 4b: Naming convention used by the Nudo Lab at KUMC"
