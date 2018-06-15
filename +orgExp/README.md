@@ -42,11 +42,13 @@ A package for keeping experimental data and metadata organized and easily access
 	* Depending on the length of recording and available computing resources, it may be wise to do this part overnight. 
 5. Once a set of Blocks reaches the same processing state, available figure or statistic export options are populated. 
 	* Based on naming convention, the Tank will try to pre-populate metadata variables, which can be used to group Block outputs.  
+  
 ---
 ## Data Pipeline ##
 ### Overview ###  
 ![][DataPipeline_Overview]  
-_**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline. Moving from performing experiments to data endpoints is easy with orgExp. Thanks to an intuitive user interface, no need to compile anything (everything runs in Matlab), and built-in flexibility that can be easily integrated to your workflow, orgExp is a good choice to move from acquisition to analysis seamlessly._
+_**Figure 1:** Generic overview for behavioral electrophysiology data acquisition and processing pipeline. Moving from performing experiments to data endpoints is easy with orgExp. Thanks to an intuitive user interface, no need to compile anything (everything runs in Matlab), and built-in flexibility that can be easily integrated to your workflow, orgExp is a good choice to move from acquisition to analysis seamlessly._  
+  
 ---
 ## File Structure Hierarchy ##
 ### Tank Structure ###  
@@ -54,7 +56,8 @@ _**Figure 1:** Generic overview for behavioral electrophysiology data acquisitio
 _**Figure 2:** Tank folder hierarchy overview. A Tank is a parent folder that contains one or more files as they are produced from the particular acquisition hardware and software used during data collection. The Tank may also contain a file with a general description of the types of experiments as well as a file that indicates how the naming convention should be translated into metadata for downstream analyses._  
 ### Block Structure ### 
 ![][BlockStructure_Overview]  
-_**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._  
+_**Figure 3:** Block folder and file hierarchy overview, after data processing and extraction has been applied to a recording file. The string inset at the top-right of the figure shows the recording naming convention used by the Nudo Lab (Cortical Plasticity Lab) at the University of Kansas Medical Center. The legend inset at the top-left of the figure shows the type(s) of file that are contained within a particular sub-folder or general grouping of types of files._   
+  
 ---
 ## Tank Methods Overview ##
 Brief example calls to methods used by Tank class. For more detailed descriptions, visit the Tank [class folder](https://github.com/m053m716/ePhys_packages/tree/master/%2BorgExp/%40Tank "@Tank") or try entering the following into the Matlab command window for more detailed documentation:   
