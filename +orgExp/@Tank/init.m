@@ -11,9 +11,11 @@ tankObj.Name = tankObj.Name{end};
 
 if isempty(tankObj.SaveLoc)
    tankObj.SaveLoc = fullfile(tankObj.DefaultSaveLoc,...
-                              tankObj.RecType,tankObj.Name);
-   if exist(tankObj.Save_Loc,'dir')==0
-      mkdir(tankObj.Save_Loc);
+                              tankObj.RecType);
+   tankObj.setSaveLocation;
+   
+   if exist(fullfile(tankObj.SaveLoc,tankObj.Name),'dir')==0
+      mkdir(fullfile(tankObj.SaveLoc,tankObj.Name));
       tankObj.ExtractFlag = true;
    else
       tankObj.ExtractFlag = false;

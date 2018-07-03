@@ -89,7 +89,7 @@ classdef Tank < handle
          
          %% LOOK FOR BLOCK DIRECTORY
          if isempty(tankObj.DIR)
-            tankObj.DIR = uigetdir(tankObj.Default_Tank_Loc,...
+            tankObj.DIR = uigetdir(tankObj.DefaultTankLoc,...
                                    'Select TANK folder');
             if tankObj.DIR == 0
                error('No block selected. Object not created.');

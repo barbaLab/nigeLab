@@ -1,8 +1,8 @@
-function intan2Block(tankObj,varargin)
-%% INTAN2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
+function intanRHS2Block(tankObj,varargin)
+%% INTANRHS2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
 %
-%  tankObj.INTAN2BLOCK;
-%  INTAN2BLOCK(tankObj,'NAME',value,...);
+%  tankObj.INTANRHS2BLOCK;
+%  INTANRHS2BLOCK(tankObj,'NAME',value,...);
 %
 %  --------
 %   INPUTS
@@ -19,7 +19,7 @@ function intan2Block(tankObj,varargin)
 
 %% DEFAULTS
 DEFTANK = 'R:/Rat/Intan';       % Default tank path for file-selection UI
-SAVELOC = 'P:/Extracted_Data_To_Move/Rat/Intan';
+SAVELOC = tankObj.SaveLoc;
 
 RAW_ID      = '_RawData';                 % Raw stream ID
 FILT_ID     = '_Filtered';                % Filtered stream ID

@@ -45,8 +45,8 @@ if nargin > 1
          error('File conversion aborted. Process canceled.');
       end
       
-      % Give chance to alter save location based on default settings
-      setSaveLocation(tankObj);
+%       % Give chance to alter save location based on default settings
+%       setSaveLocation(tankObj);
    end
 end
 
@@ -63,12 +63,14 @@ attach_files = dir(fullfile(repoPath,'**'));
 attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
 dir_files = ~cell2mat({attach_files(:).isdir})';
 ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
-   {attach_files(dir_files).name})';
+                          {attach_files(dir_files).name})';
 
 %% PARSE NAME DEPENDING ON RECORDING TYPE
 switch tankObj.RecType
    case 'Intan'
       F = dir(fullfile(tankObj.DIR,'*.rh*'));
+      Name = strsplit(tankObj.DIR,filesep);
+      Name = Name{numel(Name)};
       
       if numel(F) > 1
          ind = listdlg('PromptString','Select files to extract:',...
@@ -124,7 +126,14 @@ switch tankObj.RecType
             'STATE_FILTER',STATE_FILTER,...
             'FILE_TYPE',ftype{iF}};
          
-         createTask(j, @intan2Block, 0,{IN_ARGS});
+         switch ftype{iF}
+            case 'rhs'
+               createTask(j, @intanRHS2Block, 0,{IN_ARGS});
+            case 'rhd'
+               createTask(j, @intanRHD2Block, 0,{IN_ARGS});
+            otherwise
+               error('Invalid file type (%s).',ftype{iF});
+         end
          
          fprintf(1,'Submitting...');
          submit(j);
