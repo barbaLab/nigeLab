@@ -4,63 +4,162 @@ function init(blockObj)
 %  blockObj.INIT;
 %
 %  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
+%      Federico Barban v2.0 07/08/2018
+
+[~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.PATH);
+nameParts=strsplit(blockObj.Name,{blockObj.ID.Delimiter '.'});
+blockObj.Corresponding_animal = nameParts{1};
+blockObj.Recording_date = nameParts{3};
+blockObj.Recording_time = nameParts{4};
+blockObj.Recording_ID = nameParts{2};
+
+if isempty(blockObj.SaveLoc)
+   blockObj.SaveLoc = fullfile(blockObj.PATH);
+   blockObj.setSaveLocation;
+end
+blockObj.SaveLoc=fullfile(blockObj.SaveLoc,blockObj.Name);
+if exist(blockObj.SaveLoc,'dir')==0
+    mkdir(fullfile(blockObj.SaveLoc));
+    blockObj.ExtractFlag = true;
+else
+    blockObj.ExtractFlag = false;
+end
+
+
+switch blockObj.File_extension
+    case '.rhd' 
+        blockObj.RecType='Intan';
+        header=orgExp.libs.RHD_read_header;
+    case '.rhs'
+        blockObj.RecType='Intan';
+        header=orgExp.libs.RHS_read_header('NAME',blockObj.PATH);
+    otherwise
+        blockObj.RecType='other';
+end
+
+blockObj.Channels=header.amplifier_channels;
+blockObj.numChannels=numel(blockObj.Channels);
+
+
+%% Initialize paths
+
+%% Set some useful path variables
+delim=blockObj.ID.Delimiter;
+RAW_ID      = [delim blockObj.ID.Raw.Folder];                 % Raw stream ID
+FILT_ID     = [delim blockObj.ID.Filt.Folder];                % Filtered stream ID
+CAR_ID     = [delim blockObj.ID.CAR.Folder];              % Spatial re-reference stream ID
+DIG_ID      = [delim blockObj.ID.Digital.Folder];                 % Digital stream ID
+paths.RW= fullfile(blockObj.SaveLoc,[blockObj.Name RAW_ID]);
+paths.FW= fullfile(blockObj.SaveLoc,[blockObj.Name FILT_ID]);
+paths.CARW= fullfile(blockObj.SaveLoc,[blockObj.Name CAR_ID]);
+paths.DW= fullfile(blockObj.SaveLoc,[blockObj.Name DIG_ID]);
+
+if exist(paths.RW,'dir')==0
+    mkdir(paths.RW);
+end
+
+if exist(paths.FW,'dir')==0
+    mkdir(paths.FW);
+end
+
+if exist(paths.CARW,'dir')==0
+    mkdir(paths.CARW);
+end
+
+if exist(paths.DW,'dir')==0
+    mkdir(paths.DW);
+end
+
+if exist(fullfile(paths.DW,'STIM_DATA'),'dir')==0
+    mkdir(fullfile(paths.DW,'STIM_DATA'));
+end
+
+if exist(fullfile(paths.DW,'DC_AMP'),'dir')==0
+    mkdir(fullfile(paths.DW,'DC_AMP'));
+end
+
+paths.RW_N = fullfile(paths.RW,[blockObj.Name '_Raw_P%s_Ch_%s.mat']);
+paths.FW_N = fullfile(paths.FW,[blockObj.Name '_Filt_P%s_Ch_%s.mat']);
+paths.CARW_N = fullfile(paths.CARW,[blockObj.Name '_FiltCAR_P%s_Ch_%s.mat']);
+paths.DW_N = fullfile(paths.DW,[blockObj.Name '_DIG_%s.mat']);
+
+blockObj.paths = paths;
+%% CHECK WHETHER TO PROCEED with conversion
+% choice = questdlg('Do file conversion (can be long)?',...
+%     'Continue?',...
+%     'Yes','Cancel','Yes');
+% if strcmp(choice,'Cancel')
+%     warning('File conversion aborted. Process canceled.');
+% else
+%     blockObj.convert();
+% end
+
+%       % Give chance to alter save location based on default settings
+%       setSaveLocation(tankObj);
+
 
 %% LOOK FOR NOTES
-notes = dir(fullfile(blockObj.DIR,'*Description.txt'));
-if ~isempty(notes)
-   blockObj.Notes.File = fullfile(notes.folder,notes.name);
-   fid = fopen(blockObj.Notes.File,'r');
-   blockObj.Notes.String = textscan(fid,'%s',...
-      'CollectOutput',true,...
-      'Delimiter','\n');
-   fclose(fid);
-else
-   blockObj.Notes.File = [];
-   blockObj.Notes.String = [];
-end
+% notes = dir(fullfile(blockObj.DIR,'*Description.txt'));
+% if ~isempty(notes)
+%    blockObj.Notes.File = fullfile(notes.folder,notes.name);
+%    fid = fopen(blockObj.Notes.File,'r');
+%    blockObj.Notes.String = textscan(fid,'%s',...
+%       'CollectOutput',true,...
+%       'Delimiter','\n');
+%    fclose(fid);
+% else
+%    blockObj.Notes.File = [];
+%    blockObj.Notes.String = [];
+% end
 
-%% ADD PUBLIC BLOCK PROPERTIES
-path = strsplit(blockObj.DIR,filesep);
-blockObj.Name = path{numel(path)};
-finfo = strsplit(blockObj.Name,blockObj.ID.Delimiter);
+%% Convert and attach raw files
 
-for iL = 1:numel(blockObj.Fields)
-   blockObj.updateContents(blockObj.Fields{iL});
-end
+%% I don't really understand what you were trying to achieve here
+% for the moment i'm trying to get a bare minimum functioning structure in
+% order to start working on it
 
-%% ADD CHANNEL INFORMATION
-if ismember('CAR',blockObj.Fields(blockObj.Status))
-   blockObj.Channels.Board = sort(blockObj.CAR.ch,'ascend');
-elseif ismember('Filt',blockObj.Fields(blockObj.Status))
-   blockObj.Channels.Board = sort(blockObj.Filt.ch,'ascend');
-elseif ismember('Raw',blockObj.Fields(blockObj.Status))
-   blockObj.Channels.Board = sort(blockObj.Raw.ch,'ascend');
-end
+% %% ADD PUBLIC BLOCK PROPERTIES
+% path = strsplit(blockObj.DIR,filesep);
+% blockObj.Name = path{numel(path)};
+% finfo = strsplit(blockObj.Name,blockObj.ID.Delimiter);
+%
+% for iL = 1:numel(blockObj.Fields)
+%    blockObj.updateContents(blockObj.Fields{iL});
+% end
 
-% Check for user-specified MASKING
-if ~isempty(blockObj.MASK)
-   if abs(numel(blockObj.MASK)-numel(blockObj.Channels.Board))<eps
-      blockObj.Channels.Mask = blockObj.MASK;
-   else
-      warning('Wrong # of elements in specified MASK.');
-      fprintf(1,'Using all channels by default.\n');
-      blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
-   end
-else
-   blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
-end
+%% ADD CHANNEL INFORMATION??????
+% if ismember('CAR',blockObj.Fields(blockObj.Status))
+%    blockObj.Channels.Board = sort(blockObj.CAR.ch,'ascend');
+% elseif ismember('Filt',blockObj.Fields(blockObj.Status))
+%    blockObj.Channels.Board = sort(blockObj.Filt.ch,'ascend');
+% elseif ismember('Raw',blockObj.Fields(blockObj.Status))
+%    blockObj.Channels.Board = sort(blockObj.Raw.ch,'ascend');
+% end
 
-% Check for user-specified REMAPPING
-if ~isempty(blockObj.REMAP)
-   if abs(numel(blockObj.REMAP)-numel(blockObj.Channels.Board))<eps
-      blockObj.Channels.Probe = blockObj.REMAP;
-   else
-      warning('Wrong # of elements in specified REMAP.');
-      fprintf(1,'Using board channels by default.\n');
-      blockObj.Channels.Probe = blockObj.Channels.Board;
-   end
-else
-   blockObj.Channels.Probe = blockObj.Channels.Board;
-end
+% % Check for user-specified MASKING
+% if ~isempty(blockObj.MASK)
+%    if abs(numel(blockObj.MASK)-numel(blockObj.Channels.Board))<eps
+%       blockObj.Channels.Mask = blockObj.MASK;
+%    else
+%       warning('Wrong # of elements in specified MASK.');
+%       fprintf(1,'Using all channels by default.\n');
+%       blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
+%    end
+% else
+%    blockObj.Channels.Mask = true(size(blockObj.Channels.Board));
+% end
+
+% % Check for user-specified REMAPPING
+% if ~isempty(blockObj.REMAP)
+%    if abs(numel(blockObj.REMAP)-numel(blockObj.Channels.Board))<eps
+%       blockObj.Channels.Probe = blockObj.REMAP;
+%    else
+%       warning('Wrong # of elements in specified REMAP.');
+%       fprintf(1,'Using board channels by default.\n');
+%       blockObj.Channels.Probe = blockObj.Channels.Board;
+%    end
+% else
+%    blockObj.Channels.Probe = blockObj.Channels.Board;
+% end
 
 end

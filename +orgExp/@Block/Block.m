@@ -65,8 +65,7 @@ classdef Block < handle
 
 %% PUBLIC PROPERTIES
    properties (Access = public)
-      Name        % Base name of block
-      
+      Name
       Fields      % List of property field names
       
       % Graphics - Graphical objects associated with BLOCK object.
@@ -76,25 +75,43 @@ classdef Block < handle
       % -> Waves : AXES object. Destroyed when figure is
       %            closed.
       Graphics    % Graphical objects associated with block
+      RecType      % Intan TDT or other
+
       
-      Status      % Completion status for each element of BLOCK/FIELDS
-      
-      Channels    % List of channels from board, from probe, and masking.
    end
 
+   properties (Access = public) % debugging purpose, is protected
+       Sample_rate
+       Time
+       Corresponding_animal
+       Recording_date
+       Recording_time
+       Recording_ID
+       File_extension
+       Channels    % list of channels with varius metadata and recording data inside it.
+                    % might actually be a better idea to create a special
+                    % channel class, in order to adress some issues
+                    % concerning the access to matfiles
+       numChannels
+       Status      % Completion status for each element of BLOCK/FIELDS
+
+   end
+   
 %% PRIVATE PROPERTIES
-   properties (Access = private)
-      DIR         % Full directory of block
-      Raw         % Raw Data files
-      Filt        % Filtered files
-      CAR         % CAR-filtered files
-      DS          % Downsampled files
-      Spikes      % Spike detection files
-      Clusters    % Unsupervised clustering files
-      Sorted      % Sorted spike files
-      MEM         % LFP spectra files
-      Digital     % "Digital" (extra) input files
+   properties (Access = public) % debugging purpose, is private
+      PATH          % Raw binary directory
+      SAVELOC       % Saving path for extracted/processed data
+%       Raw         % Raw Data files
+%       Filt        % Filtered files
+%       CAR         % CAR-filtered files
+%       DS          % Downsampled files
+%       Spikes      % Spike detection files
+%       Clusters    % Unsupervised clustering files
+%       Sorted      % Sorted spike files
+%       MEM         % LFP spectra files
+%       Digital     % "Digital" (extra) input files
       ID          % Identifier structure for different elements
+      paths        % in detail paths specifications for all the saved files
       Notes       % Notes from text file
       DEF = 'P:/Rat'; % Default for UI BLOCK selection
       CH_ID = 'Ch';   % Channel index ID
@@ -103,6 +120,8 @@ classdef Block < handle
       VERBOSE = true; % Whether to report list of files and fields.
       MASK  % Whether to include channels or not
       REMAP % Mapping of channel numbers to actual numbers on probe
+      ExtractFlag
+      SaveLoc
    end
    
 %% PUBLIC METHODS
@@ -178,14 +197,16 @@ classdef Block < handle
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         if isempty(blockObj.DIR)
-            blockObj.DIR = uigetdir(blockObj.DEF,'Select recording BLOCK');
-            if blockObj.DIR == 0
+         if isempty(blockObj.PATH)
+             [file,path]= uigetfile(fullfile(blockObj.DEF,'*.*'),...
+                 'Select recording BLOCK');
+            blockObj.PATH = fullfile(path,file);
+            if blockObj.PATH == 0
                error('No block selected. Object not created.');
             end
          else
-            if exist(blockObj.DIR,'dir')==0
-               error('%s is not a valid block directory.',blockObj.DIR);
+            if exist(blockObj.PATH,'file')==0
+               error('%s is not a valid block file.',blockObj.DIR);
             end
          end
          
@@ -194,6 +215,9 @@ classdef Block < handle
          
       end
       
+      filterData(tankObj)
+      CAR(tankObj)
+      convert(tankObj)                % Convert raw data to Matlab BLOCK
       updateID(blockObj,name,type,value) % Update the file or folder identifier
       flag = list(blockObj,name) % List of current associated files for field or fields
       flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
@@ -205,8 +229,10 @@ classdef Block < handle
       takeNotes(blockObj) % View or update notes on current recording
       out = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop) % Set a specific BLOCK property
+      setSaveLocation(blockObj)
+      RHD2Block(blockObj)
+      RHS2Block(blockObj)
    end
-   
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording
    end
@@ -214,5 +240,6 @@ classdef Block < handle
 %% PRIVATE METHODS
    methods (Access = 'private')
       init(blockObj) % Initializes the BLOCK object
+
    end
 end
