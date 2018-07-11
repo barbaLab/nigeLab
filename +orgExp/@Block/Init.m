@@ -162,4 +162,5 @@ blockObj.paths = paths;
 %    blockObj.Channels.Probe = blockObj.Channels.Board;
 % end
 
+blockObj.save;
 end

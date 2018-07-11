@@ -1,4 +1,4 @@
-function syncBehavior(blockObj,varargin)
+function SyncBehavior(blockObj,varargin)
 %% SYNCBEHAVIOR   Get event times from synchronized optiTrack record.
 %
 %  tEvent = SYNCBEHAVIOR(blockObj);

@@ -15,9 +15,11 @@ else
 end
 
 
-
-Recordings = dir(animalObj.DIR);
-
+supportedFormats={'rhs','rhd','tdt'};
+Recordings=[];
+for i=supportedFormats
+ Recordings = [ Recordings dir(fullfile(animalObj.DIR,['*.' i{:}]))];
+end
 Recordings=Recordings(~ismember({Recordings.name},{'.','..'}));
 Recordings=Recordings(~[Recordings.isdir]);
 
@@ -25,6 +27,6 @@ for bb=1:numel(Recordings)
     RecFile=fullfile(Recordings(bb).folder,Recordings(bb).name);
     animalObj.addBlock(RecFile);
 end
-
+animalObj.save;
 end
 

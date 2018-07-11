@@ -1,4 +1,4 @@
-function flag = convert(tankObj,confirm)
+function flag = convert(blockObj)
 %% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
 %
 %  flag = tankObj.CONVERT;
@@ -24,48 +24,46 @@ STIM_P_CH = [nan nan];      % [probe, channel] for stimulation channel
 STIM_BLANK = [0.2 1.75];    % [pre stim ms, post stim ms] for offline suppress
 STATE_FILTER = true;
 
-%% CHECK WHETHER TO PROCEED
-flag = false;
-if nargin > 1
-    if confirm
-        choice = questdlg('Do file conversion (can be long)?',...
-            'Continue?',...
-            'Yes','Cancel','Yes');
-        if strcmp(choice,'Cancel')
-            error('File conversion aborted. Process canceled.');
-        end
-        
-        %       % Give chance to alter save location based on default settings
-        %       setSaveLocation(tankObj);
-    end
-end
+
 
 %% GET GENERIC INFO
-DIR = [UNC_PATH{1}, ...
-    tankObj.DIR((find(tankObj.DIR == filesep,1,'first')+1):end)];
-SAVELOC = [UNC_PATH{2}, ...
-    tankObj.SaveLoc((find(tankObj.SaveLoc == filesep,1,'first')+1):end)];
+% DIR = [UNC_PATH{1}, ...
+%     tankObj.DIR((find(tankObj.DIR == filesep,1,'first')+1):end)];
+% SAVELOC = [UNC_PATH{2}, ...
+%     tankObj.SaveLoc((find(tankObj.SaveLoc == filesep,1,'first')+1):end)];
 
-%% GET CURRENT VERSION INFORMATION
-[repoPath, ~] = fileparts(mfilename('fullpath'));
-gitInfo = getGitInfo(repoPath);
-attach_files = dir(fullfile(repoPath,'**'));
-attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
-dir_files = ~cell2mat({attach_files(:).isdir})';
-ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
-    {attach_files(dir_files).name})';
+%% GET CURRENT VERSION INFORMATION WIP
+% [repoPath, ~] = fileparts(mfilename('fullpath'));
+% gitInfo = getGitInfo(repoPath);
+% attach_files = dir(fullfile(repoPath,'**'));
+% attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
+% dir_files = ~cell2mat({attach_files(:).isdir})';
+% ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
+%     {attach_files(dir_files).name})';
 
 %% PARSE NAME DEPENDING ON RECORDING TYPE
 
-switch tankObj.ParallelFlag
-    % For finding clusters
-    case 'Remote Pool'
-        tankObj.ClusterCovert;
-    case 'Local pool'
-        tankObj.LocalCovert;
-    otherwise
-        tankObj.SlowCovert;
+switch blockObj.RecType
+    case 'Intan'
 
+            switch blockObj.File_extension
+                case '.rhs'
+                    blockObj.RHS2Block()
+                case '.rhd'
+                    blockObj.RHD2Block()
+                otherwise
+                    error('Invalid file type (%s).',blockObj.File_extension);
+            end
+            
+            fprintf(1,['complete.' newline]);
+            
+        
+    case 'TDT'
+        fprintf(1,'Unsupported yet')
+    case 'mat'
+        fprintf(1,'Unsupported yet')
+    otherwise
+        error('%s is not a supported acquisition system (case-sensitive).');
 end
 
 flag = true;

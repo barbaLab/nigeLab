@@ -335,7 +335,8 @@ DesiredOutputs = {
     'num_amplifier_samples';
     'num_board_dig_out_samples';
     'header_size';
-    'filesize';    
+    'filesize';   
+    'bytes_per_block';
     
     };
 end

@@ -33,10 +33,10 @@ classdef Tank < handle
       
    end
    %% PRIVATE PROPERTIES
-   properties (Access = private)
+   properties (Access = public) %debugging purposes, is private
       DIR                     % Directory of the TANK
-      
-      Block                   % Children (BLOCK)
+      Animals                 % Children (ANIMAL)
+
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
       CheckBeforeConversion   % Flag to ask for confirmation before convert
@@ -49,7 +49,8 @@ classdef Tank < handle
                               % ---------------------------
                               % Intan  ('Intan')
                               % TDT    ('TDT')                              
-      SaveLoc                 % Directory of BLOCK hierarchy parent folder
+      SaveLoc                % Directory of BLOCK hierarchy parent folder
+      ParallelFlag
    end
    
    %% PUBLIC METHODS
@@ -105,7 +106,17 @@ classdef Tank < handle
          
       end
       
-      flag = convert(tankObj,confirm) % Convert raw data to Matlab BLOCK
+      function addAnimal(tankObj,AnimalFolder)
+         newAnimal= orgExp.Animal('DIR',AnimalFolder,...
+             'SaveLoc',fullfile(tankObj.SaveLoc,tankObj.Name));
+         tankObj.Animals = [tankObj.Animals newAnimal];
+      end
+      
+      function save(tankObj)
+         save(fullfile(tankObj.SaveLoc,[tankObj.Name '.mat']),'tankObj') 
+      end
+      
+      convert(tankObj)                % Convert raw data to Matlab BLOCK
       blockList = list(tankObj)       % List Blocks in TANK
       out = tankGet(tankObj,prop)     % Get a specific TANK property
       flag = tankSet(tankObj,prop)    % Set a specific TANK property
@@ -115,5 +126,8 @@ classdef Tank < handle
       init(tankObj)                 % Initializes the TANK object.
       intan2Block(tankObj,varargin) % Does the actual data conversion
       setSaveLocation(tankObj)      % Set save location for processed TANK.
+      ClusterConvert(tankObj)
+      LocalConvert(tankObj)
+      SlowConvert(tankObj)
    end
 end

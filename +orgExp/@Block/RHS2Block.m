@@ -215,39 +215,41 @@ if (data_present)
     % big as possible to speed up the process. in order to do that we will
     % alocate 4/5 of the available memory to those variables.
     
-    nDataPoints=num_samples_per_data_block*2;   %time
-    if (num_amplifier_channels > 0)
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %amplifier_data
-        if (dc_amp_data_saved ~= 0)
-            nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %dc_amplifier_data
-        end
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %stim_data
-    end
+%     nDataPoints=num_samples_per_data_block*2;   %time
+%     if (num_amplifier_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %amplifier_data
+%         if (dc_amp_data_saved ~= 0)
+%             nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %dc_amplifier_data
+%         end
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %stim_data
+%     end
+%     
+%     if (num_board_adc_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_adc_channels; %board_adc_data
+%     end
+%     
+%     if (num_board_dac_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dac_channels;    %board_dac_data
+%     end
+%     
+%     if (num_board_dig_in_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_in_channels; %board_dig_in_raw
+%     end
+%     
+%     if (num_board_dig_out_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_out_channels; %board_dig_out_raw
+%     end
     
-    if (num_board_adc_channels > 0)
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_board_adc_channels; %board_adc_data
-    end
-    
-    if (num_board_dac_channels > 0)
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dac_channels;    %board_dac_data
-    end
-    
-    if (num_board_dig_in_channels > 0)
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_in_channels; %board_dig_in_raw
-    end
-    
-    if (num_board_dig_out_channels > 0)
-        nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_out_channels; %board_dig_out_raw
-    end
-    
+nDataPoints=bytes_per_block/2; % reading uint16
+
     time_buffer_index = false(1,nDataPoints);
     amplifier_buffer_index = uint16(zeros(1,nDataPoints));
     dc_amplifier_buffer_index = uint16(zeros(1,nDataPoints));
     stim_buffer_index = uint16(zeros(1,nDataPoints));
     adc_buffer_index = uint16(zeros(1,nDataPoints));
     dac_buffer_index = uint16(zeros(1,nDataPoints));
-    dig_in_buffer_index = uint16(zeros(1,nDataPoints));
-    dig_out_buffer_index = uint16(zeros(1,nDataPoints));
+    dig_in_buffer_index = false(1,nDataPoints);
+    dig_out_buffer_index = false(1,nDataPoints);
     
     
     [~,MEM]=memory;
@@ -295,17 +297,17 @@ if (data_present)
     end
     
     if (num_board_dig_in_channels > 0)
-        index=end_+1:end_+num_samples_per_data_block * num_board_dig_in_channels;
+        index=end_+1:end_+num_samples_per_data_block * 1;
         end_=index(end);
-        dig_in_buffer_index(index)=uint16(reshape(repmat(1:num_board_dig_in_channels,num_samples_per_data_block,1),1,[]));
+        dig_in_buffer_index(index)=true;
         dig_in_buffer_index=repmat(dig_in_buffer_index,1,nBlocks);
         
     end
     
     if (num_board_dig_out_channels > 0)
-        index=end_+1:end_+num_samples_per_data_block * num_board_dig_out_channels;
+        index=end_+1:end_+num_samples_per_data_block * 1;
         end_=index(end);
-        dig_out_buffer_index(index)=uint16(reshape(repmat(1:num_board_dig_out_channels,num_samples_per_data_block,1),1,[]));
+        dig_out_buffer_index(index)=true;
         dig_out_buffer_index=repmat(dig_out_buffer_index,1,nBlocks);
         
     end
@@ -335,7 +337,7 @@ if (data_present)
         %%% Read binary data.
         blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
         dataToRead = blocksToread*nDataPoints;
-        Buffer=uint16(fread(fid, dataToRead, 'int16'))';        
+        Buffer=uint16(fread(fid, dataToRead, 'uint16'))';        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%% Update the files
@@ -366,14 +368,20 @@ if (data_present)
             board_dac_dataFile{jj}.data(1,index) = single(Buffer(dac_buffer_index(1:dataToRead)==jj));
         end
         
-        
-        for jj=1:num_board_dig_in_channels
-            mask = uint16(2^(board_dig_in_channels(jj).native_order) * ones(size(Buffer(dig_in_buffer_index(1:dataToRead)==jj))));
-            board_dig_in_dataFile{jj}.data = (bitand(Buffer(dig_in_buffer_index(1:dataToRead)==jj), mask) > 0);
+        if num_board_dig_in_channels
+            dig_in_raw=Buffer(dig_in_buffer_index(1:dataToRead));
+            for jj=1:num_board_dig_in_channels
+                mask = uint16(2^(board_dig_in_channels(jj).native_order) * ones(size(dig_in_raw)));
+                board_dig_in_dataFile{jj}.data = (bitand(dig_in_raw, mask) > 0);
+            end
         end
-        for jj=1:num_board_dig_out_channels
-            mask =uint16( 2^(board_dig_out_channels(jj).native_order) * ones(size(Buffer(dig_out_buffer_index(1:dataToRead)==jj))));
-            board_dig_out_dataFile{jj}.data = (bitand(Buffer(dig_out_buffer_index(1:dataToRead)==jj), mask) > 0);
+
+        if num_board_dig_out_channels
+            dig_out_raw=Buffer(dig_out_buffer_index(1:dataToRead));
+            for jj=1:num_board_dig_out_channels
+                mask =uint16( 2^(board_dig_out_channels(jj).native_order) * ones(size(dig_out_raw)));
+                board_dig_out_dataFile{jj}.data = (bitand(dig_out_raw, mask) > 0);
+            end
         end
         
         progress=progress+min(nBlocks,num_data_blocks-nBlocks*(i-1));

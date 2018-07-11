@@ -61,6 +61,10 @@ classdef Animal < handle
          animalObj.Blocks = [animalObj.Blocks newBlock];
       end
       
+      function save(animalObj)
+          save(fullfile(animalObj.SaveLoc,animalObj.Name),'animalObj')
+      end
+      
 %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
       table = listBlocks(animalObj)         % List of recordings currently associated with the animal
       updateContents(blockObj,fieldname)    % Update files for specific field

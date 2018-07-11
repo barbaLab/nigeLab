@@ -215,6 +215,10 @@ classdef Block < handle
          
       end
       
+      function save(blockObj)
+          save(fullfile(blockObj.SaveLoc,blockObj.Name),'blockObj');          
+      end
+      
       filterData(tankObj)
       CAR(tankObj)
       convert(tankObj)                % Convert raw data to Matlab BLOCK
