@@ -251,9 +251,12 @@ nDataPoints=bytes_per_block/2; % reading uint16
     dig_in_buffer_index = false(1,nDataPoints);
     dig_out_buffer_index = false(1,nDataPoints);
     
-    
+    if ~isunix
     [~,MEM]=memory;
-    AvailableMemory=MEM.PhysicalMemory.Available*0.8;
+     AvailableMemory=MEM.PhysicalMemory.Available*0.8;
+    else
+        AvailableMemory=2147483648;
+    end
     nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/8));
     %     t = zeros(1, num_samples_per_data_block);
     
