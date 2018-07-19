@@ -347,7 +347,8 @@ nDataPoints=bytes_per_block/2; % reading uint16
         index =uint32( index(end) + 1 : index(end)+num_samples_per_data_block*blocksToread);
         
         t=Buffer(time_buffer_index(1:dataToRead));
-        t=bi2de(reshape(de2bi(t,16)',32,[])');  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
+        tmp=dec2bin(t,16);
+        t=bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]);  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
         
         num_gaps = num_gaps + sum(diff(t) ~= 1);
         
