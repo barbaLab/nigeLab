@@ -11,7 +11,7 @@ APASS  = 0.001;      % Passband Ripple (dB)
 ASTOP2 = 70;         % Second Stopband Attenuation (dB)
 MATCH  = 'both';     % Band to match exactly
 
-SAVELOC = blockObj.SAVELOC;
+SAVELOC = blockObj.SaveLoc;
 
 STIM_SUPPRESS = false;
 STIM_P_CH = [nan, nan];
@@ -93,8 +93,8 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', FSTOP1, ...
                 nChanPb = sum(iPb == [blockObj.Channels.port_number]);
                 %             data = single(filtfilt(b,a,double(data)));
                 fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
-                save(fullfile(fname),'data');
-                blockObj.Channels(iCh).filtData = orgExp.libs.DiskData(matfile(fname));
+                save(fullfile(fname),'data','-v7.3');
+                blockObj.Channels(iCh).Filtered = orgExp.libs.DiskData(matfile(fname));
             end
             clear data
             fraction_done = 100 * (iCh / blockObj.numChannels);

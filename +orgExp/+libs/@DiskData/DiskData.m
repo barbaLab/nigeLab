@@ -1,6 +1,5 @@
 classdef DiskData
-    %DISKDATA Summary of this class goes here
-    %   Detailed explanation goes here
+    %DISKDATA 
     
     properties (Access = private)
         diskfile
@@ -12,8 +11,7 @@ classdef DiskData
     
     methods
         function obj = DiskData(inputArg1)
-            %DISKDATA Construct an instance of this class
-            %   Detailed explanation goes here
+            %DISKDATA Constructor
             if isa(inputArg1,'matlab.io.MatFile')
                 obj.diskfile = inputArg1;
                 info = whos(obj.diskfile);
@@ -59,6 +57,14 @@ classdef DiskData
             end
         end
         
+        function Out = minus(obj,b)
+            if isa(b,'orgExp.libs.DiskData')
+               Out=obj.diskfile.(obj.name)(:,:)-b.diskfile.(b.name)(:,:);
+            elseif isnumeric(b)
+                Out=obj.diskfile.(obj.name)(:,:)-b;
+            end
+        end
+        
         function dim = size(obj)
             dim=obj.size_;
         end        
@@ -67,6 +73,13 @@ classdef DiskData
         end        
         function l=length(obj)
            l=max(obj.size_);
+        end
+        function Out = double(obj)
+           Out= double(obj.diskfile.(obj.name)(:,:));
+        end
+        
+        function Out = getPath(obj)
+            Out=obj.diskfile.Properties.Source;
         end
     end
 end

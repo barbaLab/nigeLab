@@ -82,6 +82,7 @@ classdef Block < handle
 
    properties (Access = public) % debugging purpose, is protected
        Sample_rate
+       Downsampled_rate
        Time
        Corresponding_animal
        Recording_date
@@ -89,10 +90,20 @@ classdef Block < handle
        Recording_ID
        File_extension
        Channels    % list of channels with varius metadata and recording data inside it.
-                    % might actually be a better idea to create a special
-                    % channel class, in order to adress some issues
-                    % concerning the access to matfiles
+       % might actually be a better idea to create a special
+       % channel class, in order to adress some issues
+       % concerning the access to matfiles
        numChannels
+       dcAmpDataSaved
+       numADCchannels
+       numDACChannels
+       numDigInChannels
+       numDigOutChannels
+       DACChannels
+       ADCChannels
+       DigInChannels
+       DigOutChannels
+       
        Status      % Completion status for each element of BLOCK/FIELDS
 
    end
@@ -100,7 +111,7 @@ classdef Block < handle
 %% PRIVATE PROPERTIES
    properties (Access = public) % debugging purpose, is private
       PATH          % Raw binary directory
-      SAVELOC       % Saving path for extracted/processed data
+      SaveLoc       % Saving path for extracted/processed data
 %       Raw         % Raw Data files
 %       Filt        % Filtered files
 %       CAR         % CAR-filtered files
@@ -121,7 +132,7 @@ classdef Block < handle
       MASK  % Whether to include channels or not
       REMAP % Mapping of channel numbers to actual numbers on probe
       ExtractFlag
-      SaveLoc
+      
    end
    
 %% PUBLIC METHODS
@@ -219,11 +230,12 @@ classdef Block < handle
           save(fullfile(blockObj.SaveLoc,blockObj.Name),'blockObj');          
       end
       
-      filterData(tankObj)
-      CAR(tankObj)
-      convert(tankObj)                % Convert raw data to Matlab BLOCK
+      extractLFP(blockObj)
+      filterData(blockObj)
+      CAR(blockObj)
+      convert(blockObj)                % Convert raw data to Matlab BLOCK
       updateID(blockObj,name,type,value) % Update the file or folder identifier
-      flag = list(blockObj,name) % List of current associated files for field or fields
+      L = list(blockObj) % List of current associated files for field or fields
       flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
       flag = plotSpikes(blockObj,ch) % Show spike clusters for a single channel
       out = loadSpikes(blockObj,ch) % Load spikes for a given channel
@@ -236,13 +248,16 @@ classdef Block < handle
       setSaveLocation(blockObj)
       RHD2Block(blockObj)
       RHS2Block(blockObj)
+      linkToData(blockObj,path)
+      genPaths(blockObj)
+      
    end
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording
    end
 
 %% PRIVATE METHODS
-   methods (Access = 'private')
+   methods (Access = 'public') % debugging purpose, is private
       init(blockObj) % Initializes the BLOCK object
 
    end

@@ -107,19 +107,39 @@ classdef Tank < handle
       end
       
       function addAnimal(tankObj,AnimalFolder)
+          if nargin<2
+              AnimalFolder=[];
+          end
+          if isempty(AnimalFolder)
+            AnimalFolder = uigetdir(tankObj.DIR,...
+                                   'Select animal folder');
+            if AnimalFolder == 0
+               error('No animal selected. Object not created.');
+            end
+         else
+            if exist(AnimalFolder,'dir')==0
+               error('%s is not a valid block directory.',AnimalFolder);
+            end
+         end
+          
          newAnimal= orgExp.Animal('DIR',AnimalFolder,...
              'SaveLoc',fullfile(tankObj.SaveLoc,tankObj.Name));
          tankObj.Animals = [tankObj.Animals newAnimal];
       end
       
       function save(tankObj)
+          A=tankObj.Animals;
+          for ii=1:numel(A)
+              A(ii).save;
+          end
          save(fullfile(tankObj.SaveLoc,[tankObj.Name '.mat']),'tankObj') 
       end
-      
+      linkToData(tankObj)
       convert(tankObj)                % Convert raw data to Matlab BLOCK
       blockList = list(tankObj)       % List Blocks in TANK
       out = tankGet(tankObj,prop)     % Get a specific TANK property
       flag = tankSet(tankObj,prop)    % Set a specific TANK property
+      CAR(tankObj)
    end
    %% PRIVATE METHODS
    methods (Access = private)
@@ -129,5 +149,6 @@ classdef Tank < handle
       ClusterConvert(tankObj)
       LocalConvert(tankObj)
       SlowConvert(tankObj)
+      
    end
 end

@@ -1,4 +1,4 @@
-function flag = list(blockObj,name)
+function L = list(blockObj)
 %% LIST  Give list of current files associated with field.
 %
 %  flag = blockObj.LIST;
@@ -24,29 +24,52 @@ function flag = list(blockObj,name)
 % By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
 %                 v1.1  06/14/2018 Added flag output
 
-%% RETURN LIST OF VALUES
-if nargin == 2
-   if isempty(blockObj.(name).dir)
-      fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
-      flag = false;
-   else
-      fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-         name, blockObj.Name, ...
-         strjoin({blockObj.(name).dir.name},'\n->\t'));
-      flag = true;
-   end
-else
-   flag = false;
-   for iL = 1:numel(blockObj.Fields)
-      name = blockObj.Fields{iL};
-      if isempty(blockObj.(name).dir)
-         fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
-      else
-         fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-            name, blockObj.Name, ...
-            strjoin({blockObj.(name).dir.name},'\n->\t'));
-         flag = true;
-      end
-   end
+
+DateTime=datetime([blockObj.Recording_date blockObj.Recording_time],'InputFormat','yyMMddHHmmss');
+infoFields={'RecType'
+            'Corresponding_animal'
+            'Recording_ID'
+            'File_extension'
+            'numChannels'
+            };
+                
+info.Recording_date=DateTime;
+for jj=1:numel(infoFields)
+info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
+
+
+
+L_=struct2table(info);
+if nargout==0
+    disp(L_);
+else
+    L=L_;
+end
+
+%% RETURN LIST OF VALUES
+% if nargin == 2
+%    if isempty(blockObj.(name).dir)
+%       fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
+%       flag = false;
+%    else
+%       fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
+%          name, blockObj.Name, ...
+%          strjoin({blockObj.(name).dir.name},'\n->\t'));
+%       flag = true;
+%    end
+% else
+%    flag = false;
+%    for iL = 1:numel(blockObj.Fields)
+%       name = blockObj.Fields{iL};
+%       if isempty(blockObj.(name).dir)
+%          fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
+%       else
+%          fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
+%             name, blockObj.Name, ...
+%             strjoin({blockObj.(name).dir.name},'\n->\t'));
+%          flag = true;
+%       end
+%    end
+% end
 end

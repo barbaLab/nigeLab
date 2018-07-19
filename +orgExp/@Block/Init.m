@@ -39,51 +39,20 @@ end
 
 blockObj.Channels=header.amplifier_channels;
 blockObj.numChannels=numel(blockObj.Channels);
+blockObj.dcAmpDataSaved=header.dc_amp_data_saved;
+blockObj.numADCchannels = header.num_board_adc_channels;
+blockObj.numDACChannels = header.num_board_dac_channels;
+blockObj.numDigInChannels = header.num_board_dig_in_channels;
+blockObj.numDigOutChannels = header.num_board_dig_out_channels;
 
+blockObj.DACChannels=header.board_dac_channels;
+blockObj.ADCChannels=header.board_adc_channels;
+blockObj.DigInChannels=header.board_dig_in_channels;
+blockObj.DigOutChannels=header.board_dig_out_channels;
 
 %% Initialize paths
+blockObj.genPaths;
 
-%% Set some useful path variables
-delim=blockObj.ID.Delimiter;
-RAW_ID      = [delim blockObj.ID.Raw.Folder];                 % Raw stream ID
-FILT_ID     = [delim blockObj.ID.Filt.Folder];                % Filtered stream ID
-CAR_ID     = [delim blockObj.ID.CAR.Folder];              % Spatial re-reference stream ID
-DIG_ID      = [delim blockObj.ID.Digital.Folder];                 % Digital stream ID
-paths.RW= fullfile(blockObj.SaveLoc,[blockObj.Name RAW_ID]);
-paths.FW= fullfile(blockObj.SaveLoc,[blockObj.Name FILT_ID]);
-paths.CARW= fullfile(blockObj.SaveLoc,[blockObj.Name CAR_ID]);
-paths.DW= fullfile(blockObj.SaveLoc,[blockObj.Name DIG_ID]);
-
-if exist(paths.RW,'dir')==0
-    mkdir(paths.RW);
-end
-
-if exist(paths.FW,'dir')==0
-    mkdir(paths.FW);
-end
-
-if exist(paths.CARW,'dir')==0
-    mkdir(paths.CARW);
-end
-
-if exist(paths.DW,'dir')==0
-    mkdir(paths.DW);
-end
-
-if exist(fullfile(paths.DW,'STIM_DATA'),'dir')==0
-    mkdir(fullfile(paths.DW,'STIM_DATA'));
-end
-
-if exist(fullfile(paths.DW,'DC_AMP'),'dir')==0
-    mkdir(fullfile(paths.DW,'DC_AMP'));
-end
-
-paths.RW_N = fullfile(paths.RW,[blockObj.Name '_Raw_P%s_Ch_%s.mat']);
-paths.FW_N = fullfile(paths.FW,[blockObj.Name '_Filt_P%s_Ch_%s.mat']);
-paths.CARW_N = fullfile(paths.CARW,[blockObj.Name '_FiltCAR_P%s_Ch_%s.mat']);
-paths.DW_N = fullfile(paths.DW,[blockObj.Name '_DIG_%s.mat']);
-
-blockObj.paths = paths;
 %% CHECK WHETHER TO PROCEED with conversion
 % choice = questdlg('Do file conversion (can be long)?',...
 %     'Continue?',...

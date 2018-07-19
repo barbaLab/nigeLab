@@ -62,17 +62,23 @@ classdef Animal < handle
       end
       
       function save(animalObj)
-          save(fullfile(animalObj.SaveLoc,animalObj.Name),'animalObj')
+          B=animalObj.Blocks;
+          for ii=1:numel(B)
+              B(ii).save;
+          end
+          save(fullfile(animalObj.SaveLoc,animalObj.Name),'animalObj');
       end
       
 %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
-      table = listBlocks(animalObj)         % List of recordings currently associated with the animal
+      table = list(animalObj)         % List of recordings currently associated with the animal
       updateContents(blockObj,fieldname)    % Update files for specific field
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       convert(animalObj)                % Convert raw data to Matlab BLOCK
       filterData(animalObj)
       CAR(animalObj)
+      linkToData(animalObj)
+      extractLFP(animalObj)
    end
    
    methods (Access = public, Hidden = true)

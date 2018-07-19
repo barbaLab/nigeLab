@@ -12,9 +12,10 @@ tankObj.BlockNameVars = {'Animal_ID'; ...
                          'Day'; ...
                          'Block_ID'};
 tankObj.CheckBeforeConversion = true;
-tankObj.DefaultSaveLoc = 'P:/Extracted_Data_To_Move/Rat';
-tankObj.DefaultTankLoc = 'R:/Rat'; 
+tankObj.DefaultSaveLoc = 'C:\Users\Fede\Documents\Eperiments\Alberto\Extracted_Data_To_Move';
+tankObj.DefaultTankLoc = 'C:\Users\Fede\Documents\Eperiments\Alberto\RAW';
 tankObj.Delimiter = '_';
 tankObj.RecType = 'Intan';
+tankObj.ParallelFlag = 'Local pool';
 
 end

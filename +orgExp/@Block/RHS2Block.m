@@ -447,28 +447,27 @@ if (data_present)
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % DiskData makes it easy to access data stored in matfies.
     % Assigning each file to the right channel
-    for cc=1:num_amplifier_channels
-        blockObj.Channels(cc).rawData = orgExp.libs.DiskData(amplifier_dataFile{ii});
+    for iCh=1:num_amplifier_channels
+        blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{ii});
+    
+        as_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
+        fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);
+        data = single(amp_settle_data(iCh,:));
+        save(fullfile(fname),'data','-v7.3');
+        blockObj.Channels(iCh).amp_settle_data= orgExp.libs.DiskData(matfile(fname));
+        
+        cr_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
+        fname = sprintf(strrep(cr_data_fname,'\','/'), pnum, chnum);
+        data = single(charge_recovery_data(iCh,:));
+        save(fullfile(fname),'data','-v7.3');
+        blockObj.Channels(iCh).charge_recovery_data= orgExp.libs.DiskData(matfile(fname));
+        
+        cl_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
+        fname = sprintf(strrep(cl_data_fname,'\','/'), pnum, chnum);
+        data = single(compliance_limit_data(iCh,:));
+        save(fullfile(fname),'data','-v7.3');
+        blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fname));
     end
-    
-    as_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
-    fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);
-    data = single(amp_settle_data(iCh,:));
-    save(fullfile(fname),'data','-v7.3');
-    blockObj.Channels(iCh).amp_settle_data= orgExp.libs.DiskData(matfile(fname));
-    
-    cr_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
-    fname = sprintf(strrep(cr_data_fname,'\','/'), pnum, chnum);
-    data = single(charge_recovery_data(iCh,:));
-    save(fullfile(fname),'data','-v7.3');
-    blockObj.Channels(iCh).charge_recovery_data= orgExp.libs.DiskData(matfile(fname));
-    
-    cl_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
-    fname = sprintf(strrep(cl_data_fname,'\','/'), pnum, chnum);
-    data = single(compliance_limit_data(iCh,:));
-    save(fullfile(fname),'data','-v7.3');
-    blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fname));
-    
 end
 blockObj.Status(1)=true;
 return

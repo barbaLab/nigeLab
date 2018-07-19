@@ -6,39 +6,48 @@ function blockObj = def_params(blockObj)
 % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
 
 %% Modify all properties here
-blockObj.ID = struct;
-blockObj.ID.CAR.File = 'FiltCAR';
-blockObj.ID.CAR.Folder = 'FilteredCAR';
-blockObj.ID.Clusters.File = 'clus';
-blockObj.ID.Clusters.Folder = 'wav-sneo_SPC_CAR_Clusters';
-blockObj.ID.Delimiter = '_';
-blockObj.ID.Digital.File = {'AAUX1';'AAUX2';'AAUX3'; ...
-                       'BAUX1';'BAUX2';'BAUX3'; ...
-                       'sync';'user'};
-blockObj.ID.Digital.Folder = 'Digital';
-blockObj.ID.DS.File = 'DS';
-blockObj.ID.DS.Folder = 'DS';
-blockObj.ID.Filt.File = 'Filt';
-blockObj.ID.Filt.Folder = 'Filtered';
-blockObj.ID.MEM.File = 'MEM';
-blockObj.ID.MEM.Folder = 'MEM';
-blockObj.ID.Raw.File = 'Raw_';
-blockObj.ID.Raw.Folder = 'RawData';
-blockObj.ID.Spikes.File = 'ptrain';
-blockObj.ID.Spikes.Folder = 'wav-sneo_CAR_Spikes';
-blockObj.ID.Sorted.File = 'sort';
-blockObj.ID.Sorted.Folder = 'wav-sneo_SPC_CAR_Sorted';
+blockObj.ID             = struct;
+blockObj.ID.Delimiter   = '_';
+blockObj.ID.ProbeChannel= [blockObj.ID.Delimiter 'P%s_Ch_%s'];
 
-blockObj.Fields = {'CAR'; ...
-              'Clusters'; ...
-              'Digital'; ...
-              'DS'; ...
-              'Filt'; ...
-              'MEM'; ...
-              'Raw'; ...
-              'Sorted'; ...
-              'Spikes'};
-           
+blockObj.Fields =  {'Raw';
+                    'Digital';
+                    'Filt';
+                    'CAR';
+                    'LFP';
+                    'Spikes';
+                    'Sorted';                    
+                    'Clusters';
+                    };
+
+FileNames       =   {'Raw';
+                     '';
+                     %{'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'}
+                     'Filt';
+                     'FiltCAR';
+                     'LFP';
+                     'ptrain';
+                     'sort';
+                     'clus';
+                    };
+                
+FolderNames     =   {'RawData';
+                     'Digital';
+                     'Filtered';
+                     'FilteredCAR';
+                     'LFPData';
+                     'wav-sneo_CAR_Spikes';
+                     'wav-sneo_SPC_CAR_Sorted';
+                     'wav-sneo_SPC_CAR_Clusters';
+                    };
+
+Del = blockObj.ID.Delimiter;
+P_C = blockObj.ID.ProbeChannel;
+for ii=1:numel(blockObj.Fields)
+   blockObj.ID.(blockObj.Fields{ii}).File      = [Del FileNames{ii} P_C];
+   blockObj.ID.(blockObj.Fields{ii}).Folder    = FolderNames{ii};
+end
+
 blockObj.Status = false(size(blockObj.Fields));
 
 end
