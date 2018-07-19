@@ -29,7 +29,6 @@ classdef DiskData
             switch S.type 
                 case '()'
                     
-                    SizeCheck=cellfun( @(x) max(x), S.subs )>obj.size;
                     
                     nArgs=numel(S.subs);
                     if nArgs==1
@@ -38,6 +37,8 @@ classdef DiskData
                         S.subs(1:numel(obj.size_))={1};
                         S.subs{I}=tmp;                        
                     end
+                    
+                    SizeCheck=cellfun( @(x) max(x), S.subs )>obj.size;
                     if nArgs>numel(obj.size)
                         error('Index exceeds matrix dimension.');
                     elseif any(SizeCheck(~any(strcmp(S.subs,':'))))
@@ -53,7 +54,17 @@ classdef DiskData
                 case '{}'
                     warning('curly indexing not supported yet')
                 case '.'
-                    warning('dot referencing not supported yet')
+                    Out = obj.(S.subs);
+%                     warning('dot referencing not supported yet')
+            end
+        end
+        
+        function ind = end(obj,k,n)
+            szd = size(obj);
+            if k < n
+                ind = szd(k);
+            else
+                ind = prod(szd(k:end));
             end
         end
         
