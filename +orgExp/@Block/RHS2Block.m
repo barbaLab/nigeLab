@@ -106,7 +106,7 @@ if (data_present)
         fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
         amplifier_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
         if ~exist(fullfile(fname),'file')
-            amplifier_dataFile{iCh}.data = single(zeros(1,num_amplifier_samples));
+            amplifier_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
         end
         %         amplifier_dataFile{iCh}.gitInfo = gitInfo;
         
@@ -115,7 +115,7 @@ if (data_present)
         fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
         stim_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
         if ~exist(fullfile(fname),'file')
-            stim_dataFile{iCh}.data = single(zeros(1,num_amplifier_samples));
+            stim_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
         end
         %         stim_dataFile{iCh}.gitInfo = gitInfo;
         
@@ -125,7 +125,7 @@ if (data_present)
             fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
             dc_amplifier_dataFile{iCh} =  matfile(fullfile(fname),'Writable',true);
             if ~exist(fullfile(fname),'file')
-                dc_amplifier_dataFile{iCh}.data = single(zeros(1,num_amplifier_samples));
+                dc_amplifier_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
             end
             %             dc_amplifier_dataFile{iCh}.fs = fs;
         end
@@ -143,7 +143,7 @@ if (data_present)
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
                 board_adc_dataFile{i} = matfile(fullfile(fname),'Writable',true);
                 if ~exist(fullfile(fname),'file')
-                    board_adc_dataFile{i}.data = single(zeros(1,num_amplifier_samples));;
+                    board_adc_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
                 end
                 %                 board_adc_dataFile{i}. gitInfo = gitInfo;
             end
@@ -162,7 +162,7 @@ if (data_present)
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
                 board_dac_dataFile{i} = matfile(fullfile(fname),'Writable',true);
                 if ~exist(fullfile(fname),'file')
-                    board_dac_dataFile{i}.data = single(zeros(1,num_amplifier_samples));;
+                    board_dac_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
                 end
                 %                 board_dac_dataFile{i}.gitInfo = gitInfo;
             end
@@ -181,7 +181,7 @@ if (data_present)
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
                 board_dig_in_dataFile{i} = matfile(fullfile(fname),'Writable',true);
                 if ~exist(fullfile(fname),'file')
-                    board_dig_in_dataFile{i}.data = single(zeros(1,num_amplifier_samples));;
+                    board_dig_in_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
                 end
                 %                 board_dig_in_dataFile{i}.gitInfo = gitInfo;
             end
@@ -200,7 +200,7 @@ if (data_present)
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
                 board_dig_out_dataFile{i} = matfile(fullfile(fname),'Writable',true);
                 if ~exist(fullfile(fname),'file')
-                    board_dig_out_dataFile{i}.data = single(zeros(1,num_amplifier_samples));;
+                    board_dig_out_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
                 end
                 %                 board_dig_out_dataFile{i}.gitInfo = gitInfo;
             end
@@ -257,7 +257,7 @@ nDataPoints=bytes_per_block/2; % reading uint16
     else
         AvailableMemory=2147483648;
     end
-    nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/8));
+    nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/(8+13))); %13 accounts for all the indexings
     %     t = zeros(1, num_samples_per_data_block);
     
     time_buffer_index(1:num_samples_per_data_block*2)=true;
@@ -452,7 +452,7 @@ if (data_present)
     % DiskData makes it easy to access data stored in matfies.
     % Assigning each file to the right channel
     for iCh=1:num_amplifier_channels
-        blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{ii});
+        blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{iCh});
     
         as_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
         fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);

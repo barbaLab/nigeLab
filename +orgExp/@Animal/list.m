@@ -4,11 +4,11 @@ function L = list(animalObj)
 jj=1;
 for ii=animalObj.Blocks
     tmp=ii.list;
-    I=ismember(tmp.Properties.VariableNames,'Corresponding_animal');
+    I=ismember(tmp.Properties.VariableNames,'Animals');
     L_(jj,:)=[tmp(1,I),tmp(1,~I)];
     jj=jj+1;
 end
-L_.Properties.VaribleNames(1)={'Animals'};
+% L_.Properties.VariableNames(1)={'Animals'};
 if nargout==0
     disp(L_);
 else

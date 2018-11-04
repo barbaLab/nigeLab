@@ -140,6 +140,7 @@ classdef Tank < handle
       out = tankGet(tankObj,prop)     % Get a specific TANK property
       flag = tankSet(tankObj,prop)    % Set a specific TANK property
       CAR(tankObj)
+      extractLFP(tankObj)
    end
    %% PRIVATE METHODS
    methods (Access = private)

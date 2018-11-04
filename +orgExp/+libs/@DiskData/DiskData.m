@@ -26,7 +26,7 @@ classdef DiskData
         
         function Out = subsref(obj,S)
 
-            switch S.type 
+            switch S(1).type 
                 case '()'
                     
                     
@@ -54,7 +54,7 @@ classdef DiskData
                 case '{}'
                     warning('curly indexing not supported yet')
                 case '.'
-                    Out = obj.(S.subs);
+                    Out = obj.(S(1).subs);
 %                     warning('dot referencing not supported yet')
             end
         end
@@ -76,8 +76,11 @@ classdef DiskData
             end
         end
         
-        function dim = size(obj)
-            dim=obj.size_;
+        function dim = size(obj,n)
+            if nargin<2
+                n=1:length(obj.size_);
+            end
+            dim=obj.size_(n);
         end        
         function cl=class(obj)
             cl= obj.class_;
@@ -91,6 +94,20 @@ classdef DiskData
         
         function Out = getPath(obj)
             Out=obj.diskfile.Properties.Source;
+        end
+        
+        function Out = append(obj,b)
+           if isa(b,'orgExp.libs.DiskData')
+               Out = obj;
+               nameO = Out.name;
+               nameB = b.name;
+               Out.diskfile.Properties.Writable=true;
+               Out.size_(2) = obj.size_(2)+b.size_(2);
+               Out.bytes = obj.bytes + b.bytes;
+               Out.diskfile.(nameO)(1,(obj.size_(2)+1):(obj.size_(2)+b.size_(2)))...
+                   = b.diskfile.(nameB)(1,:);
+           elseif isa(b,'float')
+           end
         end
     end
 end

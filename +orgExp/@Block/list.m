@@ -29,18 +29,33 @@ DateTime=datetime([blockObj.Recording_date blockObj.Recording_time],'InputFormat
 infoFields={'RecType'
             'Corresponding_animal'
             'Recording_ID'
-            'File_extension'
             'numChannels'
             };
                 
 info.Recording_date=DateTime;
+info.Recording_length=minutes(seconds(size(blockObj.Channels(1).rawData,2)./blockObj.Sample_rate));
 for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
-
+info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
 
 
 L_=struct2table(info);
+for ii=1:length(L_.Properties.VariableNames)
+    switch L_.Properties.VariableNames{ii}
+        case 'Recording_length'
+            L_.Properties.VariableNames{ii}='LengthInMinutes';
+        case 'Corresponding_animal'
+            L_.Properties.VariableNames{ii}='Animals';
+        case 'Recording_ID'
+            L_.Properties.VariableNames{ii}='ID';
+        case 'RecType'
+            L_.Properties.VariableNames{ii}='RecordingType';
+        case 'numChannels'
+            L_.Properties.VariableNames{ii}='NumberOfChannels';
+
+    end
+end
 if nargout==0
     disp(L_);
 else

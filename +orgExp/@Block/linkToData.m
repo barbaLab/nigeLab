@@ -11,7 +11,7 @@ for iCh = 1:blockObj.numChannels
     fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
     amplifier_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        amplifier_dataFile{iCh}.data = single(zeros(1,blockObj.numChannels));
+        amplifier_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{iCh});
     
@@ -20,7 +20,7 @@ for iCh = 1:blockObj.numChannels
     fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
     stim_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        stim_dataFile{iCh}.data = single(zeros(1,blockObj.numChannels));
+        stim_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.Channels(iCh).stimData = orgExp.libs.DiskData(stim_dataFile{iCh});
     
@@ -29,7 +29,7 @@ for iCh = 1:blockObj.numChannels
         fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
         dc_amplifier_dataFile{iCh} =  matfile(fullfile(fname),'Writable',true);
         if ~exist(fullfile(fname),'file')
-            dc_amplifier_dataFile{iCh}.data = single(zeros(1,blockObj.numChannels));
+            dc_amplifier_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
         end
         blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(dc_amplifier_dataFile{iCh});
     end
@@ -41,7 +41,7 @@ for i = 1:blockObj.numADCchannels
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),blockObj.ADCChannels(i).custom_channel_name);
     board_adc_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_adc_dataFile{i}.data = single(zeros(1,blockObj.numChannels));;
+        board_adc_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.ADCChannels(i).data=orgExp.libs.DiskData(board_adc_dataFile{i});
 end
@@ -52,7 +52,7 @@ for i = 1:blockObj.numDACChannels
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DACChannels(i).custom_channel_name);
     board_dac_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_dac_dataFile{i}.data = single(zeros(1,blockObj.numChannels));
+        board_dac_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.DACChannels(i).data=orgExp.libs.DiskData(board_dac_dataFile{i});
 end
@@ -63,7 +63,7 @@ for i = 1:blockObj.numDigInChannels
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigInChannels(i).custom_channel_name);
     board_dig_in_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_dig_in_dataFile{i}.data = single(zeros(1,blockObj.numChannels));;
+        board_dig_in_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.DigInChannels(i).data=orgExp.libs.DiskData(board_dig_in_dataFile{i});
 end
@@ -75,7 +75,7 @@ for i = 1:blockObj.numDigOutChannels
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigOutChannels(i).custom_channel_name);
     board_dig_out_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_dig_out_dataFile{i}.data = single(zeros(1,blockObj.numChannels));
+        board_dig_out_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
     end
     blockObj.DigOutChannels(i).data=orgExp.libs.DiskData(board_dig_out_dataFile{i});
 end

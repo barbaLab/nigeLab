@@ -79,6 +79,7 @@ classdef Animal < handle
       CAR(animalObj)
       linkToData(animalObj)
       extractLFP(animalObj)
+      mergeBlocks(animalObj,ind)
    end
    
    methods (Access = public, Hidden = true)
