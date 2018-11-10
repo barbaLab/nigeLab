@@ -20,5 +20,6 @@ function extractLFP(blockObj)
         end
         blockObj.Downsampled_rate=DownSampleFreq;
         blockObj.updateStatus('LFP',true);
+        blockObj.save;
 end
 

@@ -103,6 +103,8 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', FSTOP1, ...
             end
         end
 blockObj.updateStatus('filt',true);
+blockObj.save;
+end
 
 
 % if STIM_SUPPRESS
