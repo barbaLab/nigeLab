@@ -19,5 +19,6 @@ function extractLFP(blockObj)
             blockObj.Channels(ii).LFPData=orgExp.libs.DiskData(matfile(fullfile(fname)));
         end
         blockObj.Downsampled_rate=DownSampleFreq;
+        blockObj.updateStatus('LFP',true);
 end
 

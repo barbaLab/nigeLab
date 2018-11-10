@@ -5,21 +5,25 @@ function mergeBlocks(animalObj,ind)
     end
     TargetBlock=animalObj.Blocks(ind(1));
     
-    BlockFieldsToMerge={ 'Channels';
+    BlockFieldsToMerge_={ 'Channels';
 %                          'DACChannels';
 %                          'ADCChannels';
 %                          'DigInChannels';
 %                          'DigOutChannels';
                         };
+   BlockFieldsToMerge = BlockFieldsToMerge_(...
+                        ismember( BlockFieldsToMerge_, fieldnames(animalObj.Blocks(5))));
                 
-   ChannelsFieldsToMerge={ 'rawData';
+   ChannelsFieldsToMerge_={ 'rawData';
                             'amp_settle_data';
                             'charge_recovery_data';
                             'compliance_limit_data';
                             'Filtered';
                             'LFPData';
                         };
-    
+    ChannelsFieldsToMerge = ChannelsFieldsToMerge_(...
+                            isfield( animalObj.Blocks(5).Channels, ChannelsFieldsToMerge_));
+                        
     for ii=ind(2:end)
         for kk=1:numel(BlockFieldsToMerge)
             for jj=1:TargetBlock.(['num' BlockFieldsToMerge{kk}])

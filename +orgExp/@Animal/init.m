@@ -2,11 +2,8 @@ function init(animalObj)
 [~,NAME] = fileparts(animalObj.DIR);
 animalObj.Name = NAME;
 
-if isempty(animalObj.SaveLoc)
-   animalObj.SaveLoc = fullfile(animalObj.DIR);
-   animalObj.setSaveLocation;
-end
-animalObj.SaveLoc=fullfile(animalObj.SaveLoc,animalObj.Name);
+animalObj.setSaveLocation(animalObj.SaveLoc);
+
 if exist(animalObj.SaveLoc,'dir')==0
     mkdir(animalObj.SaveLoc);
     animalObj.ExtractFlag = true;

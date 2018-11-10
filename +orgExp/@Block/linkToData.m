@@ -33,6 +33,12 @@ for iCh = 1:blockObj.numChannels
         end
         blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(dc_amplifier_dataFile{iCh});
     end
+    
+    if 1 % check folder is not empty
+        fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
+        blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(matfile(fullfile(fname)));
+    end
+    
 end
 
 % Save single-channel adc data

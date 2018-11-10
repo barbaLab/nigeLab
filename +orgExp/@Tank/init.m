@@ -8,18 +8,13 @@ function init(tankObj)
 %% PARSE NAME AND SAVE LOCATION
 tankObj.Name = strsplit(tankObj.DIR,filesep);
 tankObj.Name = tankObj.Name{end};
+tankObj.setSaveLocation(tankObj.SaveLoc);
 
-if isempty(tankObj.SaveLoc)
-   tankObj.SaveLoc = fullfile(tankObj.DefaultSaveLoc,...
-                              tankObj.RecType);
-   tankObj.setSaveLocation;
-   
-   if exist(fullfile(tankObj.SaveLoc,tankObj.Name),'dir')==0
-      mkdir(fullfile(tankObj.SaveLoc,tankObj.Name));
-      tankObj.ExtractFlag = true;
-   else
-      tankObj.ExtractFlag = false;
-   end
+if exist(tankObj.SaveLoc,'dir')==0
+    mkdir(tankObj.SaveLoc);
+    tankObj.ExtractFlag = true;
+else
+    tankObj.ExtractFlag = false;
 end
 
 %% DO CONVERSION OR CHECK AND CREATE METADATA FOR TANK

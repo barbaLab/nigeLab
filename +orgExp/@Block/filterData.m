@@ -102,7 +102,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', FSTOP1, ...
                 fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
             end
         end
-blockObj.Status(2)=true;
+blockObj.updateStatus('filt',true);
 
 
 % if STIM_SUPPRESS

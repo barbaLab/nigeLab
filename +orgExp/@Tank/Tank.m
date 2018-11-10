@@ -123,7 +123,7 @@ classdef Tank < handle
          end
           
          newAnimal= orgExp.Animal('DIR',AnimalFolder,...
-             'SaveLoc',fullfile(tankObj.SaveLoc,tankObj.Name));
+             'SaveLoc',tankObj.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
       end
       
@@ -132,7 +132,7 @@ classdef Tank < handle
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(fullfile(tankObj.SaveLoc,[tankObj.Name '.mat']),'tankObj') 
+         save(tankObj.SaveLoc,'tankObj') 
       end
       linkToData(tankObj)
       convert(tankObj)                % Convert raw data to Matlab BLOCK
@@ -143,10 +143,10 @@ classdef Tank < handle
       extractLFP(tankObj)
    end
    %% PRIVATE METHODS
-   methods (Access = private)
+   methods (Access = public)
       init(tankObj)                 % Initializes the TANK object.
       intan2Block(tankObj,varargin) % Does the actual data conversion
-      setSaveLocation(tankObj)      % Set save location for processed TANK.
+      setSaveLocation(tankObj,saveloc)      % Set save location for processed TANK.
       ClusterConvert(tankObj)
       LocalConvert(tankObj)
       SlowConvert(tankObj)

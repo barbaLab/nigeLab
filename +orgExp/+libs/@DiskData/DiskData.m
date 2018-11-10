@@ -80,6 +80,8 @@ classdef DiskData
             if nargin<2
                 n=1:length(obj.size_);
             end
+            info = whos(obj.diskfile);
+            obj.size_ = info.size;
             dim=obj.size_(n);
         end        
         function cl=class(obj)

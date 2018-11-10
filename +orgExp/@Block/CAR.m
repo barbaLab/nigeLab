@@ -54,6 +54,6 @@ if ~STIM_SUPPRESS
     clear('data')
 end
 fprintf(1,'Done.\n');
-blockObj.Status(3)=true;
+blockObj.updateStatus('CAR',true);
 end
 

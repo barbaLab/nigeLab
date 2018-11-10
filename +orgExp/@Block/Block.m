@@ -103,7 +103,7 @@ classdef Block < handle
        ADCChannels
        DigInChannels
        DigOutChannels
-       
+       Samples
        Status      % Completion status for each element of BLOCK/FIELDS
 
    end
@@ -227,7 +227,7 @@ classdef Block < handle
       end
       
       function save(blockObj)
-          save(fullfile(blockObj.SaveLoc,blockObj.Name),'blockObj');          
+          save(blockObj.SaveLoc,'blockObj');          
       end
       
       extractLFP(blockObj)
@@ -245,11 +245,13 @@ classdef Block < handle
       takeNotes(blockObj) % View or update notes on current recording
       out = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop) % Set a specific BLOCK property
-      setSaveLocation(blockObj)
+      setSaveLocation(blockObj,saveloc)
       RHD2Block(blockObj)
       RHS2Block(blockObj)
       linkToData(blockObj,path)
       genPaths(blockObj)
+      operations = updateStatus(blockObj,operation,value)
+      Status = getStatus(blockObj)
       
    end
    methods (Access = public, Hidden = true)

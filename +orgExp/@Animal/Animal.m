@@ -66,7 +66,7 @@ classdef Animal < handle
           for ii=1:numel(B)
               B(ii).save;
           end
-          save(fullfile(animalObj.SaveLoc,animalObj.Name),'animalObj');
+          save(animalObj.SaveLoc,'animalObj');
       end
       
 %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
@@ -80,6 +80,7 @@ classdef Animal < handle
       linkToData(animalObj)
       extractLFP(animalObj)
       mergeBlocks(animalObj,ind)
+      removeBlocks(animalObj,ind)
    end
    
    methods (Access = public, Hidden = true)

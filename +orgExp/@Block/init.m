@@ -13,11 +13,8 @@ blockObj.Recording_date = nameParts{3};
 blockObj.Recording_time = nameParts{4};
 blockObj.Recording_ID = nameParts{2};
 
-if isempty(blockObj.SaveLoc)
-   blockObj.SaveLoc = fullfile(blockObj.PATH);
-   blockObj.setSaveLocation;
-end
-blockObj.SaveLoc=fullfile(blockObj.SaveLoc,blockObj.Name);
+blockObj.setSaveLocation(blockObj.SaveLoc);
+
 if exist(blockObj.SaveLoc,'dir')==0
     mkdir(fullfile(blockObj.SaveLoc));
     blockObj.ExtractFlag = true;
@@ -49,9 +46,8 @@ blockObj.DACChannels=header.board_dac_channels;
 blockObj.ADCChannels=header.board_adc_channels;
 blockObj.DigInChannels=header.board_dig_in_channels;
 blockObj.DigOutChannels=header.board_dig_out_channels;
-
-%% Initialize paths
-blockObj.genPaths;
+blockObj.Sample_rate = header.sample_rate;
+blockObj.Samples = header.num_amplifier_samples;
 
 %% CHECK WHETHER TO PROCEED with conversion
 % choice = questdlg('Do file conversion (can be long)?',...
