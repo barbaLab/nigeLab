@@ -34,18 +34,21 @@ switch blockObj.File_extension
         blockObj.RecType='other';
 end
 
-blockObj.Channels=header.amplifier_channels;
-blockObj.numChannels=numel(blockObj.Channels);
-blockObj.dcAmpDataSaved=header.dc_amp_data_saved;
+blockObj.Channels = header.amplifier_channels;
+blockObj.numChannels = header.num_amplifier_channels;
+blockObj.numProbes = header.num_probes;
+blockObj.dcAmpDataSaved = header.dc_amp_data_saved;
 blockObj.numADCchannels = header.num_board_adc_channels;
 blockObj.numDACChannels = header.num_board_dac_channels;
 blockObj.numDigInChannels = header.num_board_dig_in_channels;
 blockObj.numDigOutChannels = header.num_board_dig_out_channels;
+blockObj.Sample_rate = header.sample_rate;
+blockObj.Samples = header.num_amplifier_samples;
 
-blockObj.DACChannels=header.board_dac_channels;
-blockObj.ADCChannels=header.board_adc_channels;
-blockObj.DigInChannels=header.board_dig_in_channels;
-blockObj.DigOutChannels=header.board_dig_out_channels;
+blockObj.DACChannels = header.board_dac_channels;
+blockObj.ADCChannels = header.board_adc_channels;
+blockObj.DigInChannels = header.board_dig_in_channels;
+blockObj.DigOutChannels = header.board_dig_out_channels;
 blockObj.Sample_rate = header.sample_rate;
 blockObj.Samples = header.num_amplifier_samples;
 

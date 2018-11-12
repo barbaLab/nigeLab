@@ -82,8 +82,7 @@ FIELDS=fields(header);
 for ii=1:numel(FIELDS)
     eval([FIELDS{ii} '=header.(FIELDS{ii});']);
 end
-blockObj.Sample_rate = sample_rate;
-blockObj.Samples = num_amplifier_samples;
+
 %% Start data conversion
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

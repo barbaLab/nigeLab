@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings name="parallel" xmlns="urn:mathworks.matlab.settings" xsi:schemaLocation="urn:mathworks.matlab.settings settings.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+    <settings name="profiles">
+        <settings name="CPLMJS" visible="true">
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[CPLMJS]]></value>
+                </string>
+            </key>
+            <key name="Description" visible="true">
+                <string>
+                    <value><![CDATA[CPL Cluster 16]]></value>
+                </string>
+            </key>
+            <key name="ProjectComponent" visible="true" anytype="true">
+                <string>
+                    <value><![CDATA[CPLMJSProjectComponent]]></value>
+                </string>
+            </key>
+            <key name="SchedulerComponent" visible="true">
+                <string>
+                    <value><![CDATA[MJSProfile1SchedulerComponent]]></value>
+                </string>
+            </key>
+        </settings>
+        <settings name="CPLMJS2" visible="true">
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[CPLMJS2]]></value>
+                </string>
+            </key>
+            <key name="Description" visible="true">
+                <string>
+                    <value><![CDATA[CPL Cluster 8]]></value>
+                </string>
+            </key>
+            <key name="ProjectComponent" visible="true" anytype="true">
+                <string>
+                    <value><![CDATA[CPLMJS2ProjectComponent]]></value>
+                </string>
+            </key>
+            <key name="SchedulerComponent" visible="true">
+                <string>
+                    <value><![CDATA[MJSProfile1SchedulerComponent_Copy]]></value>
+                </string>
+            </key>
+        </settings>
+        <settings name="CPLMJS3" visible="true">
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[CPLMJS3]]></value>
+                </string>
+            </key>
+            <key name="Description" visible="true">
+                <string>
+                    <value><![CDATA[CPL Cluster 8]]></value>
+                </string>
+            </key>
+            <key name="ProjectComponent" visible="true" anytype="true">
+            </key>
+            <key name="SchedulerComponent" visible="true">
+                <string>
+                    <value><![CDATA[MJSProfile1SchedulerComponent2]]></value>
+                </string>
+            </key>
+        </settings>
+        <settings name="local" visible="true">
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[local]]></value>
+                </string>
+            </key>
+            <key name="Description" visible="true">
+                <string>
+                    <value><![CDATA[The local cluster]]></value>
+                </string>
+            </key>
+            <key name="ProjectComponent" visible="true" anytype="true">
+            </key>
+            <key name="SchedulerComponent" visible="true">
+                <string>
+                    <value><![CDATA[localSchedulerComponent]]></value>
+                </string>
+            </key>
+        </settings>
+    </settings>
+    <settings name="projectcomponents">
+        <settings name="CPLMJS2ProjectComponent" visible="true">
+            <key name="AdditionalPaths" visible="true">
+                <string minArraySize="0" maxArraySize="0" undef="true">
+                </string>
+            </key>
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[CPLMJS2ProjectComponent]]></value>
+                </string>
+            </key>
+            <key name="AttachedFiles" visible="true">
+                <string minArraySize="0" maxArraySize="0" undef="true">
+                </string>
+            </key>
+            <key name="AutoAttachFiles" visible="true" anytype="true">
+            </key>
+            <key name="CaptureDiary" visible="true" anytype="true">
+            </key>
+            <key name="JobFinishedFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobQueuedFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobRunningFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobTimeout" visible="true" anytype="true">
+            </key>
+            <key name="NumWorkersRange" visible="true" anytype="true">
+            </key>
+            <key name="TaskFinishedFcn" visible="true" anytype="true">
+            </key>
+            <key name="TaskRunningFcn" visible="true" anytype="true">
+            </key>
+            <key name="TaskTimeout" visible="true" anytype="true">
+            </key>
+        </settings>
+        <settings name="CPLMJSProjectComponent" visible="true">
+            <key name="AdditionalPaths" visible="true">
+                <string minArraySize="0" maxArraySize="0" undef="true">
+                </string>
+            </key>
+            <key name="Alias" visible="true">
+                <string>
+                    <value><![CDATA[CPLMJSProjectComponent]]></value>
+                </string>
+            </key>
+            <key name="AttachedFiles" visible="true">
+                <string minArraySize="0" maxArraySize="0" undef="true">
+                </string>
+            </key>
+            <key name="AutoAttachFiles" visible="true" anytype="true">
+            </key>
+            <key name="CaptureDiary" visible="true" anytype="true">
+            </key>
+            <key name="JobFinishedFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobQueuedFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobRunningFcn" visible="true" anytype="true">
+            </key>
+            <key name="JobTimeout" visible="true" anytype="true">
+            </key>
+            <key name="NumWorkersRange" visible="true" anytype="true">
+            </key>
+            <key name="TaskFinishedFcn" visible="true" anytype="true">
+            </key>
+            <key name="TaskRunningFcn" visible="true" anytype="true">
+            </key>
+            <key name="TaskTimeout" visible="true" anytype="true">
+            </key>
+        </settings>
+    </settings>
+    <settings name="schedulercomponents">
+        <settings name="Local" visible="true">
+            <settings name="localSchedulerComponent" visible="true">
+                <key name="Alias" visible="true">
+                    <string>
+                        <value><![CDATA[localSchedulerComponent]]></value>
+                    </string>
+                </key>
+                <key name="DummyKey" visible="true">
+                    <string undef="true">
+                    </string>
+                </key>
+                <key name="JobStorageLocation" visible="true">
+                    <string minArraySize="0" maxArraySize="0" undef="true">
+                    </string>
+                </key>
+                <key name="NumThreads" visible="true" anytype="true">
+                </key>
+                <key name="NumWorkers" visible="true" anytype="true">
+                    <double>
+                        <value>8.0</value>
+                    </double>
+                </key>
+            </settings>
+        </settings>
+        <settings name="MJS" visible="true">
+            <settings name="MJSProfile1SchedulerComponent" visible="true">
+                <key name="Alias" visible="true">
+                    <string>
+                        <value><![CDATA[MJSProfile1SchedulerComponent]]></value>
+                    </string>
+                </key>
+                <key name="Certificate" visible="true" anytype="true">
+                </key>
+                <key name="DefaultTimeout" visible="true" anytype="true">
+                </key>
+                <key name="Host" visible="true">
+                    <string>
+                        <value><![CDATA[MLTEST01]]></value>
+                    </string>
+                </key>
+                <key name="LicenseNumber" visible="true" anytype="true">
+                </key>
+                <key name="MJSName" visible="true">
+                    <string>
+                        <value><![CDATA[CPL-MJS]]></value>
+                    </string>
+                </key>
+                <key name="MaximumRetries" visible="true" anytype="true">
+                </key>
+                <key name="NumThreads" visible="true" anytype="true">
+                </key>
+                <key name="RestartWorker" visible="true" anytype="true">
+                </key>
+                <key name="Username" visible="true">
+                    <string undef="true">
+                    </string>
+                </key>
+            </settings>
+            <settings name="MJSProfile1SchedulerComponent2" visible="true">
+                <key name="Alias" visible="true">
+                    <string>
+                        <value><![CDATA[MJSProfile1SchedulerComponent2]]></value>
+                    </string>
+                </key>
+                <key name="Certificate" visible="true" anytype="true">
+                </key>
+                <key name="DefaultTimeout" visible="true" anytype="true">
+                </key>
+                <key name="Host" visible="true">
+                    <string>
+                        <value><![CDATA[MLTEST01]]></value>
+                    </string>
+                </key>
+                <key name="LicenseNumber" visible="true" anytype="true">
+                </key>
+                <key name="MJSName" visible="true">
+                    <string>
+                        <value><![CDATA[CPL-MJS3]]></value>
+                    </string>
+                </key>
+                <key name="MaximumRetries" visible="true" anytype="true">
+                </key>
+                <key name="NumThreads" visible="true" anytype="true">
+                </key>
+                <key name="RestartWorker" visible="true" anytype="true">
+                </key>
+                <key name="Username" visible="true">
+                    <string undef="true">
+                    </string>
+                </key>
+            </settings>
+            <settings name="MJSProfile1SchedulerComponent_Copy" visible="true">
+                <key name="Alias" visible="true">
+                    <string>
+                        <value><![CDATA[MJSProfile1SchedulerComponent_Copy]]></value>
+                    </string>
+                </key>
+                <key name="Certificate" visible="true" anytype="true">
+                </key>
+                <key name="DefaultTimeout" visible="true" anytype="true">
+                </key>
+                <key name="Host" visible="true">
+                    <string>
+                        <value><![CDATA[MLTEST01]]></value>
+                    </string>
+                </key>
+                <key name="LicenseNumber" visible="true" anytype="true">
+                </key>
+                <key name="MJSName" visible="true">
+                    <string>
+                        <value><![CDATA[CPL-MJS2]]></value>
+                    </string>
+                </key>
+                <key name="MaximumRetries" visible="true" anytype="true">
+                </key>
+                <key name="NumThreads" visible="true" anytype="true">
+                </key>
+                <key name="RestartWorker" visible="true" anytype="true">
+                </key>
+                <key name="Username" visible="true">
+                    <string undef="true">
+                    </string>
+                </key>
+            </settings>
+        </settings>
+    </settings>
+    <settings name="version" visible="true">
+        <key name="PCTVersionNumber" visible="true">
+            <double>
+                <value>25.0</value>
+            </double>
+        </key>
+    </settings>
+</settings>

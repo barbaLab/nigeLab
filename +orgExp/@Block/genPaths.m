@@ -1,17 +1,22 @@
 function genPaths(blockObj)
 %% Set some useful path variables
+% Here are defined all the paths where data will be saved.
+% The folder tree is also created here(if not already exsting)
+
 delim       = blockObj.ID.Delimiter;
 RAW_ID      = [delim blockObj.ID.Raw.Folder];                 % Raw stream ID
 FILT_ID     = [delim blockObj.ID.Filt.Folder];                % Filtered stream ID
 CAR_ID      = [delim blockObj.ID.CAR.Folder];                 % Spatial re-reference stream ID
 DIG_ID      = [delim blockObj.ID.Digital.Folder];             % Digital stream ID
 LFP_ID      = [delim blockObj.ID.LFP.Folder];                 % LFP stream ID
+SD_ID       = [delim blockObj.ID.Spikes.Folder];
 
 paths.RW    = fullfile(blockObj.SaveLoc,[blockObj.Name RAW_ID] );
 paths.FW    = fullfile(blockObj.SaveLoc,[blockObj.Name FILT_ID]);
 paths.CARW  = fullfile(blockObj.SaveLoc,[blockObj.Name CAR_ID] );
 paths.DW    = fullfile(blockObj.SaveLoc,[blockObj.Name DIG_ID] );
 paths.LW    = fullfile(blockObj.SaveLoc,[blockObj.Name LFP_ID] );
+paths.SDW   = fullfile(blockObj.SaveLoc,[blockObj.Name SD_ID]  );
 
 for paths_ = fields(paths)'
     % Checks if all the target paths exist, if not mkdir
@@ -34,6 +39,7 @@ paths.FW_N      = fullfile(paths.FW,  [blockObj.Name blockObj.ID.Filt.File '.mat
 paths.CARW_N    = fullfile(paths.CARW,[blockObj.Name blockObj.ID.Filt.File '.mat']);
 paths.DW_N      = fullfile(paths.DW,  [blockObj.Name '_DIG_%s.mat']);
 paths.LW_N      = fullfile(paths.LW,  [blockObj.Name blockObj.ID.LFP.File '.mat']);
+paths.SDW_N     = fullfile(paths.SDW,  [blockObj.Name blockObj.ID.Spikes.File '.mat']);
 blockObj.paths  = paths;
 
 end

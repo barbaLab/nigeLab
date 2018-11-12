@@ -94,6 +94,7 @@ classdef Block < handle
        % channel class, in order to adress some issues
        % concerning the access to matfiles
        numChannels
+       numProbes
        dcAmpDataSaved
        numADCchannels
        numDACChannels
@@ -251,8 +252,8 @@ classdef Block < handle
       linkToData(blockObj,path)
       genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
-      Status = getStatus(blockObj)
-      
+      Status = getStatus(blockObj,stage)
+      spikeDetection(blockObj)
    end
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording

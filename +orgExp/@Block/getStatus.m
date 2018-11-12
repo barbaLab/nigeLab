@@ -1,10 +1,14 @@
-function Status = getStatus(blockObj)
+function Status = getStatus(blockObj,stage)
 %% Returns the operations performed on the block to date
 
 Status = blockObj.updateStatus;   % returns list of available statuses
-if any(blockObj.Status)
-    Status = Status{blockObj.Status};
+if nargin<2
+    if any(blockObj.Status)
+        Status = Status(blockObj.Status)';
+    else
+        Status={'none'};
+    end
 else
-    Status={'none'};
+    Status = blockObj.Status(strcmp(blockObj.updateStatus,stage));
 end
 
