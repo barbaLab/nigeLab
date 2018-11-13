@@ -9,6 +9,9 @@ if nargin<2
         Status={'none'};
     end
 else
-    Status = blockObj.Status(strcmp(blockObj.updateStatus,stage));
+    OpInd=strcmp(blockObj.updateStatus,stage);
+    Status = blockObj.Status(OpInd);
+    if isempty(Status)
+    end
+        warning('No computation stage with that name');
 end
-

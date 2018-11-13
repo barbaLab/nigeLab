@@ -14,6 +14,8 @@ operations = {'ext';
               'LFP';
               'SD';
               'sorting';
+              '';
+              '';
                 };
 
 if nargin<2
