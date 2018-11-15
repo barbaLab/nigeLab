@@ -38,7 +38,8 @@ for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
-info.Status = {blockObj.getStatus};
+St = blockObj.getStatus;
+info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});
 
 
 L_=struct2table(info,'AsArray',true);

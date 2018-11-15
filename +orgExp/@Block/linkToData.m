@@ -41,7 +41,7 @@ for iCh = 1:blockObj.numChannels
             UpdateStatus = false;
             break;       
         end
-        blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);;
+        blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     end
 end
 if UpdateStatus, blockObj.updateStatus('Raw',true);end
@@ -66,7 +66,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;
         break;        
     end
-    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Filtered=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 if UpdateStatus, blockObj.updateStatus('Filt',true);end
 
@@ -78,7 +78,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;
         break;
     end
-    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).CAR=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 if UpdateStatus, blockObj.updateStatus('CAR',true); end
 
@@ -90,7 +90,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;
         break;
     end
-    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end   
 if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 

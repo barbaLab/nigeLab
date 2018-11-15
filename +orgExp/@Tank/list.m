@@ -68,5 +68,6 @@ end
 
 function Status = getAnimalStatus(animalObj)
     L = animalObj.list;
-    Status = unique(cat(2,L.Status{:}))';
+    Status = unique(L.Status)';
+    Status = sprintf([repmat('%s;',1,numel(Status)) '\b'],Status{:});
 end
