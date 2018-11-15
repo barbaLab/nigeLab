@@ -31,7 +31,7 @@ USE_EXISTING_SPIKES = false;        % Use existing spikes on directory
 DO_AUTO_CLUSTERING = true;          % If false, skips "clustering" portion
 
 % % Isilon cluster settings
-USE_CLUSTER = true;      % Must pre-detect clusters on machine and run 
+USE_CLUSTER = false;      % Must pre-detect clusters on machine and run 
                          % v2017a in order to use Isilon cluster.
 
 % Probe configuration
@@ -190,6 +190,7 @@ pars = struct;
     pars.SPIKE_DATA = SPIKE_DATA;
     pars.SORT_ID = SORT_ID;
     pars.WAVELET = WAVELET;
+    [pars.Lo_D,pars.Hi_D] = wfilters(pars.WAVELET,'d');
     pars.USE_CLUSTER = USE_CLUSTER;
     pars.VERSION = VERSION;
     

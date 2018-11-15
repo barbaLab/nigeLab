@@ -39,7 +39,7 @@ function [peak_train,spikes] = Build_Spike_Array(data,ts,p2pamp,pars)
 %% 
 nspk = numel(ts);
 spikes = zeros(nspk,pars.ls+4);
-data = [data, zeros(1, pars.w_post)]; % Add zeros in case of spikes at end of record
+data = [data(:,:), zeros(1, pars.w_post)]; % Add zeros in case of spikes at end of record
 for ispk = 1:nspk                          % Eliminates artifacts
      try
          spikes(ispk,:) = data((ts(ispk)-double(pars.w_pre) - 1): ...

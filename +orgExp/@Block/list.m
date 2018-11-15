@@ -33,12 +33,12 @@ infoFields={'RecType'
             };
                 
 info.Recording_date=DateTime;
-info.LengthInMinutes=minutes(seconds(size(blockObj.Samples./blockObj.Sample_rate)));
+info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.Sample_rate)));
 for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
-info.Status = blockObj.getStatus;
+info.Status = {blockObj.getStatus};
 
 
 L_=struct2table(info);

@@ -1,4 +1,4 @@
-function blockObj = def_params(blockObj)
+function [Pars,Fields] = blockDefaults()
 %% DEF_PARAMS  Sets default parameters for BLOCK object
 %
 %  obj = DEF_PARAMS(obj);
@@ -6,20 +6,26 @@ function blockObj = def_params(blockObj)
 % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
 
 %% Modify all properties here
-blockObj.ID             = struct;
-blockObj.ID.Delimiter   = '_';
-blockObj.ID.ProbeChannel= [blockObj.ID.Delimiter 'P%s_Ch_%s'];
+Pars             = struct;
+Pars.SaveFormat  = 'MatFile';
+Pars.Delimiter   = '_';
+Pars.ProbeChannel= [Pars.Delimiter 'P%s_Ch_%s'];
 
-blockObj.Fields =  {'Raw';
-                    'Digital';
-                    'Filt';
-                    'CAR';
-                    'LFP';
-                    'Spikes';
-                    'Sorted';                    
-                    'Clusters';
+Fields =  {'Raw';
+           'Digital';
+           'Filt';
+           'CAR';
+           'LFP';
+           'Spikes';
+           'Sorted';
+           'Clusters';
+           %%%%%%%%%%%%%%%%%%% This names are hardcoded. They are used in
+           %%%%%%%%%%%%%%%%%%% the following (Block) functions:
+           %%%%%%%%%%%%%%%%%%% convert, extractLFP, filterData, CAR,
+           %%%%%%%%%%%%%%%%%%% spikeDetection
                     };
-
+                
+                
 FileNames       =   {'Raw';
                      '';
                      %{'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'}
@@ -41,13 +47,11 @@ FolderNames     =   {'RawData';
                      'wav-sneo_SPC_CAR_Clusters';
                     };
 
-Del = blockObj.ID.Delimiter;
-P_C = blockObj.ID.ProbeChannel;
-for ii=1:numel(blockObj.Fields)
-   blockObj.ID.(blockObj.Fields{ii}).File      = [Del FileNames{ii} P_C];
-   blockObj.ID.(blockObj.Fields{ii}).Folder    = FolderNames{ii};
+Del = Pars.Delimiter;
+P_C = Pars.ProbeChannel;
+for ii=1:numel(Fields)
+   Pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
+   Pars.(Fields{ii}).Folder    = FolderNames{ii};
 end
-
-blockObj.Status = false(size(blockObj.Fields));
 
 end

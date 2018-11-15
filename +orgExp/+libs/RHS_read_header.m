@@ -1,5 +1,11 @@
 function [header,FID] = RHS_read_header(varargin)
 
+if nargin >0
+    printflag = false;
+else
+    printflag = true;
+end
+
 for iV = 1:2:length(varargin)
     eval([upper(varargin{iV}) '=varargin{iV+1};']);
 end
@@ -56,10 +62,13 @@ end
 data_file_main_version_number = fread(FID, 1, 'int16');
 data_file_secondary_version_number = fread(FID, 1, 'int16');
 
-fprintf(1, '\n');
-fprintf(1, 'Reading Intan Technologies RHS2000 Data File, Version %d.%d\n', ...
-    data_file_main_version_number, data_file_secondary_version_number);
-fprintf(1, '\n');
+if printflag
+    fprintf(1, '\n');
+    fprintf(1, 'Reading Intan Technologies RHS2000 Data File, Version %d.%d\n', ...
+        data_file_main_version_number, data_file_secondary_version_number);
+    fprintf(1, '\n');
+end
+
 
 num_samples_per_data_block = 128;
 
@@ -211,22 +220,23 @@ num_board_dac_channels = board_dac_index - 1;
 num_board_dig_in_channels = board_dig_in_index - 1;
 num_board_dig_out_channels = board_dig_out_index - 1;
 
-fprintf(1, 'Found %d amplifier channel%s.\n', ...
-    num_amplifier_channels, num_amplifier_channels);
-if (dc_amp_data_saved ~= 0)
-    fprintf(1, 'Found %d DC amplifier channel%s.\n', ...
-        num_amplifier_channels, (num_amplifier_channels));
+if printflag
+    fprintf(1, 'Found %d amplifier channel%s.\n', ...
+        num_amplifier_channels, num_amplifier_channels);
+    if (dc_amp_data_saved ~= 0)
+        fprintf(1, 'Found %d DC amplifier channel%s.\n', ...
+            num_amplifier_channels, (num_amplifier_channels));
+    end
+    fprintf(1, 'Found %d board ADC channel%s.\n', ...
+        num_board_adc_channels, (num_board_adc_channels));
+    fprintf(1, 'Found %d board DAC channel%s.\n', ...
+        num_board_dac_channels, (num_board_dac_channels));
+    fprintf(1, 'Found %d board digital input channel%s.\n', ...
+        num_board_dig_in_channels, (num_board_dig_in_channels));
+    fprintf(1, 'Found %d board digital output channel%s.\n', ...
+        num_board_dig_out_channels, (num_board_dig_out_channels));
+    fprintf(1, '\n');
 end
-fprintf(1, 'Found %d board ADC channel%s.\n', ...
-    num_board_adc_channels, (num_board_adc_channels));
-fprintf(1, 'Found %d board DAC channel%s.\n', ...
-    num_board_dac_channels, (num_board_dac_channels));
-fprintf(1, 'Found %d board digital input channel%s.\n', ...
-    num_board_dig_in_channels, (num_board_dig_in_channels));
-fprintf(1, 'Found %d board digital output channel%s.\n', ...
-    num_board_dig_out_channels, (num_board_dig_out_channels));
-fprintf(1, '\n');
-
 % Determine how many samples the data file contains.
 
 % Each data block contains num_samples_per_data_block amplifier samples.
@@ -266,14 +276,16 @@ num_board_dig_out_samples = num_samples_per_data_block * num_data_blocks;
 
 record_time = num_amplifier_samples / sample_rate;
 
-if (data_present)
-    fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n', ...
-        record_time, sample_rate / 1000, num_amplifier_samples);
-    fprintf(1, '\n');
-else
-    fprintf(1, 'Header file contains no data.  Amplifiers were sampled at %0.2f kS/s.\n', ...
-        sample_rate / 1000);
-    fprintf(1, '\n');
+if printflag
+    if (data_present)
+        fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n', ...
+            record_time, sample_rate / 1000, num_amplifier_samples);
+        fprintf(1, '\n');
+    else
+        fprintf(1, 'Header file contains no data.  Amplifiers were sampled at %0.2f kS/s.\n', ...
+            sample_rate / 1000);
+        fprintf(1, '\n');
+    end
 end
 
 header_size=ftell(FID);

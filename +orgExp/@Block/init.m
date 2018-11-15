@@ -6,14 +6,18 @@ function init(blockObj)
 %  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
 %      Federico Barban v2.0 07/08/2018
 
+[Pars,blockObj.Fields] = orgExp.defaults.blockDefaults;
+
 [~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.PATH);
-nameParts=strsplit(blockObj.Name,{blockObj.ID.Delimiter '.'});
+nameParts=strsplit(blockObj.Name,{Pars.Delimiter '.'});
+
 blockObj.Corresponding_animal = nameParts{1};
 blockObj.Recording_date = nameParts{3};
 blockObj.Recording_time = nameParts{4};
 blockObj.Recording_ID = nameParts{2};
 
 blockObj.setSaveLocation(blockObj.SaveLoc);
+blockObj.SaveFormat = Pars.SaveFormat;
 
 if exist(blockObj.SaveLoc,'dir')==0
     mkdir(fullfile(blockObj.SaveLoc));
@@ -52,6 +56,8 @@ blockObj.DigOutChannels = header.board_dig_out_channels;
 blockObj.Sample_rate = header.sample_rate;
 blockObj.Samples = header.num_amplifier_samples;
 
+blockObj.updateStatus('init');
+
 %% CHECK WHETHER TO PROCEED with conversion
 % choice = questdlg('Do file conversion (can be long)?',...
 %     'Continue?',...
@@ -81,10 +87,6 @@ blockObj.Samples = header.num_amplifier_samples;
 % end
 
 %% Convert and attach raw files
-
-%% I don't really understand what you were trying to achieve here
-% for the moment i'm trying to get a bare minimum functioning structure in
-% order to start working on it
 
 % %% ADD PUBLIC BLOCK PROPERTIES
 % path = strsplit(blockObj.DIR,filesep);
