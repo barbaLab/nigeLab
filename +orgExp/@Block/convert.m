@@ -66,5 +66,5 @@ switch blockObj.RecType
         error('%s is not a supported acquisition system (case-sensitive).');
 end
 
-blockObj.updateStatus('ext',true);
+blockObj.updateStatus('Raw',true);
 end

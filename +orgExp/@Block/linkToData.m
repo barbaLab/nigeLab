@@ -5,73 +5,129 @@ function [outputArg1,outputArg2] = linkToData(blockObj)
 % WIP - adds CAR rereferincing and filtered data
 
 % One file per probe and channel
+warningFlag=false;
+UpdateStatus = true;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%       Amp Channels        %%%%%%%%%%%%%%%%%%%%%%
+
 for iCh = 1:blockObj.numChannels
+    
+    %%%%%%%%%%%%% Raw data (and digital data)
     pnum  = num2str(blockObj.Channels(iCh).port_number);
     chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
-    amplifier_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        amplifier_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
+        warningFlag=true;
+        UpdateStatus = false;     
+        break;
     end
-    blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{iCh});
+    blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     
     
     stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
     fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
-    stim_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        stim_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
+        warningFlag=true;
+        UpdateStatus = false;
+        break;
     end
-    blockObj.Channels(iCh).stimData = orgExp.libs.DiskData(stim_dataFile{iCh});
+    blockObj.Channels(iCh).stimData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     
     if (blockObj.dcAmpDataSaved ~= 0)
         dc_amp_fname = strrep(fullfile(blockObj.paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
         fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
-        dc_amplifier_dataFile{iCh} =  matfile(fullfile(fname),'Writable',true);
         if ~exist(fullfile(fname),'file')
-            dc_amplifier_dataFile{iCh}.data = (zeros(1,blockObj.numChannels,'single'));
+            warningFlag=true;
+            UpdateStatus = false;
+            break;       
         end
-        blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(dc_amplifier_dataFile{iCh});
+        blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);;
     end
-    
-    if 1 % check folder is not empty
-        fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
-        blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(matfile(fullfile(fname)));
-    end
-    
 end
+if UpdateStatus, blockObj.updateStatus('Raw',true);end
+    
+    %%%%%%%%%%%% LFP data
+for iCh = 1:blockObj.numChannels
+    fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
+    if ~exist(fullfile(fname),'file')
+        warningFlag=true;
+        UpdateStatus = false;
+        break;        
+    end
+    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+end
+if UpdateStatus, blockObj.updateStatus('LFP',true);end
+
+    %%%%%%%%%%%%%%%% Filt data
+for iCh = 1:blockObj.numChannels    
+    fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
+    if ~exist(fullfile(fname),'file')
+        warningFlag=true;
+        UpdateStatus = false;
+        break;        
+    end
+    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+end
+if UpdateStatus, blockObj.updateStatus('Filt',true);end
+
+    %%%%%%%%%%%%%%%% CAR data
+for iCh = 1:blockObj.numChannels    
+    fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
+    if ~exist(fullfile(fname),'file')
+        warningFlag = true;
+        UpdateStatus = false;
+        break;
+    end
+    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+end
+if UpdateStatus, blockObj.updateStatus('CAR',true); end
+
+    %%%%%%%%%%%%%%%% spikedetection data
+for iCh = 1:blockObj.numChannels    
+    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
+    if ~exist(fullfile(fname),'file')
+        warningFlag=true;
+        UpdateStatus = false;
+        break;
+    end
+    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+end   
+if UpdateStatus, blockObj.updateStatus('Spikes',true);end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%       AUX Channels        %%%%%%%%%%%%%%%%%%%%%%
 
 % Save single-channel adc data
 for i = 1:blockObj.numADCchannels
     blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),blockObj.ADCChannels(i).custom_channel_name);
-    board_adc_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_adc_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
+        warningFlag=true;
+        break;
     end
-    blockObj.ADCChannels(i).data=orgExp.libs.DiskData(board_adc_dataFile{i});
+    blockObj.ADCChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 
 % Save single-channel dac data
 for i = 1:blockObj.numDACChannels
     blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DACChannels(i).custom_channel_name);
-    board_dac_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_dac_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
+        warningFlag=true;
+        break;
     end
-    blockObj.DACChannels(i).data=orgExp.libs.DiskData(board_dac_dataFile{i});
+    blockObj.DACChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 
 % Save single-channel digital input data
 for i = 1:blockObj.numDigInChannels
     blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigInChannels(i).custom_channel_name);
-    board_dig_in_dataFile{i} = matfile(fullfile(fname),'Writable',true);
     if ~exist(fullfile(fname),'file')
-        board_dig_in_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
+        warningFlag=true;
+        break;
     end
-    blockObj.DigInChannels(i).data=orgExp.libs.DiskData(board_dig_in_dataFile{i});
+    blockObj.DigInChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 
 
@@ -79,14 +135,17 @@ end
 % Save single-channel digital output data
 for i = 1:blockObj.numDigOutChannels
     fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigOutChannels(i).custom_channel_name);
-    board_dig_out_dataFile{i} = matfile(fullfile(fname),'Writable',true);
-    if ~exist(fullfile(fname),'file')
-        board_dig_out_dataFile{i}.data = (zeros(1,blockObj.numChannels,'single'));
+     if ~exist(fullfile(fname),'file')
+        warningFlag=true;
+        break;
     end
-    blockObj.DigOutChannels(i).data=orgExp.libs.DiskData(board_dig_out_dataFile{i});
+    blockObj.DigOutChannels(i).data = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
 end
 
-blockObj.Status(1)=true;
+if warningFlag
+    warning('Something went wrong. Consider rerunning the processing stages');
+end
+
 blockObj.save;
 end
 

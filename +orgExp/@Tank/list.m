@@ -35,7 +35,8 @@ VariableNames = {'Animals';
                  'Recording_date';
                  'RecordingType';
                  'NumberOfBlocks';
-                 'NumberOfChannels';                 
+                 'NumberOfChannels';     
+                 'Status';
                     };
                 
 GatherFunction = { @(an) an.Name;
@@ -43,6 +44,7 @@ GatherFunction = { @(an) an.Name;
                    @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.File_extension})];
                    @(an) numel(an.Blocks);
                    @(an) unique(cat(1,an.Blocks.numChannels));
+                   @(an) getAnimalStatus(an);
     };
 
 Lstruc=cell2struct(cell(1,numel(VariableNames)),VariableNames,2);
@@ -62,6 +64,9 @@ else
     L=struct2table(Lstruc);
 end
 
+end
 
-
+function Status = getAnimalStatus(animalObj)
+    L = animalObj.list;
+    Status = unique(cat(2,L.Status{:}))';
 end

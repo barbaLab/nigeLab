@@ -72,7 +72,8 @@ switch pars.FEAT
       for iN=1:N  % Wavelet decomposition (been using 3 scales, 'bior1.3')
          [C,L] = wavedec(spikes(iN,:), ...
             pars.NSCALES, ...
-            pars.WAVELET);
+            pars.Lo_D,...
+            pars.Hi_D);
          cc(iN,:) = C((sum(L(1:pars.NSCALES))+2):(end-1));
       end
       

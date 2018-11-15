@@ -102,7 +102,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', FSTOP1, ...
                 fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
             end
         end
-blockObj.updateStatus('filt',true);
+blockObj.updateStatus('Filt',true);
 blockObj.save;
 end
 

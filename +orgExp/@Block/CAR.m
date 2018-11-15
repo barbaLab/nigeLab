@@ -1,6 +1,6 @@
 function CAR(blockObj)
 probes=unique([blockObj.Channels.port_number]);
-num_amplifier_channels=length(blockObj.Channels(1).filtData);
+num_amplifier_channels=length(blockObj.Channels(1).Filtered);
 probe_ref=zeros(numel(probes),num_amplifier_channels);
 
 STIM_SUPPRESS = false;

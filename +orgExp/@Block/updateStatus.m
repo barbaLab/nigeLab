@@ -1,28 +1,24 @@
 function operations = updateStatus(blockObj,operation,value)
 %% updates status of block
-% possible operations are:
-% 'ext'             extraction
-% 'filt'            filtering
-% 'CAR'             re referencing
-% 'LFP'             local field potential
-% 'SD'              spike detection
-% 'sorting'         sorting
 
-operations = {'ext';
-              'filt';
-              'CAR';
-              'LFP';
-              'SD';
-              'sorting';
-                };
+[~,operations_] = orgExp.defaults.blockDefaults();
 
-if nargin<2
-    return;
-elseif nargin == 3
-    st = strcmp(operations,operation);
-    blockObj.Status(st) = value;
-else
-   error('not enough input parameters'); 
+
+switch nargin
+    case 1
+        operations=operations_;
+        return;
+    case 2
+        if ischar(operation) && strcmp('init',operation)
+           blockObj.Status = false(size(operations_));
+        else
+            error('undefined input parameter %s',operation);
+        end
+    case 3
+        st = strcmp(operations_,operation);
+        blockObj.Status(st) = value;
+    otherwise
+        error('not enough input parameters');
 end
 
 

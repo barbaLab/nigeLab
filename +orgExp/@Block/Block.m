@@ -106,22 +106,14 @@ classdef Block < handle
        DigOutChannels
        Samples
        Status      % Completion status for each element of BLOCK/FIELDS
-
+       SDpars
    end
    
 %% PRIVATE PROPERTIES
    properties (Access = public) % debugging purpose, is private
       PATH          % Raw binary directory
       SaveLoc       % Saving path for extracted/processed data
-%       Raw         % Raw Data files
-%       Filt        % Filtered files
-%       CAR         % CAR-filtered files
-%       DS          % Downsampled files
-%       Spikes      % Spike detection files
-%       Clusters    % Unsupervised clustering files
-%       Sorted      % Sorted spike files
-%       MEM         % LFP spectra files
-%       Digital     % "Digital" (extra) input files
+      SaveFormat    % saving format (MatFile,HDF5,dat)
       ID          % Identifier structure for different elements
       paths        % in detail paths specifications for all the saved files
       Notes       % Notes from text file
@@ -192,10 +184,7 @@ classdef Block < handle
          %               double vector of channel mappings.
          %
          % By: Max Murphy  v1.0  08/25/2017
-         
-         %% LOAD DEFAULT ID SETTINGS
-         blockObj = def_params(blockObj);
-         
+                  
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
