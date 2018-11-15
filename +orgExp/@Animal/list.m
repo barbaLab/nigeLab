@@ -8,6 +8,7 @@ for ii=animalObj.Blocks
     L_(jj,:)=[tmp(1,I),tmp(1,~I)];
     jj=jj+1;
 end
+L_ = addvars(L_,[1:numel(animalObj.Blocks)]','NewVariableNames','N', 'Before', 1);
 % L_.Properties.VariableNames(1)={'Animals'};
 if nargout==0
     disp(L_);

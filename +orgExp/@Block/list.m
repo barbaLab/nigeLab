@@ -41,7 +41,7 @@ info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
 info.Status = {blockObj.getStatus};
 
 
-L_=struct2table(info);
+L_=struct2table(info,'AsArray',true);
 for ii=1:length(L_.Properties.VariableNames)
     switch L_.Properties.VariableNames{ii}
         case 'Corresponding_animal'

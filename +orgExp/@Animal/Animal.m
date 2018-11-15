@@ -81,6 +81,7 @@ classdef Animal < handle
       extractLFP(animalObj)
       mergeBlocks(animalObj,ind)
       removeBlocks(animalObj,ind)
+      spikeDetection(animalObj)
    end
    
    methods (Access = public, Hidden = true)

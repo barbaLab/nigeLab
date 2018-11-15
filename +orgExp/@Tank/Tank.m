@@ -141,6 +141,7 @@ classdef Tank < handle
       flag = tankSet(tankObj,prop)    % Set a specific TANK property
       CAR(tankObj)
       extractLFP(tankObj)
+      spikeDetection(tankObj)
    end
    %% PRIVATE METHODS
    methods (Access = public)

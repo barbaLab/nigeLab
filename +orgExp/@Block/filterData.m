@@ -81,7 +81,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', FSTOP1, ...
             save(fullfile(filt_infoname),'filtspecs','-v7.3');
         end
         % Save amplifier_data by probe/channel
-        fprintf(1,'Applying bandpass filtering...\n');
+        fprintf(1,'\nApplying bandpass filtering...');
         fprintf(1,'%.3d%%',0)
         for iCh = 1:blockObj.numChannels          
             if ~STIM_SUPPRESS

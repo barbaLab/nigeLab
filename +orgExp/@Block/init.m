@@ -21,9 +21,6 @@ blockObj.SaveFormat = Pars.SaveFormat;
 
 if exist(blockObj.SaveLoc,'dir')==0
     mkdir(fullfile(blockObj.SaveLoc));
-    blockObj.ExtractFlag = true;
-else
-    blockObj.ExtractFlag = false;
 end
 
 
