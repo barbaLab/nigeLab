@@ -142,6 +142,7 @@ classdef Tank < handle
       CAR(tankObj)
       extractLFP(tankObj)
       spikeDetection(tankObj)
+      freeSpace(tankObj,ask)
    end
    %% PRIVATE METHODS
    methods (Access = public)

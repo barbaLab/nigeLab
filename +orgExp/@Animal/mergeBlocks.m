@@ -15,6 +15,7 @@ function mergeBlocks(animalObj,ind)
                         ismember( BlockFieldsToMerge_, fieldnames(animalObj.Blocks(ind(1)))));
                 
    ChannelsFieldsToMerge_={ 'rawData';
+                            'stimData';
                             'amp_settle_data';
                             'charge_recovery_data';
                             'compliance_limit_data';

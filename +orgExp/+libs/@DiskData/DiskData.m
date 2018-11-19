@@ -42,7 +42,25 @@ classdef DiskData
                         otherwise
                             error('Unknown data format');
                     end
-                    
+                case 3
+                    switch varargin{1}
+                        case 'MatFile'
+                            data=0;
+                            save(fullfile(varargin{2}),'data','-v7.3');
+                            obj.diskfile = matfile(varargin{2},...
+                                'Writable',true);
+                            obj.diskfile.data = varargin{3};
+                            info = whos(obj.diskfile);
+                            obj.type='MatFile';
+                            obj.name = info.name;
+                            obj.size_ = info.size;
+                            obj.bytes = info.bytes;
+                            obj.class_ = info.class;
+                            
+                        case 'HDF5'
+                        otherwise
+                            error('Unknown data format');
+                    end
                 otherwise
                     error('Wrong number of input parameter');
             end

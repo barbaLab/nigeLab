@@ -42,7 +42,7 @@ Yb = Y(1:(end-2));
 Yf = Y(3:end);
 Z = [0, Y(2:(end-1)).^2 - Yb .* Yf, 0]; % Discrete nonlinear energy operator
 Zs = fastsmooth(Z,pars.SNEO_N);
-
+clear('Z','Y','Yb','Yf');
 %% CREATE THRESHOLD FILTER
 tmpdata = data;
 tmpdata(art_idx) = [];
@@ -51,7 +51,7 @@ tmpZ(art_idx) = [];
 
 th = pars.MULTCOEFF * median(abs(tmpZ));
 data_th = pars.MULTCOEFF * median(abs(tmpdata));
-
+clear('tmpZ','tmpdata');
 %% PERFORM THRESHOLDING
 pk = Zs > th;
 

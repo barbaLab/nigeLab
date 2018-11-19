@@ -243,6 +243,7 @@ classdef Block < handle
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
       spikeDetection(blockObj)
+      freeSpace(blockObj,ask)
    end
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording

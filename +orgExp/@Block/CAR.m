@@ -20,40 +20,44 @@ if (~isnan(STIM_P_CH(1)) && ~isnan(STIM_P_CH(2)))
    STIM_SUPPRESS = true;
 end
 
-fprintf(['Applying CAR rereferncing...' newline]);
+fprintf(1,'Applying CAR rereferncing... %.3d%%',0);
 for iCh = 1:length(blockObj.Channels)
     if ~STIM_SUPPRESS
         % Filter and and save amplifier_data by probe/channel
-        pnum  = num2str(blockObj.Channels(iCh).port_number);
-        chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
         iPb = blockObj.Channels(iCh).port_number;
         nChanPb = sum(iPb == [blockObj.Channels.port_number]);
-        fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
-        load(fname,'data');
+        data = blockObj.Channels(iCh).Filtered(:);
         probe_ref(iPb,:)=probe_ref(iPb,:)+data./nChanPb;
-        %             data = single(filtfilt(b,a,double(data)));
     end
-    clear('data')
+    fraction_done = 100 * (iCh / blockObj.numChannels);
+    if ~floor(mod(fraction_done,5)) % only increment counter by 5%
+        fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
+    end
 end
+clear('data');
+fprintf(1,'\b\b\b\bDone.\n');
+
 
 % Save amplifier_data CAR by probe/channel
+fprintf(1,'Saving data... %.3d%%',0);
 if ~STIM_SUPPRESS
     car_infoname = fullfile(blockObj.paths.CARW,[blockObj.Name '_CAR_Ref.mat']);
     save(fullfile(car_infoname),'probe_ref','-v7.3');
     for iCh = 1:length(blockObj.Channels)
         pnum  = num2str(blockObj.Channels(iCh).port_number);
         chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-        fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);       % loads filtered data
-        load(fname,'data');
-        
-        data = data - probe_ref(blockObj.Channels(iCh).port_number,:); % rereferencing
-        
+        data = blockObj.Channels(iCh).Filtered(:);
+        data = data - probe_ref(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
-        save(fullfile(fname),'data','-v7.3');
+        blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
+        fraction_done = 100 * (iCh / blockObj.numChannels);
+    if ~floor(mod(fraction_done,5)) % only increment counter by 5%
+        fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
+    end
     end
     clear('data')
 end
-fprintf(1,'Done.\n');
+fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('CAR',true);
 end
 

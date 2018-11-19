@@ -82,6 +82,7 @@ classdef Animal < handle
       mergeBlocks(animalObj,ind)
       removeBlocks(animalObj,ind)
       spikeDetection(animalObj)
+      freeSpace(animalObj,ask)
    end
    
    methods (Access = public, Hidden = true)

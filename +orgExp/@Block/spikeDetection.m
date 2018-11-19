@@ -88,7 +88,7 @@ function [spikedata] = PerChannelDetection(blockObj,ch,pars)
 %
 
 %% LOAD FILTERED AND RE-REFERENCED MAT FILE
-data=blockObj.Channels(ch).Filtered(:,:);
+data=blockObj.Channels(ch).CAR(:,:);
 pars.FS = blockObj.Sample_rate;
 %% PERFORM SPIKE DETECTION
 spikedata = SpikeDetectionArray(data,pars); 

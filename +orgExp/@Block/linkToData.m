@@ -12,7 +12,7 @@ UpdateStatus = true;
 
 for iCh = 1:blockObj.numChannels
     
-    %%%%%%%%%%%%% Raw data (and digital data)
+    %%%%%%%%%%%%% Raw data 
     pnum  = num2str(blockObj.Channels(iCh).port_number);
     chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
@@ -22,8 +22,11 @@ for iCh = 1:blockObj.numChannels
         break;
     end
     blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
-    
-    
+    if UpdateStatus, blockObj.updateStatus('Raw',true);end
+end
+    %%%%%%%%%%%%%%% Digital data
+UpdateStatus = true;
+for iCh = 1:blockObj.numChannels 
     stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
     fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')
@@ -43,11 +46,14 @@ for iCh = 1:blockObj.numChannels
         end
         blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     end
+    if UpdateStatus, blockObj.updateStatus('Digital',true);end
 end
-if UpdateStatus, blockObj.updateStatus('Raw',true);end
     
     %%%%%%%%%%%% LFP data
+UpdateStatus = true;
 for iCh = 1:blockObj.numChannels
+    pnum  = num2str(blockObj.Channels(iCh).port_number);
+    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')
         warningFlag=true;
@@ -59,7 +65,10 @@ end
 if UpdateStatus, blockObj.updateStatus('LFP',true);end
 
     %%%%%%%%%%%%%%%% Filt data
-for iCh = 1:blockObj.numChannels    
+UpdateStatus = true;
+for iCh = 1:blockObj.numChannels
+    pnum  = num2str(blockObj.Channels(iCh).port_number);
+    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')
         warningFlag=true;
@@ -71,7 +80,10 @@ end
 if UpdateStatus, blockObj.updateStatus('Filt',true);end
 
     %%%%%%%%%%%%%%%% CAR data
-for iCh = 1:blockObj.numChannels    
+UpdateStatus = true;
+for iCh = 1:blockObj.numChannels
+    pnum  = num2str(blockObj.Channels(iCh).port_number);
+    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')
         warningFlag = true;
@@ -83,7 +95,10 @@ end
 if UpdateStatus, blockObj.updateStatus('CAR',true); end
 
     %%%%%%%%%%%%%%%% spikedetection data
-for iCh = 1:blockObj.numChannels    
+UpdateStatus = true;
+for iCh = 1:blockObj.numChannels
+    pnum  = num2str(blockObj.Channels(iCh).port_number);
+    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
     fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')
         warningFlag=true;
