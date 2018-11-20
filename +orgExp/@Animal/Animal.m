@@ -79,7 +79,7 @@ classdef Animal < handle
       CAR(animalObj)
       linkToData(animalObj)
       extractLFP(animalObj)
-      mergeBlocks(animalObj,ind)
+      mergeBlocks(animalObj,ind,varargin)
       removeBlocks(animalObj,ind)
       spikeDetection(animalObj)
       freeSpace(animalObj,ask)

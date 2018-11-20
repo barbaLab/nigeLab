@@ -26,7 +26,10 @@ for iCh = 1:blockObj.numChannels
 end
     %%%%%%%%%%%%%%% Digital data
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels 
+for iCh = 1:blockObj.numChannels
+    pnum  = num2str(blockObj.Channels(iCh).port_number);
+    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+
     stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
     fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
     if ~exist(fullfile(fname),'file')

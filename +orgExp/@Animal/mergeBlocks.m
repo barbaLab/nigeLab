@@ -1,4 +1,13 @@
-function mergeBlocks(animalObj,ind)
+function mergeBlocks(animalObj,ind,varargin)
+%%
+%     BlockFieldsToMerge_                   'Channels'
+%     ChannelsFieldsToMerge_                'rawData','stimData','amp_settle_data'
+%                                           'charge_recovery_data','compliance_limit_data'
+%                                           'Filtered','LFPData';
+
+
+
+
     if nargin<2
         warning('Not enough input args, no blocks merged.');
        return; 
@@ -22,6 +31,11 @@ function mergeBlocks(animalObj,ind)
                             'Filtered';
                             'LFPData';
                         };
+                    
+for iV = 1:2:numel(varargin)
+    eval([(varargin{iV}) '=varargin{iV+1};']);
+end
+                    
     ChannelsFieldsToMerge = ChannelsFieldsToMerge_(...
                             isfield( animalObj.Blocks(ind(1)).Channels, ChannelsFieldsToMerge_));
     
@@ -46,5 +60,5 @@ function mergeBlocks(animalObj,ind)
             end
         end
     end
-    
+%     TargetBlock.Samples = TargetBlock.Channels(1).(ChannelsFieldsToMerge{1}).lenght;
 end

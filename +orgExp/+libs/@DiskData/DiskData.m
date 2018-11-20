@@ -67,7 +67,7 @@ classdef DiskData
         end
         
         
-        function Out = subsref(obj,S)
+        function varargout = subsref(obj,S)
             Out=obj.diskfile.(obj.name);
             for ii=1:numel(S)
                 switch S(ii).type
@@ -100,6 +100,9 @@ classdef DiskData
                             Out = Out.(S(ii).subs);
                         end
                 end
+            end
+            for i=1:nargout
+                varargout(i) = {Out};
             end
         end
         
@@ -152,6 +155,10 @@ classdef DiskData
         
         function dim = size(obj,n)
             info = whos(obj.diskfile);
+            if length(info)~=1
+                [~,I]=max([info.bytes]);
+                info=info(I);
+            end
             if nargin<2
                 n=1:length(info.size);
             end
