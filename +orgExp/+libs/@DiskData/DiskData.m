@@ -12,7 +12,10 @@ classdef DiskData
     
     methods
         function obj = DiskData(varargin)
-            %DISKDATA Constructor
+            %% DISKDATA Constructor
+            % D = DiskData(DataType,DataPath,Data)
+            % D = DiskData(DataType,DataPath)
+            % D = DiskData(MatFile)
             switch nargin
                 case 1
                     if isa(varargin{1},'matlab.io.MatFile')
@@ -68,46 +71,50 @@ classdef DiskData
         
         
         function varargout = subsref(obj,S)
-            Out=obj.diskfile.(obj.name);
+%             Out=obj.diskfile.(obj.name);
+            Out = 'obj';
             for ii=1:numel(S)
                 switch S(ii).type
-                    case '()'  
-                        nArgs=numel(S(ii).subs);
-                        if nArgs==1
-                            [~,I]=max(size(obj));
-                            tmp=S(ii).subs{1};
-                            S(ii).subs(1:numel(size(obj)))={1};
-                            S(ii).subs{I}=tmp;
-                        end                  
-                        SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
-
-                        if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
-                            error('Index exceeds matrix dimension.');
+                    case '()'
+                        if ii==1
+                            Out='obj.diskfile.(obj.name)';
+                            
+                            nArgs=numel(S(ii).subs);
+                            if nArgs==1
+                                [~,I]=max(size(obj));
+                                tmp=S(ii).subs{1};
+                                S(ii).subs(1:numel(size(obj)))={1};
+                                S(ii).subs{I}=tmp;
+                            end
+                            SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
+                            
+                            if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
+                                error('Index exceeds matrix dimension.');
+                            end
                         end
-                        
-                        
+%                         S(ii).subs=cellfun( @(x) num2str(x), S(ii).subs ,'UniformOutput',false);
                         % wow, this is actally working! unexpected
                         % redirecting the indexing operation from the object to
                         % the variable stored in the matfile
-                        Out = Out(S(ii).subs{:});
+                        Out = sprintf('%s(S(ii).subs{:})',Out);
                     case '{}'
                         warning('curly indexing not supported yet')
                     case '.'
                         s=methods(obj);
                         if any(strcmp(s,S(ii).subs))
-                            Out = obj.(S(ii).subs);
+                            Out = sprintf('obj.%s',S(ii).subs);
                         else
-                            Out = Out.(S(ii).subs);
+                            Out = sprintf('%s.(%s)',Out,S(ii).subs);
                         end
                 end
             end
+            Out = eval(Out);
             for i=1:nargout
                 varargout(i) = {Out};
             end
         end
         
          function obj = subsasgn(obj,S,b)
-             %             obj.diskfile.Properties.Writable=true;
              tmp = obj.diskfile.(obj.name);
              for ii=1:numel(S)
                  switch S(ii).type
@@ -153,6 +160,26 @@ classdef DiskData
             end
         end
         
+        function Out = plus(obj,b)
+            if isa(b,'orgExp.libs.DiskData')
+                Out=obj.diskfile.(obj.name)(:,:)+b.diskfile.(b.name)(:,:);
+            elseif isnumeric(b)
+                Out=obj.diskfile.(obj.name)(:,:)+b;
+            end
+        end
+        
+        function Out = times(obj,b)
+            Out=obj.diskfile.(obj.name)(:,:).*b;
+        end
+            
+        function Out = mtimes(obj,b)
+            if isa(b,'orgExp.libs.DiskData')
+                Out=obj.diskfile.(obj.name)(:,:)*b.diskfile.(b.name)(:,:);
+            elseif isnumeric(b)
+                Out=obj.diskfile.(obj.name)(:,:)*b;
+            end
+        end
+        
         function dim = size(obj,n)
             info = whos(obj.diskfile);
             if length(info)~=1
@@ -177,6 +204,10 @@ classdef DiskData
         
         function Out = double(obj)
             Out= double(obj.diskfile.(obj.name)(:,:));
+        end
+        
+        function Out = single(obj)
+            Out= single(obj.diskfile.(obj.name)(:,:));
         end
         
         function Out = getPath(obj)
@@ -205,9 +236,9 @@ classdef DiskData
             disp(obj.diskfile.(obj.name));
         end
         
-        function n=numel(obj)
-            n=numel(obj.diskfile.(obj.name));
-        end
+%         function n=numel(obj)
+%             n=numel(obj.diskfile.(obj.name));
+%         end
         
         function x=abs(obj)
             x = abs(obj.diskfile.(obj.name));

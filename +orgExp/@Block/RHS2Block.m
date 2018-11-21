@@ -177,7 +177,6 @@ if (data_present)
         save(fullfile(infoname),'DigI_info','gitInfo','-v7.3');
         if (data_present)
             for i = 1:num_board_dig_in_channels
-                blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
                 board_dig_in_dataFile{i} = matfile(fullfile(fname),'Writable',true);
                 if ~exist(fullfile(fname),'file')
@@ -240,14 +239,14 @@ if (data_present)
 %         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_out_channels; %board_dig_out_raw
 %     end
     
-nDataPoints=bytes_per_block/2; % reading uint16
+    nDataPoints=bytes_per_block/2; % reading uint16
 
     time_buffer_index = false(1,nDataPoints);
-    amplifier_buffer_index = uint16(zeros(1,nDataPoints));
-    dc_amplifier_buffer_index = uint16(zeros(1,nDataPoints));
-    stim_buffer_index = uint16(zeros(1,nDataPoints));
-    adc_buffer_index = uint16(zeros(1,nDataPoints));
-    dac_buffer_index = uint16(zeros(1,nDataPoints));
+    amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
+    dc_amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
+    stim_buffer_index = zeros(1,nDataPoints,'uint16');
+    adc_buffer_index = zeros(1,nDataPoints,'uint16');
+    dac_buffer_index = zeros(1,nDataPoints,'uint16');
     dig_in_buffer_index = false(1,nDataPoints);
     dig_out_buffer_index = false(1,nDataPoints);
     
@@ -473,7 +472,6 @@ if (data_present)
         blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fname));
     end
 end
-blockObj.Status(1)=true;
 return
 
 
