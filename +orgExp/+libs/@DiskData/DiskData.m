@@ -2,46 +2,79 @@ classdef DiskData
     %DISKDATA
     
     properties (Access = private)
-        diskfile
-        type
-        name
+        diskfile_
+        type_
+        name_
         size_
-        bytes
+        bytes_
         class_
     end
     
     methods
         function obj = DiskData(varargin)
             %% DISKDATA Constructor
-            % D = DiskData(DataType,DataPath,Data)
-            % D = DiskData(DataType,DataPath)
             % D = DiskData(MatFile)
+            % ----------------------------------            
+            % D = DiskData(Datatype_,DataPath,Data)
+            % D = DiskData(Datatype_,DataPath)
+            % 
+            % varargin 
+            %               name
+            %               size
+            %               class
+            
+            
+            %%input parsing 
+            tmp={'name','size','class'};
+            nargin=numel(varargin);
+            for ii=1:nargin
+                if ~isempty(find(strcmp(varargin(ii),tmp),1))
+                    break;
+                end
+            end
+            nargin=ii-1;
+            switch nargin
+                case 2
+                    size_=inf;
+                    name_='data';
+                case 3
+                    size_=size(varargin{3});
+                    name_='data';
+                    class_=class(varargin{3});
+            end
+            for iV = ii:2:nargin
+                eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
+            end
+            %% creating files
             switch nargin
                 case 1
                     if isa(varargin{1},'matlab.io.MatFile')
-                        obj.diskfile = varargin{1};
-                        info = whos(obj.diskfile);
-                        obj.type='MatFile';
-                        obj.name = info.name;
+                        obj.diskfile_ = varargin{1};
+                        info = whos(obj.diskfile_);
+                        obj.type_='MatFile';
+                        obj.name_ = info.name_;
                     else
                         error('Data format not yet supported');
                     end
                 case 2
                     switch varargin{1}
                         case 'MatFile'
-                            obj.diskfile = matfile(varargin{2},...
+                            obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
                             if ~exist(varargin{2},'file')
-                                obj.diskfile.data = [];
+                                obj.diskfile_.data = [];
                             end
-                            info = whos(obj.diskfile);
-                            obj.type='MatFile';
-                            obj.name = info.name;
+                            info = whos(obj.diskfile_);
+                            obj.type_='MatFile';
+                            obj.name_ = info.name_;
                             obj.size_ = info.size;
-                            obj.bytes = info.bytes;
+                            obj.bytes_ = info.bytes_;
                             obj.class_ = info.class;
                             
                         case 'HDF5'
+                                varname_ = ['/' name_];
+                                h5create(varargin{2}, varname_, size_);
+                                obj.type_='HDF5';
                         otherwise
                             error('Unknown data format');
                     end
@@ -50,17 +83,28 @@ classdef DiskData
                         case 'MatFile'
                             data=0;
                             save(fullfile(varargin{2}),'data','-v7.3');
-                            obj.diskfile = matfile(varargin{2},...
+                            obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
-                            obj.diskfile.data = varargin{3};
-                            info = whos(obj.diskfile);
-                            obj.type='MatFile';
-                            obj.name = info.name;
+                            obj.diskfile_.data = varargin{3};
+                            info = whos(obj.diskfile_);
+                            obj.type_='MatFile';
+                            obj.name_ = info.name;
                             obj.size_ = info.size;
-                            obj.bytes = info.bytes;
+                            obj.bytes_ = info.bytes;
                             obj.class_ = info.class;
                             
                         case 'HDF5'
+                            varname_ = ['/' name_];
+                            fname=fullfile([varargin{2} '.hd5']);
+                            h5create(fname, varname_, size_,'Datatype',class_);
+                            obj.diskfile_=hdf5info(fname);
+                            h5write(fname, varname_, varargin{3});
+                            obj.name_ = varname_;
+                            obj.size_ = size(varargin{3});
+                            obj.class_ = class_;
+                            obj.type_='HDF5';
+                            obj.bytes_ = obj.diskfile_.FileSize;
+
                         otherwise
                             error('Unknown data format');
                     end
@@ -71,13 +115,13 @@ classdef DiskData
         
         
         function varargout = subsref(obj,S)
-%             Out=obj.diskfile.(obj.name);
+%             Out=obj.diskfile_.(obj.name_);
             Out = 'obj';
             for ii=1:numel(S)
-                switch S(ii).type
+                switch S(ii).type_
                     case '()'
                         if ii==1
-                            Out='obj.diskfile.(obj.name)';
+                            Out='obj.diskfile_.(obj.name_)';
                             
                             nArgs=numel(S(ii).subs);
                             if nArgs==1
@@ -115,9 +159,9 @@ classdef DiskData
         end
         
          function obj = subsasgn(obj,S,b)
-             tmp = obj.diskfile.(obj.name);
+             tmp = obj.diskfile_.(obj.name_);
              for ii=1:numel(S)
-                 switch S(ii).type
+                 switch S(ii).type_
                      case '()'
                          nArgs=numel(S(ii).subs);
                          if nArgs==1
@@ -140,7 +184,7 @@ classdef DiskData
                      case '{}'
                  end
              end
-             obj.diskfile.(obj.name) = tmp;
+             obj.diskfile_.(obj.name_) = tmp;
         end
         
         function ind = end(obj,k,n)
@@ -154,36 +198,36 @@ classdef DiskData
         
         function Out = minus(obj,b)
             if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile.(obj.name)(:,:)-b.diskfile.(b.name)(:,:);
+                Out=obj.diskfile_.(obj.name_)(:,:)-b.diskfile_.(b.name_)(:,:);
             elseif isnumeric(b)
-                Out=obj.diskfile.(obj.name)(:,:)-b;
+                Out=obj.diskfile_.(obj.name_)(:,:)-b;
             end
         end
         
         function Out = plus(obj,b)
             if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile.(obj.name)(:,:)+b.diskfile.(b.name)(:,:);
+                Out=obj.diskfile_.(obj.name_)(:,:)+b.diskfile_.(b.name_)(:,:);
             elseif isnumeric(b)
-                Out=obj.diskfile.(obj.name)(:,:)+b;
+                Out=obj.diskfile_.(obj.name_)(:,:)+b;
             end
         end
         
         function Out = times(obj,b)
-            Out=obj.diskfile.(obj.name)(:,:).*b;
+            Out=obj.diskfile_.(obj.name_)(:,:).*b;
         end
             
         function Out = mtimes(obj,b)
             if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile.(obj.name)(:,:)*b.diskfile.(b.name)(:,:);
+                Out=obj.diskfile_.(obj.name_)(:,:)*b.diskfile_.(b.name_)(:,:);
             elseif isnumeric(b)
-                Out=obj.diskfile.(obj.name)(:,:)*b;
+                Out=obj.diskfile_.(obj.name_)(:,:)*b;
             end
         end
         
         function dim = size(obj,n)
-            info = whos(obj.diskfile);
+            info = whos(obj.diskfile_);
             if length(info)~=1
-                [~,I]=max([info.bytes]);
+                [~,I]=max([info.bytes_]);
                 info=info(I);
             end
             if nargin<2
@@ -193,39 +237,39 @@ classdef DiskData
         end
         
         function cl=class(obj)
-            info = whos(obj.diskfile);
+            info = whos(obj.diskfile_);
             cl = info.class;
         end
         
         function l=length(obj)
-            info = whos(obj.diskfile);
+            info = whos(obj.diskfile_);
             l=max(info.size);
         end
         
         function Out = double(obj)
-            Out= double(obj.diskfile.(obj.name)(:,:));
+            Out= double(obj.diskfile_.(obj.name_)(:,:));
         end
         
         function Out = single(obj)
-            Out= single(obj.diskfile.(obj.name)(:,:));
+            Out= single(obj.diskfile_.(obj.name_)(:,:));
         end
         
         function Out = getPath(obj)
-            Out=obj.diskfile.Properties.Source;
+            Out=obj.diskfile_.Properties.Source;
         end
         
         function Out = append(obj,b)
             Out = obj;
-            nameO = Out.name;
+            name_O = Out.name_;
             if isa(b,'orgExp.libs.DiskData')
-                nameB = b.name;
-                Out.diskfile.Properties.Writable=true;
-                Out.diskfile.(nameO)(1,(obj.size(2)+1):(obj.size(2)+b.size(2)))...
-                    = b.diskfile.(nameB)(1,:);
-            elseif isempty(obj.diskfile.(obj.name))
-                 Out.diskfile.(nameO) = b;
+                name_B = b.name_;
+                Out.diskfile_.Properties.Writable=true;
+                Out.diskfile_.(name_O)(1,(obj.size(2)+1):(obj.size(2)+b.size(2)))...
+                    = b.diskfile_.(name_B)(1,:);
+            elseif isempty(obj.diskfile_.(obj.name_))
+                 Out.diskfile_.(name_O) = b;
             elseif class(obj)==class(b)
-                Out.diskfile.(nameO)(1,(obj.size(2)+1):(obj.size(2)+size(b,2)))...
+                Out.diskfile_.(name_O)(1,(obj.size(2)+1):(obj.size(2)+size(b,2)))...
                     = b;
             else
                 error('Cannot concatenate objects of different classes');
@@ -233,19 +277,21 @@ classdef DiskData
         end
         
         function disp(obj)
-            disp(obj.diskfile.(obj.name));
+            switch obj.type_
+                case 'MatFile'
+                    disp(obj.diskfile_.(obj.name_));
+                case 'HDF5'
+                    fname=obj.diskfile_.Filename;
+                    disp(hdf5read(fname,obj.name_));
+            end
         end
         
-%         function n=numel(obj)
-%             n=numel(obj.diskfile.(obj.name));
-%         end
-        
         function x=abs(obj)
-            x = abs(obj.diskfile.(obj.name));
+            x = abs(obj.diskfile_.(obj.name_));
         end
         
         function b = isempty(obj)
-            b = isempty(obj.diskfile.(obj.name));
+            b = isempty(obj.diskfile_.(obj.name_));
         end
         
     end
