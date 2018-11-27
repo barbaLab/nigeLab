@@ -11,6 +11,7 @@ DIG_ID      = [delim ID.Digital.Folder];             % Digital stream ID
 LFP_ID      = [delim ID.LFP.Folder];                 % LFP stream ID
 SD_ID       = [delim ID.Spikes.Folder];              % Spike detection ID
 
+paths.TW    = fullfile(blockObj.SaveLoc);
 paths.RW    = fullfile(blockObj.SaveLoc,[blockObj.Name RAW_ID] );
 paths.FW    = fullfile(blockObj.SaveLoc,[blockObj.Name FILT_ID]);
 paths.CARW  = fullfile(blockObj.SaveLoc,[blockObj.Name CAR_ID] );
@@ -34,6 +35,7 @@ if exist(fullfile(paths.DW,'DC_AMP'),'dir')==0
 end
 
 % ProbeChannel    = ID.ProbeChannel;
+paths.TW_N       = fullfile(paths.TW,  [blockObj.Name ID.Time.File  '.mat']);
 paths.RW_N      = fullfile(paths.RW,  [blockObj.Name ID.Raw.File  '.mat']);
 paths.FW_N      = fullfile(paths.FW,  [blockObj.Name ID.Filt.File '.mat']);
 paths.CARW_N    = fullfile(paths.CARW,[blockObj.Name ID.Filt.File '.mat']);

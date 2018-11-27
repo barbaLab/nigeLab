@@ -1,9 +1,9 @@
 function header=RHD_read_header(varargin)
 %% PARSE VARARGIN
 if nargin >0
-    printflag = false;
+    Verbose = false;
 else
-    printflag = true;
+    Verbose = true;
 end
 
 for iV = 1:2:length(varargin)
@@ -55,7 +55,7 @@ end
 data_file_main_version_number = fread(FID, 1, 'int16');
 data_file_secondary_version_number = fread(FID, 1, 'int16');
 
-if printflag
+if Verbose
     fprintf(1, '\n');
     fprintf(1, 'Reading Intan Technologies RHD2000 Data File, Version %d.%d\n', ...
         data_file_main_version_number, data_file_secondary_version_number);
@@ -299,7 +299,7 @@ record_time = num_amplifier_samples / sample_rate;
 % end
 
 
-if printflag
+if Verbose
     if (data_present)
         fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n',...
             record_time, sample_rate / 1000, num_amplifier_samples);

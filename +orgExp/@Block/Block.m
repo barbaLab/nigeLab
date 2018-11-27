@@ -64,71 +64,79 @@ classdef Block < handle
 % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
 
 %% PUBLIC PROPERTIES
+  
    properties (Access = public)
-      Name
-      Fields      % List of property field names
-      
-      % Graphics - Graphical objects associated with BLOCK object.
-      % -> Spikes : SPIKEIMAGE object. Once constructed, can
-      %             call as blockObj.Graphics.Spikes.Build to
-      %             recreate the spikes figure.
-      % -> Waves : AXES object. Destroyed when figure is
-      %            closed.
-      Graphics    % Graphical objects associated with block
-      RecType      % Intan TDT or other
-
-      
-   end
-
-   properties (Access = public) % debugging purpose, is protected
-       Sample_rate
-       Downsampled_rate
-       Time
-       Corresponding_animal
+       Name
        Recording_date
        Recording_time
        Recording_ID
-       File_extension
-       Channels    % list of channels with varius metadata and recording data inside it.
-       % might actually be a better idea to create a special
-       % channel class, in order to adress some issues
-       % concerning the access to matfiles
-       numChannels
-       numProbes
-       dcAmpDataSaved
-       numADCchannels
-       numDACChannels
-       numDigInChannels
-       numDigOutChannels
-       DACChannels
-       ADCChannels
-       DigInChannels
-       DigOutChannels
-       Samples
-       Status      % Completion status for each element of BLOCK/FIELDS
-       SDpars
+   end
+
+   properties (Access = public)
+      DACChannels
+      ADCChannels
+      DigInChannels
+      DigOutChannels
+      Channels    % list of channels with varius metadata and recording data inside it.
+                   % might actually be a better idea to create a special
+                   % channel class, in order to adress some issues
+                   % concerning the access to matfiles
+       
+       
+       % Graphics - Graphical objects associated with BLOCK object.
+       % -> Spikes : SPIKEIMAGE object. Once constructed, can
+       %             call as blockObj.Graphics.Spikes.Build to
+       %             recreate the spikes figure.
+       % -> Waves : AXES object. Destroyed when figure is
+       %            closed.
+       Graphics    % Graphical objects associated with block
    end
    
+   properties (SetAccess = private) % debugging purpose, is protected
+       
+       Sample_rate
+       Time
+       File_extension   % Intan TDT or other
+       RecType
+
+       numChannels       = 0
+       numProbes         = 0
+       numADCchannels    = 0
+       numDACChannels    = 0
+       numDigInChannels  = 0
+       numDigOutChannels = 0       
+   end
+   
+   properties (SetAccess = immutable,GetAccess = private)
+       dcAmpDataSaved
+   end
+   
+   
 %% PRIVATE PROPERTIES
-   properties (Access = public) % debugging purpose, is private
+   properties (SetAccess = private,GetAccess = public)
+       Fields      % List of property field names
+       SDpars
+       FiltPars
+      Corresponding_animal
       PATH          % Raw binary directory
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat)
-      ID          % Identifier structure for different elements
-      paths        % in detail paths specifications for all the saved files
-      Notes       % Notes from text file
-      DEF = 'P:/Rat'; % Default for UI BLOCK selection
-      CH_ID = 'Ch';   % Channel index ID
-      CH_FIELDWIDTH = 3; % Number of characters in channel number 
-                         % (example: Example_Raw_Ch_001.mat would be 3)
-      VERBOSE = true; % Whether to report list of files and fields.
-      MASK  % Whether to include channels or not
-      REMAP % Mapping of channel numbers to actual numbers on probe
-      ExtractFlag
+      Downsampled_rate % 
       
+      Samples    
+                   
+      
+      Mask  % Whether to include channels or not           
    end
    
-%% PUBLIC METHODS
+   properties (Access = private)
+       Status      % Completion status for each element of BLOCK/FIELDS
+       paths        % in detail paths specifications for all the saved files
+       Notes       % Notes from text file
+       Verbose = true; % Whether to report list of files and fields.
+   end
+   
+%% METHODS
    methods (Access = public)
       function blockObj = Block(varargin)
          %% BLOCK Create a datastore object based on CPL data structure
@@ -199,7 +207,7 @@ classdef Block < handle
          
          %% LOOK FOR BLOCK DIRECTORY
          if isempty(blockObj.PATH)
-             [file,path]= uigetfile(fullfile(blockObj.DEF,'*.*'),...
+             [file,path]= uigetfile(fullfile(pwd,'*.*'),...
                  'Select recording BLOCK');
             blockObj.PATH = fullfile(path,file);
             if blockObj.PATH == 0
@@ -224,15 +232,7 @@ classdef Block < handle
       filterData(blockObj)
       CAR(blockObj)
       convert(blockObj)                % Convert raw data to Matlab BLOCK
-      updateID(blockObj,name,type,value) % Update the file or folder identifier
       L = list(blockObj) % List of current associated files for field or fields
-      flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
-      flag = plotSpikes(blockObj,ch) % Show spike clusters for a single channel
-      out = loadSpikes(blockObj,ch) % Load spikes for a given channel
-      out = loadClusters(blockObj,ch) % Load clusters file for a given channel
-      out = loadSorted(blockObj,ch) % Load sorting file for a given channel
-      updateContents(blockObj,fieldname) % Update files for specific field
-      takeNotes(blockObj) % View or update notes on current recording
       out = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop) % Set a specific BLOCK property
       setSaveLocation(blockObj,saveloc)
@@ -244,13 +244,23 @@ classdef Block < handle
       Status = getStatus(blockObj,stage)
       spikeDetection(blockObj)
       freeSpace(blockObj,ask)
+      
+      updateID(blockObj,name,type,value) % Update the file or folder identifier
+      flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
+      flag = plotSpikes(blockObj,ch) % Show spike clusters for a single channel
+      out = loadSpikes(blockObj,ch) % Load spikes for a given channel
+      out = loadClusters(blockObj,ch) % Load clusters file for a given channel
+      out = loadSorted(blockObj,ch) % Load sorting file for a given channel
+      updateContents(blockObj,fieldname) % Update files for specific field
+      takeNotes(blockObj) % View or update notes on current recording
+      
    end
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording
    end
 
 %% PRIVATE METHODS
-   methods (Access = 'public') % debugging purpose, is private
+   methods (Access = 'private') % debugging purpose, is private
       init(blockObj) % Initializes the BLOCK object
 
    end

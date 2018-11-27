@@ -42,9 +42,9 @@ FolderNames     =   {'RawData';
                      'Filtered';
                      'FilteredCAR';
                      'LFPData';
-                     'wav-sneo_CAR_Spikes';
-                     'wav-sneo_SPC_CAR_Sorted';
-                     'wav-sneo_SPC_CAR_Clusters';
+                     'Spikes';
+                     'Sorted';
+                     'Clusters';
                     };
 
 Del = Pars.Delimiter;
@@ -53,5 +53,7 @@ for ii=1:numel(Fields)
    Pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
    Pars.(Fields{ii}).Folder    = FolderNames{ii};
 end
+
+Pars.Time.File = [Del 'Time'];
 
 end

@@ -25,7 +25,7 @@ classdef DiskData
             %               class
             
             
-            %%input parsing 
+            %% input parsing 
             tmp={'name','size','class'};
             nargin=numel(varargin);
             jj=nargin+1;
@@ -35,9 +35,6 @@ classdef DiskData
                     break;
                 end
             end
-            for iV = jj:2:nargin
-                eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
-            end
             nargin=jj-1;
             switch nargin
                 case 2
@@ -46,10 +43,13 @@ classdef DiskData
                     chunks_=[1 2048];
                     class_ = 'double';
                 case 3
-                    size_=[1 inf];
+                    size_=size(varargin{3});
                     name_='data';
                     class_=class(varargin{3});
                     chunks_=[1 2048];
+            end
+            for iV = jj:2:numel(varargin)
+                eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
             end
             %% creating files
             switch nargin
@@ -91,17 +91,29 @@ classdef DiskData
                 case 3
                     switch varargin{1}
                         case 'MatFile'
+                            data=zeros(1,1,class_);
+                            if ~exist(varargin{2},'file')
+                                data=ones(1,1,class_);
+                                save(varargin{2},name_,'-v7.3');
+                            end
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
-                            varname_ = ['/' name_];
-                            h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
-                            h5write(varargin{2}, '/data', varargin{3},[1 1],size(varargin{3}));
-                            info = whos(obj.diskfile_);
+                                                     
                             obj.type_='MatFile';
-                            obj.name_ = info.name;
-                            obj.size_ = info.size;
+                            obj.name_ = name_;
+                            obj.size_ = size_;                            
+                            obj.class_ = class_;
+                            if data
+                                fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
+                                H5L.delete(fid,'data','H5P_DEFAULT');
+                                H5F.close(fid);
+                                varname_ = ['/' obj.name_];
+                                h5create(varargin{2}, varname_, size_,'DataType',class_);
+                                
+                            end
+                            h5write(varargin{2}, '/data', varargin{3},[1 1],size_);
+                            info = whos(obj.diskfile_);
                             obj.bytes_ = info.bytes;
-                            obj.class_ = info.class;
                         otherwise
                             error('Unknown data format');
                     end
@@ -131,18 +143,23 @@ classdef DiskData
                                 error('Index exceeds matrix dimension.');
                             end
                                                    
-                            if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
-                                indx = [1  cellfun( @(x) find(diff(x)-1), S(ii).subs(2))+1;
-                                    cellfun( @(x) find(diff(x)-1), S(ii).subs(2)) numel(S(ii).subs{2})];
-                            elseif any(strcmp(S(ii).subs,':'))
-                                indx = [ 1; inf];
+%                             if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
+                            if any(strcmp(S(ii).subs,':'))
+                                indx = [1 inf];
                             else
-                                indx=[S(ii).subs{2}(1) S(ii).subs{2}(end)-S(ii).subs{2}(1)];
+                                interindx=find(diff(S(ii).subs{2})-1);
+                                indx=0;
+                                for nn=1:numel(interindx)
+                                    indx=[indx (interindx(nn)) (interindx(nn))];
+                                end
+                                indx=reshape([indx numel(S(ii).subs{2})],2,[])'+[1 0];
+                                indx=S(ii).subs{2}(indx);
                             end
+                            indx=[indx(:,1) diff(indx,[],2)+1];
                             Out = [];
                             varname=['/' obj.name_];
-                            for kk=1:size(indx,2)
-                                Out=[Out h5read(obj.getPath,varname,[1 indx(1,kk)],[1 indx(2,kk)])];                                
+                            for kk=1:size(indx,1)
+                                Out=[Out h5read(obj.getPath,varname,[1 indx(kk,1)],[1 indx(kk,2)])];                                
                             end
                             varargout(1) = {Out};
                             return;
@@ -157,14 +174,14 @@ classdef DiskData
                     case '.'
                         s=methods(obj);
                         if any(strcmp(s,S(ii).subs))
-                            Out = sprintf('obj.%s',S(ii).subs);
+                            Out = sprintf('obj.%s',S(ii).subs);                           
                         else
                             Out = sprintf('%s.(%s)',Out,S(ii).subs);
                         end
                 end
             end
-            Out = eval(Out);
-            varargout(1) = {Out};
+                Out = eval(Out);
+                varargout(1) = {Out};
         end
         
          function obj = subsasgn(obj,S,b)
@@ -206,30 +223,42 @@ classdef DiskData
         end
         
         function Out = minus(obj,b)
+                varname=[ '/' obj.name_];
+                a = h5read(obj.getPath,varname,[1 1],[1 inf]);
             if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile_.(obj.name_)(:,:)-b.diskfile_.(b.name_)(:,:);
+                varname=[ '/' b.name_];
+                b = h5read(b.getPath,varname,[1 1],[1 inf]);
+                Out=a-b;
             elseif isnumeric(b)
-                Out=obj.diskfile_.(obj.name_)(:,:)-b;
+                Out=a-b;
             end
         end
         
         function Out = plus(obj,b)
-            if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile_.(obj.name_)(:,:)+b.diskfile_.(b.name_)(:,:);
-            elseif isnumeric(b)
-                Out=obj.diskfile_.(obj.name_)(:,:)+b;
-            end
+            Out = obj.minus(obj,-b);
         end
         
         function Out = times(obj,b)
-            Out=obj.diskfile_.(obj.name_)(:,:).*b;
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+            if isa(b,'orgExp.libs.DiskData')
+                varname=[ '/' b.name_];
+                b = h5read(b.getPath,varname,[1 1],[1 inf]);
+                Out=a*b;
+            elseif isnumeric(b)
+                Out=a.*b;
+            end
         end
             
         function Out = mtimes(obj,b)
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
             if isa(b,'orgExp.libs.DiskData')
-                Out=obj.diskfile_.(obj.name_)(:,:)*b.diskfile_.(b.name_)(:,:);
+                varname=[ '/' b.name_];
+                b = h5read(b.getPath,varname,[1 1],[1 inf]);
+                Out=a*b;
             elseif isnumeric(b)
-                Out=obj.diskfile_.(obj.name_)(:,:)*b;
+                Out=a*b;
             end
         end
         
@@ -255,11 +284,15 @@ classdef DiskData
         end
         
         function Out = double(obj)
-            Out= double(obj.diskfile_.(obj.name_)(:,:));
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+            Out= double(a);
         end
         
         function Out = single(obj)
-            Out= single(obj.diskfile_.(obj.name_)(:,:));
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+            Out= single(a);
         end
         
         function Out = getPath(obj)
@@ -276,22 +309,23 @@ classdef DiskData
                  Out.size_= size(obj)+size(b);      
         end
         
-        function disp(obj)
-            switch obj.type_
-                case 'MatFile'
-                    disp(obj.diskfile_.(obj.name_));
-                case 'HDF5'
-                    fname=obj.diskfile_.Filename;
-                    disp(hdf5read(fname,obj.name_));
+        function Out=disp(obj)
+            if nargout>0
+                Out=[];
             end
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+            disp(a);
         end
         
         function x=abs(obj)
-            x = abs(obj.diskfile_.(obj.name_));
+            varname=[ '/' obj.name_];
+            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+            x = abs(a);
         end
         
         function b = isempty(obj)
-            b = isempty(obj.diskfile_.(obj.name_));
+            b = all(size(obj)==0);
         end
         
     end
