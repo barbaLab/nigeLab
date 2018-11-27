@@ -28,20 +28,23 @@ classdef DiskData
             %%input parsing 
             tmp={'name','size','class'};
             nargin=numel(varargin);
+            jj=nargin+1;
             for ii=1:nargin
                 if ~isempty(find(strcmp(varargin(ii),tmp),1))
+                    jj=ii;
                     break;
                 end
             end
-            for iV = ii:2:nargin
+            for iV = jj:2:nargin
                 eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
             end
-            nargin=ii-1;
+            nargin=jj-1;
             switch nargin
                 case 2
                     size_=[1 inf];
                     name_='data';
                     chunks_=[1 2048];
+                    class_ = 'double';
                 case 3
                     size_=[1 inf];
                     name_='data';
@@ -55,16 +58,18 @@ classdef DiskData
                         obj.diskfile_ = varargin{1};
                         info = whos(obj.diskfile_);
                         obj.type_='MatFile';
-                        obj.name_ = info.name_;
+                        obj.name_ = info.name;
                     else
                         error('Data format not yet supported');
                     end
                 case 2
                     switch varargin{1}
                         case 'MatFile'
-                            
-                            data=ones(1,1,class_);
-                            save(varargin{2},name_,'-v7.3');
+                            data=zeros(1,1,class_);
+                            if ~exist(varargin{2},'file')
+                                data=ones(1,1,class_);
+                                save(varargin{2},name_,'-v7.3');
+                            end
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
                             obj.type_='MatFile';

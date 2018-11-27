@@ -392,11 +392,11 @@ if (data_present)
     amp_settle_data = charge_recovery_data;
     % Scaling variables appropriatly.
     for jj=1:num_amplifier_channels
-        stim_data = stim_dataFile{jj}.data;
+        stim_data = stim_dataFile{jj}(:);
         % Scale voltage levels appropriately.
-        amplifier_dataFile{jj}.data = 0.195 * (single(amplifier_dataFile{jj}.data) - 32768); % units = microvolts
+        amplifier_dataFile{jj}(:) = 0.195 * (single(amplifier_dataFile{jj}) - 32768); % units = microvolts
         if (dc_amp_data_saved ~= 0)
-            dc_amplifier_dataFile{jj}.data = -0.01923 * (single(dc_amplifier_dataFile{jj}.data) - 512); % units = volts
+            dc_amplifier_dataFile{jj}(:) = -0.01923 * (single(dc_amplifier_dataFile{jj}) - 512); % units = volts
         end
         compliance_limit_data(jj,:) = stim_data >= 2^15;
         stim_data = stim_data - (compliance_limit_data(jj,:) * 2^15);
@@ -408,13 +408,13 @@ if (data_present)
         stim_data = stim_data - (stim_polarity * 2^8);
         stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
         stim_data = stim_data .* stim_polarity;
-        stim_dataFile{jj}.data = stim_step_size * stim_data / 1.0e-6; % units = microamps
+        stim_dataFile{jj}(:) = stim_step_size * stim_data / 1.0e-6; % units = microamps
     end
     for jj=1:num_board_adc_channels
-           board_adc_dataFile{jj}.data = 312.5e-6 * (single(board_adc_dataFile{jj}.data) - 32768); % units = volts
+           board_adc_dataFile{jj}(:) = 312.5e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
     end
     for jj=1:num_board_dac_channels
-        board_dac_dataFile{jj}.data = 312.5e-6 * (single(board_dac_dataFile{jj}.data) - 32768); % units = volts
+        board_dac_dataFile{jj}(:) = 312.5e-6 * (single(board_dac_dataFile{jj}) - 32768); % units = volts
     end
    
     % Check for gaps in timestamps.
@@ -429,7 +429,7 @@ if (data_present)
     % DiskData makes it easy to access data stored in matfies.
     % Assigning each file to the right channel
     for iCh=1:num_amplifier_channels
-        blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(amplifier_dataFile{iCh});
+        blockObj.Channels(iCh).rawData = amplifier_dataFile{iCh};
     
         as_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
         fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);
