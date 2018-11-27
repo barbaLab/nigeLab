@@ -283,6 +283,7 @@ num_data_blocks = bytes_remaining / bytes_per_block;
 num_amplifier_samples = num_samples_per_data_block * num_data_blocks;
 num_aux_input_samples = (num_samples_per_data_block / 4) * num_data_blocks;
 num_supply_voltage_samples = 1 * num_data_blocks;
+num_temp_sensor_samples = 1 * num_data_blocks;
 num_board_adc_samples = num_samples_per_data_block * num_data_blocks;
 num_board_dig_in_samples = num_samples_per_data_block * num_data_blocks;
 num_board_dig_out_samples = num_samples_per_data_block * num_data_blocks;
@@ -392,6 +393,7 @@ DesiredOutputs = {
     'num_amplifier_samples';
     'num_aux_input_samples';
     'num_supply_voltage_samples';
+    'num_temp_sensor_samples';
     'num_board_adc_samples';
     'num_board_dig_in_samples';
     'num_board_dig_out_samples';

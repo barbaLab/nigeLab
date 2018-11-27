@@ -104,30 +104,19 @@ if (data_present)
         pnum  = num2str(amplifier_channels(iCh).port_number);
         chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
         fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
-        amplifier_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
-        if ~exist(fullfile(fname),'file')
-            amplifier_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
-        end
-        %         amplifier_dataFile{iCh}.gitInfo = gitInfo;
-        
+        amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','single','size',[1 num_amplifier_samples]);
         
         stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
         fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
-        stim_dataFile{iCh} = matfile(fullfile(fname),'Writable',true);
-        if ~exist(fullfile(fname),'file')
-            stim_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
-        end
-        %         stim_dataFile{iCh}.gitInfo = gitInfo;
+        stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','single','size',[1 num_amplifier_samples]);
         
-        if (dc_amp_data_saved ~= 0)
-            
+        if (dc_amp_data_saved ~= 0)            
             dc_amp_fname = strrep(fullfile(blockObj.paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
             fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
-            dc_amplifier_dataFile{iCh} =  matfile(fullfile(fname),'Writable',true);
-            if ~exist(fullfile(fname),'file')
-                dc_amplifier_dataFile{iCh}.data = zeros(1,num_amplifier_samples,'single');
-            end
-            %             dc_amplifier_dataFile{iCh}.fs = fs;
+            dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','single','size',[1 num_amplifier_samples]);
         end
     end
     
@@ -141,11 +130,8 @@ if (data_present)
             for i = 1:num_board_adc_channels
                 blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
-                board_adc_dataFile{i} = matfile(fullfile(fname),'Writable',true);
-                if ~exist(fullfile(fname),'file')
-                    board_adc_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
-                end
-                %                 board_adc_dataFile{i}. gitInfo = gitInfo;
+                board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','single','size',[1 num_board_adc_samples]);
             end
         end
     end
@@ -160,11 +146,8 @@ if (data_present)
             for i = 1:num_board_dac_channels
                 blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
-                board_dac_dataFile{i} = matfile(fullfile(fname),'Writable',true);
-                if ~exist(fullfile(fname),'file')
-                    board_dac_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
-                end
-                %                 board_dac_dataFile{i}.gitInfo = gitInfo;
+                board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','single','size',[1 num_board_dac_samples]);
             end
         end
     end
@@ -178,11 +161,8 @@ if (data_present)
         if (data_present)
             for i = 1:num_board_dig_in_channels
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
-                board_dig_in_dataFile{i} = matfile(fullfile(fname),'Writable',true);
-                if ~exist(fullfile(fname),'file')
-                    board_dig_in_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
-                end
-                %                 board_dig_in_dataFile{i}.gitInfo = gitInfo;
+                board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','uint8','size',[1 num_board_dig_in_samples]);
             end
         end
     end
@@ -197,11 +177,8 @@ if (data_present)
         if (data_present)
             for i = 1:num_board_dig_out_channels
                 fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
-                board_dig_out_dataFile{i} = matfile(fullfile(fname),'Writable',true);
-                if ~exist(fullfile(fname),'file')
-                    board_dig_out_dataFile{i}.data = zeros(1,num_amplifier_samples,'single');
-                end
-                %                 board_dig_out_dataFile{i}.gitInfo = gitInfo;
+                board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+                'class','uint8','size',[1 num_board_dig_out_samples]);
             end
         end
     end
@@ -242,11 +219,11 @@ if (data_present)
     nDataPoints=bytes_per_block/2; % reading uint16
 
     time_buffer_index = false(1,nDataPoints);
-    amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
-    dc_amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
-    stim_buffer_index = zeros(1,nDataPoints,'uint16');
-    adc_buffer_index = zeros(1,nDataPoints,'uint16');
-    dac_buffer_index = zeros(1,nDataPoints,'uint16');
+    amplifier_buffer_index = zeros(1,nDataPoints,'uint8');
+    dc_amplifier_buffer_index = zeros(1,nDataPoints,'uint8');
+    stim_buffer_index = zeros(1,nDataPoints,'uint8');
+    adc_buffer_index = zeros(1,nDataPoints,'uint8');
+    dac_buffer_index = zeros(1,nDataPoints,'uint8');
     dig_in_buffer_index = false(1,nDataPoints);
     dig_out_buffer_index = false(1,nDataPoints);
     
@@ -256,7 +233,8 @@ if (data_present)
     else
         AvailableMemory=2147483648;
     end
-    nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/(8+13))); %13 accounts for all the indexings
+    % Each block counts like 10 : 8 indexes uint8 and the readings uint16
+    nBlocks=min(num_data_blocks,floor(AvailableMemory/bytes_per_block/(9))); 
     %     t = zeros(1, num_samples_per_data_block);
     
     time_buffer_index(1:num_samples_per_data_block*2)=true;
@@ -339,7 +317,7 @@ if (data_present)
         %%% Read binary data.
         blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
         dataToRead = blocksToread*nDataPoints;
-        Buffer=uint16(fread(fid, dataToRead, 'uint16'))';        
+        Buffer=uint16(fread(fid, dataToRead, 'uint16=>uint16'))';        
         
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         %%% Update the files
@@ -356,26 +334,26 @@ if (data_present)
         clear('t');
         % Write data to file
         for jj=1:num_amplifier_channels
-            amplifier_dataFile{jj}.data(1,index) = single(Buffer(amplifier_buffer_index(1:dataToRead)==jj));
+            amplifier_dataFile{jj}.append( single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)));
             if (dc_amp_data_saved ~= 0)
-                dc_amplifier_dataFile{jj}.data(1,index) = single(Buffer(dc_amplifier_buffer_index(1:dataToRead)==jj));
+                dc_amplifier_dataFile{jj}.append( single(Buffer(dc_amplifier_buffer_index(1:dataToRead)==jj)) );
             end
-            stim_dataFile{jj}.data(1,index) = single(Buffer(stim_buffer_index(1:dataToRead)==jj));
+            stim_dataFile{jj}.append ( single(Buffer(stim_buffer_index(1:dataToRead)==jj)) );
         end
         
         for jj=1:num_board_adc_channels
-            board_adc_dataFile{jj}.data(1,index) = single(Buffer(adc_buffer_index(1:dataToRead)==jj));
+            board_adc_dataFile{jj}.append ( single(Buffer(adc_buffer_index(1:dataToRead)==jj)) );
         end
         
         for jj=1:num_board_dac_channels
-            board_dac_dataFile{jj}.data(1,index) = single(Buffer(dac_buffer_index(1:dataToRead)==jj));
+            board_dac_dataFile{jj}.append( single(Buffer(dac_buffer_index(1:dataToRead)==jj)) );
         end
         
         if num_board_dig_in_channels
             dig_in_raw=Buffer(dig_in_buffer_index(1:dataToRead));
             for jj=1:num_board_dig_in_channels
                 mask = uint16(2^(board_dig_in_channels(jj).native_order) * ones(size(dig_in_raw)));
-                board_dig_in_dataFile{jj}.data = (bitand(dig_in_raw, mask) > 0);
+                board_dig_in_dataFile{jj}.append( uint8(bitand(dig_in_raw, mask) > 0));
             end
         end
 
@@ -383,7 +361,7 @@ if (data_present)
             dig_out_raw=Buffer(dig_out_buffer_index(1:dataToRead));
             for jj=1:num_board_dig_out_channels
                 mask =uint16( 2^(board_dig_out_channels(jj).native_order) * ones(size(dig_out_raw)));
-                board_dig_out_dataFile{jj}.data = (bitand(dig_out_raw, mask) > 0);
+                board_dig_out_dataFile{jj}.append( uint8(bitand(dig_out_raw, mask) > 0));
             end
         end
         

@@ -8,6 +8,7 @@ classdef DiskData
         size_
         bytes_
         class_
+        chunks_
     end
     
     methods
@@ -32,18 +33,20 @@ classdef DiskData
                     break;
                 end
             end
+            for iV = ii:2:nargin
+                eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
+            end
             nargin=ii-1;
             switch nargin
                 case 2
-                    size_=inf;
+                    size_=[1 inf];
                     name_='data';
+                    chunks_=[1 2048];
                 case 3
-                    size_=size(varargin{3});
+                    size_=[1 inf];
                     name_='data';
                     class_=class(varargin{3});
-            end
-            for iV = ii:2:nargin
-                eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
+                    chunks_=[1 2048];
             end
             %% creating files
             switch nargin
@@ -59,70 +62,57 @@ classdef DiskData
                 case 2
                     switch varargin{1}
                         case 'MatFile'
+                            
+                            data=ones(1,1,class_);
+                            save(varargin{2},name_,'-v7.3');
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
-                            if ~exist(varargin{2},'file')
-                                obj.diskfile_.data = [];
-                            end
-                            info = whos(obj.diskfile_);
                             obj.type_='MatFile';
-                            obj.name_ = info.name_;
-                            obj.size_ = info.size;
-                            obj.bytes_ = info.bytes_;
-                            obj.class_ = info.class;
-                            
-                        case 'HDF5'
-                                varname_ = ['/' name_];
-                                h5create(varargin{2}, varname_, size_);
-                                obj.type_='HDF5';
+                            obj.name_ = name_;
+                            obj.size_ = [0 0];
+                            obj.bytes_ = 0;
+                            obj.class_ = class_;
+                            if data
+                                fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
+                                H5L.delete(fid,'data','H5P_DEFAULT');
+                                H5F.close(fid);
+                                varname_ = ['/' obj.name_];
+                                h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
+                            end
+                           
                         otherwise
                             error('Unknown data format');
                     end
                 case 3
                     switch varargin{1}
                         case 'MatFile'
-                            data=0;
-                            save(fullfile(varargin{2}),'data','-v7.3');
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
-                            obj.diskfile_.data = varargin{3};
+                            varname_ = ['/' name_];
+                            h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
+                            h5write(varargin{2}, '/data', varargin{3},[1 1],size(varargin{3}));
                             info = whos(obj.diskfile_);
                             obj.type_='MatFile';
                             obj.name_ = info.name;
                             obj.size_ = info.size;
                             obj.bytes_ = info.bytes;
                             obj.class_ = info.class;
-                            
-                        case 'HDF5'
-                            varname_ = ['/' name_];
-                            fname=fullfile([varargin{2} '.hd5']);
-                            h5create(fname, varname_, size_,'Datatype',class_);
-                            obj.diskfile_=hdf5info(fname);
-                            h5write(fname, varname_, varargin{3});
-                            obj.name_ = varname_;
-                            obj.size_ = size(varargin{3});
-                            obj.class_ = class_;
-                            obj.type_='HDF5';
-                            obj.bytes_ = obj.diskfile_.FileSize;
-
                         otherwise
                             error('Unknown data format');
                     end
                 otherwise
                     error('Wrong number of input parameter');
             end
-        end
-        
+        end        
         
         function varargout = subsref(obj,S)
 %             Out=obj.diskfile_.(obj.name_);
             Out = 'obj';
             for ii=1:numel(S)
-                switch S(ii).type_
+                switch S(ii).type
                     case '()'
-                        if ii==1
-                            Out='obj.diskfile_.(obj.name_)';
-                            
+                        if ii==1 && ~strcmp(class(obj),'struct')
+                                                        
                             nArgs=numel(S(ii).subs);
                             if nArgs==1
                                 [~,I]=max(size(obj));
@@ -135,12 +125,28 @@ classdef DiskData
                             if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
                                 error('Index exceeds matrix dimension.');
                             end
+                                                   
+                            if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
+                                indx = [1  cellfun( @(x) find(diff(x)-1), S(ii).subs(2))+1;
+                                    cellfun( @(x) find(diff(x)-1), S(ii).subs(2)) numel(S(ii).subs{2})];
+                            elseif any(strcmp(S(ii).subs,':'))
+                                indx = [ 1; inf];
+                            else
+                                indx=[S(ii).subs{2}(1) S(ii).subs{2}(end)-S(ii).subs{2}(1)];
+                            end
+                            Out = [];
+                            varname=['/' obj.name_];
+                            for kk=1:size(indx,2)
+                                Out=[Out h5read(obj.getPath,varname,[1 indx(1,kk)],[1 indx(2,kk)])];                                
+                            end
+                            varargout(1) = {Out};
+                            return;
+                        elseif ii==1 && strcmp(class(obj),'struct')
+                            Out='obj.diskfile_.(obj.name_)';
+                            Out = sprintf('%s(S(ii).subs{:})',Out);
+                        else
+                             Out = sprintf('%s(S(ii).subs{:})',Out);
                         end
-%                         S(ii).subs=cellfun( @(x) num2str(x), S(ii).subs ,'UniformOutput',false);
-                        % wow, this is actally working! unexpected
-                        % redirecting the indexing operation from the object to
-                        % the variable stored in the matfile
-                        Out = sprintf('%s(S(ii).subs{:})',Out);
                     case '{}'
                         warning('curly indexing not supported yet')
                     case '.'
@@ -153,15 +159,13 @@ classdef DiskData
                 end
             end
             Out = eval(Out);
-            for i=1:nargout
-                varargout(i) = {Out};
-            end
+            varargout(1) = {Out};
         end
         
          function obj = subsasgn(obj,S,b)
              tmp = obj.diskfile_.(obj.name_);
              for ii=1:numel(S)
-                 switch S(ii).type_
+                 switch S(ii).type
                      case '()'
                          nArgs=numel(S(ii).subs);
                          if nArgs==1
@@ -237,8 +241,7 @@ classdef DiskData
         end
         
         function cl=class(obj)
-            info = whos(obj.diskfile_);
-            cl = info.class;
+            cl = obj.class_;
         end
         
         function l=length(obj)
@@ -260,20 +263,12 @@ classdef DiskData
         
         function Out = append(obj,b)
             Out = obj;
-            name_O = Out.name_;
-            if isa(b,'orgExp.libs.DiskData')
-                name_B = b.name_;
-                Out.diskfile_.Properties.Writable=true;
-                Out.diskfile_.(name_O)(1,(obj.size(2)+1):(obj.size(2)+b.size(2)))...
-                    = b.diskfile_.(name_B)(1,:);
-            elseif isempty(obj.diskfile_.(obj.name_))
-                 Out.diskfile_.(name_O) = b;
-            elseif class(obj)==class(b)
-                Out.diskfile_.(name_O)(1,(obj.size(2)+1):(obj.size(2)+size(b,2)))...
-                    = b;
-            else
+            varname_ = ['/' obj.name_];
+            h5write(obj.getPath, varname_, b(1,:),[1,(obj.size(2)+1)],size(b));
+            if not(strcmp(class(obj),class(b))|isa(b,'orgExp.libs.DiskData'))
                 error('Cannot concatenate objects of different classes');
             end
+                 Out.size_= size(obj)+size(b);      
         end
         
         function disp(obj)

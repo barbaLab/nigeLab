@@ -345,6 +345,9 @@ DesiredOutputs = {
     'num_data_blocks';
     'num_samples_per_data_block';
     'num_amplifier_samples';
+    'num_board_adc_samples';
+    'num_board_dac_samples';
+    'num_board_dig_in_samples';
     'num_board_dig_out_samples';
     'header_size';
     'filesize';   
