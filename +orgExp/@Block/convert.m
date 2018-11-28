@@ -43,28 +43,36 @@ STATE_FILTER = true;
 
 %% PARSE NAME DEPENDING ON RECORDING TYPE
 
-switch blockObj.RecType
-    case 'Intan'
+flag = false; % if returns before completion, indicate failure to complete.
 
-            switch blockObj.File_extension
-                case '.rhs'
-                    blockObj.RHS2Block()
-                case '.rhd'
-                    blockObj.RHD2Block()
-                otherwise
-                    error('Invalid file type (%s).',blockObj.File_extension);
-            end
-            
-            fprintf(1,['complete.' newline]);
-            
-        
-    case 'TDT'
-        fprintf(1,'Unsupported yet')
-    case 'mat'
-        fprintf(1,'Unsupported yet')
-    otherwise
-        error('%s is not a supported acquisition system (case-sensitive).');
+switch blockObj.RecType
+   case 'Intan'
+      
+      switch blockObj.File_extension
+         case '.rhs'
+            blockObj.RHS2Block();
+         case '.rhd'
+            blockObj.RHD2Block();
+         otherwise
+            warning('Invalid file type (%s).',blockObj.File_extension);
+            return;
+      end
+      
+   case 'TDT'
+      warning('%s is not yet supported, but will be added.',blockObj.RecType);
+      return;
+      
+   case 'mat'
+      warning('%s is not yet supported, but will be added.',blockObj.RecType);
+      return;
+      
+   otherwise
+      warning('%s is not a supported acquisition system (case-sensitive).',blockObj.RecType);
+      return;
 end
 
+fprintf(1,'complete.\n');
 blockObj.updateStatus('Raw',true);
+flag = true;
+
 end

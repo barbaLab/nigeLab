@@ -1,7 +1,7 @@
-function [Pars,Fields] = Block()
+function [pars,Fields] = Block()
 %% defaults.Block  Sets default parameters for BLOCK object
 %
-%  [Pars,Fields] = defaults.Block();
+%  [pars,Fields] = defaults.Block();
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
@@ -20,12 +20,14 @@ function [Pars,Fields] = Block()
          
 % Define general values used when parsing metadata from file name and
 % structure:
-Pars             = struct;
-Pars.DEF         = 'R:\Rat';
-Pars.SaveFormat  = 'Hybrid'; % refers to save/load format
-Pars.Delimiter   = '_';      % delimiter for variables in BLOCK name
+pars             = struct;
+pars.DEF         = 'R:\Rat';
+pars.UNC_Path = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
+                 '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
+pars.SaveFormat  = 'Hybrid'; % refers to save/load format
+pars.Delimiter   = '_';      % delimiter for variables in BLOCK name
 CH_ID = 'Ch'; % precedes the channel number delimited variable
-Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
+pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 
 %% Here You can specify the naming format of your block recording
 % The block name will be splitted using Delimiter (defined above) and each
@@ -35,16 +37,15 @@ Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
 % specify if that piece of info should be kept or discarded.
 % The word after a discardChar will be ignored.
 % e.g. the recording name R18-68_2018_07_24_0_180724_141203
-% translates to 
+% translates to :
+
 % Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID $Recording_date $Recording_time';
 % Pars.includeChar='$';
 % Pars.discardChar='&';
 
-Pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
-% namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
-
-Pars.includeChar='$';
-Pars.discardChar='&';
+pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
+pars.includeChar='$';
+pars.discardChar='&';
 
 %% 
 Fields =  {'Raw';
@@ -55,6 +56,7 @@ Fields =  {'Raw';
            'Spikes';
            'Sorted';
            'Clusters';
+           'Metadata';
            %%%%%%%%%%%%%%%%%%% This names are hardcoded. They are used in
            %%%%%%%%%%%%%%%%%%% the following (Block) functions:
            %%%%%%%%%%%%%%%%%%% convert (and ad hoc functions), extractLFP, 
@@ -63,14 +65,14 @@ Fields =  {'Raw';
                 
                 
 FileNames       =   {'Raw';
-                     '';
-                     %{'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'}
+                     {'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'};
                      'Filt';
                      'FiltCAR';
                      'LFP';
                      'ptrain';
                      'sort';
                      'clus';
+                     {'probes';'experiment'};
                     };
                 
 FolderNames     =   {'RawData';
@@ -81,15 +83,16 @@ FolderNames     =   {'RawData';
                      'wav-sneo_CAR_Spikes';
                      'wav-sneo_SPC_CAR_Sorted';
                      'wav-sneo_SPC_CAR_Clusters';
+                     'Metadata';
                     };
 
-Del = Pars.Delimiter;
-P_C = Pars.ProbeChannel;
+Del = pars.Delimiter;
+P_C = pars.ProbeChannel;
 for ii=1:numel(Fields)
-   Pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
-   Pars.(Fields{ii}).Folder    = FolderNames{ii};
+   pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
+   pars.(Fields{ii}).Folder    = FolderNames{ii};
 end
 
-Pars.Time.File = [Del 'Time'];
+pars.Time.File = [Del 'Time'];
 
 end
