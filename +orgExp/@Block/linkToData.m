@@ -1,8 +1,15 @@
-function [outputArg1,outputArg2] = linkToData(blockObj)
-%% Connects the data saved on the disk to the structure
-% Useful when you already have formatted data or when the processing stops
-% for some reason
-% WIP - adds CAR rereferincing and filtered data
+function linkToData(blockObj)
+%% LINKTODATA  Connect the data saved on the disk to the structure
+%
+%  b = orgExp.Block;
+%  b.linkToData;
+%
+% Note: This is useful when you already have formatted data,
+%       or when the processing stops for some reason while in progress.
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+
+%%
 
 % One file per probe and channel
 warningFlag=false;
@@ -21,7 +28,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;     
         break;
     end
-    blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Raw = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     if UpdateStatus, blockObj.updateStatus('Raw',true);end
 end
     %%%%%%%%%%%%%%% Digital data

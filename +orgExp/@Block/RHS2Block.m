@@ -1,8 +1,8 @@
 function RHS2Block(blockObj,varargin)
-%% INTANRHS2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
+%% RHS2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
 %
-%  tankObj.INTANRHS2BLOCK;
-%  INTANRHS2BLOCK(tankObj,'NAME',value,...);
+%  tankObj.RHS2BLOCK;
+%  RHS2BLOCK(tankObj,'NAME',value,...);
 %
 %  --------
 %   INPUTS
@@ -51,13 +51,13 @@ end
 %         return %#ok<UNRCH>
 %     end
 %
-[path,file,~] = fileparts(blockObj.PATH);
+% [path,file,~] = fileparts(blockObj.RecFile);
 
 % end
 
 tic;
-fid = fopen(blockObj.PATH, 'r');
-s = dir(blockObj.PATH);
+fid = fopen(blockObj.RecFile, 'r');
+s = dir(blockObj.RecFile);
 filesize = s.bytes;
 
 Animal = blockObj.Corresponding_animal;

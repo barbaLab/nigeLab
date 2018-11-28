@@ -1,10 +1,10 @@
-function spikeDetection(blockObj)
-%% SPIKEDETECTION    Detects spikes after "convert" and "filterData" steps
+function qSD(blockObj)
+%% QSD  Detects spikes after "convert" and "filterData" steps, using Isilon
 %
 %  b = orgExp.Block();  % point to experiment
 %  convert(b);          % convert binary data
 %  filterData(b);       % filter the data
-%  spikeDetection(b);   % detect extracellular spiking
+%  qSD(b);              % submit detection to Matlab remote job
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
@@ -23,28 +23,22 @@ for iCh = 1:nCh
    blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName));
 end
 
-%% DO SPIKE DETECTION FOR EACH CHANNEL
-disp('000%');
-for iCh = 1:nCh % For each "channel index"...
-   % Do detection:
-   spk = PerChannelDetection(blockObj,iCh,pars);
-   
-   % Create the DiskData pointer to the file:
-   blockObj.Channels(iCh).Spikes = ...
-      orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
-   
-   % And update the status indicator in Command Window:
-   fraction_done = 100 * (iCh / nCh);
-   if ~floor(mod(fraction_done,5)) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
-   end
-   
+% Have to do it this way for the parallel part
+Chans=blockObj.Channels;
+parfor iCh = 1:nCh % For each "channel index"...
+   [spk] = PerChannelDetection(blockObj,iCh,pars);
+   pNum  = num2str(blockObj.Channels(iCh).port_number);
+   chNum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
+   Chans(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
 end
+blockObj.Channels = Chans;
 
-% Indicate that it is finished at the end
+
 blockObj.updateStatus('Spikes',true);
 blockObj.save;
 end
+
 
 function [spikedata] = PerChannelDetection(blockObj,ch,pars)
 %% PERCHANNELDETECTION  Perform spike detection for each channel individually.
@@ -76,9 +70,21 @@ function [spikedata] = PerChannelDetection(blockObj,ch,pars)
 %% LOAD FILTERED AND RE-REFERENCED MAT FILE
 data=blockObj.Channels(ch).CAR(:,:);
 pars.FS = blockObj.Sample_rate;
-
 %% PERFORM SPIKE DETECTION
 spikedata = SpikeDetectionArray(data,pars);
+
+%% SAVE SPIKE DETECTION DATA FOR THIS CHANNEL
+% newname = sprintf('%s%sP%d_Ch_%03d.mat',paths.N,pars.SPIKE_DATA,p,ch);
+
+
+% orgExp.libs.parsavedata(fullfile(paths.SL,paths.PF,newname), ...
+%     'spikes', spikedata.spikes, ...
+%     'artifact', spikedata.artifact, ...
+%     'peak_train',  spikedata.peak_train, ...
+%     'features', spikedata.features, ...
+%     'pw', spikedata.pw, ...
+%     'pp', spikedata.pp, ...
+%     'pars', pars)
 
 end
 
@@ -110,7 +116,7 @@ function [spikedata,pars] = SpikeDetectionArray(data, pars)
 %     pars      :       Updated parameters with new spike-related
 %                       variables.
 %
-% See also: PERCHANNELDETECTION
+% See also: SPIKEDETECTIONARRAY
 
 %% CONVERT PARAMETERS
 pars.w_pre       =   double(round(pars.W_PRE / 1000 * pars.FS));        % Samples before spike

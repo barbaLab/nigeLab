@@ -1,13 +1,13 @@
 function RHD2Block(blockObj,varargin)
-%% INTANRHD2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
+%% RHD2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
 %
-%  tankObj.INTANRHS2BLOCK;
-%  INTANRHD2BLOCK(tankObj,'NAME',value,...);
+%  blockObj.RHD2BLOCK;
+%  RHD2BLOCK(blockObj,'NAME',value,...);
 %
 %  --------
 %   INPUTS
 %  --------
-%   tankObj    :     Tank Class object.
+%   blockObj    :     Block Class object.
 %
 %  varargin    :     (Optional) 'NAME', value input argument pairs.
 %

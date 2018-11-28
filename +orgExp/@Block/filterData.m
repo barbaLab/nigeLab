@@ -38,7 +38,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', pars.FSTOP1, ...
                 % Filter and and save amplifier_data by probe/channel
                 pnum  = num2str(blockObj.Channels(iCh).port_number);
                 chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-                data = single(filtfilt(bp_Filt,blockObj.Channels(iCh).rawData.double));
+                data = single(filtfilt(bp_Filt,blockObj.Channels(iCh).Raw.double));
                 iPb = blockObj.Channels(iCh).port_number;
                 %             data = single(filtfilt(b,a,double(data)));
                 fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
