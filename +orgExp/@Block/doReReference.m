@@ -1,33 +1,39 @@
-function CAR(blockObj)
-probes=unique([blockObj.Channels.port_number]);
-num_amplifier_channels=length(blockObj.Channels(1).Filt);
-probe_ref=zeros(numel(probes),num_amplifier_channels);
+function doReReference(blockObj)
+%% DOREREFERENCE  Perform common-average re-referencing (CAR)
+%
+%  b = orgExp.Block();
+%  doExtraction(b);
+%  doReReference(b);
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-STIM_SUPPRESS = false;
-STIM_P_CH = [nan, nan];
-STIM_BLANK = [1 3];
-FILE_TYPE = blockObj.File_extension;
+probes = unique([blockObj.Channels.port_number]);
+nChannels = length(blockObj.Channels(1).Filt);
+refMean = zeros(numel(probes),nChannels);
 
-if STIM_SUPPRESS
-   if isnan(STIM_P_CH(1)) %#ok<UNRCH>
+doSuppression = blockObj.FiltPars.STIM_SUPPRESS;
+stimProbeChannel     = blockObj.FiltPars.STIM_P_CH;
+
+if doSuppression
+   if isnan(stimProbeChannel(1)) 
       error('STIM Probe Number not specified (''STIM_P_CH(1)'')');
-   elseif isnan(STIM_P_CH(2))
+   elseif isnan(stimProbeChannel(2))
       error('STIM Channel Number not specified (''STIM_P_CH(2)'')');
    end
 end
 
-if (~isnan(STIM_P_CH(1)) && ~isnan(STIM_P_CH(2)))
-   STIM_SUPPRESS = true;
+if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
+   doSuppression = true;
 end
 
 fprintf(1,'Applying CAR rereferncing... %.3d%%',0);
 for iCh = 1:length(blockObj.Channels)
-    if ~STIM_SUPPRESS
+    if ~doSuppression
         % Filter and and save amplifier_data by probe/channel
         iPb = blockObj.Channels(iCh).port_number;
         nChanPb = sum(iPb == [blockObj.Channels.port_number]);
         data = blockObj.Channels(iCh).Filt(:);
-        probe_ref(iPb,:)=probe_ref(iPb,:)+data./nChanPb;
+        refMean(iPb,:)=refMean(iPb,:)+data./nChanPb;
     end
     fraction_done = 100 * (iCh / blockObj.numChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%
@@ -40,14 +46,14 @@ fprintf(1,'\b\b\b\bDone.\n');
 
 % Save amplifier_data CAR by probe/channel
 fprintf(1,'Saving data... %.3d%%',0);
-if ~STIM_SUPPRESS
+if ~doSuppression
     car_infoname = fullfile(blockObj.paths.CARW,[blockObj.Name '_CAR_Ref.mat']);
     save(fullfile(car_infoname),'probe_ref','-v7.3');
     for iCh = 1:length(blockObj.Channels)
         pnum  = num2str(blockObj.Channels(iCh).port_number);
         chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
         data = blockObj.Channels(iCh).Filt(:);
-        data = data - probe_ref(blockObj.Channels(iCh).port_number,:); % rereferencing        
+        data = data - refMean(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
         blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
         fraction_done = 100 * (iCh / blockObj.numChannels);

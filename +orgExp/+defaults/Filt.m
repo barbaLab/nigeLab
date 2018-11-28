@@ -48,6 +48,7 @@ METHOD = 'ellip';    % filter type
 
 STIM_SUPPRESS = false;  % set true to do stimulus artifact suppression
 STIM_BLANK = [1 3];     % milliseconds prior and after to blank on stims
+STIM_P_CH = [nan, nan]; % [probe #, channel #] for channel delivering stims
 
 %% PARSE VARARGIN
 if numel(varargin)==1
@@ -77,5 +78,6 @@ pars.METHOD = METHOD;
 
 pars.STIM_SUPPRESS = STIM_SUPPRESS;
 pars.STIM_BLANK = STIM_BLANK;
+pars.STIM_P_CH = STIM_P_CH;
 
 end

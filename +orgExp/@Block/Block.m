@@ -1,145 +1,145 @@
 classdef Block < handle
-%% BLOCK    Creates datastore for an electrophysiology recording.
-%
-%  blockObj = BLOCK;
-%  blockObj = BLOCK('NAME','VALUE',...);
-%
-%  ex: 
-%  blockObj = BLOCK('DIR','P:\Your\Recording\Directory\Here');
-%
-%  BLOCK Properties:
-%     Name - Name of recording BLOCK.
-%
-%     Fields - List of property field names that may have files associated
-%              with them.
-%
-%     Graphics - Graphics objects that are associated with BLOCK
-%                object. Currently contains Spikes subfield, which is a
-%                SPIKEIMAGE object that is available after calling the
-%                PLOTSPIKES method. The Waves subfield is only available
-%                after calling the PLOTWAVES method. To recall the
-%                SPIKEIMAGE object once it has been constructed, call as
-%                blockObj.Graphics.Spikes.Build.
-%
-%     Status - Completion status for each element of BLOCK/FIELDS.
-%
-%     Channels - List of channels from board, from probe, and masking.
-%
-%  BLOCK Methods:
-%     Block - Class constructor. Call as blockObj = BLOCK(varargin)
-%
-%     updateID - Update the File or Folder ID for a particular Field, which
-%                is listed in blockObj.Fields. Call as
-%                blockObj.UpdateID(name,type,value); name is the name of the
-%                field, type is the ID type ('File' or 'Folder'), and value
-%                is the new ID. For example:
-%                blockObj.UpdateID('Spikes','Folder','pca-PT_Spikes') would
-%                change where the BLOCK finds its spikes files.
-%
-%     updateContents - Using current information for File and Folder ID
-%                      string identifiers, update the list of files
-%                      associated with a particular information field.
-%
-%     plotWaves -    Make a preview of the filtered waveform for all 
-%                    channels, and include any sorted, clustered, or 
-%                    detected spikes for those channels as highlighted 
-%                    marks at the appropriate time stamp.
-%
-%     plotSpikes -   Display all spikes for a particular channel as a
-%                    SPIKEIMAGE object.
-%
-%     loadSpikes -   Call as x = blockObj.LoadSpikes(channel) to load spikes
-%                    file contents to the structure x.
-%
-%     loadClusters - Call as x = blockObj.LoadClusters(channel) to load 
-%                    class file contents to the structure x.
-%
-%     loadSorted -   Call as x = blockObj.LoadSorted(channel) to load class file
-%                    contents to the structure x.
-%
-%     set - Set a specific property of the BLOCK object.
-%
-%     get - Get a specific property of the BLOCK object.
-%
-% By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
-
-%% PUBLIC PROPERTIES
-  
+   %% BLOCK    Creates datastore for an electrophysiology recording.
+   %
+   %  blockObj = BLOCK;
+   %  blockObj = BLOCK('NAME','VALUE',...);
+   %
+   %  ex:
+   %  blockObj = BLOCK('DIR','P:\Your\Recording\Directory\Here');
+   %
+   %  BLOCK Properties:
+   %     Name - Name of recording BLOCK.
+   %
+   %     Fields - List of property field names that may have files associated
+   %              with them.
+   %
+   %     Graphics - Graphics objects that are associated with BLOCK
+   %                object. Currently contains Spikes subfield, which is a
+   %                SPIKEIMAGE object that is available after calling the
+   %                PLOTSPIKES method. The Waves subfield is only available
+   %                after calling the PLOTWAVES method. To recall the
+   %                SPIKEIMAGE object once it has been constructed, call as
+   %                blockObj.Graphics.Spikes.Build.
+   %
+   %     Status - Completion status for each element of BLOCK/FIELDS.
+   %
+   %     Channels - List of channels from board, from probe, and masking.
+   %
+   %  BLOCK Methods:
+   %     Block - Class constructor. Call as blockObj = BLOCK(varargin)
+   %
+   %     updateID - Update the File or Folder ID for a particular Field, which
+   %                is listed in blockObj.Fields. Call as
+   %                blockObj.UpdateID(name,type,value); name is the name of the
+   %                field, type is the ID type ('File' or 'Folder'), and value
+   %                is the new ID. For example:
+   %                blockObj.UpdateID('Spikes','Folder','pca-PT_Spikes') would
+   %                change where the BLOCK finds its spikes files.
+   %
+   %     updateContents - Using current information for File and Folder ID
+   %                      string identifiers, update the list of files
+   %                      associated with a particular information field.
+   %
+   %     plotWaves -    Make a preview of the filtered waveform for all
+   %                    channels, and include any sorted, clustered, or
+   %                    detected spikes for those channels as highlighted
+   %                    marks at the appropriate time stamp.
+   %
+   %     plotSpikes -   Display all spikes for a particular channel as a
+   %                    SPIKEIMAGE object.
+   %
+   %     loadSpikes -   Call as x = blockObj.LoadSpikes(channel) to load spikes
+   %                    file contents to the structure x.
+   %
+   %     loadClusters - Call as x = blockObj.LoadClusters(channel) to load
+   %                    class file contents to the structure x.
+   %
+   %     loadSorted -   Call as x = blockObj.LoadSorted(channel) to load class file
+   %                    contents to the structure x.
+   %
+   %     set - Set a specific property of the BLOCK object.
+   %
+   %     get - Get a specific property of the BLOCK object.
+   %
+   % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
+   
+   %% PUBLIC PROPERTIES
+   
    properties (Access = public)
-       Name
-       Recording_date
-       Recording_time
-       Recording_ID
+      Name
+      Recording_date
+      Recording_time
+      Recording_ID
    end
-
+   
    properties (Access = public)
       DACChannels
       ADCChannels
       DigInChannels
       DigOutChannels
       Verbose = true; % Whether to report list of files and fields.
-      Channels    % list of channels with various metadata and recording 
-                  % data inside it. 
-                  %
-                  % [ [ might actually be a better idea to create a 
-                  %     special channel class? ] ]
-                  
-       % Graphics - Graphical objects associated with BLOCK object.
-       % -> Spikes : SPIKEIMAGE object. Once constructed, can
-       %             call as blockObj.Graphics.Spikes.Build to
-       %             recreate the spikes figure.
-       % -> Waves : AXES object. Destroyed when figure is
-       %            closed.
-       Graphics    % Graphical objects associated with block
+      Channels    % list of channels with various metadata and recording
+      % data inside it.
+      %
+      % [ [ might actually be a better idea to create a
+      %     special channel class? ] ]
+      
+      % Graphics - Graphical objects associated with BLOCK object.
+      % -> Spikes : SPIKEIMAGE object. Once constructed, can
+      %             call as blockObj.Graphics.Spikes.Build to
+      %             recreate the spikes figure.
+      % -> Waves : AXES object. Destroyed when figure is
+      %            closed.
+      Graphics    % Graphical objects associated with block
    end
    
    properties (SetAccess = private)
-       
-       Sample_rate
-       Time
-       File_extension   % Intan TDT or other
-       RecType
-
-       numChannels       = 0
-       numProbes         = 0
-       numADCchannels    = 0
-       numDACChannels    = 0
-       numDigInChannels  = 0
-       numDigOutChannels = 0       
+      
+      Sample_rate
+      Time
+      File_extension   % Intan TDT or other
+      RecType
+      
+      numChannels       = 0
+      numProbes         = 0
+      numADCchannels    = 0
+      numDACChannels    = 0
+      numDigInChannels  = 0
+      numDigOutChannels = 0
    end
    
    properties (SetAccess = immutable,GetAccess = private)
-       dcAmpDataSaved
-       Date
-       Month
-       Day
+      dcAmpDataSaved
+      Date
+      Month
+      Day
    end
    
    
-%% PRIVATE PROPERTIES
+   %% PRIVATE PROPERTIES
    properties (SetAccess = private,GetAccess = public)
-       Fields      % List of property field names
-       SDpars
-       FiltPars
+      Fields      % List of property field names
+      SDpars
+      FiltPars
       Corresponding_animal
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
       Downsampled_rate % Rate for down-sampling LFP data
       
-      Samples    
-                   
+      Samples
       
-      Mask  % Whether to include channels or not           
+      
+      Mask  % Whether to include channels or not
    end
    
    properties (Access = private)
-       Status      % Completion status for each element of BLOCK/FIELDS
-       paths        % in detail paths specifications for all the saved files
-       Notes       % Notes from text file
+      Status      % Completion status for each element of BLOCK/FIELDS
+      paths        % in detail paths specifications for all the saved files
+      Notes       % Notes from text file
    end
    
-%% METHODS
+   %% METHODS
    methods (Access = public)
       function blockObj = Block(varargin)
          %% BLOCK Create a datastore object based on CPL data structure
@@ -147,7 +147,7 @@ classdef Block < handle
          %  blockObj = BLOCK;
          %  blockObj = BLOCK('NAME',Value,...);
          %
-         %  ex: 
+         %  ex:
          %  blockObj = BLOCK('RecLoc','P:\Your\Block\Directory\Here');
          %
          %  List of 'NAME', Value input argument pairs:
@@ -172,7 +172,7 @@ classdef Block < handle
          %
          % By: Max Murphy  v1.0  08/25/2017
          %     F. Barban   v2.0  11/2018
-                  
+         
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
@@ -181,7 +181,7 @@ classdef Block < handle
             P = properties(blockObj);
             Prop = P{ismember(upper(P), upper( deblank( varargin{iV+1}))) };
             if isempty(Prop)
-                continue;
+               continue;
             end
             blockObj.(Prop) = varargin{iV+1};
          end
@@ -189,8 +189,8 @@ classdef Block < handle
          %% LOOK FOR BLOCK DIRECTORY
          [pars,~] = orgExp.defaults.Block;
          if isempty(blockObj.RecFile)
-             [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
-                 'Select recording BLOCK');
+            [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
+               'Select recording BLOCK');
             blockObj.RecFile = fullfile(path,file);
             if blockObj.RecFile == 0
                error('No block selected. Object not created.');
@@ -207,23 +207,23 @@ classdef Block < handle
       end
       
       function save(blockObj)
-          save(blockObj.SaveLoc,'blockObj');          
-      end
-            
-      function disp(blockObj)
-            if blockObj.Verbose
-                builtin('disp',blockObj);
-            end
+         save(blockObj.SaveLoc,'blockObj');
       end
       
-%       function varargout = subsref(obj,S)
-%             a=1;
-%       end
+      function disp(blockObj)
+         if blockObj.Verbose
+            builtin('disp',blockObj);
+         end
+      end
+      
+      %       function varargout = subsref(obj,S)
+      %             a=1;
+      %       end
       
       extractLFP(blockObj)
       filterData(blockObj)
-      CAR(blockObj)
-      convert(blockObj)                % Convert raw data to Matlab BLOCK
+      doReReference(blockObj)
+      doExtraction(blockObj) % Convert raw data to Matlab BLOCK
       L = list(blockObj) % List of current associated files for field or fields
       varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop,val) % Set a specific BLOCK property
@@ -250,10 +250,10 @@ classdef Block < handle
    methods (Access = public, Hidden = true)
       updateNotes(blockObj,str) % Update notes for a recording
    end
-
-%% PRIVATE METHODS
+   
+   %% PRIVATE METHODS
    methods (Access = 'private') % debugging purpose, is private
       init(blockObj) % Initializes the BLOCK object
-
+      
    end
 end
