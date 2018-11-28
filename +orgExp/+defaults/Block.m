@@ -1,15 +1,27 @@
 function [Pars,Fields] = blockDefaults()
 %% DEF_PARAMS  Sets default parameters for BLOCK object
-%
-%  obj = DEF_PARAMS(obj);
-%
-% By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
+
 
 %% Modify all properties here
+         %     'CH_ID' : (def: 'Ch') If you have a different file name
+         %               identifier that precedes the channel number for
+         %               that particular file, specify this on object
+         %               construction.
+         %     'CH_FIELDWIDTH' : (def: 3) Number of characters in the
+         %                        channel number in the file name. NAN
+         %     'Def' : (def: 'P:/Rat') If you are using the UI selection
+         %              interface a lot, and typically working with a more
+         %              specific project directory, you can specify this to
+         %              change where the default UI selection directory
+         %              starts. Alternatively, just change the property in
+         %              the code under private properties.         
+         
 Pars             = struct;
-Pars.SaveFormat  = 'MatFile';
+Pars.DEF         = 'R:\Rat';
+Pars.SaveFormat  = 'Hybrid';
 Pars.Delimiter   = '_';
-Pars.ProbeChannel= [Pars.Delimiter 'P%s_Ch_%s'];
+CH_ID = 'Ch';
+Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
 
 %% Here You can specify the naming format of your block recording
 % The block name will be splitted using Delimiter (defined above) and each
@@ -24,7 +36,7 @@ Pars.ProbeChannel= [Pars.Delimiter 'P%s_Ch_%s'];
 % Pars.includeChar='$';
 % Pars.discardChar='&';
 
-Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID $Recording_date $Recording_time';
+Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID';
 % namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
 
 Pars.includeChar='$';
@@ -32,7 +44,7 @@ Pars.discardChar='&';
 
 %% 
 Fields =  {'Raw';
-           'Digital';
+           'Dig';
            'Filt';
            'CAR';
            'LFP';
@@ -41,8 +53,8 @@ Fields =  {'Raw';
            'Clusters';
            %%%%%%%%%%%%%%%%%%% This names are hardcoded. They are used in
            %%%%%%%%%%%%%%%%%%% the following (Block) functions:
-           %%%%%%%%%%%%%%%%%%% convert, extractLFP, filterData, CAR,
-           %%%%%%%%%%%%%%%%%%% spikeDetection
+           %%%%%%%%%%%%%%%%%%% convert (and ad hoc functions), extractLFP, 
+           %%%%%%%%%%%%%%%%%%% filterData, CAR, spikeDetection, linkToData
                     };
                 
                 

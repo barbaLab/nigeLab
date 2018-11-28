@@ -429,7 +429,7 @@ if (data_present)
     % DiskData makes it easy to access data stored in matfies.
     % Assigning each file to the right channel
     for iCh=1:num_amplifier_channels
-        blockObj.Channels(iCh).rawData = amplifier_dataFile{iCh};
+        blockObj.Channels(iCh).Raw = amplifier_dataFile{iCh};
     
         as_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
         fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);

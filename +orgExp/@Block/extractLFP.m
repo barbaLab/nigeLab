@@ -16,7 +16,7 @@ function extractLFP(blockObj)
             chnum = blockObj.Channels(ii).custom_channel_name(regexp(blockObj.Channels(ii).custom_channel_name, '\d'));
             fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
             save(fullfile(fname),'lfp','-v7.3');
-            blockObj.Channels(ii).LFPData=orgExp.libs.DiskData(matfile(fullfile(fname)));
+            blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fname)));
         end
         blockObj.Downsampled_rate=DownSampleFreq;
         blockObj.updateStatus('LFP',true);

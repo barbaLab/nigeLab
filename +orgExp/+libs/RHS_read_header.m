@@ -1,9 +1,9 @@
 function [header,FID] = RHS_read_header(varargin)
 
 if nargin >0
-    printflag = false;
+    VERBOSE = false;
 else
-    printflag = true;
+    VERBOSE = true;
 end
 
 for iV = 1:2:length(varargin)
@@ -12,7 +12,7 @@ end
 
 if exist('FID','var')
     
-    [NAME,~,~,encoding] = fopen(FID);
+    [NAME,~,~,~] = fopen(FID);
     if isempty(NAME)
        error('Must provide a valid file pointer.');
     end
@@ -26,15 +26,14 @@ else    % Must select a directory and a file
      
     
     [file, path] = ...
-        uigetfile('*.rhd', 'Select an RHD2000 Data File', ...
+        uigetfile('*.rhs', 'Select an RHS2000 Data File', ...
         'MultiSelect', 'off');
     
     if file == 0 % Must select a file
-        error('Must select a valid RHD2000 Data File.');
+        error('Must select a valid RHS2000 Data File.');
     end
     
     NAME = [path, file];
-    file = file(1:end-4); %remove extension
     FID = fopen(NAME, 'r');
    
 
@@ -62,7 +61,7 @@ end
 data_file_main_version_number = fread(FID, 1, 'int16');
 data_file_secondary_version_number = fread(FID, 1, 'int16');
 
-if printflag
+if VERBOSE
     fprintf(1, '\n');
     fprintf(1, 'Reading Intan Technologies RHS2000 Data File, Version %d.%d\n', ...
         data_file_main_version_number, data_file_secondary_version_number);
@@ -220,7 +219,7 @@ num_board_dac_channels = board_dac_index - 1;
 num_board_dig_in_channels = board_dig_in_index - 1;
 num_board_dig_out_channels = board_dig_out_index - 1;
 
-if printflag
+if VERBOSE
     fprintf(1, 'Found %d amplifier channel%s.\n', ...
         num_amplifier_channels, num_amplifier_channels);
     if (dc_amp_data_saved ~= 0)
@@ -276,7 +275,7 @@ num_board_dig_out_samples = num_samples_per_data_block * num_data_blocks;
 
 record_time = num_amplifier_samples / sample_rate;
 
-if printflag
+if VERBOSE
     if (data_present)
         fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n', ...
             record_time, sample_rate / 1000, num_amplifier_samples);

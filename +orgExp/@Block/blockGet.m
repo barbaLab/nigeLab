@@ -1,4 +1,4 @@
-function out = blockGet(blockObj,prop)
+function varargout = blockGet(blockObj,prop)
 %% BLOCKGET  Get a specific BLOCK property
 %
 %  out = BLOCKGET(blockObj,prop);
@@ -29,23 +29,19 @@ function out = blockGet(blockObj,prop)
 %
 % By: Max Murphy  v1.0  06/14/2018  Original version (R2017b)
 
-%% PARSE INPUT
-% if nargin < 2
-%    prop = {'DIR'; ...
-%            
-% 
-% 
-% for iV = 1:2:numel(varargin) % Can specify properties on construct
-%             if ~ischar(varargin{iV})
-%                continue
-%             end
-%             p = findprop(blockObj,varargin{iV});
-%             if isempty(p)
-%                continue
-%             end
-%             blockObj.(varargin{iV}) = varargin{iV+1};
-%          end
+P = properties(blockObj);
 
-out = blockObj.(prop);
+if nargin<2
+    prop=P;
+end
+Prop = P(ismember(upper(P), upper( deblank( prop))) );
+if ~isempty(Prop)
+    for ii= 1:numel(Prop)
+        varargout{ii} = blockObj.(Prop{ii});
+    end
+else
+   warning('Property %s not found.',prop);
+   varargout=cell;
+end
 
 end

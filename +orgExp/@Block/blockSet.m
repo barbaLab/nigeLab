@@ -47,7 +47,8 @@ if iscell(prop) % If cell, use recursion
 end
 
 %% CHECK PROPERTY AND IF IT EXISTS, ASSIGN AND RETURN CORRESPONDING BOOLEAN
-p = findprop(blockObj,prop);
+ P = properties(blockObj);
+ p = P(ismember(upper(P), upper( deblank( prop))) );
 if isempty(p)
    flag = false;
 else

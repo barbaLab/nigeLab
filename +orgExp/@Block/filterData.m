@@ -31,7 +31,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', pars.FSTOP1, ...
                 iPb = blockObj.Channels(iCh).port_number;
                 %             data = single(filtfilt(b,a,double(data)));
                 fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
-                blockObj.Channels(iCh).Filtered = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
+                blockObj.Channels(iCh).Filt = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
             end
             clear data
             fraction_done = 100 * (iCh / blockObj.numChannels);

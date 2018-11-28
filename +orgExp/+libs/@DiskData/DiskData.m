@@ -65,6 +65,7 @@ classdef DiskData
                 case 2
                     switch varargin{1}
                         case 'MatFile'
+                        case 'Hybrid'
                             data=zeros(1,1,class_);
                             if ~exist(varargin{2},'file')
                                 data=ones(1,1,class_);
@@ -91,6 +92,7 @@ classdef DiskData
                 case 3
                     switch varargin{1}
                         case 'MatFile'
+                        case 'Hybrid'
                             data=zeros(1,1,class_);
                             if ~exist(varargin{2},'file')
                                 data=ones(1,1,class_);
@@ -275,7 +277,7 @@ classdef DiskData
         end
         
         function cl=class(obj)
-            cl = obj.class_;
+            cl = sprintf('DiskData (%s)', obj.class_);
         end
         
         function l=length(obj)

@@ -81,7 +81,8 @@ classdef Block < handle
                    % might actually be a better idea to create a special
                    % channel class, in order to adress some issues
                    % concerning the access to matfiles
-       
+     Verbose = true; % Whether to report list of files and fields.
+
        
        % Graphics - Graphical objects associated with BLOCK object.
        % -> Spikes : SPIKEIMAGE object. Once constructed, can
@@ -92,7 +93,7 @@ classdef Block < handle
        Graphics    % Graphical objects associated with block
    end
    
-   properties (SetAccess = private) % debugging purpose, is protected
+   properties (SetAccess = private)
        
        Sample_rate
        Time
@@ -109,6 +110,9 @@ classdef Block < handle
    
    properties (SetAccess = immutable,GetAccess = private)
        dcAmpDataSaved
+       Date
+       Month
+       Day
    end
    
    
@@ -118,7 +122,7 @@ classdef Block < handle
        SDpars
        FiltPars
       Corresponding_animal
-      PATH          % Raw binary directory
+      Path          % Raw binary directory
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat)
       Downsampled_rate % 
@@ -133,7 +137,6 @@ classdef Block < handle
        Status      % Completion status for each element of BLOCK/FIELDS
        paths        % in detail paths specifications for all the saved files
        Notes       % Notes from text file
-       Verbose = true; % Whether to report list of files and fields.
    end
    
 %% METHODS
@@ -145,44 +148,20 @@ classdef Block < handle
          %  blockObj = BLOCK('NAME',Value,...);
          %
          %  ex: 
-         %  blockObj = BLOCK('DIR','P:\Your\Block\Directory\Here');
+         %  blockObj = BLOCK('Path','P:\Your\Block\Directory\Here');
          %
          %  List of 'NAME', Value input argument pairs:
          %
-         %  -> 'DIR' : (def: none) Specify as string with full directory of
+         %  -> 'Path' : (def: none) Specify as string with full directory of
          %              recording BLOCK. Specifying this will skip the UI
          %              selection portion, so it's useful if you are
          %              looping the expression.
          %
-         %  -> 'VERBOSE' : (def: true) Setting this to false suppresses
+         %  -> 'Verbose' : (def: true) Setting this to false suppresses
          %                  output list of files and folders associated
          %                  with the CPL_BLOCK object during
          %                  initialization.
          %
-         %  -> 'DEF' : (def: 'P:/Rat') If you are using the UI selection
-         %              interface a lot, and typically working with a more
-         %              specific project directory, you can specify this to
-         %              change where the default UI selection directory
-         %              starts. Alternatively, just change the property in
-         %              the code under private properties.
-         %
-         %  -> 'CH_ID' : (def: 'Ch') If you have a different file name
-         %               identifier that precedes the channel number for
-         %               that particular file, specify this on object
-         %               construction.
-         %
-         %               ex: 
-         %               blockObj.List('Raw')
-         %               
-         %               Current Raw files stored in [blockObj.Name]:
-         %               -> Example_Raw_Chan_001.mat
-         %
-         %               In this case, you would specify 'Chan' during
-         %               construction of blockObj:
-         %               blockObj = Block('CH_ID','Chan');
-         %
-         %  -> 'CH_FIELDWIDTH' : (def: 3) Number of characters in the
-         %                        channel number in the file name.
          %
          %  -> 'MASK' : (def: []) If specified, use as a nChannels x 1
          %              logical vector of true/false for channels to
@@ -192,49 +171,62 @@ classdef Block < handle
          %               double vector of channel mappings.
          %
          % By: Max Murphy  v1.0  08/25/2017
+         %     F. Barban   v2.0  11/2018
                   
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
-               continue
+               continue;
             end
-            p = findprop(blockObj,varargin{iV});
-            if isempty(p)
-               continue
+            P = properties(blockObj);
+            Prop = P{ismember(upper(P), upper( deblank( varargin{iV+1}))) };
+            if isempty(Prop)
+                continue;
             end
-            blockObj.(varargin{iV}) = varargin{iV+1};
+            blockObj.(Prop) = varargin{iV+1};
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         if isempty(blockObj.PATH)
-             [file,path]= uigetfile(fullfile(pwd,'*.*'),...
+         [pars,~] = orgExp.defaults.blockDefaults;
+         if isempty(blockObj.Path)
+             [file,path]= uigetfile(fullfile(pars.DEF,'*.*'),...
                  'Select recording BLOCK');
-            blockObj.PATH = fullfile(path,file);
-            if blockObj.PATH == 0
+            blockObj.Path = fullfile(path,file);
+            if blockObj.Path == 0
                error('No block selected. Object not created.');
             end
          else
-            if exist(blockObj.PATH,'file')==0
+            if exist(blockObj.Path,'file')==0
                error('%s is not a valid block file.',blockObj.DIR);
             end
          end
          
          %% INITIALIZE BLOCK OBJECT
-         blockObj.init;
+         blockObj.init();
          
       end
       
       function save(blockObj)
           save(blockObj.SaveLoc,'blockObj');          
       end
+            
+      function disp(blockObj)
+            if blockObj.Verbose
+                builtin('disp',blockObj);
+            end
+      end
+      
+%       function varargout = subsref(obj,S)
+%             a=1;
+%       end
       
       extractLFP(blockObj)
       filterData(blockObj)
       CAR(blockObj)
       convert(blockObj)                % Convert raw data to Matlab BLOCK
       L = list(blockObj) % List of current associated files for field or fields
-      out = blockGet(blockObj,prop) % Get a specific BLOCK property
-      flag = blockSet(blockObj,prop) % Set a specific BLOCK property
+      varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
+      flag = blockSet(blockObj,prop,val) % Set a specific BLOCK property
       setSaveLocation(blockObj,saveloc)
       RHD2Block(blockObj)
       RHS2Block(blockObj)

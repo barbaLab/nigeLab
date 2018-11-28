@@ -1,4 +1,4 @@
-function init(blockObj)
+function init(blockObj,varargin)
 %% INIT Initialize BLOCK object
 %
 %  blockObj.INIT;
@@ -8,7 +8,7 @@ function init(blockObj)
 
 [Pars,blockObj.Fields] = orgExp.defaults.blockDefaults;
 
-[~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.PATH);
+[~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.Path);
 nameParts=strsplit(blockObj.Name,{Pars.Delimiter '.'});
 expression = sprintf('\\%c\\w*|\\%c\\w*',Pars.includeChar,Pars.discardChar);
 [splitStr]=regexp(Pars.namingConvention,expression,'match');
@@ -16,8 +16,18 @@ include=find(cellfun(@(x) x(1)=='$',splitStr));
 P = properties(blockObj);
 
 for ii=include
-    Prop = P(ismember(lower(P), lower( deblank( splitStr{ii}(2:end)))) );
-    blockObj.(Prop) = nameParts{ii};
+    eval(sprintf('%s=nameParts{ii}',upper( deblank( splitStr{ii}(2:end)))));
+    Prop = P(ismember(upper(P), upper( deblank( splitStr{ii}(2:end)))) );
+    if ~isempty(Prop)
+        blockObj.(Prop{:}) = nameParts{ii};
+    end
+end
+
+if isempty(blockObj.Recording_date)
+    YY = YEAR(end-1:end);
+    MM = MONTH;
+    DD = sprintf('%.2d',str2double(DAY));
+    blockObj.Recording_date = [YY MM DD];
 end
 
 blockObj.setSaveLocation(blockObj.SaveLoc);
@@ -31,10 +41,10 @@ end
 switch blockObj.File_extension
     case '.rhd' 
         blockObj.RecType='Intan';
-        header=orgExp.libs.RHD_read_header('NAME',blockObj.PATH);
+        header=orgExp.libs.RHD_read_header('NAME',blockObj.Path,'VERBOSE',blockObj.Verbose);
     case '.rhs'
         blockObj.RecType='Intan';
-        header=orgExp.libs.RHS_read_header('NAME',blockObj.PATH);
+        header=orgExp.libs.RHS_read_header('NAME',blockObj.Path,'VERBOSE',blockObj.Verbose);
     otherwise
         blockObj.RecType='other';
 end

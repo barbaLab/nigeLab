@@ -3,15 +3,12 @@ function spikeDetection(blockObj)
     pars = blockObj.SDpars;
 %     SiteLayout = pars.CHANS{iP,2};
     nCh = blockObj.numChannels;
-    
-    spk = cell(nCh,1);
-%     if pars.USE_CLUSTER
+    %     if pars.USE_CLUSTER
 %         set(myJob,'Tag',['Detecting spikes for ' paths.N '...']);
 %     else
 %         disp('Beginning spike detection...'); %#ok<*UNRCH>
 %     end
     
-    FS = nan(nCh,1);
 %     Fspk = dir(fullfile(paths.SL, ...
 %         paths.PF,['*' pars.SPIKE_DATA '*.mat']));
 %     if (~isempty(Fspk) && pars.USE_EXISTING_SPIKES)
@@ -37,7 +34,10 @@ function spikeDetection(blockObj)
             parfor iCh = 1:nCh % For each "channel index"...
                 [spk] = PerChannelDetection( ...
                     blockObj,iCh,pars);
-                    Chans(iCh).Spikes(:)=spk;
+                pnum  = num2str(blockObj.Channels(iCh).port_number);
+                chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+                fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
+                Chans(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fname),spk);
             end
             blockObj.Channels = Chans;
         else
@@ -45,7 +45,7 @@ function spikeDetection(blockObj)
             for iCh = 1:nCh % For each "channel index"...
                 [spk] = PerChannelDetection( ...
                     blockObj,iCh,pars);
-                blockObj.Channels(iCh).Spikes(:)=spk;
+                blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fname),spk);
                 
                 fraction_done = 100 * (iCh / nCh);
                 if ~floor(mod(fraction_done,5)) % only increment counter by 5%

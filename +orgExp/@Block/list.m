@@ -23,9 +23,14 @@ function L = list(blockObj)
 %
 % By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
 %                 v1.1  06/14/2018 Added flag output
-
-
-DateTime=datetime([blockObj.Recording_date blockObj.Recording_time],'InputFormat','yyMMddHHmmss');
+Format = '';
+if ~isempty(blockObj.Recording_date)
+    Format = 'yyMMdd';
+end
+if ~isempty(blockObj.Recording_time)
+    Format = [Format 'HHmmss' ];
+end
+DateTime=datetime([blockObj.Recording_date blockObj.Recording_time],'InputFormat',Format);
 infoFields={'RecType'
             'Corresponding_animal'
             'Recording_ID'
@@ -46,7 +51,7 @@ L_=struct2table(info,'AsArray',true);
 for ii=1:length(L_.Properties.VariableNames)
     switch L_.Properties.VariableNames{ii}
         case 'Corresponding_animal'
-            L_.Properties.VariableNames{ii}='Animals';
+            L_.Properties.VariableNames{ii}='Animal';
         case 'RecType'
             L_.Properties.VariableNames{ii}='RecordingType';
         case 'numChannels'
@@ -58,30 +63,4 @@ if nargout==0
 else
     L=L_;
 end
-
-%% RETURN LIST OF VALUES
-% if nargin == 2
-%    if isempty(blockObj.(name).dir)
-%       fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
-%       flag = false;
-%    else
-%       fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-%          name, blockObj.Name, ...
-%          strjoin({blockObj.(name).dir.name},'\n->\t'));
-%       flag = true;
-%    end
-% else
-%    flag = false;
-%    for iL = 1:numel(blockObj.Fields)
-%       name = blockObj.Fields{iL};
-%       if isempty(blockObj.(name).dir)
-%          fprintf(1,'\nNo %s files found for %s.\n',name,blockObj.Name);
-%       else
-%          fprintf(1,'\nCurrent %s files stored in %s:\n->\t%s\n\n',...
-%             name, blockObj.Name, ...
-%             strjoin({blockObj.(name).dir.name},'\n->\t'));
-%          flag = true;
-%       end
-%    end
-% end
 end

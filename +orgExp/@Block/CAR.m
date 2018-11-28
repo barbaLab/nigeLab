@@ -1,6 +1,6 @@
 function CAR(blockObj)
 probes=unique([blockObj.Channels.port_number]);
-num_amplifier_channels=length(blockObj.Channels(1).Filtered);
+num_amplifier_channels=length(blockObj.Channels(1).Filt);
 probe_ref=zeros(numel(probes),num_amplifier_channels);
 
 STIM_SUPPRESS = false;
@@ -26,7 +26,7 @@ for iCh = 1:length(blockObj.Channels)
         % Filter and and save amplifier_data by probe/channel
         iPb = blockObj.Channels(iCh).port_number;
         nChanPb = sum(iPb == [blockObj.Channels.port_number]);
-        data = blockObj.Channels(iCh).Filtered(:);
+        data = blockObj.Channels(iCh).Filt(:);
         probe_ref(iPb,:)=probe_ref(iPb,:)+data./nChanPb;
     end
     fraction_done = 100 * (iCh / blockObj.numChannels);
@@ -46,7 +46,7 @@ if ~STIM_SUPPRESS
     for iCh = 1:length(blockObj.Channels)
         pnum  = num2str(blockObj.Channels(iCh).port_number);
         chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-        data = blockObj.Channels(iCh).Filtered(:);
+        data = blockObj.Channels(iCh).Filt(:);
         data = data - probe_ref(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
         blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
