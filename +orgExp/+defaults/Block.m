@@ -21,10 +21,14 @@ function [pars,Fields] = Block()
 % Define general values used when parsing metadata from file name and
 % structure:
 pars             = struct;
-pars.DEF         = 'R:\Rat';
+
+pars.RecLocDefault  = 'R:/Rat';
 pars.UNC_Path = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
                  '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
+              
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
+pars.SaveLocDefault = 'P:/Rat';
+
 pars.Delimiter   = '_';      % delimiter for variables in BLOCK name
 CH_ID = 'Ch'; % precedes the channel number delimited variable
 pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
@@ -86,6 +90,7 @@ FolderNames     =   {'RawData';
                      'Metadata';
                     };
 
+% Concatenate identifier for each file-type:
 Del = pars.Delimiter;
 P_C = pars.ProbeChannel;
 for ii=1:numel(Fields)

@@ -77,13 +77,13 @@ classdef Block < handle
       ADCChannels
       DigInChannels
       DigOutChannels
-      Channels    % list of channels with varius metadata and recording data inside it.
-                   % might actually be a better idea to create a special
-                   % channel class, in order to adress some issues
-                   % concerning the access to matfiles
-     Verbose = true; % Whether to report list of files and fields.
-
-       
+      Verbose = true; % Whether to report list of files and fields.
+      Channels    % list of channels with various metadata and recording 
+                  % data inside it. 
+                  %
+                  % [ [ might actually be a better idea to create a 
+                  %     special channel class? ] ]
+                  
        % Graphics - Graphical objects associated with BLOCK object.
        % -> Spikes : SPIKEIMAGE object. Once constructed, can
        %             call as blockObj.Graphics.Spikes.Build to
@@ -122,10 +122,10 @@ classdef Block < handle
        SDpars
        FiltPars
       Corresponding_animal
-      Path          % Raw binary directory
+      RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
-      SaveFormat    % saving format (MatFile,HDF5,dat)
-      Downsampled_rate % 
+      SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
+      Downsampled_rate % Rate for down-sampling LFP data
       
       Samples    
                    
@@ -148,11 +148,11 @@ classdef Block < handle
          %  blockObj = BLOCK('NAME',Value,...);
          %
          %  ex: 
-         %  blockObj = BLOCK('Path','P:\Your\Block\Directory\Here');
+         %  blockObj = BLOCK('RecLoc','P:\Your\Block\Directory\Here');
          %
          %  List of 'NAME', Value input argument pairs:
          %
-         %  -> 'Path' : (def: none) Specify as string with full directory of
+         %  -> 'RecLoc' : (def: none) Specify as string with full directory of
          %              recording BLOCK. Specifying this will skip the UI
          %              selection portion, so it's useful if you are
          %              looping the expression.
@@ -188,16 +188,16 @@ classdef Block < handle
          
          %% LOOK FOR BLOCK DIRECTORY
          [pars,~] = orgExp.defaults.Block;
-         if isempty(blockObj.Path)
-             [file,path]= uigetfile(fullfile(pars.DEF,'*.*'),...
+         if isempty(blockObj.RecFile)
+             [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
                  'Select recording BLOCK');
-            blockObj.Path = fullfile(path,file);
-            if blockObj.Path == 0
+            blockObj.RecFile = fullfile(path,file);
+            if blockObj.RecFile == 0
                error('No block selected. Object not created.');
             end
          else
-            if exist(blockObj.Path,'file')==0
-               error('%s is not a valid block file.',blockObj.DIR);
+            if exist(blockObj.RecFile,'file')==0
+               error('%s is not a valid block file.',blockObj.RecFile);
             end
          end
          

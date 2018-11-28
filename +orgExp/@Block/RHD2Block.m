@@ -1,8 +1,8 @@
-function RHS2Block(blockObj,varargin)
-%% INTANRHS2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
+function RHD2Block(blockObj,varargin)
+%% INTANRHD2BLOCK  Convert Intan RHD or RHS to Matlab BLOCK format
 %
 %  tankObj.INTANRHS2BLOCK;
-%  INTANRHS2BLOCK(tankObj,'NAME',value,...);
+%  INTANRHD2BLOCK(tankObj,'NAME',value,...);
 %
 %  --------
 %   INPUTS
@@ -31,11 +31,11 @@ else
     gitInfo = NaN;
 end
 
-[path,file,~] = fileparts(blockObj.PATH);
+% [path,file,~] = fileparts(blockObj.RecFile);
 
 tic;
-fid = fopen(blockObj.PATH, 'r');
-s = dir(blockObj.PATH);
+fid = fopen(blockObj.RecFile, 'r');
+s = dir(blockObj.RecFile);
 filesize = s.bytes;
 
 Animal = blockObj.Corresponding_animal;
@@ -46,7 +46,7 @@ Animal = blockObj.Corresponding_animal;
 
 header = orgExp.libs.RHD_read_header('FID',fid);
 
-% this is lazyness at its best, I should go through the code and change
+% this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
 % but I'm to lazy to do that
 
