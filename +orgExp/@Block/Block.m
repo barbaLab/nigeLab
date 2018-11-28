@@ -135,7 +135,7 @@ classdef Block < handle
    
    properties (Access = private)
       Status      % Completion status for each element of BLOCK/FIELDS
-      paths        % in detail paths specifications for all the saved files
+      paths       % Detailed paths specifications for all the saved files
       Notes       % Notes from text file
    end
    
@@ -222,20 +222,23 @@ classdef Block < handle
       
       extractLFP(blockObj)
       filterData(blockObj)
-      doReReference(blockObj)
-      doExtraction(blockObj) % Convert raw data to Matlab BLOCK
+      doReReference(blockObj) % Do virtual common-average re-reference
+      qReReference(blockObj)  % Queue CAR to Isilon
+      doExtraction(blockObj)  % Extract raw data to Matlab BLOCK
+      qExtraction(blockObj)   % Queue extraction to Isilon
       L = list(blockObj) % List of current associated files for field or fields
       varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
-      flag = blockSet(blockObj,prop,val) % Set a specific BLOCK property
-      setSaveLocation(blockObj,saveloc)
+      flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
+      flag = setSaveLocation(blockObj,saveLoc)
       RHD2Block(blockObj)
       RHS2Block(blockObj)
-      linkToData(blockObj,path)
+      linkToData(blockObj)
       genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
-      spikeDetection(blockObj)
-      freeSpace(blockObj,ask)
+      spikeDetection(blockObj) % Do spike detection for extracellular field
+      qSD(blockObj)            % Queue SD to Isilon
+      flag = clearSpace(blockObj,ask)  % Clear space on disk
       
       updateID(blockObj,name,type,value) % Update the file or folder identifier
       flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets

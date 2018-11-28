@@ -24,15 +24,15 @@ for iCh = 1:nCh
 end
 
 % Have to do it this way for the parallel part
-Chans=blockObj.Channels;
+channelData = blockObj.Channels;
 parfor iCh = 1:nCh % For each "channel index"...
    [spk] = PerChannelDetection(blockObj,iCh,pars);
    pNum  = num2str(blockObj.Channels(iCh).port_number);
    chNum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
-   Chans(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
+   channelData(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
 end
-blockObj.Channels = Chans;
+blockObj.Channels = channelData;
 
 
 blockObj.updateStatus('Spikes',true);
