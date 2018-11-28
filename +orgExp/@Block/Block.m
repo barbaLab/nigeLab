@@ -187,7 +187,7 @@ classdef Block < handle
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         [pars,~] = orgExp.defaults.blockDefaults;
+         [pars,~] = orgExp.defaults.Block;
          if isempty(blockObj.Path)
              [file,path]= uigetfile(fullfile(pars.DEF,'*.*'),...
                  'Select recording BLOCK');

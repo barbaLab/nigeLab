@@ -1,6 +1,17 @@
-function filterData(blockObj)
+function filterData(blockObj,varargin)
+%% orgExp.Block.filterData    Filter raw data using spike bandpass filter
+%
+%  blockObj = orgExp.Block;
+%  filterData(blockObj);
+%
+%  Note: added varargin so you can pass <'NAME', value> input argument
+%        pairs to specify adhoc filter parameters if desired, rather than
+%        modifying the defaults.Filt source code.
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-pars = orgExp.defaults.Init_Filt;
+%% GET DEFAULT PARAMETERS
+pars = orgExp.defaults.Filt(varargin);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
