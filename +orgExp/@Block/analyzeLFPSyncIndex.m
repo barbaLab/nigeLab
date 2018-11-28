@@ -1,4 +1,4 @@
-function synchIndex(blockObj)
+function analyzeLFPSyncIndex(blockObj)
 if ~isfield(blockObj.Channels,'psd')
     for nCh=1:blockObj.numChannels
         [pxx,~] = pwelch(blockObj.Channels(nCh).LFPData(:),[],[],[],blockObj.Downsampled_rate);

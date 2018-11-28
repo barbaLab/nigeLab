@@ -221,13 +221,39 @@ classdef Block < handle
       %             a=1;
       %       end
       
-      extractLFP(blockObj)
-      filterData(blockObj)
-      doReReference(blockObj) % Do virtual common-average re-reference
-      qReReference(blockObj)  % Queue CAR to Isilon
-      doExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      qExtraction(blockObj)   % Queue extraction to Isilon
+      % Methods for data processing:
+      doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
+      qExtraction(blockObj)      % Queue extraction to Isilon
+      doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
+      qUnitFilter(blockObj)      % Queue filter to Isilon
+      doReReference(blockObj)    % Do virtual common-average re-reference
+      qReReference(blockObj)     % Queue CAR to Isilon
+      doSpikeDetection(blockObj) % Do spike detection for extracellular field
+      qSD(blockObj)              % Queue SD to Isilon
+      doLFPExtraction(blockObj)  % Extract LFP decimated streams
+      qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
+      
+      % Methods for data analysis:
+      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
+      analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+      
+      % Methods for data visualization:
+      flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets
+      flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
+      
+      % Methods for quickly accessing data [deprecated?]:
+      out = loadSpikes(blockObj,ch)       % Load spikes for a given channel
+      out = loadClusters(blockObj,ch)     % Load clusters file for a given channel
+      out = loadSorted(blockObj,ch)       % Load sorting file for a given channel
       L = list(blockObj) % List of current associated files for field or fields
+      
+      
+      
+      
+   end
+   methods (Access = public, Hidden = true)
+      % Other utility methods:
+      updateNotes(blockObj,str) % Update notes for a recording
       varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
       flag = setSaveLocation(blockObj,saveLoc)
@@ -237,22 +263,12 @@ classdef Block < handle
       genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
-      spikeDetection(blockObj) % Do spike detection for extracellular field
-      qSD(blockObj)            % Queue SD to Isilon
+      
       flag = clearSpace(blockObj,ask)  % Clear space on disk
       
-      updateID(blockObj,name,type,value) % Update the file or folder identifier
-      flag = plotWaves(blockObj,WAV,SPK) % Plot stream snippets
-      flag = plotSpikes(blockObj,ch) % Show spike clusters for a single channel
-      out = loadSpikes(blockObj,ch) % Load spikes for a given channel
-      out = loadClusters(blockObj,ch) % Load clusters file for a given channel
-      out = loadSorted(blockObj,ch) % Load sorting file for a given channel
-      updateContents(blockObj,fieldname) % Update files for specific field
-      takeNotes(blockObj) % View or update notes on current recording
-      
-   end
-   methods (Access = public, Hidden = true)
-      updateNotes(blockObj,str) % Update notes for a recording
+      updateID(blockObj,name,type,value)  % Update the file or folder identifier
+      updateContents(blockObj,fieldname)  % Update files for specific field
+      takeNotes(blockObj)                 % View or update notes on current recording
    end
    
    %% PRIVATE METHODS

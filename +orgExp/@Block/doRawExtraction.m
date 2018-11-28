@@ -1,14 +1,8 @@
-function flag = doExtraction(blockObj)
+function flag = doRawExtraction(blockObj)
 %% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
 %
-%  flag = tankObj.CONVERT;
-%  flag = tankObj.CONVERT(confirm);
-%
-%  --------
-%   INPUTS
-%  --------
-%   confirm    :     (Optional) flag that if true requires user
-%                               confirmation
+%  b = orgExp.Block;
+%  flag = b.doRawExtraction;
 %
 %  --------
 %   OUTPUT

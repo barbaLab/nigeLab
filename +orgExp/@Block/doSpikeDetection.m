@@ -1,10 +1,10 @@
-function spikeDetection(blockObj)
-%% SPIKEDETECTION    Detects spikes after "convert" and "filterData" steps
+function doSpikeDetection(blockObj)
+%% DOSPIKEDETECTION    Detects spikes after "convert" and "filterData" steps
 %
 %  b = orgExp.Block();  % point to experiment
 %  convert(b);          % convert binary data
 %  filterData(b);       % filter the data
-%  spikeDetection(b);   % detect extracellular spiking
+%  doSpikeDetection(b);   % detect extracellular spiking
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 

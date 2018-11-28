@@ -1,8 +1,8 @@
-function filterData(blockObj,varargin)
-%% orgExp.Block.filterData    Filter raw data using spike bandpass filter
+function qUnitFilter(blockObj,varargin)
+%% QUNITFILTER   Filter raw data using spike bandpass filter using Isilon
 %
 %  blockObj = orgExp.Block;
-%  filterData(blockObj);
+%  qUnitFilter(blockObj);
 %
 %  Note: added varargin so you can pass <'NAME', value> input argument
 %        pairs to specify adhoc filter parameters if desired, rather than

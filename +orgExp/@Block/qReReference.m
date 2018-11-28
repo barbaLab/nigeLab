@@ -1,5 +1,5 @@
-function doReReference(blockObj)
-%% DOREREFERENCE  Perform common-average re-referencing (CAR)
+function qReReference(blockObj)
+%% QREREFERENCE  Perform common-average re-referencing (CAR)
 %
 %  b = orgExp.Block();
 %  doExtraction(b);
