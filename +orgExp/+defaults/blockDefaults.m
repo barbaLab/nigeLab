@@ -11,6 +11,26 @@ Pars.SaveFormat  = 'MatFile';
 Pars.Delimiter   = '_';
 Pars.ProbeChannel= [Pars.Delimiter 'P%s_Ch_%s'];
 
+%% Here You can specify the naming format of your block recording
+% The block name will be splitted using Delimiter (defined above) and each
+% segment will be assigned to the property definied here. 
+% Using namingConvention you can define to what varible each piece of the
+% block name should be assigned to. Use the includeChar and discardChar to
+% specify if that piece of info should be kept or discarded.
+% The word after a discardChar will be ignored.
+% e.g. the recording name R18-68_2018_07_24_0_180724_141203
+% translates to 
+% Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID $Recording_date $Recording_time';
+% Pars.includeChar='$';
+% Pars.discardChar='&';
+
+Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID $Recording_date $Recording_time';
+% namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
+
+Pars.includeChar='$';
+Pars.discardChar='&';
+
+%% 
 Fields =  {'Raw';
            'Digital';
            'Filt';

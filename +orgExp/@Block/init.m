@@ -10,11 +10,15 @@ function init(blockObj)
 
 [~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.PATH);
 nameParts=strsplit(blockObj.Name,{Pars.Delimiter '.'});
+expression = sprintf('\\%c\\w*|\\%c\\w*',Pars.includeChar,Pars.discardChar);
+[splitStr]=regexp(Pars.namingConvention,expression,'match');
+include=find(cellfun(@(x) x(1)=='$',splitStr));
+P = properties(blockObj);
 
-blockObj.Corresponding_animal = nameParts{1};
-blockObj.Recording_date = nameParts{3};
-blockObj.Recording_time = nameParts{4};
-blockObj.Recording_ID = nameParts{2};
+for ii=include
+    Prop = P(ismember(lower(P), lower( deblank( splitStr{ii}(2:end)))) );
+    blockObj.(Prop) = nameParts{ii};
+end
 
 blockObj.setSaveLocation(blockObj.SaveLoc);
 blockObj.SaveFormat = Pars.SaveFormat;

@@ -8,7 +8,7 @@ function  setSaveLocation(animalObj,saveloc)
 %% Prompt for location using previously set location
 if nargin<2 || isempty(saveloc)
 tmp = uigetdir(animalObj.DIR,...
-   'Set Processed Tank Location');
+   'Set Processed Animal Location');
 elseif nargin==2
    tmp = saveloc;
 end

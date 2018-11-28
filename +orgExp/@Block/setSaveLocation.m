@@ -8,7 +8,7 @@ function setSaveLocation(blockObj,saveloc)
 %% Prompt for location using previously set location
 if nargin<2 || isempty(saveloc)
 tmp = uigetdir(blockObj.PATH,...
-   'Set Processed Tank Location');
+   'Set Processed Block Location');
 elseif nargin==2
    tmp = saveloc;
 end
