@@ -42,9 +42,9 @@ FolderNames     =   {'RawData';
                      'Filtered';
                      'FilteredCAR';
                      'LFPData';
-                     'Spikes';
-                     'Sorted';
-                     'Clusters';
+                     'wav-sneo_CAR_Spikes';
+                     'wav-sneo_SPC_CAR_Sorted';
+                     'wav-sneo_SPC_CAR_Clusters';
                     };
 
 Del = Pars.Delimiter;
