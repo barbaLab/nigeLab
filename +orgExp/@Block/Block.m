@@ -119,8 +119,9 @@ classdef Block < handle
    %% PRIVATE PROPERTIES
    properties (SetAccess = private,GetAccess = public)
       Fields      % List of property field names
-      SDpars
-      FiltPars
+      SD_pars
+      Filt_pars
+      LFP_pars
       Corresponding_animal
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
