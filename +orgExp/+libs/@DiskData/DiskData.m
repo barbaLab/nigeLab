@@ -265,7 +265,7 @@ classdef DiskData
         function dim = size(obj,n)
             info = whos(obj.diskfile_);
             if length(info)~=1
-                [~,I]=max([info.bytes_]);
+                [~,I]=max([info.bytes]);
                 info=info(I);
             end
             if nargin<2
