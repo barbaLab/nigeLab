@@ -1,26 +1,30 @@
-function [Pars,Fields] = blockDefaults()
-%% DEF_PARAMS  Sets default parameters for BLOCK object
+function [Pars,Fields] = Block()
+%% defaults.Block  Sets default parameters for BLOCK object
+%
+%  [Pars,Fields] = defaults.Block();
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 
 %% Modify all properties here
-         %     'CH_ID' : (def: 'Ch') If you have a different file name
-         %               identifier that precedes the channel number for
-         %               that particular file, specify this on object
-         %               construction.
-         %     'CH_FIELDWIDTH' : (def: 3) Number of characters in the
-         %                        channel number in the file name. NAN
-         %     'Def' : (def: 'P:/Rat') If you are using the UI selection
-         %              interface a lot, and typically working with a more
-         %              specific project directory, you can specify this to
-         %              change where the default UI selection directory
-         %              starts. Alternatively, just change the property in
-         %              the code under private properties.         
+%     'CH_ID' : (def: 'Ch') If you have a different file name
+%               identifier that precedes the channel number for
+%               that particular file, specify this on object
+%               construction.
+%     'Def' : (def: 'P:/Rat') If you are using the UI selection
+%              interface a lot, and typically working with a more
+%              specific project directory, you can specify this to
+%              change where the default UI selection directory
+%              starts. Alternatively, just change the property in
+%              the code under private properties.         
          
+% Define general values used when parsing metadata from file name and
+% structure:
 Pars             = struct;
 Pars.DEF         = 'R:\Rat';
-Pars.SaveFormat  = 'Hybrid';
-Pars.Delimiter   = '_';
-CH_ID = 'Ch';
+Pars.SaveFormat  = 'Hybrid'; % refers to save/load format
+Pars.Delimiter   = '_';      % delimiter for variables in BLOCK name
+CH_ID = 'Ch'; % precedes the channel number delimited variable
 Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
 
 %% Here You can specify the naming format of your block recording
@@ -36,7 +40,7 @@ Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
 % Pars.includeChar='$';
 % Pars.discardChar='&';
 
-Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID';
+Pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
 % namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
 
 Pars.includeChar='$';
