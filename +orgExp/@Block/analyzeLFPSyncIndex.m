@@ -1,4 +1,16 @@
+<<<<<<< HEAD:+orgExp/@Block/synchIndex.m
 function synchIndex(blockObj)
+=======
+function analyzeLFPSyncIndex(blockObj)
+if ~isfield(blockObj.Channels,'psd')
+    for nCh=1:blockObj.numChannels
+        [pxx,~] = pwelch(blockObj.Channels(nCh).LFPData(:),[],[],[],blockObj.Downsampled_rate);
+        blockObj.Channels(nCh).psd=pxx;
+        blockObj.Channels(nCh).syncIdx = computeSyncIdx(blockObj.Channels(nCh).LFPData(:),[0 4],[4 100],win*60*Downsampled_rate,Downsampled_rate);
+
+    end
+end
+>>>>>>> KUMC-qSD:+orgExp/@Block/analyzeLFPSyncIndex.m
 
 win=1; %s
 overlap = 0; %s

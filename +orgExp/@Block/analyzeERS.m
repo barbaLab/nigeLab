@@ -1,4 +1,4 @@
-function  [tf_map,times_in_ms]=ERSAnalysis(blockObj,options)
+function  [tf_map,times_in_ms]=analyzeERS(blockObj,options)
 
 %% performs the event relater power spectrum analysis on the data provided 
 % blockObj contains the recording and the metadata

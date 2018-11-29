@@ -1,9 +1,18 @@
 function pars = SD(varargin)
+<<<<<<< HEAD
 %% INIT_SD Initialize SpikeDetectCluster parameters
+=======
+%% defaults.SD    Initialize parameters for spike detection
+>>>>>>> KUMC-qSD
 %
-%   pars = INIT_SD('NAME',value,...)
+%   pars = defaults.SD('NAME',value,...);
 %
-% By: Max Murphy (08/14/2017)
+%  Note: before further documentation here, maybe we consider cleaning this
+%        up... basically it got pretty cluttered as I was trying lots of
+%        different spike detection methods to find what worked best on our
+%        data-sets generally. - MM
+%
+% By: MAECI 2018 collaboration (Max Murphy & Federico Barban)
 
 %% DEFAULTS
 % General settings

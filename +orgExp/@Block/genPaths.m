@@ -19,7 +19,10 @@ paths.DW    = fullfile(blockObj.SaveLoc,[blockObj.Name DIG_ID] );
 paths.LW    = fullfile(blockObj.SaveLoc,[blockObj.Name LFP_ID] );
 paths.SDW   = fullfile(blockObj.SaveLoc,[blockObj.Name SD_ID]  );
 
-for paths_ = fields(paths)'
+all_fields = fieldnames(paths);
+all_fields = reshape(all_fields,1,numel(all_fields));
+
+for paths_ = all_fields
     % Checks if all the target paths exist, if not mkdir
     if exist(paths.(paths_{:}),'dir')==0
         mkdir(paths.(paths_{:}));

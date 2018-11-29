@@ -1,6 +1,17 @@
-function filterData(blockObj)
+function qUnitFilter(blockObj,varargin)
+%% QUNITFILTER   Filter raw data using spike bandpass filter using Isilon
+%
+%  blockObj = orgExp.Block;
+%  qUnitFilter(blockObj);
+%
+%  Note: added varargin so you can pass <'NAME', value> input argument
+%        pairs to specify adhoc filter parameters if desired, rather than
+%        modifying the defaults.Filt source code.
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-pars = orgExp.defaults.Filt;
+%% GET DEFAULT PARAMETERS
+pars = orgExp.defaults.Filt(varargin);
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,7 +38,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', pars.FSTOP1, ...
                 % Filter and and save amplifier_data by probe/channel
                 pnum  = num2str(blockObj.Channels(iCh).port_number);
                 chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-                data = single(filtfilt(bp_Filt,blockObj.Channels(iCh).rawData.double));
+                data = single(filtfilt(bp_Filt,blockObj.Channels(iCh).Raw.double));
                 iPb = blockObj.Channels(iCh).port_number;
                 %             data = single(filtfilt(b,a,double(data)));
                 fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);

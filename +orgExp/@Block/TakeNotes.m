@@ -8,7 +8,7 @@ function takeNotes(obj)
 %%
 h = orgExp.libs.NotesUI;
 if isempty(obj.Notes.File)
-   obj.Notes.File = fullfile(obj.DIR,[obj.Name ' Description.txt']);
+   obj.Notes.File = fullfile(obj.SaveLoc,[obj.Name ' Description.txt']);
 end
 h.addNotes(obj,obj.Notes);
 

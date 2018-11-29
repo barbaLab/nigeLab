@@ -1,3 +1,4 @@
+<<<<<<< HEAD:+orgExp/@Block/spikeDetection.m
 function spikeDetection(blockObj)
     blockObj.SDpars = orgExp.defaults.SD;
     pars = blockObj.SDpars;
@@ -54,9 +55,47 @@ function spikeDetection(blockObj)
                 
             end
         end
+=======
+function qSD(blockObj)
+%% QSD  Detects spikes after "convert" and "filterData" steps, using Isilon
+%
+%  b = orgExp.Block();  % point to experiment
+%  convert(b);          % convert binary data
+%  filterData(b);       % filter the data
+%  qSD(b);              % submit detection to Matlab remote job
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-        blockObj.updateStatus('Spikes',true);
-        blockObj.save;    
+%% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
+blockObj.SDpars = orgExp.defaults.SD;
+pars = blockObj.SDpars;
+
+%% GO THROUGH EACH CHANNEL AND PARSE NAME INFORMATION
+nCh = blockObj.numChannels;
+
+for iCh = 1:nCh
+   pNum  = num2str(blockObj.Channels(iCh).port_number);
+   chIdx = regexp(blockObj.Channels(iCh).custom_channel_name, '\d');
+   chNum = blockObj.Channels(iCh).custom_channel_name(chIdx);
+   fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
+   blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName));
+end
+
+% Have to do it this way for the parallel part
+channelData = blockObj.Channels;
+parfor iCh = 1:nCh % For each "channel index"...
+   [spk] = PerChannelDetection(blockObj,iCh,pars);
+   pNum  = num2str(blockObj.Channels(iCh).port_number);
+   chNum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
+   channelData(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
+end
+blockObj.Channels = channelData;
+
+>>>>>>> KUMC-qSD:+orgExp/@Block/qSD.m
+
+blockObj.updateStatus('Spikes',true);
+blockObj.save;
 end
 
 
@@ -68,7 +107,7 @@ function [spikedata] = PerChannelDetection(blockObj,ch,pars)
 %   --------
 %    INPUTS
 %   --------
-%       p           :       Number of probe.   
+%       p           :       Number of probe.
 %
 %      ch           :       Number of filtered and re-referenced
 %                           single-channel stream to load.
@@ -91,7 +130,7 @@ function [spikedata] = PerChannelDetection(blockObj,ch,pars)
 data=blockObj.Channels(ch).CAR(:,:);
 pars.FS = blockObj.Sample_rate;
 %% PERFORM SPIKE DETECTION
-spikedata = SpikeDetectionArray(data,pars); 
+spikedata = SpikeDetectionArray(data,pars);
 
 %% SAVE SPIKE DETECTION DATA FOR THIS CHANNEL
 % newname = sprintf('%s%sP%d_Ch_%03d.mat',paths.N,pars.SPIKE_DATA,p,ch);
