@@ -37,7 +37,7 @@ warningString = {'RAW'; ...
 
 %% CHECK AMPLIFIER CHANNELS
 
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    
    %%%%%%%%%%%%% Raw data
    pnum  = num2str(blockObj.Channels(iCh).port_number);
@@ -55,7 +55,7 @@ end
 
 %% CHECK STIMULATION DATA
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    
@@ -69,7 +69,7 @@ for iCh = 1:blockObj.numChannels
    end
    blockObj.Channels(iCh).stimData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    
-   if (blockObj.dcAmpDataSaved ~= 0)
+   if (blockObj.DCAmpDataSaved ~= 0)
       dc_amp_fname = strrep(fullfile(blockObj.paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
       if ~exist(fullfile(fname),'file')
@@ -85,7 +85,7 @@ end
 
 %% CHECK LFP DATA
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
@@ -101,7 +101,7 @@ if UpdateStatus, blockObj.updateStatus('LFP',true);end
 
 %% CHECK FILTERED DATA
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
@@ -117,7 +117,7 @@ if UpdateStatus, blockObj.updateStatus('Filt',true);end
 
 %% CHECK CAR DATA
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
@@ -133,7 +133,7 @@ if UpdateStatus, blockObj.updateStatus('CAR',true); end
 
 %% CHECK SPIKES DATA
 UpdateStatus = true;
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
@@ -148,7 +148,7 @@ end
 if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 
 %% CHECK SINGLE_CHANNEL ADC DATA
-for i = 1:blockObj.numADCchannels
+for i = 1:blockObj.NumADCchannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),blockObj.ADCChannels(i).custom_channel_name);
    if ~exist(fullfile(fname),'file')
@@ -160,7 +160,7 @@ for i = 1:blockObj.numADCchannels
 end
 
 %% CHECK SINGLE-CHANNEL DAC DATA
-for i = 1:blockObj.numDACChannels
+for i = 1:blockObj.NumDACChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DACChannels(i).custom_channel_name);
    if ~exist(fullfile(fname),'file')
@@ -172,7 +172,7 @@ for i = 1:blockObj.numDACChannels
 end
 
 %% CHECK SINGLE_CHANNEL DIGITAL INPUT DATA
-for i = 1:blockObj.numDigInChannels
+for i = 1:blockObj.NumDigInChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigInChannels(i).custom_channel_name);
    if ~exist(fullfile(fname),'file')
@@ -184,7 +184,7 @@ for i = 1:blockObj.numDigInChannels
 end
 
 %% CHECK SINGLE_CHANNEL DIGITAL OUTPUT DATA
-for i = 1:blockObj.numDigOutChannels
+for i = 1:blockObj.NumDigOutChannels
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigOutChannels(i).custom_channel_name);
    if ~exist(fullfile(fname),'file')
       warningFlag=true;

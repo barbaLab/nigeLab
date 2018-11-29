@@ -1,5 +1,5 @@
 function pars = Filt(varargin)
-=======
+% =======
 %% defaults.Filt  Initialize filter parameters for bandpass filter
 %
 %  pars = defaults.Filt('NAME',value,...);

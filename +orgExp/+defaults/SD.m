@@ -1,6 +1,6 @@
 function pars = SD(varargin)
 %% defaults.SD    Initialize parameters for spike detection
->>>>>>> KUMC-qSD
+% >>>>>>> KUMC-qSD
 %
 %   pars = defaults.SD('NAME',value,...);
 %

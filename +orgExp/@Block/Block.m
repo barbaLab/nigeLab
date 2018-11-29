@@ -94,21 +94,21 @@ classdef Block < handle
    
    properties (SetAccess = private)
       
-      Sample_rate
+      SampleRate
       Time
       File_extension   % Intan TDT or other
       RecType
       
-      numChannels       = 0
-      numProbes         = 0
-      numADCchannels    = 0
-      numDACChannels    = 0
-      numDigInChannels  = 0
-      numDigOutChannels = 0
+      NumChannels       = 0
+      NumProbes         = 0
+      NumADCchannels    = 0
+      NumDACChannels    = 0
+      NumDigInChannels  = 0
+      NumDigOutChannels = 0
    end
    
    properties (SetAccess = immutable,GetAccess = private)
-      dcAmpDataSaved
+      DCAmpDataSaved
       Date
       Month
       Day      
@@ -122,24 +122,23 @@ classdef Block < handle
       UNC_Path
       ProbeChannel
       
-      dynamicVarExp
-      includeChar
-      discardChar
-      namingConvention
+      DynamicVarExp
+      IncludeChar
+      DiscardChar
+      NamingConvention
    end
    
    
    %% PRIVATE PROPERTIES
    properties (SetAccess = private,GetAccess = public)
       Fields      % List of property field names
-      SD_pars
-      Filt_pars
-      LFP_pars
-      Corresponding_animal
+      SDPars
+      FiltPars
+      LFPPars
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
-      Downsampled_rate % Rate for down-sampling LFP data
+      DownsampledRate % Rate for down-sampling LFP data
       
       Samples
       
@@ -274,10 +273,16 @@ classdef Block < handle
                           end
                           Out = sprintf('%s.%s',Out,longCommand);
                       else
-                          Out = sprintf('%s(S(%d).subs{:})',Out,ii);
+                          Out = builtin('subsref',blockObj,S);
+                          varargout = {Out};
+                          return
+%                           Out = sprintf('%s(S(%d).subs{:})',Out,ii);
                       end
                   case '.'
-                      Out = sprintf('%s.(S(%d).subs)',Out,ii);
+                      Out = builtin('subsref',blockObj,S);
+                      varargout = {Out};
+                      return
+%                       Out = sprintf('%s.(S(%d).subs)',Out,ii);
                   otherwise
               end
               ii=ii+1;

@@ -11,7 +11,7 @@ function doUnitFilter(blockObj,varargin)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 pars = orgExp.defaults.Filt;
-=======
+% =======
 %% GET DEFAULT PARAMETERS
 pars = orgExp.defaults.Filt(varargin);
 
