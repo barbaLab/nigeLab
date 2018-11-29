@@ -1,6 +1,6 @@
 function filterData(blockObj)
 
-pars = orgExp.defaults.Init_Filt;
+pars = orgExp.defaults.Filt;
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

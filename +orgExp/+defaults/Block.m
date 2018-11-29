@@ -1,4 +1,4 @@
-function [Pars,Fields] = blockDefaults()
+function [Pars,Fields] = Block()
 %% DEF_PARAMS  Sets default parameters for BLOCK object
 
 
@@ -36,7 +36,7 @@ Pars.ProbeChannel= [Pars.Delimiter 'P%s_' CH_ID '_%s'];
 % Pars.includeChar='$';
 % Pars.discardChar='&';
 
-Pars.namingConvention='$Corresponding_animal &YEAR &MONTH &DAY $Recording_ID';
+Pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
 % namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
 
 Pars.includeChar='$';

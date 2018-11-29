@@ -21,7 +21,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;     
         break;
     end
-    blockObj.Channels(iCh).rawData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Raw = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
     if UpdateStatus, blockObj.updateStatus('Raw',true);end
 end
     %%%%%%%%%%%%%%% Digital data
@@ -108,7 +108,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;
         break;
     end
-    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData('MatFile',fname);
 end   
 if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 

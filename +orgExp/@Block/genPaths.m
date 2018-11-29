@@ -2,12 +2,12 @@ function genPaths(blockObj)
 %% Set some useful path variables
 % Here are defined all the paths where data will be saved.
 % The folder tree is also created here(if not already exsting)
-[ID,~] = orgExp.defaults.blockDefaults;
+[ID,~] = orgExp.defaults.Block;
 delim       = ID.Delimiter;
 RAW_ID      = [delim ID.Raw.Folder];                 % Raw stream ID
 FILT_ID     = [delim ID.Filt.Folder];                % Filtered stream ID
 CAR_ID      = [delim ID.CAR.Folder];                 % Spatial re-reference stream ID
-DIG_ID      = [delim ID.Digital.Folder];             % Digital stream ID
+DIG_ID      = [delim ID.Dig.Folder];             % Digital stream ID
 LFP_ID      = [delim ID.LFP.Folder];                 % LFP stream ID
 SD_ID       = [delim ID.Spikes.Folder];              % Spike detection ID
 

@@ -1,4 +1,4 @@
-function pars = Init_Filt(varargin)
+function pars = Filt(varargin)
 %% PARSE VARARGIN
 if numel(varargin)==1
     varargin = varargin{1};

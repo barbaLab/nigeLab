@@ -1,4 +1,4 @@
-function pars = Init_SD(varargin)
+function pars = SD(varargin)
 %% INIT_SD Initialize SpikeDetectCluster parameters
 %
 %   pars = INIT_SD('NAME',value,...)

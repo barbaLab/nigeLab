@@ -187,7 +187,7 @@ classdef Block < handle
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         [pars,~] = orgExp.defaults.blockDefaults;
+         [pars,~] = orgExp.defaults.Block;
          if isempty(blockObj.Path)
              [file,path]= uigetfile(fullfile(pars.DEF,'*.*'),...
                  'Select recording BLOCK');
@@ -216,9 +216,41 @@ classdef Block < handle
             end
       end
       
-%       function varargout = subsref(obj,S)
-%             a=1;
-%       end
+      function varargout=subsref(blockObj,S)
+          Out = 'blockObj';
+          ii=1;
+          while ii<=numel(S)
+              switch S(ii).type
+                  case '()'
+                      if ii==1
+                          nargs=numel(S(ii).subs);
+                          if nargs<2
+                              error('Not enough input arguments');
+                          end
+                          for jj=3:nargs
+                              ind=numel(S)+1;
+                             S(ind).subs{1}=S(ii).subs{jj};
+                             S(ind).type = '()';
+                          end
+                          Shrt = orgExp.defaults.Shortcuts();
+                          if ischar( S(ii).subs{1} )
+                              longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(ii).subs{1}),2},S(ii).subs{2});
+                          elseif isnumeric( S(ii).subs{1} )
+                              longCommand = sprintf(Shrt{S(ii).subs{1},2},S(ii).subs{2});
+                          end
+                          Out = sprintf('%s.%s',Out,longCommand);
+                      else
+                          Out = sprintf('%s(S(%d).subs{:})',Out,ii);
+                      end
+                  case '.'
+                      Out = sprintf('%s.(S(%d).subs)',Out,ii);
+                  otherwise
+              end
+              ii=ii+1;
+          end
+          Out = eval(Out);
+          varargout = {Out};
+      end
       
       extractLFP(blockObj)
       filterData(blockObj)

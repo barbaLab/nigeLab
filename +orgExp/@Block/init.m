@@ -6,7 +6,7 @@ function init(blockObj,varargin)
 %  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
 %      Federico Barban v2.0 07/08/2018
 
-[Pars,blockObj.Fields] = orgExp.defaults.blockDefaults;
+[Pars,blockObj.Fields] = orgExp.defaults.Block;
 
 [~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.Path);
 nameParts=strsplit(blockObj.Name,{Pars.Delimiter '.'});
@@ -16,7 +16,7 @@ include=find(cellfun(@(x) x(1)=='$',splitStr));
 P = properties(blockObj);
 
 for ii=include
-    eval(sprintf('%s=nameParts{ii}',upper( deblank( splitStr{ii}(2:end)))));
+    eval(sprintf('%s=nameParts{ii};',upper( deblank( splitStr{ii}(2:end)))));
     Prop = P(ismember(upper(P), upper( deblank( splitStr{ii}(2:end)))) );
     if ~isempty(Prop)
         blockObj.(Prop{:}) = nameParts{ii};

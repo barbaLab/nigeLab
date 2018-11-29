@@ -1,5 +1,5 @@
 function spikeDetection(blockObj)
-    blockObj.SDpars = orgExp.defaults.Init_SD;
+    blockObj.SDpars = orgExp.defaults.SD;
     pars = blockObj.SDpars;
 %     SiteLayout = pars.CHANS{iP,2};
     nCh = blockObj.numChannels;

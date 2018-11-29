@@ -1,7 +1,7 @@
 function operations = updateStatus(blockObj,operation,value)
 %% updates status of block
 
-[~,operations_] = orgExp.defaults.blockDefaults();
+[~,operations_] = orgExp.defaults.Block();
 
 
 switch nargin
