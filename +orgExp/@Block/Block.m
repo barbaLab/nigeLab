@@ -194,6 +194,7 @@ classdef Block < handle
                'Select recording BLOCK');
             blockObj.RecFile = fullfile(path,file);
             if blockObj.RecFile == 0
+>>>>>>> KUMC-qSD
                error('No block selected. Object not created.');
             end
          else
@@ -268,6 +269,11 @@ classdef Block < handle
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+      
+      % Methods for data analysis:
+      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
+      analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+>>>>>>> KUMC-qSD
       
       % Methods for data visualization:
       flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets

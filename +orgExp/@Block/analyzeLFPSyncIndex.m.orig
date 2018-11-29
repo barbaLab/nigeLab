@@ -1,6 +1,9 @@
-<<<<<<<<< Temporary merge branch 1:+orgExp/@Block/analyzeLFPSyncIndex.m
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD:+orgExp/@Block/synchIndex.m
 function synchIndex(blockObj)
 =======
+>>>>>>> IIT
 function analyzeLFPSyncIndex(blockObj)
 if ~isfield(blockObj.Channels,'psd')
     for nCh=1:blockObj.numChannels
@@ -10,6 +13,10 @@ if ~isfield(blockObj.Channels,'psd')
 
     end
 end
+<<<<<<< HEAD
+=======
+>>>>>>> KUMC-qSD:+orgExp/@Block/analyzeLFPSyncIndex.m
+>>>>>>> IIT
 
 win=1; %s
 overlap = 0; %s

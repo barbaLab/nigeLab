@@ -1,3 +1,6 @@
+function [Pars,Fields] = Block()
+%% DEF_PARAMS  Sets default parameters for BLOCK object
+=======
 function [pars,Fields] = Block()
 %% defaults.Block  Sets default parameters for BLOCK object
 %
@@ -50,6 +53,7 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
 pars.includeChar='$';
 pars.discardChar='&';
+>>>>>>> KUMC-qSD
 
 %% 
 Fields =  {'Raw';

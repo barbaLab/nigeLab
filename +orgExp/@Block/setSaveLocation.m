@@ -13,6 +13,7 @@ flag = false;
 if nargin<2 || isempty(saveLoc)
    tmp = uigetdir(blockObj.SaveLocDefault,...
                'Set Processed BLOCK Location');
+>>>>>>> KUMC-qSD
 elseif nargin==2
    tmp = saveLoc;
 end

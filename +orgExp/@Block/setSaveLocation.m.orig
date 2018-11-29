@@ -15,10 +15,16 @@ if nargin<2 || isempty(saveLoc)
    tmp = uigetdir(blockObj.SaveLocDefault,...
                'Set Processed BLOCK Location');
 =======
+<<<<<<< HEAD
 if nargin<2 || isempty(saveloc)
 tmp = uigetdir(blockObj.Path,...
    'Set Processed Block Location');
->>>>>>> IIT-prev
+=======
+if nargin<2 || isempty(saveLoc)
+   tmp = uigetdir(blockObj.SaveLocDefault,...
+               'Set Processed BLOCK Location');
+>>>>>>> KUMC-qSD
+>>>>>>> IIT
 elseif nargin==2
    tmp = saveLoc;
 end

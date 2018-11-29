@@ -190,18 +190,24 @@ classdef Block < handle
          %% LOOK FOR BLOCK DIRECTORY
          [pars,~] = orgExp.defaults.Block;
 <<<<<<< HEAD
-         if isempty(blockObj.RecFile)
-            [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
-               'Select recording BLOCK');
-            blockObj.RecFile = fullfile(path,file);
-            if blockObj.RecFile == 0
 =======
+<<<<<<< HEAD
          if isempty(blockObj.Path)
              [file,path]= uigetfile(fullfile(pars.DEF,'*.*'),...
                  'Select recording BLOCK');
             blockObj.Path = fullfile(path,file);
             if blockObj.Path == 0
->>>>>>> IIT-prev
+=======
+>>>>>>> IIT
+         if isempty(blockObj.RecFile)
+            [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
+               'Select recording BLOCK');
+            blockObj.RecFile = fullfile(path,file);
+            if blockObj.RecFile == 0
+<<<<<<< HEAD
+=======
+>>>>>>> KUMC-qSD
+>>>>>>> IIT
                error('No block selected. Object not created.');
             end
          else
@@ -226,26 +232,9 @@ classdef Block < handle
       end
       
 <<<<<<< HEAD
-      %       function varargout = subsref(obj,S)
-      %             a=1;
-      %       end
-      
-      % Methods for data processing:
-      doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      qExtraction(blockObj)      % Queue extraction to Isilon
-      doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
-      qUnitFilter(blockObj)      % Queue filter to Isilon
-      doReReference(blockObj)    % Do virtual common-average re-reference
-      qReReference(blockObj)     % Queue CAR to Isilon
-      doSpikeDetection(blockObj) % Do spike detection for extracellular field
-      qSD(blockObj)              % Queue SD to Isilon
-      doLFPExtraction(blockObj)  % Extract LFP decimated streams
-      qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
-      
-      % Methods for data analysis:
-      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
-      analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
 =======
+<<<<<<< HEAD
+>>>>>>> IIT
       function varargout=subsref(blockObj,S)
           Out = 'blockObj';
           ii=1;
@@ -281,7 +270,33 @@ classdef Block < handle
           Out = eval(Out);
           varargout = {Out};
       end
->>>>>>> IIT-prev
+<<<<<<< HEAD
+=======
+=======
+      %       function varargout = subsref(obj,S)
+      %             a=1;
+      %       end
+>>>>>>> IIT
+      
+      % Methods for data processing:
+      doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
+      qExtraction(blockObj)      % Queue extraction to Isilon
+      doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
+      qUnitFilter(blockObj)      % Queue filter to Isilon
+      doReReference(blockObj)    % Do virtual common-average re-reference
+      qReReference(blockObj)     % Queue CAR to Isilon
+      doSpikeDetection(blockObj) % Do spike detection for extracellular field
+      qSD(blockObj)              % Queue SD to Isilon
+      doLFPExtraction(blockObj)  % Extract LFP decimated streams
+      qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
+      
+      % Methods for data analysis:
+      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
+      analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+<<<<<<< HEAD
+=======
+>>>>>>> KUMC-qSD
+>>>>>>> IIT
       
       % Methods for data visualization:
       flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets

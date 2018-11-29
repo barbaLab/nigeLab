@@ -10,12 +10,17 @@ function doUnitFilter(blockObj,varargin)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-<<<<<<< HEAD:+orgExp/@Block/doUnitFilter.m
+<<<<<<< HEAD
 %% GET DEFAULT PARAMETERS
 pars = orgExp.defaults.Filt(varargin);
 =======
+<<<<<<< HEAD:+orgExp/@Block/filterData.m
 pars = orgExp.defaults.Filt;
->>>>>>> IIT-prev:+orgExp/@Block/filterData.m
+=======
+%% GET DEFAULT PARAMETERS
+pars = orgExp.defaults.Filt(varargin);
+>>>>>>> KUMC-qSD:+orgExp/@Block/doUnitFilter.m
+>>>>>>> IIT
 
 %%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

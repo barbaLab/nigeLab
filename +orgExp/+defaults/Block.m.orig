@@ -1,14 +1,20 @@
 <<<<<<< HEAD
+=======
+<<<<<<< HEAD
+function [Pars,Fields] = Block()
+%% DEF_PARAMS  Sets default parameters for BLOCK object
+=======
+>>>>>>> IIT
 function [pars,Fields] = Block()
 %% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = defaults.Block();
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+<<<<<<< HEAD
 =======
-function [Pars,Fields] = Block()
-%% DEF_PARAMS  Sets default parameters for BLOCK object
->>>>>>> IIT-prev
+>>>>>>> KUMC-qSD
+>>>>>>> IIT
 
 
 %% Modify all properties here
@@ -57,12 +63,18 @@ pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
 pars.includeChar='$';
 pars.discardChar='&';
 =======
+<<<<<<< HEAD
 Pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
 % namingConvention='$Corresponding_animal $Recording_ID $Recording_date$$Recording_time$';
 
 Pars.includeChar='$';
 Pars.discardChar='&';
->>>>>>> IIT-prev
+=======
+pars.namingConvention='$Corresponding_animal $YEAR $MONTH $DAY $Recording_ID';
+pars.includeChar='$';
+pars.discardChar='&';
+>>>>>>> KUMC-qSD
+>>>>>>> IIT
 
 %% 
 Fields =  {'Raw';
