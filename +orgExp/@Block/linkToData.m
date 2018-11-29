@@ -115,7 +115,7 @@ for iCh = 1:blockObj.numChannels
         UpdateStatus = false;
         break;
     end
-    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData('MatFile',fname);
 end   
 if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 

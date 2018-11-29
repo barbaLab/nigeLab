@@ -65,19 +65,58 @@ classdef DiskData
                 case 2
                     switch varargin{1}
                         case 'MatFile'
+                            eval(sprintf('%s=zeros(1,1,class_);',name_));
+                            if exist(varargin{2},'file')
+                                obj.diskfile_ = matfile(varargin{2},...
+                                    'Writable',true);
+                                info = whos(obj.diskfile_);
+                                if isscalar(info)
+                                    data=load(varargin{2});
+                                    info = whos(data);
+                                end
+                                obj.bytes_ = info.bytes;
+                                obj.name_ = info.name;
+                                obj.size_ = info.size;
+                                obj.class_ = info.class;
+                            else
+                                eval(sprintf('%s=ones(1,1,class_);',name_));
+                                save(varargin{2},name_,'-v7.3');
+                                obj.diskfile_ = matfile(varargin{2},...
+                                    'Writable',true);
+                                obj.name_ = name_;
+                                obj.size_ = [0 0];
+                                obj.bytes_ = 0;
+                                obj.class_ = class_;
+                            end
+                            obj.type_='MatFile';
+                            
                         case 'Hybrid'
                             data=zeros(1,1,class_);
                             if ~exist(varargin{2},'file')
                                 data=ones(1,1,class_);
                                 save(varargin{2},name_,'-v7.3');
+                                obj.name_ = name_;
+                                obj.size_ = [0 0];
+                                obj.bytes_ = 0;
+                                obj.class_ = class_;
+                                obj.diskfile_ = matfile(varargin{2},...
+                                    'Writable',true);
+                            else
+                                obj.diskfile_ = matfile(varargin{2},...
+                                    'Writable',true);
+                                info = whos(obj.diskfile_);
+                                [~,I]=max(cat(1,info(:).size),[],1);
+                                I=unique(I);
+                                if size(I,2)~=1
+                                    error('Your file look wierd.\nI wasn''t able to properly connect it ti DiskData');
+                                end
+                                obj.bytes_ = info(I).bytes;
+                                obj.name_ = info(I).name;
+                                obj.size_ = info(I).size;
+                                obj.class_ = info(I).class;
                             end
-                            obj.diskfile_ = matfile(varargin{2},...
-                                'Writable',true);
-                            obj.type_='MatFile';
-                            obj.name_ = name_;
-                            obj.size_ = [0 0];
-                            obj.bytes_ = 0;
-                            obj.class_ = class_;
+                            obj.type_='Hybrid';
+                            
                             if data
                                 fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
                                 H5L.delete(fid,'data','H5P_DEFAULT');
@@ -92,6 +131,17 @@ classdef DiskData
                 case 3
                     switch varargin{1}
                         case 'MatFile'
+                            eval(sprintf('%s=ones(1,1,class_);',name_));
+                            save(varargin{2},name_,'-v7.3');
+                            obj.diskfile_ = matfile(varargin{2},...
+                                'Writable',true);
+                            obj.diskfile_.(name_) = varargin{3};
+                            obj.type_='MatFile';
+                            obj.name_ = name_;
+                            obj.size_ = size_;                            
+                            obj.class_ = class_;
+                            info = whos(obj.diskfile_);
+                            obj.bytes_ = info.bytes;
                         case 'Hybrid'
                             data=zeros(1,1,class_);
                             if ~exist(varargin{2},'file')
@@ -101,7 +151,7 @@ classdef DiskData
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
                                                      
-                            obj.type_='MatFile';
+                            obj.type_='Hybrid';
                             obj.name_ = name_;
                             obj.size_ = size_;                            
                             obj.class_ = class_;
@@ -127,24 +177,24 @@ classdef DiskData
         function varargout = subsref(obj,S)
 %             Out=obj.diskfile_.(obj.name_);
             Out = 'obj';
+            readDat=true;
             for ii=1:numel(S)
                 switch S(ii).type
                     case '()'
-                        if ii==1 && ~strcmp(class(obj),'struct')
-                                                        
-                            nArgs=numel(S(ii).subs);
-                            if nArgs==1
-                                [~,I]=max(size(obj));
-                                tmp=S(ii).subs{1};
-                                S(ii).subs(1:numel(size(obj)))={1};
-                                S(ii).subs{I}=tmp;
-                            end
-                            SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
-                            
-                            if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
-                                error('Index exceeds matrix dimension.');
-                            end
-                                                   
+                        nArgs=numel(S(ii).subs);
+                        if nArgs==1
+                            if ~exist('sz','var'),sz=size(obj);end
+                            [~,I]=max(sz);
+                            tmp=S(ii).subs{1};
+                            S(ii).subs(1:numel(size(obj)))={1};
+                            S(ii).subs{I}=tmp;
+                        end
+                        SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
+                        
+                        if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
+                            error('Index exceeds matrix dimension.');
+                        end
+                        if readDat && strcmp(obj.type_,'Hybrid')
 %                             if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
                             if any(strcmp(S(ii).subs,':'))
                                 indx = [1 inf];
@@ -165,12 +215,12 @@ classdef DiskData
                             end
                             varargout(1) = {Out};
                             return;
-                        elseif ii==1 && strcmp(class(obj),'struct')
-                            Out='obj.diskfile_.(obj.name_)';
-                            Out = sprintf('%s(S(ii).subs{:})',Out);
+                        elseif readDat && strcmp(obj.type_,'MatFile')
+                            Out = sprintf('%s(S(%d).subs{:})',Out,ii);
                         else
-                             Out = sprintf('%s(S(ii).subs{:})',Out);
+                             Out = sprintf('%s(S(%d).subs{:})',Out,ii);
                         end
+                        readDat=false;
                     case '{}'
                         warning('curly indexing not supported yet')
                     case '.'
@@ -178,7 +228,9 @@ classdef DiskData
                         if any(strcmp(s,S(ii).subs))
                             Out = sprintf('obj.%s',S(ii).subs);                           
                         else
-                            Out = sprintf('%s.(%s)',Out,S(ii).subs);
+                            readDat = true;
+                            sz = size(obj.diskfile_.(S(ii).subs));
+                            Out = sprintf('obj.diskfile_.%s',S(ii).subs); 
                         end
                 end
             end
@@ -186,34 +238,34 @@ classdef DiskData
                 varargout(1) = {Out};
         end
         
-         function obj = subsasgn(obj,S,b)
-             tmp = obj.diskfile_.(obj.name_);
-             for ii=1:numel(S)
-                 switch S(ii).type
-                     case '()'
-                         nArgs=numel(S(ii).subs);
-                         if nArgs==1
-                             [~,I]=max(size(obj));
-                             tmp_=S(ii).subs{1};
-                             S(ii).subs(1:numel(size(obj)))={1};
-                             S(ii).subs{I}=tmp_;
-                             clear('tmp_');
-                         end
-                         if isempty(tmp)
-                             clear('tmp');
-                             tmp(S(ii).subs{:})=b;
-                         else
-                             tmp(S.subs{:})=b;
-                         end
-                         
-                     case '.'
-                         tmp.(S.subs{:}) = b;
-                         
-                     case '{}'
-                 end
-             end
-             obj.diskfile_.(obj.name_) = tmp;
-        end
+%          function obj = subsasgn(obj,S,b)
+%              tmp = obj.diskfile_.(obj.name_);
+%              for ii=1:numel(S)
+%                  switch S(ii).type
+%                      case '()'
+%                          nArgs=numel(S(ii).subs);
+%                          if nArgs==1
+%                              [~,I]=max(size(obj));
+%                              tmp_=S(ii).subs{1};
+%                              S(ii).subs(1:numel(size(obj)))={1};
+%                              S(ii).subs{I}=tmp_;
+%                              clear('tmp_');
+%                          end
+%                          if isempty(tmp)
+%                              clear('tmp');
+%                              tmp(S(ii).subs{:})=b;
+%                          else
+%                              tmp(S.subs{:})=b;
+%                          end
+%                          
+%                      case '.'
+%                          tmp.(S.subs{:}) = b;
+%                          
+%                      case '{}'
+%                  end
+%              end
+%              obj.diskfile_.(obj.name_) = tmp;
+%         end
         
         function ind = end(obj,k,n)
             szd = size(obj);
@@ -312,11 +364,19 @@ classdef DiskData
         end
         
         function Out=disp(obj)
-            if nargout>0
-                Out=[];
+            switch obj.type_
+                case 'Hybrid'
+                    if nargout>0
+                        Out=[];
+                    end
+                    varname=[ '/' obj.name_];
+                    a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+                case 'MatFile'
+                    if nargout>0
+                        Out=[];
+                    end
+                    a = obj.diskfile_.(obj.name_);
             end
-            varname=[ '/' obj.name_];
-            a = h5read(obj.getPath,varname,[1 1],[1 inf]);
             disp(a);
         end
         
