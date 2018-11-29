@@ -61,7 +61,8 @@ classdef Block < handle
    %
    %     get - Get a specific property of the BLOCK object.
    %
-   % By: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
+   % Started by: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
+   % Expanded by: MAECI 2018 collaboration (Federico Barban & Max Murphy)
    
    %% PUBLIC PROPERTIES
    
@@ -248,6 +249,7 @@ classdef Block < handle
          end
       end
       
+      % Federico I will let you comment this :) -MM
       function varargout=subsref(blockObj,S) %#ok<INUSL>
           Out = 'blockObj';
           ii=1;
@@ -285,16 +287,16 @@ classdef Block < handle
       end
       
       % Methods for data processing:
-      doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      qExtraction(blockObj)      % Queue extraction to Isilon
-      doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
-      qUnitFilter(blockObj)      % Queue filter to Isilon
-      doReReference(blockObj)    % Do virtual common-average re-reference
-      qReReference(blockObj)     % Queue CAR to Isilon
-      doSpikeDetection(blockObj) % Do spike detection for extracellular field
-      qSD(blockObj)              % Queue SD to Isilon
-      doLFPExtraction(blockObj)  % Extract LFP decimated streams
-      qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
+      flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
+      flag = qRawExtraction(blockObj)   % Queue extraction to Isilon
+      flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
+      flag = qUnitFilter(blockObj)      % Queue filter to Isilon
+      flag = doReReference(blockObj)    % Do virtual common-average re-reference
+      flag = qReReference(blockObj)     % Queue CAR to Isilon
+      flag = doSD(blockObj)             % Do spike detection for extracellular field
+      flag = qSD(blockObj)              % Queue SD to Isilon
+      flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
+      flag = qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
       
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
@@ -316,22 +318,26 @@ classdef Block < handle
    end
    methods (Access = public, Hidden = true)
       % Other utility methods:
-      updateNotes(blockObj,str) % Update notes for a recording
-      varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
-      flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
-      flag = setSaveLocation(blockObj,saveLoc)
-      RHD2Block(blockObj)
-      RHS2Block(blockObj)
-      linkToData(blockObj,preExtractedFlag)
+      flag = setSaveLocation(blockObj,saveLoc)   % Set the BLOCK location
+      flag = RHD2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
+      flag = RHS2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
+      
       genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
       
       flag = clearSpace(blockObj,ask)  % Clear space on disk
       
+      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       updateID(blockObj,name,type,value)  % Update the file or folder identifier
       updateContents(blockObj,fieldname)  % Update files for specific field
+      
+      
+      % For future expansion?
       takeNotes(blockObj)                 % View or update notes on current recording
+      updateNotes(blockObj,str) % Update notes for a recording
+      varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
+      flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
    end
    
    %% PRIVATE METHODS

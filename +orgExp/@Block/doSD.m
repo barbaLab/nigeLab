@@ -1,16 +1,17 @@
-function doSpikeDetection(blockObj)
-%% DOSPIKEDETECTION    Detects spikes after raw extraction and unit filter
+function flag = doSD(blockObj)
+%% DOSD   Detects spikes after raw extraction and unit filter
 %
 %  EXAMPLE USAGE
 %  -------------------------------------------------------
 %  b = orgExp.Block();    % point to experiment
 %  doRawExtraction(b);    % convert binary data
 %  doUnitFilter(b);       % filter the data
-%  doSpikeDetection(b);   % detect extracellular spiking
+%  doSD(b);   % detect extracellular spiking
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
+flag = false;
 blockObj.SDpars = orgExp.defaults.SD;
 pars = blockObj.SDpars;
 
@@ -46,6 +47,7 @@ end
 % Indicate that it is finished at the end
 blockObj.updateStatus('Spikes',true);
 blockObj.save;
+flag = true;
 
    function [spikedata] = PerChannelDetection(blockObj,ch,pars)
    %% PERCHANNELDETECTION  Perform spike detection for each channel individually.

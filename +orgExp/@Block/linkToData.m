@@ -1,8 +1,8 @@
-function linkToData(blockObj,preExtractedFlag)
+function flag = linkToData(blockObj,preExtractedFlag)
 %% LINKTODATA  Connect the data saved on the disk to the structure
 %
 %  b = orgExp.Block;
-%  b.linkToData;
+%  flag = linkToData(b);
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
@@ -10,6 +10,8 @@ function linkToData(blockObj,preExtractedFlag)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% DEFAULTS
+flag = false;
+
 % If not otherwise specified, assume extraction has not been done.
 if nargin < 2
    preExtractedFlag = false;
@@ -205,5 +207,6 @@ if warningFlag && ~preExtractedFlag
 end
 
 blockObj.save;
+flag = true;
 end
 

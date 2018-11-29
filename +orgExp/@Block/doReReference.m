@@ -1,4 +1,4 @@
-function doReReference(blockObj)
+function flag = doReReference(blockObj)
 %% DOREREFERENCE  Perform common-average re-referencing (CAR)
 %
 %  b = orgExp.Block();
@@ -7,6 +7,8 @@ function doReReference(blockObj)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
+%%
+flag = false; % Create flag for reporting successful execution
 probes = unique([blockObj.Channels.port_number]);
 nChannels = length(blockObj.Channels(1).Filt);
 refMean = zeros(numel(probes),nChannels);
@@ -65,5 +67,6 @@ if ~doSuppression
 end
 fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('CAR',true);
+flag = true;
 end
 
