@@ -1,7 +1,7 @@
 classdef Block < handle
    %% BLOCK    Creates datastore for an electrophysiology recording.
    %
-   %  blockObj = BLOCK;
+   %  blockObj = BLOCK();
    %  blockObj = BLOCK('NAME','VALUE',...);
    %
    %  ex:
@@ -67,9 +67,7 @@ classdef Block < handle
    
    properties (Access = public)
       Name
-      Recording_date
-      Recording_time
-      Recording_ID
+      Meta
    end
    
    properties (Access = public)
@@ -112,7 +110,21 @@ classdef Block < handle
       dcAmpDataSaved
       Date
       Month
-      Day
+      Day      
+   end
+   
+   properties (SetAccess = immutable,GetAccess = public)
+      % Extraction path and metadata parsing miscellany here:
+      RecLocDefault
+      SaveLocDefault
+      Delimiter
+      UNC_Path
+      ProbeChannel
+      
+      dynamicVarExp
+      includeChar
+      discardChar
+      namingConvention
    end
    
    
@@ -175,22 +187,38 @@ classdef Block < handle
          %     F. Barban   v2.0  11/2018
          
          %% PARSE VARARGIN
+         P = properties(blockObj);
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue;
             end
-            P = properties(blockObj);
-            Prop = P{ismember(upper(P), upper( deblank( varargin{iV+1}))) };
-            if isempty(Prop)
-               continue;
+            % Check to see if it matches any of the listed properties
+            idx = ismember(upper(P), upper( deblank( varargin{iV})));
+            if sum(idx)==1 % Should only be one match
+               Prop = P{idx};
+               blockObj.(Prop) = varargin{iV+1};
             end
-            blockObj.(Prop) = varargin{iV+1};
+            
+         end
+         
+         %% LOAD DEFAULT BLOCK PARAMETERS
+         [pars,blockObj.Fields] = orgExp.defaults.Block;
+         allNames = fieldnames(pars);
+         allNames = reshape(allNames,1,numel(allNames));
+         for varName = allNames
+            str = varName{1}; % remove from cell container
+            
+            % Check to see if it matches any of the listed properties
+            idx = ismember(upper(P), upper( deblank( str)));
+            if sum(idx)==1 % Should only be one match
+               Prop = P{idx};
+               blockObj.(Prop) = pars.(str);
+            end
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         [pars,~] = orgExp.defaults.Block;
          if isempty(blockObj.RecFile)
-            [file,path]= uigetfile(fullfile(pars.RecLocDefault,'*.*'),...
+            [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
             blockObj.RecFile = fullfile(path,file);
             if blockObj.RecFile == 0
@@ -204,7 +232,9 @@ classdef Block < handle
          end
          
          %% INITIALIZE BLOCK OBJECT
-         blockObj.init();
+         if ~blockObj.init()
+            error('Block object construction unsuccessful.');
+         end
          
       end
       
@@ -218,7 +248,7 @@ classdef Block < handle
          end
       end
       
-      function varargout=subsref(blockObj,S)
+      function varargout=subsref(blockObj,S) %#ok<INUSL>
           Out = 'blockObj';
           ii=1;
           while ii<=numel(S)
@@ -292,7 +322,7 @@ classdef Block < handle
       flag = setSaveLocation(blockObj,saveLoc)
       RHD2Block(blockObj)
       RHS2Block(blockObj)
-      linkToData(blockObj)
+      linkToData(blockObj,preExtractedFlag)
       genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
@@ -306,7 +336,7 @@ classdef Block < handle
    
    %% PRIVATE METHODS
    methods (Access = 'private') % debugging purpose, is private
-      init(blockObj) % Initializes the BLOCK object
+      flag = init(blockObj) % Initializes the BLOCK object
       
    end
 end

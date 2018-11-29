@@ -13,18 +13,21 @@ flag = false;
 if nargin<2 || isempty(saveLoc)
    tmp = uigetdir(blockObj.SaveLocDefault,...
                'Set Processed BLOCK Location');
->>>>>>> KUMC-qSD
 elseif nargin==2
    tmp = saveLoc;
 end
 
 %% Abort if cancel was clicked, otherwise set it
 if tmp == 0
-   warning('Save location not set.');
+   disp('Save location selection canceled manually.');
 else
-   blockObj.SaveLoc = fullfile(tmp,blockObj.Name);
-   blockObj.genPaths;
-   flag = true;
+   % Make sure it's a valid directory, as it could be provided through
+   % second input argument:
+   if exist(tmp,'dir')~=0
+      blockObj.SaveLoc = fullfile(tmp,blockObj.Name);
+      blockObj.genPaths;
+      flag = true;
+   end
 end
 
 end

@@ -1,100 +1,119 @@
-function init(blockObj)
+function flag = init(blockObj)
 %% INIT Initialize BLOCK object
 %
 %  b = orgExp.Block();
 %
-%  By: Max Murphy v1.0  08/25/2017  Original version (R2017a)
-%      Federico Barban v2.0 07/08/2018
-
-[Pars,blockObj.Fields] = orgExp.defaults.Block;
-
-[~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.Path);
-nameParts=strsplit(blockObj.Name,{Pars.Delimiter '.'});
-expression = sprintf('\\%c\\w*|\\%c\\w*',Pars.includeChar,Pars.discardChar);
-[splitStr]=regexp(Pars.namingConvention,expression,'match');
-include=find(cellfun(@(x) x(1)=='$',splitStr));
-P = properties(blockObj);
-
-for ii=include
-    eval(sprintf('%s=nameParts{ii};',upper( deblank( splitStr{ii}(2:end)))));
-    Prop = P(ismember(upper(P), upper( deblank( splitStr{ii}(2:end)))) );
-    if ~isempty(Prop)
-        blockObj.(Prop{:}) = nameParts{ii};
-    end
-=======
 %  Note: INIT is a protected function and will always be called on
-%        construction of BLOCK.
+%        construction of BLOCK. Returns a "true" flag if executed
+%        successfully.
 %
 %  By: Max Murphy       v1.0  08/25/2017  Original version (R2017a)
 %      Federico Barban  v2.0  07/08/2018
 %      MAECI 2018       v3.0  11/28/2018
 
-%% LOAD DEFAULT PARAMETERS
-[pars,blockObj.Fields] = orgExp.defaults.Block;
-
 %% PARSE NAME INFO
+% Set flag for output if something goes wrong
+flag = false; 
+
 % Parse name and extension. "nameParts" contains parsed variable strings:
-[~,blockObj.Name,blockObj.File_extension] = fileparts(blockObj.RecFile);
-nameParts=strsplit(blockObj.Name,{pars.Delimiter '.'});
+[~,fName,blockObj.File_extension] = fileparts(blockObj.RecFile);
+nameParts=strsplit(fName,{blockObj.Delimiter '.'});
 
 % Parse variables from defaults.Block "template," which match delimited
 % elements of block recording name:
-expression = sprintf('\\%c\\w*|\\%c\\w*',pars.includeChar,pars.discardChar);
-[splitStr]=regexp(pars.namingConvention,expression,'match');
+regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
+   blockObj.includeChar,...
+   blockObj.discardChar);
+splitStr = regexp(blockObj.dynamicVarExp,regExpStr,'match');
 
 % Find which delimited elements correspond to variables that should be 
 % included by looking at the leading character from the defaults.Block
 % template string:
-includedVarIndices=find(cellfun(@(x) x(1)=='$',splitStr));
+incVarIdx = find(cellfun(@(x) x(1)=='$',splitStr));
+incVarIdx = reshape(incVarIdx,1,numel(incVarIdx));
 P = properties(blockObj);
 
-% Create a struct to allow creation of dynamic variable name dictionary
+% Find which set of variables (the total number available from the name, or
+% the number set to be read dynamically from the naming convention) has
+% fewer elements, and use that to determine how many loop iterations there
+% are:
+nMin = min(numel(incVarIdx),numel(nameParts));
+
+% Create a struct to allow creation of dynamic variable name dictionary.
+% Make sure to iterate on 'splitStr', and not 'nameParts,' because variable
+% assignment should be decided by the string in namingConvention property.
 dynamicVars = struct;
-for ii=includedVarIndices
-   varName = upper( deblank( splitStr{ii}(2:end)));
+for ii=1:nMin 
+   splitStrIdx = incVarIdx(ii);
+   varName = deblank( splitStr{splitStrIdx}(2:end));
    dynamicVars.(varName) = nameParts{ii};
-   
-   % If this variable is a property, assign it:
-   Prop = P(ismember(upper(P),varName));
-   if ~isempty(Prop)
-      blockObj.(Prop{:}) = nameParts{ii};
-   end
 end
 
 % If Recording_date isn't one of the specified "template" variables from
-% pars.namingConvention, then parse it from YEAR, MONTH, and DATE:
-if isempty(blockObj.Recording_date)
-   if isfield(varName,'YEAR') && ...
-      isfield(varName,'MONTH') && ...
-      isfield(varName,'DAY')
-      YY = varName.YEAR((end-1):end);
-      MM = varName.MONTH;
-      DD = sprintf('%.2d',str2double(varName.DAY));
-      blockObj.Recording_date = [YY MM DD];
+% namingConvention property, then parse it from Year, Month, and Day. This
+% will be helpful for handling file names for TDT recording blocks, which
+% don't automatically append the Rec_date and Rec_time strings:
+f = fieldnames(dynamicVars);
+if sum(ismember(f,{'Rec_date'})) < 1
+   if isfield(dynamicVars,'Year') && ...
+      isfield(dynamicVars,'Month') && ...
+      isfield(dynamicVars,'Day')
+      YY = dynamicVars.Year((end-1):end);
+      MM = dynamicVars.Month;
+      DD = sprintf('%.2d',str2double(dynamicVars.Day));
+      dynamicVars.Rec_date = [YY MM DD];
    else
-      blockObj.Recording_date = 'YY MM DD';
-      warning('Unable to parse date from BLOCK name (%s).',blockObj.Name);
+      dynamicVars.Rec_date = 'YYMMDD';
+      warning('Unable to parse date from BLOCK name (%s).',fName);
    end
 end
 
+% Similarly, if recording_time is empty, still keep it as a field in
+% metadata associated with the BLOCK.
+if sum(ismember(f,{'Rec_time'})) < 1
+   dynamicVars.Rec_time = 'hhmmss';
+end
+
+blockObj.Meta = dynamicVars;
+
+%% PARSE BLOCKOBJ.NAME, USING BLOCKOBJ.NAMINGCONVENTION
+str = [];
+nameCon = blockObj.namingConvention;
+for ii = 1:numel(nameCon)
+   if isfield(dynamicVars,nameCon{ii})
+      str = [str, ...
+         dynamicVars.(blockObj.namingConvention{ii}),...
+         blockObj.Delimiter]; %#ok<AGROW>
+   end
+end
+blockObj.Name = str(1:(end-1));
+
+%% GET/CREATE SAVE LOCATION FOR BLOCK
+
 % blockObj.SaveLoc is probably empty [] at this point, which will prompt a
 % UI to point to the block save directory:
-blockObj.setSaveLocation(blockObj.SaveLoc);
-blockObj.SaveFormat = pars.SaveFormat;
+if ~blockObj.setSaveLocation(blockObj.SaveLoc)
+   flag = false;
+   warning('Save location not set successfully.');
+   return;
+end
 
 if exist(blockObj.SaveLoc,'dir')==0
    mkdir(fullfile(blockObj.SaveLoc));
+   makeLink = false;
+else
+   makeLink = true;
 end
 
 %% EXTRACT HEADER INFORMATION
 switch blockObj.File_extension
    case '.rhd'
       blockObj.RecType='Intan';
-      header=orgExp.libs.RHD_read_header('NAME',blockObj.Path,...
+      header=orgExp.libs.RHD_read_header('NAME',blockObj.RecFile,...
                                          'VERBOSE',blockObj.Verbose);
    case '.rhs'
       blockObj.RecType='Intan';
-      header=orgExp.libs.RHS_read_header('NAME',blockObj.Path,...
+      header=orgExp.libs.RHS_read_header('NAME',blockObj.RecFile,...
                                          'VERBOSE',blockObj.Verbose);
    otherwise
       blockObj.RecType='other';
@@ -119,6 +138,13 @@ blockObj.Sample_rate = header.sample_rate;
 blockObj.Samples = header.num_amplifier_samples;
 
 blockObj.updateStatus('init');
+if makeLink
+   fprintf(1,'Extracted files found, linking data...\n');
+   blockObj.linkToData(makeLink);
+   fprintf(1,'\t->complete.\n');
+end
 
 blockObj.save;
+flag = true;
+
 end
