@@ -1,4 +1,3 @@
-<<<<<<<<< Temporary merge branch 1:+orgExp/@Block/qSD.m
 function qSD(blockObj)
 %% QSD  Detects spikes after "convert" and "filterData" steps, using Isilon
 %
@@ -34,8 +33,6 @@ parfor iCh = 1:nCh % For each "channel index"...
    channelData(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
 end
 blockObj.Channels = channelData;
-
->>>>>>> KUMC-qSD:+orgExp/@Block/qSD.m
 
 blockObj.updateStatus('Spikes',true);
 blockObj.save;

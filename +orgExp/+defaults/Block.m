@@ -1,13 +1,9 @@
-function [Pars,Fields] = Block()
-%% DEF_PARAMS  Sets default parameters for BLOCK object
-=======
 function [pars,Fields] = Block()
 %% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = defaults.Block();
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
-
 
 %% Modify all properties here
 %     'CH_ID' : (def: 'Ch') If you have a different file name
