@@ -1,25 +1,41 @@
-function RHD2Block(blockObj)
+function flag = RHD2Block(blockObj,recFile,paths)
 %% RHD2BLOCK  Convert Intan RHD binary to Matlab BLOCK format
 %
-%  b = orgExp.Block;    % create block object
-%  b.doExtraction;      % RHD2Block is run from DOEXTRACTION
+%  b = orgExp.Block;        % create block object
+%  doRawExtraction(b);      % RHD2Block is run from DORAWEXTRACTION
 %
 %  --------
 %   INPUTS
 %  --------
-%   blockObj    :     Block Class object.
+%  blockObj    :     Block Class object.
+%
+%  recFile     :     (Optional) If different than the value associated with
+%                               blockObj property, specify here.
+%
+%   paths      :     (Optional) If different than the value associated with
+%                               blockObj property, specify here.
 %
 %  --------
 %   OUTPUT
 %  --------
 %  Creates filtered streams *.mat files in TANK-BLOCK hierarchy format.
 %
-% See also: DOEXTRACTION, QEXTRACTION
+% See also: DORAWEXTRACTION, QRAWEXTRACTION
+
+%% PARSE INPUT
+if nargin < 3
+   paths = blockObj.paths;
+end
+
+if nargin < 2
+   recFile = blockObj.RecFile;
+end
 
 %% READ FILE
 tic;
-fid = fopen(blockObj.RecFile, 'r');
-s = dir(blockObj.RecFile);
+flag = false;
+fid = fopen(recFile, 'r');
+s = dir(recFile);
 filesize = s.bytes;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,19 +63,19 @@ end
 if (data_present)
    fprintf(1, 'Allocating memory for data...\n');
    
-   fname = fullfile(blockObj.paths.TW_N);
+   fname = fullfile(paths.TW_N);
    TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
       'class','int32','size',[1 num_amplifier_samples]);
    
    if (num_amplifier_channels > 0)
       RW_info = amplifier_channels;
-      infoname = fullfile(strrep(blockObj.paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
+      infoname = fullfile(strrep(paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
       save(fullfile(infoname),'RW_info','-v7.3');
       % One file per probe and channel
       for iCh = 1:num_amplifier_channels
          pnum  = num2str(amplifier_channels(iCh).port_number);
          chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-         fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
+         fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
          amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
             'class','single','size',[1 num_amplifier_samples]);
       end
@@ -68,12 +84,12 @@ if (data_present)
    % Save single-channel adc data
    if (num_board_adc_channels > 0)
       ADC_info = board_adc_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
+      infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
       save(fullfile(infoname),'ADC_info','-v7.3');
       if (data_present)
          for iCh = 1:num_board_adc_channels
             chnum = board_adc_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),chnum);
+            fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
             board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
                'class','single','size',[1 num_board_adc_samples]);
          end
@@ -83,11 +99,11 @@ if (data_present)
    % Save single-channel supply_voltage data
    if (num_supply_voltage_channels > 0)
       supply_voltage_info = supply_voltage_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
+      infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
       save(fullfile(infoname),'supply_voltage_info','-v7.3');
       for iCh = 1:num_supply_voltage_channels
          chnum = supply_voltage_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),chnum);
+         fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
             'class','single','size',[1 num_supply_voltage_samples]);
       end
@@ -96,12 +112,12 @@ if (data_present)
    % Save single-channel temperature data
    if (num_temp_sensor_channels > 0)
       temp_sensor_info = temp_sensor_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
+      infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
       save(fullfile(infoname),'temp_sensor_info','-v7.3');
       for iCh = 1:num_temp_sensor_channels
-         blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
+         paths.DW_N = strrep(paths.DW_N, '\', '/');
          chnum = temp_sensor_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),chnum);
+         fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
             'class','single','size',[1 num_temp_sensor_samples]);
       end
@@ -110,11 +126,11 @@ if (data_present)
    % Save single-channel aux-in data
    if (num_aux_input_channels > 0)
       AUX_info = aux_input_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
+      infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
       save(fullfile(infoname),'AUX_info','-v7.3');
       for iCh = 1:num_aux_input_channels
          chnum = aux_input_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), chnum);
+         fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
          aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
             'class','single','size',[1 num_aux_input_samples]);
       end
@@ -123,13 +139,13 @@ if (data_present)
    % Save single-channel digital input data
    if (num_board_dig_in_channels > 0)
       DigI_info = board_dig_in_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
+      infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
       save(fullfile(infoname),'DigI_info','-v7.3');
       if (data_present)
          for iCh = 1:num_board_dig_in_channels
-            blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
+            paths.DW_N = strrep(paths.DW_N, '\', '/');
             chnum = board_dig_in_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), chnum);
+            fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
             board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
                'class','int8','size',[1 num_board_dig_in_samples]);
          end
@@ -140,12 +156,12 @@ if (data_present)
    % Save single-channel digital output data
    if (num_board_dig_out_channels > 0)
       DigO_info = board_dig_out_channels;
-      infoname = fullfile(strrep(blockObj.paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
+      infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
       save(fullfile(infoname),'DigO_info','-v7.3');
       if (data_present)
          for iCh = 1:num_board_dig_out_channels
             chnum = board_dig_out_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),chnum);
+            fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
             board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
                'class','int8','size',[1 num_board_dig_out_samples]);
             %                 board_dig_out_dataFile{i}.gitInfo = gitInfo;
@@ -390,7 +406,7 @@ if (data_present)
    end
 end
 
-
+flag = true;
 end
 
 

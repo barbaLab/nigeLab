@@ -108,7 +108,7 @@ classdef DiskData
                                 [~,I]=max(cat(1,info(:).size),[],1);
                                 I=unique(I);
                                 if size(I,2)~=1
-                                    error('Your file look wierd.\nI wasn''t able to properly connect it ti DiskData');
+                                    error('Your file looks weird.\nI wasn''t able to properly connect it to DiskData');
                                 end
                                 obj.bytes_ = info(I).bytes;
                                 obj.name_ = info(I).name;

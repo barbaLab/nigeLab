@@ -1,4 +1,4 @@
-function qSD(blockObj)
+function flag = qSD(blockObj)
 %% QSD  Detects spikes after "convert" and "filterData" steps, using Isilon
 %
 %  b = orgExp.Block();  % point to experiment
@@ -9,6 +9,7 @@ function qSD(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
+flag = false;
 blockObj.SDpars = orgExp.defaults.SD;
 pars = blockObj.SDpars;
 
@@ -36,6 +37,7 @@ blockObj.Channels = channelData;
 
 blockObj.updateStatus('Spikes',true);
 blockObj.save;
+flag = true;
 end
 
 

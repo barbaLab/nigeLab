@@ -1,15 +1,35 @@
-function flag = doRawExtraction(blockObj)
-%% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
+function flag = qRawExtraction()
+%% QRAWEXTRACTION  Extract raw data files to BLOCK format using Isilon
 %
 %  b = orgExp.Block;
-%  flag = doRawExtraction(b);
+%  flag = qRawExtraction(b);
 %
 %  --------
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if conversion was successful.
 %
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+%  By: Max Murphy v1.0  06/15/2018 Original version (R2017b)
+
+%% PREPARE THE PROPER PATH NAMES TO GIVE TO ISILON
+% Replace the leading string for the recording file on R:/Recorded_Data
+recFile = [blockObj.UNC_Path{1}, ...
+    blockObj.RecFile((find(blockObj.RecFile == filesep,1,'first')+1):end)];
+
+% Replace the leading string for the processed data (P:/Processed_Data)
+paths = blockObj.paths;
+f = reshape(fieldnames(paths),1,numel(fieldnames(paths)));
+for varName = f
+   paths.(varName) = [blockObj.UNC_Path{2},...
+      paths.(varName)((find(paths.(varName) == filesep,1,'first')+1):end)];
+end
+
+%% GET CURRENT VERSION INFORMATION WIP
+attach_files = dir(fullfile(repoPath,'**'));
+attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
+dir_files = ~cell2mat({attach_files(:).isdir})';
+ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
+    {attach_files(dir_files).name})';
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
@@ -20,9 +40,9 @@ switch blockObj.RecType
       % Two types of Intan binary files: rhd and rhs
       switch blockObj.File_extension
          case '.rhs'
-            flag = RHS2Block(blockObj);
+            flag = RHS2Block(blockObj,recFile,paths);
          case '.rhd'
-            flag = RHD2Block(blockObj);
+            flag = RHD2Block(blockObj,recFile,paths);
          otherwise
             warning('Invalid file type (%s).',blockObj.File_extension);
             return;
