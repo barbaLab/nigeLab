@@ -245,17 +245,9 @@ if (data_present)
    num_gaps = 0;
    index = 0;
    
-   deBounce = false;
+   
    for i=1:ceil(num_data_blocks/nBlocks)
-      pct = round(num_data_blocks/nBlocks*100);
-      if rem(pct,5)==0 && ~deBounce
-         if exist('myJob','var')~=0
-            set(myJob,'Tag',sprintf('%s: Saving DATA %g\%',blockObj.Name,pct));
-         end
-         deBounce = true;
-      elseif rem(pct+1,5)==0 && deBounce
-         deBounce = false;
-      end
+      
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Read binary data.
@@ -372,7 +364,17 @@ if (data_present)
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % DiskData makes it easy to access data stored in matfies.
    % Assigning each file to the right channel
+   deBounce = false;
    for iCh=1:num_amplifier_channels
+      pct = round(i/nBlocks*100);
+      if rem(pct,5)==0 && ~deBounce
+         if exist('myJob','var')~=0
+            set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
+         end
+         deBounce = true;
+      elseif rem(pct+1,5)==0 && deBounce
+         deBounce = false;
+      end
       blockObj.Channels(iCh).Raw = amplifier_dataFile{iCh};
       
       as_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');

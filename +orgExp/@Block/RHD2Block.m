@@ -308,10 +308,10 @@ if (data_present)
    
    deBounce = false;
    for i=1:ceil(num_data_blocks/nBlocks)
-      pct = round(num_data_blocks/nBlocks*100);
+      pct = round(i/nBlocks*100);
       if rem(pct,5)==0 && ~deBounce
          if exist('myJob','var')~=0
-            set(myJob,'Tag',sprintf('%s: Saving DATA %g\%',blockObj.Name,pct));
+            set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
          end
          deBounce = true;
       elseif rem(pct+1,5)==0 && deBounce
