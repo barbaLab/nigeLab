@@ -13,16 +13,16 @@ function flag = qRawExtraction(blockObj)
 
 %% PREPARE THE PROPER PATH NAMES TO GIVE TO ISILON
 % Replace the leading string for the recording file on R:/Recorded_Data
-recFile = [blockObj.UNCPath{1}, ...
-   blockObj.RecFile((find(blockObj.RecFile == filesep,1,'first')+1):end)];
+concatIdx = find((blockObj.RecFile == '/' ) | (blockObj.RecFile == '\'),1,'first')+1;
+recFile = [blockObj.UNCPath{1}, blockObj.RecFile(concatIdx:end)];
 
 % Replace the leading string for the processed data (P:/Processed_Data)
 paths = blockObj.paths;
 f = reshape(fieldnames(paths),1,numel(fieldnames(paths)));
 for varName = f
    v = varName{1};
-   paths.(v) = [blockObj.UNCPath{2},...
-      paths.(v)((find(paths.(v) == filesep,1,'first')+1):end)];
+   concatIdx = find((paths.(v)== '/' ) | (paths.(v) == '\'),1,'first')+1;
+   paths.(v) = [blockObj.UNCPath{2},paths.(v)(concatIdx:end)];
 end
 
 %% GET CURRENT VERSION INFORMATION WIP
@@ -91,7 +91,8 @@ switch blockObj.RecType
       return;
 end
 
-fprintf(1,'complete. Submitting to %s...\n',useCluster);
+fprintf(1,'Submitting raw extraction for %s to %s...\n',...
+   blockObj.Name,useCluster);
 submit(myJob);
 fprintf(1,'\n\n\n----------------------------------------------\n\n');
 wait(myJob, 'queued');
