@@ -43,6 +43,7 @@ filesize = s.bytes;
 %% Read the file header
 
 header = orgExp.libs.RHS_read_header('FID',fid);
+blockObj.Meta.Header = fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -403,6 +404,21 @@ if exist('myJob','var')~=0
 end
 
 updateStatus(blockObj,'Raw',true);
+
+   function header_out = fixNamingConvention(header_in)
+      %% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+      
+      header_out = struct;
+      f = fieldnames(header_in);
+      for iF = 1:numel(f)
+         str = strsplit(f{iF},'_');
+         for iS = 1:numel(str)
+            str{iS}(1) = upper(str{iS}(1));
+         end
+         str = strjoin(str);
+         header_out.(str) = header_in.(f{iF});
+      end      
+   end
 
 end
 

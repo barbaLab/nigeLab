@@ -44,6 +44,7 @@ filesize = s.bytes;
 %% Read the file header
 
 header = orgExp.libs.RHD_read_header('FID',fid);
+blockObj.Meta.Header = fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -330,7 +331,7 @@ if (data_present)
       
       t=Buffer(time_buffer_index(1:dataToRead));
       tmp=dec2bin(t,16);
-      t=bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]);  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
+      t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
       TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
@@ -446,6 +447,22 @@ end
 flag = true;
 
 updateStatus(blockObj,'Raw',true);
+
+   function header_out = fixNamingConvention(header_in)
+      %% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+      
+      header_out = struct;
+      f = fieldnames(header_in);
+      for iF = 1:numel(f)
+         str = strsplit(f{iF},'_');
+         for iS = 1:numel(str)
+            str{iS}(1) = upper(str{iS}(1));
+         end
+         str = strjoin(str);
+         header_out.(str) = header_in.(f{iF});
+      end      
+   end
+
 end
 
 
