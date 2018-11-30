@@ -1,4 +1,4 @@
-function flag = qRawExtraction()
+function flag = qRawExtraction(blockObj)
 %% QRAWEXTRACTION  Extract raw data files to BLOCK format using Isilon
 %
 %  b = orgExp.Block;
@@ -13,36 +13,56 @@ function flag = qRawExtraction()
 
 %% PREPARE THE PROPER PATH NAMES TO GIVE TO ISILON
 % Replace the leading string for the recording file on R:/Recorded_Data
-recFile = [blockObj.UNC_Path{1}, ...
-    blockObj.RecFile((find(blockObj.RecFile == filesep,1,'first')+1):end)];
+recFile = [blockObj.UNCPath{1}, ...
+   blockObj.RecFile((find(blockObj.RecFile == filesep,1,'first')+1):end)];
 
 % Replace the leading string for the processed data (P:/Processed_Data)
 paths = blockObj.paths;
 f = reshape(fieldnames(paths),1,numel(fieldnames(paths)));
 for varName = f
-   paths.(varName) = [blockObj.UNC_Path{2},...
-      paths.(varName)((find(paths.(varName) == filesep,1,'first')+1):end)];
+   v = varName{1};
+   paths.(v) = [blockObj.UNCPath{2},...
+      paths.(v)((find(paths.(v) == filesep,1,'first')+1):end)];
 end
 
 %% GET CURRENT VERSION INFORMATION WIP
-attach_files = dir(fullfile(repoPath,'**'));
-attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
-dir_files = ~cell2mat({attach_files(:).isdir})';
-ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
-    {attach_files(dir_files).name})';
+load('qRawExtraction_files.mat','attachedFiles');
+pkgPath = fileparts(mfilename('fullpath'));
+pkgPath = strsplit(pkgPath,filesep);
+pkgIdx = find(ismember(pkgPath,'+orgExp'),1,'first')-1;
+for ii = 1:numel(attachedFiles) %#ok<NODEF>
+   attachedFiles{ii} = fullfile(strjoin(pkgPath(1:pkgIdx),filesep),...
+      attachedFiles{ii}); %#ok<AGROW>
+end
+
+if isempty(blockObj.Cluster)
+   useCluster = orgExp.libs.findGoodCluster('CLUSTER_LIST',blockObj.ClusterList);
+else
+   useCluster = blockObj.Cluster;
+end
+myCluster = parcluster(useCluster);
+myJob     = createCommunicatingJob(myCluster, ...
+       'AttachedFiles', attachedFiles, ...
+       'Name', ['Raw Extraction: ' blockObj.Name], ...
+       'NumWorkersRange', [1 2], ...
+       'FinishedFcn', @orgExp.libs.JobFinishedAlert, ...
+       'Type','pool', ...
+       'Tag', ['Queued: Raw Extraction for ' blockObj.Name]);
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
-flag = false; 
+flag = false;
 
 switch blockObj.RecType
    case 'Intan'
       % Two types of Intan binary files: rhd and rhs
-      switch blockObj.File_extension
+      switch blockObj.FileExt
          case '.rhs'
-            flag = RHS2Block(blockObj,recFile,paths);
+            createTask(myJob,@RHS2Block,0,{blockObj,recFile,paths});
+            flag = true;
          case '.rhd'
-            flag = RHD2Block(blockObj,recFile,paths);
+            createTask(myJob,@RHD2Block,0,{blockObj,recFile,paths});
+            flag = true;
          otherwise
             warning('Invalid file type (%s).',blockObj.File_extension);
             return;
@@ -71,6 +91,14 @@ switch blockObj.RecType
       return;
 end
 
-blockObj.updateStatus('Raw',true);
+fprintf(1,'complete. Submitting to %s...\n',useCluster);
+submit(myJob);
+fprintf(1,'\n\n\n----------------------------------------------\n\n');
+wait(myJob, 'queued');
+fprintf(1,'Queued job:  %s\n',blockObj.Name);
+fprintf(1,'\n');
+wait(myJob, 'running');
+fprintf(1,'\n');
+fprintf(1,'->\tJob running.\n');
 
 end

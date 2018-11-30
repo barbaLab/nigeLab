@@ -94,38 +94,43 @@ classdef Block < handle
    
    properties (SetAccess = private)
       
-      Sample_rate
+      SampleRate
       Time
-      File_extension   % Intan TDT or other
+      FileExt   % Intan TDT or other
       RecType
       
-      numChannels       = 0
-      numProbes         = 0
-      numADCchannels    = 0
-      numDACChannels    = 0
-      numDigInChannels  = 0
-      numDigOutChannels = 0
+      NumChannels       = 0
+      NumProbes         = 0
+      NumADCchannels    = 0
+      NumDACChannels    = 0
+      NumDigInChannels  = 0
+      NumDigOutChannels = 0
    end
    
    properties (SetAccess = immutable,GetAccess = private)
-      dcAmpDataSaved
+      DcAmpDataSaved
       Date
       Month
       Day      
    end
    
    properties (SetAccess = immutable,GetAccess = public)
-      % Extraction path and metadata parsing miscellany here:
+      % Properties for setting up other basic properties
       RecLocDefault
       SaveLocDefault
-      Delimiter
-      UNC_Path
       ProbeChannel
       
-      dynamicVarExp
-      includeChar
-      discardChar
-      namingConvention
+      % Properties for parsing name metadata
+      Delimiter
+      DynamicVarExp
+      IncludeChar
+      DiscardChar
+      NamingConvention
+      
+      % Properties for "q" functions
+      UNCPath
+      ClusterList
+      Cluster
    end
    
    

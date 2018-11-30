@@ -18,7 +18,7 @@ flag = false;
 switch blockObj.RecType
    case 'Intan'
       % Two types of Intan binary files: rhd and rhs
-      switch blockObj.File_extension
+      switch blockObj.FileExt
          case '.rhs'
             flag = RHS2Block(blockObj);
          case '.rhd'
@@ -50,7 +50,5 @@ switch blockObj.RecType
          blockObj.RecType);
       return;
 end
-
-blockObj.updateStatus('Raw',true);
 
 end

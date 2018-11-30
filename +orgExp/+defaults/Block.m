@@ -11,9 +11,14 @@ function [pars,Fields] = Block()
 pars             = struct;
 
 pars.RecLocDefault  = 'R:/Rat';
-pars.UNC_Path = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
-                 '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
-              
+
+% UNC path and cluster list for Matlab Distributed Computing Toolbox
+pars.UNCPath = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
+                '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
+pars.ClusterList = {'CPLMJS'; 'CPLMJS2'; 'CPLMJS3'};
+pars.Cluster = 'CPLMJS';
+% pars.Cluster = [];
+
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
 pars.SaveLocDefault = 'P:/Rat';
 
@@ -34,10 +39,10 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 % The recording name R18-68_2018_07_24_0_180724_141203.rhd, with dynamic 
 % parsing and naming conventions set as:
 % 
-% pars.dynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
-% pars.includeChar='$';
-% pars.discardChar='&';
-% pars.namingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
+% pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
+% pars.IncludeChar='$';
+% pars.DiscardChar='&';
+% pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
 %
 % Will still extract the Recording_date and Recording_time directly from
 % the name (if they are present). However, the block name in the specified
@@ -50,10 +55,10 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 %
 % Alternatively, specifying:
 %
-% pars.dynamicVarExp='$Animal_ID &Year &Month &Day $Rec_ID $Rec_date $Rec_time';
-% pars.includeChar='$';
-% pars.dischardChar='&';
-% pars.namingConvention={'Animal_ID','Rec_ID','Rec_date','Rec_time'};
+% pars.DynamicVarExp='$Animal_ID &Year &Month &Day $Rec_ID $Rec_date $Rec_time';
+% pars.IncludeChar='$';
+% pars.DischardChar='&';
+% pars.NamingConvention={'Animal_ID','Rec_ID','Rec_date','Rec_time'};
 %
 % Will also extract Recording_date and Recording_time, but will not parse 
 % variables for 'Year,' 'Month,' or 'Date.' 
@@ -61,10 +66,10 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 %
 % ~/path/R18-68_0_180724_141203
 
-pars.dynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
-pars.includeChar='$';
-pars.discardChar='&';
-pars.namingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
+pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
+pars.IncludeChar='$';
+pars.DiscardChar='&';
+pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
 
 %% 
 Fields =  {'Raw';

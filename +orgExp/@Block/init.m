@@ -16,22 +16,21 @@ function flag = init(blockObj)
 flag = false; 
 
 % Parse name and extension. "nameParts" contains parsed variable strings:
-[~,fName,blockObj.File_extension] = fileparts(blockObj.RecFile);
+[~,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
 nameParts=strsplit(fName,{blockObj.Delimiter '.'});
 
 % Parse variables from defaults.Block "template," which match delimited
 % elements of block recording name:
 regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
-   blockObj.includeChar,...
-   blockObj.discardChar);
-splitStr = regexp(blockObj.dynamicVarExp,regExpStr,'match');
+   blockObj.IncludeChar,...
+   blockObj.DiscardChar);
+splitStr = regexp(blockObj.DynamicVarExp,regExpStr,'match');
 
 % Find which delimited elements correspond to variables that should be 
 % included by looking at the leading character from the defaults.Block
 % template string:
 incVarIdx = find(cellfun(@(x) x(1)=='$',splitStr));
 incVarIdx = reshape(incVarIdx,1,numel(incVarIdx));
-P = properties(blockObj);
 
 % Find which set of variables (the total number available from the name, or
 % the number set to be read dynamically from the naming convention) has
@@ -61,9 +60,9 @@ if sum(ismember(f,{'Rec_date'})) < 1
       YY = dynamicVars.Year((end-1):end);
       MM = dynamicVars.Month;
       DD = sprintf('%.2d',str2double(dynamicVars.Day));
-      dynamicVars.Rec_date = [YY MM DD];
+      dynamicVars.RecDate = [YY MM DD];
    else
-      dynamicVars.Rec_date = 'YYMMDD';
+      dynamicVars.RecDate = 'YYMMDD';
       warning('Unable to parse date from BLOCK name (%s).',fName);
    end
 end
@@ -71,18 +70,18 @@ end
 % Similarly, if recording_time is empty, still keep it as a field in
 % metadata associated with the BLOCK.
 if sum(ismember(f,{'Rec_time'})) < 1
-   dynamicVars.Rec_time = 'hhmmss';
+   dynamicVars.RecTime = 'hhmmss';
 end
 
 blockObj.Meta = dynamicVars;
 
 %% PARSE BLOCKOBJ.NAME, USING BLOCKOBJ.NAMINGCONVENTION
 str = [];
-nameCon = blockObj.namingConvention;
+nameCon = blockObj.NamingConvention;
 for ii = 1:numel(nameCon)
    if isfield(dynamicVars,nameCon{ii})
       str = [str, ...
-         dynamicVars.(blockObj.namingConvention{ii}),...
+         dynamicVars.(nameCon{ii}),...
          blockObj.Delimiter]; %#ok<AGROW>
    end
 end
@@ -106,7 +105,7 @@ else
 end
 
 %% EXTRACT HEADER INFORMATION
-switch blockObj.File_extension
+switch blockObj.FileExt
    case '.rhd'
       blockObj.RecType='Intan';
       header=orgExp.libs.RHD_read_header('NAME',blockObj.RecFile,...
@@ -121,21 +120,19 @@ end
 
 %% ASSIGN DATA FIELDS USING HEADER INFO
 blockObj.Channels = header.amplifier_channels;
-blockObj.numChannels = header.num_amplifier_channels;
-blockObj.numProbes = header.num_probes;
-% blockObj.dcAmpDataSaved = header.dc_amp_data_saved;
-blockObj.numADCchannels = header.num_board_adc_channels;
-% blockObj.numDACChannels = header.num_board_dac_channels;
-blockObj.numDigInChannels = header.num_board_dig_in_channels;
-blockObj.numDigOutChannels = header.num_board_dig_out_channels;
-blockObj.Sample_rate = header.sample_rate;
+blockObj.NumChannels = header.num_amplifier_channels;
+blockObj.NumProbes = header.num_probes;
+% blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
+blockObj.NumADCchannels = header.num_board_adc_channels;
+% blockObj.NumDACChannels = header.num_board_dac_channels;
+blockObj.NumDigInChannels = header.num_board_dig_in_channels;
+blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
+blockObj.SampleRate = header.sample_rate;
 blockObj.Samples = header.num_amplifier_samples;
 % blockObj.DACChannels = header.board_dac_channels;
 blockObj.ADCChannels = header.board_adc_channels;
 blockObj.DigInChannels = header.board_dig_in_channels;
 blockObj.DigOutChannels = header.board_dig_out_channels;
-blockObj.Sample_rate = header.sample_rate;
-blockObj.Samples = header.num_amplifier_samples;
 
 blockObj.updateStatus('init');
 if makeLink

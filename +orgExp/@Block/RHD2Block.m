@@ -25,6 +25,8 @@ function flag = RHD2Block(blockObj,recFile,paths)
 %% PARSE INPUT
 if nargin < 3
    paths = blockObj.paths;
+else % Otherwise, it was run via a "q" command
+   myJob = getCurrentJob;
 end
 
 if nargin < 2
@@ -68,6 +70,9 @@ if (data_present)
       'class','int32','size',[1 num_amplifier_samples]);
    
    if (num_amplifier_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
+      end
       RW_info = amplifier_channels;
       infoname = fullfile(strrep(paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
       save(fullfile(infoname),'RW_info','-v7.3');
@@ -83,6 +88,9 @@ if (data_present)
    
    % Save single-channel adc data
    if (num_board_adc_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting ADC info',blockObj.Name));
+      end
       ADC_info = board_adc_channels;
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
       save(fullfile(infoname),'ADC_info','-v7.3');
@@ -98,6 +106,9 @@ if (data_present)
    
    % Save single-channel supply_voltage data
    if (num_supply_voltage_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting VOLTAGE info',blockObj.Name));
+      end
       supply_voltage_info = supply_voltage_channels;
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
       save(fullfile(infoname),'supply_voltage_info','-v7.3');
@@ -111,6 +122,9 @@ if (data_present)
    
    % Save single-channel temperature data
    if (num_temp_sensor_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting TEMPERATURE info',blockObj.Name));
+      end
       temp_sensor_info = temp_sensor_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
       save(fullfile(infoname),'temp_sensor_info','-v7.3');
@@ -125,6 +139,9 @@ if (data_present)
    
    % Save single-channel aux-in data
    if (num_aux_input_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting AUX info',blockObj.Name));
+      end
       AUX_info = aux_input_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
       save(fullfile(infoname),'AUX_info','-v7.3');
@@ -138,6 +155,9 @@ if (data_present)
    
    % Save single-channel digital input data
    if (num_board_dig_in_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting DIG-IN info',blockObj.Name));
+      end
       DigI_info = board_dig_in_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
       save(fullfile(infoname),'DigI_info','-v7.3');
@@ -155,6 +175,9 @@ if (data_present)
    
    % Save single-channel digital output data
    if (num_board_dig_out_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting DIG-O info',blockObj.Name));
+      end
       DigO_info = board_dig_out_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
       save(fullfile(infoname),'DigO_info','-v7.3');
@@ -284,7 +307,17 @@ if (data_present)
    num_gaps = 0;
    index = 0;
    
+   deBounce = false;
    for i=1:ceil(num_data_blocks/nBlocks)
+      pct = round(num_data_blocks/nBlocks*100);
+      if rem(pct,5)==0 && ~deBounce
+         if exist('myJob','var')~=0
+            set(myJob,'Tag',sprintf('%s: Saving DATA %g\%',blockObj.Name,pct));
+         end
+         deBounce = true;
+      elseif rem(pct+1,5)==0 && deBounce
+         deBounce = false;
+      end
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Read binary data.
@@ -406,7 +439,14 @@ if (data_present)
    end
 end
 
+
+if exist('myJob','var')~=0
+   set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
+end
+
 flag = true;
+
+updateStatus(blockObj,'Raw',true);
 end
 
 

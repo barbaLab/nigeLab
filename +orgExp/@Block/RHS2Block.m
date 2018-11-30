@@ -381,6 +381,8 @@ if (data_present)
 end
 flag = true;
 
+updateStatus(blockObj,'Raw',true);
+
 end
 
 
