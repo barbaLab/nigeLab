@@ -72,18 +72,18 @@ if (data_present)
       pnum  = num2str(amplifier_channels(iCh).port_number);
       chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
       fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
-      amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+      amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
          'class','single','size',[1 num_amplifier_samples]);
       
       stim_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
-      stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+      stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
          'class','single','size',[1 num_amplifier_samples]);
       
       if (dc_amp_data_saved ~= 0)
          dc_amp_fname = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
          fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
-         dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+         dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
             'class','single','size',[1 num_amplifier_samples]);
       end
    end
@@ -98,7 +98,7 @@ if (data_present)
          for i = 1:num_board_adc_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
-            board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
                'class','single','size',[1 num_board_adc_samples]);
          end
       end
@@ -114,7 +114,7 @@ if (data_present)
          for i = 1:num_board_dac_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
-            board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
                'class','single','size',[1 num_board_dac_samples]);
          end
       end
@@ -129,7 +129,7 @@ if (data_present)
       if (data_present)
          for i = 1:num_board_dig_in_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
-            board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
                'class','uint8','size',[1 num_board_dig_in_samples]);
          end
       end
@@ -145,7 +145,7 @@ if (data_present)
       if (data_present)
          for i = 1:num_board_dig_out_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
-            board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
                'class','uint8','size',[1 num_board_dig_out_samples]);
          end
       end

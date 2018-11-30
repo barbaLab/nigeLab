@@ -69,7 +69,7 @@ for iCh = 1:blockObj.NumChannels
    end
    blockObj.Channels(iCh).stimData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    
-   if (blockObj.dcAmpDataSaved ~= 0)
+   if (blockObj.DCAmpDataSaved ~= 0)
       dc_amp_fname = strrep(fullfile(blockObj.paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
       if ~exist(fullfile(fname),'file')
