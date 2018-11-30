@@ -67,7 +67,7 @@ if (data_present)
    
    fname = fullfile(paths.TW_N);
    TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-      'class','int32','size',[1 num_amplifier_samples]);
+      'class','int32','size',[1 num_amplifier_samples],'access','w');
    
    if (num_amplifier_channels > 0)
       if exist('myJob','var')~=0
@@ -82,7 +82,7 @@ if (data_present)
          chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
          fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
          amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-            'class','single','size',[1 num_amplifier_samples]);
+            'class','single','size',[1 num_amplifier_samples],'access','w');
       end
    end
    
@@ -99,7 +99,7 @@ if (data_present)
             chnum = board_adc_channels(iCh).custom_channel_name;
             fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
             board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-               'class','single','size',[1 num_board_adc_samples]);
+               'class','single','size',[1 num_board_adc_samples],'access','w');
          end
       end
    end
@@ -116,7 +116,7 @@ if (data_present)
          chnum = supply_voltage_channels(iCh).custom_channel_name;
          fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-            'class','single','size',[1 num_supply_voltage_samples]);
+            'class','single','size',[1 num_supply_voltage_samples],'access','w');
       end
    end
    
@@ -133,7 +133,7 @@ if (data_present)
          chnum = temp_sensor_channels(iCh).custom_channel_name;
          fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-            'class','single','size',[1 num_temp_sensor_samples]);
+            'class','single','size',[1 num_temp_sensor_samples],'access','w');
       end
    end
    
@@ -149,7 +149,7 @@ if (data_present)
          chnum = aux_input_channels(iCh).custom_channel_name;
          fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
          aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-            'class','single','size',[1 num_aux_input_samples]);
+            'class','single','size',[1 num_aux_input_samples],'access','w');
       end
    end
    
@@ -167,7 +167,7 @@ if (data_present)
             chnum = board_dig_in_channels(iCh).custom_channel_name;
             fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
             board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-               'class','int8','size',[1 num_board_dig_in_samples]);
+               'class','int8','size',[1 num_board_dig_in_samples],'access','w');
          end
       end
    end
@@ -186,8 +186,7 @@ if (data_present)
             chnum = board_dig_out_channels(iCh).custom_channel_name;
             fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
             board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
-               'class','int8','size',[1 num_board_dig_out_samples]);
-            %                 board_dig_out_dataFile{i}.gitInfo = gitInfo;
+               'class','int8','size',[1 num_board_dig_out_samples],'access','w');
          end
       end
    end

@@ -505,6 +505,9 @@ classdef DiskData
       
       function Out = append(obj,b)
          %% APPEND   Overloaded function for concatenating elements to DiskData array
+         if ~obj.writable_
+            error('Improper assignment. DiskData object constructed as read-only.');
+         end
          Out = obj;
          varname_ = ['/' obj.name_];
          if not(strcmp(class(obj),sprintf('DiskData.%s',class(b)))|isa(b,'orgExp.libs.DiskData'))

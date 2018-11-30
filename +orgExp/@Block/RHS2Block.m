@@ -25,6 +25,8 @@ function flag = RHS2Block(blockObj,recFile,paths)
 %% PARSE INPUT
 if nargin < 3
    paths = blockObj.paths;
+else % Otherwise, it was run via a "q" command
+   myJob = getCurrentJob;
 end
 
 if nargin < 2
@@ -34,8 +36,8 @@ end
 %% READ FILE
 tic;
 flag = false;
-fid = fopen(blockObj.RecFile, 'r');
-s = dir(blockObj.RecFile);
+fid = fopen(recFile, 'r');
+s = dir(recFile);
 filesize = s.bytes;
 
 %% Read the file header
@@ -66,6 +68,9 @@ if (data_present)
    infoname = fullfile(paths.RW,[blockObj.Name '_RawWave_Info.mat']);
    save(fullfile(infoname),'RW_info','-v7.3');
    
+   if exist('myJob','var')~=0
+      set(myJob,'Tag',sprintf('%s: Initializing DiskData arrays...',blockObj.Name));
+   end
    
    % One file per probe and channel
    for iCh = 1:num_amplifier_channels
@@ -73,18 +78,18 @@ if (data_present)
       chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
       fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
       amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-         'class','single','size',[1 num_amplifier_samples]);
+         'class','single','size',[1 num_amplifier_samples],'access','w');
       
       stim_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
       stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-         'class','single','size',[1 num_amplifier_samples]);
+         'class','single','size',[1 num_amplifier_samples],'access','w');
       
       if (dc_amp_data_saved ~= 0)
          dc_amp_fname = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
          fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
          dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-            'class','single','size',[1 num_amplifier_samples]);
+            'class','single','size',[1 num_amplifier_samples],'access','w');
       end
    end
    
@@ -99,7 +104,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
             board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-               'class','single','size',[1 num_board_adc_samples]);
+               'class','single','size',[1 num_board_adc_samples],'access','w');
          end
       end
    end
@@ -115,7 +120,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
             board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-               'class','single','size',[1 num_board_dac_samples]);
+               'class','single','size',[1 num_board_dac_samples],'access','w');
          end
       end
    end
@@ -130,7 +135,7 @@ if (data_present)
          for i = 1:num_board_dig_in_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
             board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
-               'class','uint8','size',[1 num_board_dig_in_samples]);
+               'class','uint8','size',[1 num_board_dig_in_samples],'access','w');
          end
       end
    end
@@ -146,7 +151,7 @@ if (data_present)
          for i = 1:num_board_dig_out_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
             board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
-               'class','uint8','size',[1 num_board_dig_out_samples]);
+               'class','uint8','size',[1 num_board_dig_out_samples],'access','w');
          end
       end
    end
@@ -240,7 +245,17 @@ if (data_present)
    num_gaps = 0;
    index = 0;
    
+   deBounce = false;
    for i=1:ceil(num_data_blocks/nBlocks)
+      pct = round(num_data_blocks/nBlocks*100);
+      if rem(pct,5)==0 && ~deBounce
+         if exist('myJob','var')~=0
+            set(myJob,'Tag',sprintf('%s: Saving DATA %g\%',blockObj.Name,pct));
+         end
+         deBounce = true;
+      elseif rem(pct+1,5)==0 && deBounce
+         deBounce = false;
+      end
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Read binary data.
@@ -380,6 +395,10 @@ if (data_present)
    end
 end
 flag = true;
+
+if exist('myJob','var')~=0
+   set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
+end
 
 updateStatus(blockObj,'Raw',true);
 
