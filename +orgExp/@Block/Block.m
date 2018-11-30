@@ -118,6 +118,7 @@ classdef Block < handle
       % Properties for setting up other basic properties
       RecLocDefault
       SaveLocDefault
+      ForceSaveLoc
       ProbeChannel
       
       % Properties for parsing name metadata
@@ -254,7 +255,7 @@ classdef Block < handle
       end
       
       % Federico I will let you comment this :) -MM
-      function varargout=subsref(blockObj,S) %#ok<INUSL>
+      function varargout=subsref(blockObj,S) 
           Out = 'blockObj';
           ii=1;
           while ii<=numel(S)
@@ -263,7 +264,9 @@ classdef Block < handle
                       if ii==1
                           nargs=numel(S(ii).subs);
                           if nargs<2
-                              error('Not enough input arguments');
+                              Out = builtin('subsref',blockObj,S);
+                              varargout = {Out};
+                              return;
                           end
                           for jj=3:nargs
                               ind=numel(S)+1;

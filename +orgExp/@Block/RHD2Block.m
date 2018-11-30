@@ -66,8 +66,8 @@ end
 if (data_present)
    fprintf(1, 'Allocating memory for data...\n');
    
-   fname = fullfile(paths.TW_N);
-   TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+   fName = fullfile(paths.TW_N);
+   TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
       'class','int32','size',[1 num_amplifier_samples],'access','w');
    
    if (num_amplifier_channels > 0)
@@ -78,11 +78,12 @@ if (data_present)
       infoname = fullfile(strrep(paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
       save(fullfile(infoname),'RW_info','-v7.3');
       % One file per probe and channel
+      amplifier_dataFile = cell(num_amplifier_channels,1);
       for iCh = 1:num_amplifier_channels
-         pnum  = num2str(amplifier_channels(iCh).port_number);
-         chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-         fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
-         amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+         pNum  = num2str(amplifier_channels(iCh).port_number);
+         chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
+         fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+         amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
       end
    end
@@ -96,10 +97,11 @@ if (data_present)
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
       save(fullfile(infoname),'ADC_info','-v7.3');
       if (data_present)
+         board_adc_dataFile = cell(num_board_adc_channels,1);
          for iCh = 1:num_board_adc_channels
-            chnum = board_adc_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
-            board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            chNum = board_adc_channels(iCh).custom_channel_name;
+            fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+            board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
          end
       end
@@ -113,10 +115,11 @@ if (data_present)
       supply_voltage_info = supply_voltage_channels;
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
       save(fullfile(infoname),'supply_voltage_info','-v7.3');
+      supply_voltage_dataFile = cell(num_supply_voltage_channels,1);
       for iCh = 1:num_supply_voltage_channels
-         chnum = supply_voltage_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
-         supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+         chNum = supply_voltage_channels(iCh).custom_channel_name;
+         fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+         supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_supply_voltage_samples],'access','w');
       end
    end
@@ -129,11 +132,12 @@ if (data_present)
       temp_sensor_info = temp_sensor_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
       save(fullfile(infoname),'temp_sensor_info','-v7.3');
+      temp_sensor_dataFile = cell(num_temp_sensor_channels,1);
       for iCh = 1:num_temp_sensor_channels
          paths.DW_N = strrep(paths.DW_N, '\', '/');
-         chnum = temp_sensor_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
-         supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+         chNum = temp_sensor_channels(iCh).custom_channel_name;
+         fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+         temp_sensor_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_temp_sensor_samples],'access','w');
       end
    end
@@ -146,10 +150,11 @@ if (data_present)
       AUX_info = aux_input_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
       save(fullfile(infoname),'AUX_info','-v7.3');
+      aux_input_dataFile = cell(num_aux_input_channels,1);
       for iCh = 1:num_aux_input_channels
-         chnum = aux_input_channels(iCh).custom_channel_name;
-         fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
-         aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+         chNum = aux_input_channels(iCh).custom_channel_name;
+         fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
+         aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_aux_input_samples],'access','w');
       end
    end
@@ -163,11 +168,12 @@ if (data_present)
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
       save(fullfile(infoname),'DigI_info','-v7.3');
       if (data_present)
+         board_dig_in_dataFile = cell(num_board_dig_in_channels,1);
          for iCh = 1:num_board_dig_in_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
-            chnum = board_dig_in_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(paths.DW_N,'\','/'), chnum);
-            board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            chNum = board_dig_in_channels(iCh).custom_channel_name;
+            fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
+            board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_in_samples],'access','w');
          end
       end
@@ -183,10 +189,11 @@ if (data_present)
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
       save(fullfile(infoname),'DigO_info','-v7.3');
       if (data_present)
+         board_dig_out_dataFile = cell(num_board_dig_out_channels,1);
          for iCh = 1:num_board_dig_out_channels
-            chnum = board_dig_out_channels(iCh).custom_channel_name;
-            fname = sprintf(strrep(paths.DW_N,'\','/'),chnum);
-            board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),...
+            chNum = board_dig_out_channels(iCh).custom_channel_name;
+            fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+            board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_out_samples],'access','w');
          end
       end
@@ -332,7 +339,8 @@ if (data_present)
       t=Buffer(time_buffer_index(1:dataToRead));
       tmp=dec2bin(t,16);
       t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
-      TimeFile.append(t);
+      t = reshape(t,1,numel(t)); % ensure correct orientation
+%       TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds)
@@ -448,21 +456,21 @@ flag = true;
 
 updateStatus(blockObj,'Raw',true);
 
-   function header_out = fixNamingConvention(header_in)
-      %% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
-      
-      header_out = struct;
-      f = fieldnames(header_in);
-      for iF = 1:numel(f)
-         str = strsplit(f{iF},'_');
-         for iS = 1:numel(str)
-            str{iS}(1) = upper(str{iS}(1));
-         end
-         str = strjoin(str);
-         header_out.(str) = header_in.(f{iF});
-      end      
-   end
+end
 
+function header_out = fixNamingConvention(header_in)
+%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+
+header_out = struct;
+f = fieldnames(header_in);
+for iF = 1:numel(f)
+   str = strsplit(f{iF},'_');
+   for iS = 1:numel(str)
+      str{iS}(1) = upper(str{iS}(1));
+   end
+   str = strjoin(str,'');
+   header_out.(str) = header_in.(f{iF});
+end
 end
 
 

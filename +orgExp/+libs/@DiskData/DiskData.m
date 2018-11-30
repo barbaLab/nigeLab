@@ -397,7 +397,8 @@ classdef DiskData
                      clear('tmp');
                      tmp(S(ii).subs{:})=b;
                   else
-                     tmp(S.subs{:})=b;
+%                      tmp(S.subs{:})=b; % switched -MM
+                     tmp(S.subs{1})=b; 
                   end
                   
                case '.'

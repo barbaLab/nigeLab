@@ -21,6 +21,7 @@ pars.Cluster = 'CPLMJS';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
 pars.SaveLocDefault = 'P:/Rat';
+pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
 CH_ID = 'Ch';           % precedes the channel number delimited variable
