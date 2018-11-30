@@ -108,7 +108,7 @@ classdef DiskData
                                 [~,I]=max(cat(1,info(:).size),[],1);
                                 I=unique(I);
                                 if size(I,2)~=1
-                                    error('Your file look wierd.\nI wasn''t able to properly connect it ti DiskData');
+                                    error('Your file looks weird.\nI wasn''t able to properly connect it to DiskData');
                                 end
                                 obj.bytes_ = info(I).bytes;
                                 obj.name_ = info(I).name;
@@ -131,8 +131,12 @@ classdef DiskData
                 case 3
                     switch varargin{1}
                         case 'MatFile'
-                            eval(sprintf('%s=ones(1,1,class_);',name_));
-                            save(varargin{2},name_,'-v7.3');
+                            eval(sprintf('%s=varargin{3};',name_));
+                            if isstruct(varargin{3})
+                                save(varargin{2},'-struct',name_,'-v7.3');
+                            else
+                                save(varargin{2},name_,'-v7.3');
+                            end
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
                             obj.diskfile_.(name_) = varargin{3};
@@ -144,26 +148,23 @@ classdef DiskData
                             obj.bytes_ = info.bytes;
                         case 'Hybrid'
                             data=zeros(1,1,class_);
-                            if ~exist(varargin{2},'file')
-                                data=ones(1,1,class_);
-                                save(varargin{2},name_,'-v7.3');
-                            end
+                            
+                            save(varargin{2},'data','-v7.3');
+                            
                             obj.diskfile_ = matfile(varargin{2},...
                                 'Writable',true);
                                                      
                             obj.type_='Hybrid';
                             obj.name_ = name_;
-                            obj.size_ = size_;                            
+                            obj.size_ = size(varargin{3});                            
                             obj.class_ = class_;
-                            if data
-                                fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
-                                H5L.delete(fid,'data','H5P_DEFAULT');
-                                H5F.close(fid);
-                                varname_ = ['/' obj.name_];
-                                h5create(varargin{2}, varname_, size_,'DataType',class_);
-                                
-                            end
-                            h5write(varargin{2}, '/data', varargin{3},[1 1],size_);
+                            fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
+                            H5L.delete(fid,'data','H5P_DEFAULT');
+                            H5F.close(fid);
+                            varname_ = ['/' obj.name_];
+                            h5create(varargin{2}, varname_, size_,'DataType',class_);
+
+                            h5write(varargin{2}, '/data', varargin{3},[1 1],size(varargin{3}));
                             info = whos(obj.diskfile_);
                             obj.bytes_ = info.bytes;
                         otherwise
@@ -226,7 +227,10 @@ classdef DiskData
                     case '.'
                         s=methods(obj);
                         if any(strcmp(s,S(ii).subs))
-                            Out = sprintf('obj.%s',S(ii).subs);                           
+                           Out = builtin('subsref',obj,S);
+                           varargout(1) = {Out};
+                           return;
+%                             Out = sprintf('obj.%s',S(ii).subs);                           
                         else
                             readDat = true;
                             sz = size(obj.diskfile_.(S(ii).subs));
@@ -317,15 +321,15 @@ classdef DiskData
         end
         
         function dim = size(obj,n)
-            info = whos(obj.diskfile_);
-            if length(info)~=1
-                [~,I]=max([info.bytes]);
-                info=info(I);
-            end
+%             info = whos(obj.diskfile_);
+%             if length(info)~=1
+%                 [~,I]=max([info.bytes]);
+%                 info=info(I);
+%             end
             if nargin<2
-                n=1:length(info.size);
+                n=1:length(obj.size_);
             end
-            dim=info.size(n);
+            dim=obj.size_(n);
         end
         
         function cl=class(obj)
@@ -356,11 +360,11 @@ classdef DiskData
         function Out = append(obj,b)
             Out = obj;
             varname_ = ['/' obj.name_];
-            h5write(obj.getPath, varname_, b(1,:),[1,(obj.size(2)+1)],size(b));
-            if not(strcmp(class(obj),class(b))|isa(b,'orgExp.libs.DiskData'))
+            if not(strcmp(class(obj),sprintf('DiskData (%s)',class(b)))|isa(b,'orgExp.libs.DiskData'))
                 error('Cannot concatenate objects of different classes');
             end
-                 Out.size_= size(obj)+size(b);      
+            h5write(obj.getPath, varname_, b(1,:),[1,(obj.size(2)+1)],size(b));
+            Out.size_= size(obj)+size(b);
         end
         
         function Out=disp(obj)

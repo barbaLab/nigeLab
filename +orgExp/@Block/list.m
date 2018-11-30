@@ -24,24 +24,33 @@ function L = list(blockObj)
 % By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
 %                 v1.1  06/14/2018 Added flag output
 Format = '';
-if ~isempty(blockObj.Recording_date)
-    Format = 'yyMMdd';
+str='';
+if ~strcmp(blockObj.Meta.Rec_date,'YYMMDD')
+    Format = [Format 'yyMMdd'];
+    str = [str blockObj.Meta.Rec_date];
 end
-if ~isempty(blockObj.Recording_time)
+if ~strcmp(blockObj.Meta.Rec_time,'hhmmss')
     Format = [Format 'HHmmss' ];
+    str = [str blockObj.Meta.Rec_time];
 end
-DateTime=datetime([blockObj.Recording_date blockObj.Recording_time],'InputFormat',Format);
-infoFields={'RecType'
-            'Corresponding_animal'
-            'Recording_ID'
-            'numChannels'
+DateTime=datetime(str,'InputFormat',Format);
+infoFields={'Animal_ID'
+            'Rec_ID'
             };
                 
 info.Recording_date=DateTime;
 info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.Sample_rate)));
 for jj=1:numel(infoFields)
+info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
+end
+
+infoFields={'RecType'
+            'numChannels'
+            };
+for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
+
 info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
 St = blockObj.getStatus;
 info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});

@@ -2,71 +2,53 @@ function flag = doRawExtraction(blockObj)
 %% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
 %
 %  b = orgExp.Block;
-%  flag = b.doRawExtraction;
+%  flag = doRawExtraction(b);
 %
 %  --------
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if conversion was successful.
 %
-%  By: Max Murphy v1.0  06/15/2018 Original version (R2017b)
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% DEFAULT CONVERSION CONSTANTS
-% For filtering (these should be detected by TANK)
-STIM_SUPPRESS = false;      % set true to do stimulus suppression (must change STIM_P_CH also)
-STIM_P_CH = [nan nan];      % [probe, channel] for stimulation channel
-STIM_BLANK = [0.2 1.75];    % [pre stim ms, post stim ms] for offline suppress
-STATE_FILTER = true;
-
-
-
-%% GET GENERIC INFO
-% DIR = [UNC_PATH{1}, ...
-%     tankObj.DIR((find(tankObj.DIR == filesep,1,'first')+1):end)];
-% SAVELOC = [UNC_PATH{2}, ...
-%     tankObj.SaveLoc((find(tankObj.SaveLoc == filesep,1,'first')+1):end)];
-
-%% GET CURRENT VERSION INFORMATION WIP
-% [repoPath, ~] = fileparts(mfilename('fullpath'));
-% gitInfo = getGitInfo(repoPath);
-% attach_files = dir(fullfile(repoPath,'**'));
-% attach_files = attach_files((~contains({attach_files(:).folder},'.git')))';
-% dir_files = ~cell2mat({attach_files(:).isdir})';
-% ATTACHED_FILES = fullfile({attach_files(dir_files).folder},...
-%     {attach_files(dir_files).name})';
-
-%% PARSE NAME DEPENDING ON RECORDING TYPE
-
-flag = false; % if returns before completion, indicate failure to complete.
+%% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
+% If returns before completion, indicate failure to complete with flag
+flag = false; 
 
 switch blockObj.RecType
    case 'Intan'
-      
-      switch blockObj.File_extension
+      % Two types of Intan binary files: rhd and rhs
+      switch blockObj.FileExt
          case '.rhs'
-            blockObj.RHS2Block();
+            flag = RHS2Block(blockObj);
          case '.rhd'
-            blockObj.RHD2Block();
+            flag = RHD2Block(blockObj);
          otherwise
             warning('Invalid file type (%s).',blockObj.File_extension);
             return;
       end
       
    case 'TDT'
-      warning('%s is not yet supported, but will be added.',blockObj.RecType);
+      % TDT raw data already has a sort of "BLOCK" structure that should be
+      % parsed to get this information.
+      warning('%s is not yet supported, but will be added.',...
+         blockObj.RecType);
       return;
       
    case 'mat'
-      warning('%s is not yet supported, but will be added.',blockObj.RecType);
+      % Federico did you add this? I don't think there are plans to add
+      % support for acquisition that streams to Matlab files...? -MM
+      warning('%s is not yet supported, but will be added.',...
+         blockObj.RecType);
       return;
       
    otherwise
-      warning('%s is not a supported acquisition system (case-sensitive).',blockObj.RecType);
+      % Currently only working with TDT and Intan, the two types of
+      % acquisition hardware that are in place at Nudo Lab at KUMC, and at
+      % Chiappalone Lab at IIT.
+      warning('%s is not a supported (case-sensitive).',...
+         blockObj.RecType);
       return;
 end
-
-fprintf(1,'complete.\n');
-blockObj.updateStatus('Raw',true);
-flag = true;
 
 end
