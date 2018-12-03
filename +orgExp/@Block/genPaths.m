@@ -1,7 +1,9 @@
-function genPaths(blockObj)
+function flag = genPaths(blockObj)
 %% Set some useful path variables
 % Here are defined all the paths where data will be saved.
 % The folder tree is also created here(if not already exsting)
+flag = false;
+
 [ID,~] = orgExp.defaults.Block;
 delim       = ID.Delimiter;
 RAW_ID      = [delim ID.Raw.Folder];                 % Raw stream ID
@@ -47,4 +49,5 @@ paths.LW_N      = fullfile(paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
 paths.SDW_N     = fullfile(paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);
 blockObj.paths  = paths;
 
+flag = true;
 end

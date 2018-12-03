@@ -14,6 +14,7 @@ function flag = doRawExtraction(blockObj)
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
 flag = false; 
+blockObj.genPaths;
 
 switch blockObj.RecType
    case 'Intan'

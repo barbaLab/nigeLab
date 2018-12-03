@@ -335,7 +335,7 @@ classdef Block < handle
       flag = RHD2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
       flag = RHS2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
       
-      genPaths(blockObj)
+      flag = genPaths(blockObj)
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
       

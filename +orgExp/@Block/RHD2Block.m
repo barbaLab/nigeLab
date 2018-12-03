@@ -83,6 +83,7 @@ if (data_present)
          pNum  = num2str(amplifier_channels(iCh).port_number);
          chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
          fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+         if exist(fName,'file'),delete(fName);end
          amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
       end
@@ -101,6 +102,7 @@ if (data_present)
          for iCh = 1:num_board_adc_channels
             chNum = board_adc_channels(iCh).custom_channel_name;
             fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+            if exist(fName,'file'),delete(fName);end
             board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
          end
@@ -119,6 +121,7 @@ if (data_present)
       for iCh = 1:num_supply_voltage_channels
          chNum = supply_voltage_channels(iCh).custom_channel_name;
          fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+         if exist(fName,'file'),delete(fName);end
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_supply_voltage_samples],'access','w');
       end
@@ -137,6 +140,7 @@ if (data_present)
          paths.DW_N = strrep(paths.DW_N, '\', '/');
          chNum = temp_sensor_channels(iCh).custom_channel_name;
          fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+         if exist(fName,'file'),delete(fName);end
          temp_sensor_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_temp_sensor_samples],'access','w');
       end
@@ -154,6 +158,7 @@ if (data_present)
       for iCh = 1:num_aux_input_channels
          chNum = aux_input_channels(iCh).custom_channel_name;
          fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
+         if exist(fName,'file'),delete(fName);end
          aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_aux_input_samples],'access','w');
       end
@@ -173,6 +178,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             chNum = board_dig_in_channels(iCh).custom_channel_name;
             fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
+            if exist(fName,'file'),delete(fName);end
             board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_in_samples],'access','w');
          end
@@ -193,6 +199,7 @@ if (data_present)
          for iCh = 1:num_board_dig_out_channels
             chNum = board_dig_out_channels(iCh).custom_channel_name;
             fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+            if exist(fName,'file'),delete(fName);end
             board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_out_samples],'access','w');
          end
@@ -265,23 +272,23 @@ if (data_present)
    end
    
    if (num_aux_input_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
+      index=end_+1:end_+num_samples_per_data_block/4 * num_aux_input_channels;
       end_=index(end);
-      aux_in_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
+      aux_in_buffer_index(index)=uint16(reshape(repmat(1:num_aux_input_channels,num_samples_per_data_block/4,1),1,[]));
       aux_in_buffer_index=repmat(aux_in_buffer_index,1,nBlocks);
    end
    
    if (num_supply_voltage_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
+      index=end_+1:end_+ 1 * num_supply_voltage_channels;
       end_=index(end);
-      supply_voltage_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
+      supply_voltage_buffer_index(index)=uint16(reshape(repmat(1:num_supply_voltage_channels,1,1),1,[]));
       supply_voltage_buffer_index=repmat(supply_voltage_buffer_index,1,nBlocks);
    end
    
    if (num_temp_sensor_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_board_dac_channels;
+      index=end_+1:end_+ 1 * num_temp_sensor_channels;
       end_=index(end);
-      temp_buffer_index(index)=uint16(reshape(repmat(1:num_board_dac_channels,num_samples_per_data_block,1),1,[]));
+      temp_buffer_index(index)=uint16(reshape(repmat(1:num_temp_sensor_channels,1,1),1,[]));
       temp_buffer_index=repmat(temp_buffer_index,1,nBlocks);
    end
    
@@ -310,6 +317,19 @@ if (data_present)
       
    end
    
+  switch eval_board_mode
+     case 1
+        adc_scale = 152.59e-6;
+        adc_offset = 32768;
+     case 13
+        adc_scale = 312.5e-6;
+        adc_offset = 32768;
+     otherwise
+        adc_scale =  50.354e-6;
+        adc_offset = 0;
+  end
+  
+   
    progress=0;
    num_gaps = 0;
    index = 0;
@@ -330,7 +350,7 @@ if (data_present)
       %%% Read binary data.
       blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
       dataToRead = blocksToread*nDataPoints;
-      Buffer=uint16(fread(fid, dataToRead, 'uint16'))';
+      Buffer=uint16(fread(fid, dataToRead, 'uint16=>uint16'))';
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Update the files
@@ -345,23 +365,23 @@ if (data_present)
       
       % Scale time steps (units = seconds)
       clear('t');
-      % Write data to file
-      for jj=1:num_amplifier_channels
-         amplifier_dataFile{jj}.append(single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)));
+      % Write data to file  
+      for jj=1:num_amplifier_channels % units = microvolts
+         amplifier_dataFile{jj}.append( 0.195 * single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768);
       end
       
-      for jj=1:num_aux_input_channels
-         aux_input_dataFile{jj}.append(single(Buffer(aux_in_buffer_index(1:dataToRead)==jj)));
+      for jj=1:num_aux_input_channels % units = volts
+         aux_input_dataFile{jj}.append( 37.4e-6 * single(Buffer(aux_in_buffer_index(1:dataToRead)==jj)));
       end
-      for jj=1:num_supply_voltage_channels
-         supply_voltage_dataFile{jj}.append(single(Buffer(supply_voltage_buffer_index(1:dataToRead)==jj)));
+      for jj=1:num_supply_voltage_channels  % units = volts
+         supply_voltage_dataFile{jj}.append( 74.8e-6 * single(Buffer(supply_voltage_buffer_index(1:dataToRead)==jj)));
       end
-      for jj=1:num_temp_sensor_channels
-         temp_sensor_dataFile{jj}.append(single(Buffer(temp_buffer_index(1:dataToRead)==jj)));
+      for jj=1:num_temp_sensor_channels % units = deg C
+         temp_sensor_dataFile{jj}.append(single(Buffer(temp_buffer_index(1:dataToRead)==jj)) ./100 );
       end
       
-      for jj=1:num_board_adc_channels
-         board_adc_dataFile{jj}.append(single(Buffer(adc_buffer_index(1:dataToRead)==jj)));
+      for jj=1:num_board_adc_channels % units = volts
+         board_adc_dataFile{jj}.append( adc_scale * single(Buffer(adc_buffer_index(1:dataToRead)==jj))  - adc_offset );
       end
       
       if num_board_dig_in_channels
@@ -400,44 +420,44 @@ fclose(fid);
 
 if (data_present)
    
-   fprintf(1, 'Parsing data...\n');
-   
-   % Scaling variables appropriately.
-   for jj=1:num_amplifier_channels
-      
-      % Scale voltage levels appropriately.
-      amplifier_dataFile{jj}(:) = 0.195 * (single(amplifier_dataFile{jj}) - 32768); % units = microvolts
-      
-   end
-   for jj=1:num_aux_input_channels
-      aux_input_dataFile{jj}(:) = 37.4e-6 *  single(aux_input_dataFile{jj}); % units = volts
-   end
-   
-   for jj=1:num_supply_voltage_channels
-      supply_voltage_dataFile{jj} = 74.8e-6 * single(supply_voltage_dataFile{jj}); % units = volts
-   end
-   
-   for jj=1:num_board_adc_channels
-      if (eval_board_mode == 1)
-         board_adc_dataFile{jj}(:) = 152.59e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
-      elseif (eval_board_mode == 13) % Intan Recording Controller
-         board_adc_dataFile{jj}(:) = 312.5e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
-      else
-         board_adc_dataFile{jj}(:) = 50.354e-6 * single(board_adc_dataFile{jj}); % units = volts
-      end
-   end
-   
-   for jj=1:num_temp_sensor_channels
-      temp_sensor_dataFile{jj}(:) =  single(temp_sensor_dataFile{jj}) ./ 100; % units = deg C
-   end
-   
-   % Check for gaps in timestamps.
-   if (num_gaps == 0)
-      fprintf(1, 'No missing timestamps in data.\n');
-   else
-      fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
-         num_gaps);
-   end
+%    fprintf(1, 'Parsing data...\n');
+%    
+%    % Scaling variables appropriately.
+%    for jj=1:num_amplifier_channels
+%       
+%       % Scale voltage levels appropriately.
+%       amplifier_dataFile{jj}(:) = 0.195 * (single(amplifier_dataFile{jj}) - 32768); % units = microvolts
+%       
+%    end
+%    for jj=1:num_aux_input_channels
+%       aux_input_dataFile{jj}(:) = 37.4e-6 *  single(aux_input_dataFile{jj}); % units = volts
+%    end
+%    
+%    for jj=1:num_supply_voltage_channels
+%       supply_voltage_dataFile{jj} = 74.8e-6 * single(supply_voltage_dataFile{jj}); % units = volts
+%    end
+%    
+%    for jj=1:num_board_adc_channels
+%       if (eval_board_mode == 1)
+%          board_adc_dataFile{jj}(:) = 152.59e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
+%       elseif (eval_board_mode == 13) % Intan Recording Controller
+%          board_adc_dataFile{jj}(:) = 312.5e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
+%       else
+%          board_adc_dataFile{jj}(:) = 50.354e-6 * single(board_adc_dataFile{jj}); % units = volts
+%       end
+%    end
+%    
+%    for jj=1:num_temp_sensor_channels
+%       temp_sensor_dataFile{jj}(:) =  single(temp_sensor_dataFile{jj}) ./ 100; % units = deg C
+%    end
+%    
+%    % Check for gaps in timestamps.
+%    if (num_gaps == 0)
+%       fprintf(1, 'No missing timestamps in data.\n');
+%    else
+%       fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
+%          num_gaps);
+%    end
    %% Linking data to blockObj
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % DiskData makes it easy to access data stored in matfies.
@@ -447,7 +467,7 @@ if (data_present)
    end
 end
 
-
+% % % % % % % % % % % % % % % % % % % % % % 
 if exist('myJob','var')~=0
    set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
 end
