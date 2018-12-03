@@ -25,6 +25,8 @@ function flag = RHS2Block(blockObj,recFile,paths)
 %% PARSE INPUT
 if nargin < 3
    paths = blockObj.paths;
+else % Otherwise, it was run via a "q" command
+   myJob = getCurrentJob;
 end
 
 if nargin < 2
@@ -34,13 +36,14 @@ end
 %% READ FILE
 tic;
 flag = false;
-fid = fopen(blockObj.RecFile, 'r');
-s = dir(blockObj.RecFile);
+fid = fopen(recFile, 'r');
+s = dir(recFile);
 filesize = s.bytes;
 
 %% Read the file header
 
 header = orgExp.libs.RHS_read_header('FID',fid);
+blockObj.Meta.Header = fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -66,25 +69,33 @@ if (data_present)
    infoname = fullfile(paths.RW,[blockObj.Name '_RawWave_Info.mat']);
    save(fullfile(infoname),'RW_info','-v7.3');
    
+   if exist('myJob','var')~=0
+      set(myJob,'Tag',sprintf('%s: Initializing DiskData arrays...',blockObj.Name));
+   end
    
    % One file per probe and channel
+   amplifier_dataFile = cell(num_amplifier_channels,1);
+   stim_dataFile = cell(num_amplifier_channels,1);
+   if (dc_amp_data_saved ~= 0)
+      dc_amplifier_dataFile = cell(num_amplifier_channels,1);
+   end
    for iCh = 1:num_amplifier_channels
       pnum  = num2str(amplifier_channels(iCh).port_number);
       chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
       fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
       amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-         'class','single','size',[1 num_amplifier_samples]);
+         'class','single','size',[1 num_amplifier_samples],'access','w');
       
       stim_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
       stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-         'class','single','size',[1 num_amplifier_samples]);
+         'class','single','size',[1 num_amplifier_samples],'access','w');
       
       if (dc_amp_data_saved ~= 0)
          dc_amp_fname = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
          fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
          dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-            'class','single','size',[1 num_amplifier_samples]);
+            'class','single','size',[1 num_amplifier_samples],'access','w');
       end
    end
    
@@ -95,11 +106,12 @@ if (data_present)
       infoname = fullfile(paths.DW,[blockObj.Name '_ADC_Info.mat']);
       save(fullfile(infoname),'ADC_info','-v7.3');
       if (data_present)
+         board_adc_dataFile = cell(num_board_adc_channels,1);
          for i = 1:num_board_adc_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
             board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-               'class','single','size',[1 num_board_adc_samples]);
+               'class','single','size',[1 num_board_adc_samples],'access','w');
          end
       end
    end
@@ -111,11 +123,12 @@ if (data_present)
       infoname = fullfile(paths.DW,[blockObj.Name '_DAC_Info.mat']);
       save(fullfile(infoname),'DAC_info','-v7.3');
       if (data_present)
+         board_dac_dataFile = cell(num_aux_input_channels,1);
          for i = 1:num_board_dac_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
             board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
-               'class','single','size',[1 num_board_dac_samples]);
+               'class','single','size',[1 num_board_dac_samples],'access','w');
          end
       end
    end
@@ -127,10 +140,11 @@ if (data_present)
       infoname = fullfile(paths.DW,[blockObj.Name '_Digital_Input_Info.mat']);
       save(fullfile(infoname),'DigI_info','-v7.3');
       if (data_present)
+         board_dig_in_dataFile = cell(num_board_dig_in_channels,1);
          for i = 1:num_board_dig_in_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
             board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
-               'class','uint8','size',[1 num_board_dig_in_samples]);
+               'class','uint8','size',[1 num_board_dig_in_samples],'access','w');
          end
       end
    end
@@ -143,10 +157,11 @@ if (data_present)
       infoname = fullfile(paths.DW,[blockObj.Name '_Digital_Output_Info.mat']);
       save(fullfile(infoname),'DigO_info','-v7.3');
       if (data_present)
+         board_dig_out_dataFile = cell(num_board_dig_out_channels,1);
          for i = 1:num_board_dig_out_channels
             fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
             board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
-               'class','uint8','size',[1 num_board_dig_out_samples]);
+               'class','uint8','size',[1 num_board_dig_out_samples],'access','w');
          end
       end
    end
@@ -240,7 +255,9 @@ if (data_present)
    num_gaps = 0;
    index = 0;
    
+   
    for i=1:ceil(num_data_blocks/nBlocks)
+      
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Read binary data.
@@ -254,8 +271,8 @@ if (data_present)
       
       t=Buffer(time_buffer_index(1:dataToRead));
       tmp=dec2bin(t,16);
-      t=bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]);  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
-      
+      t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
+%       t = reshape(t,1,numel(t)); % ensure correct orientation
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds).
@@ -357,7 +374,17 @@ if (data_present)
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % DiskData makes it easy to access data stored in matfies.
    % Assigning each file to the right channel
+   deBounce = false;
    for iCh=1:num_amplifier_channels
+      pct = round(i/nBlocks*100);
+      if rem(pct,5)==0 && ~deBounce
+         if exist('myJob','var')~=0
+            set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
+         end
+         deBounce = true;
+      elseif rem(pct+1,5)==0 && deBounce
+         deBounce = false;
+      end
       blockObj.Channels(iCh).Raw = amplifier_dataFile{iCh};
       
       as_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
@@ -381,8 +408,27 @@ if (data_present)
 end
 flag = true;
 
+if exist('myJob','var')~=0
+   set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
+end
+
 updateStatus(blockObj,'Raw',true);
 
+end
+
+function header_out = fixNamingConvention(header_in)
+%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+
+header_out = struct;
+f = fieldnames(header_in);
+for iF = 1:numel(f)
+   str = strsplit(f{iF},'_');
+   for iS = 1:numel(str)
+      str{iS}(1) = upper(str{iS}(1));
+   end
+   str = strjoin(str,'');
+   header_out.(str) = header_in.(f{iF});
+end
 end
 
 

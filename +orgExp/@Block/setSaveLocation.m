@@ -27,6 +27,11 @@ else
       blockObj.SaveLoc = fullfile(tmp,blockObj.Name);
       blockObj.genPaths;
       flag = true;
+   elseif blockObj.ForceSaveLoc
+      blockObj.SaveLoc = fullfile(tmp,blockObj.Name);
+      mkdir(blockObj.SaveLoc);
+      blockObj.genPaths;
+      flag = true;
    end
 end
 

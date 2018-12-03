@@ -401,7 +401,7 @@ DesiredOutputs = {
    'header_size';
    'filesize';
    'bytes_per_block';
-   
+   'data_file_main_version_number';
    };
 end
 
