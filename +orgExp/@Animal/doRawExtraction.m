@@ -1,8 +1,8 @@
 function flag = doRawExtraction(animalObj)
-%% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
+%% DORAWEXTRACTION  Convert raw data files to Matlab TANK-BLOCK structure object
 %
 %  a = orgExp.Animal();
-%  extractionCompleteFlag = doRawExtraction(a);
+%  flag = doRawExtraction(a);
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 

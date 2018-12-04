@@ -1,5 +1,5 @@
 function flag = doLFPExtraction(animalObj)
-%% DOSD  Do spike detection on all blocks for this animal.
+%% DOLFPEXTRACTION  Do LFP extraction on all blocks for this animal.
 %
 %  a = orgExp.Animal();
 %  doRawExtraction(a);
