@@ -134,15 +134,20 @@ classdef Tank < handle
           end
          save(tankObj.SaveLoc,'tankObj') 
       end
+      
+      % Extraction methods
+      flag = doRawExtraction(tankObj)    % Convert raw data to Matlab BLOCK
+      flag = doReReference(tankObj)
+      flag = doLFPExtraction(tankObj)
+      flag = doSD(tankObj)
+      flag = clearSpace(tankObj,ask)
+      
+      % Utility
       linkToData(tankObj)
-      convert(tankObj)                % Convert raw data to Matlab BLOCK
       blockList = list(tankObj)       % List Blocks in TANK
       out = tankGet(tankObj,prop)     % Get a specific TANK property
-      flag = tankSet(tankObj,prop)    % Set a specific TANK property
-      CAR(tankObj)
-      extractLFP(tankObj)
-      spikeDetection(tankObj)
-      freeSpace(tankObj,ask)
+      flag = tankSet(tankObj,prop)    % Set a specific TANK property      
+      
    end
    %% PRIVATE METHODS
    methods (Access = public)

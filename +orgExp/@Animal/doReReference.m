@@ -1,5 +1,5 @@
 function flag = doReReference(animalObj)
-%% DOSD  Do spike detection on all blocks for this animal.
+%% DOREREFERENCE  Do common-average re-reference for all blocks in animalObj
 %
 %  a = orgExp.Animal();
 %  doRawExtraction(a);

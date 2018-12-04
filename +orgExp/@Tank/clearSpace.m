@@ -1,14 +1,14 @@
-function flag = clearSpace(animalObj,ask)
+function flag = clearSpace(tankObj,ask)
 %% CLEARSPACE   Delete the raw data folder to free some storage space
 %
-%  a = orgExp.Animal;
-%  flag = clearSpace(a);
-%  flag = clearSpace(a,ask);
+%  tank = orgExp.Tank;
+%  flag = clearSpace(tank);
+%  flag = clearSpace(tank,ask);
 %
 %  --------
 %   INPUTS
 %  --------
-%  animalObj   :     orgExp ANIMAL class.
+%    tankObj   :     orgExp TANK class.
 %
 %    ask       :     True or false. CAUTION: setting this to false and
 %                       running the CLEARSPACE method will automatically
@@ -22,29 +22,28 @@ function flag = clearSpace(animalObj,ask)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% CHECK WHETHER TO DELETE FILES
-B=animalObj.Blocks;
-flag = false(1,numel(B));
-
+%% ASK TO CONFIRM FILE DELETION
+A=tankObj.Animals;
+flag = false(1,numel(A));
 if nargin<2
     ask=true;
 end
 
 if ask
-    promptMessage = sprintf('Do you want to delete the extracted raw files from animal %s?\nThis procedure is irreversible.',animalObj.Name);
+    promptMessage = sprintf('Do you want to delete the extracted raw files from tank %s?\nThis procedure is irreversible.',tankObj.Name);
     button = questdlg(promptMessage, 'Are you sure?', 'Cancel', 'Continue', 'Cancel');
     if strcmpi(button, 'Cancel')
         return;
     end
 end
 
-%% CONTINUE WITH FILE REMOVAL
-for ii=1:numel(B)
+%% PROCEED WITH REMOVING FILES
+for ii=1:numel(A)
     ask = false;
-    flag(ii) = B(ii).freeSpace(ask);
+    flag(ii) = A(ii).freeSpace(ask);
 end
-animalObj.save;
-fprintf(1,'Finished clearing space for: %s \n.',animalObj.Name);
+tankObj.save;
+fprintf(1,'Finished clearing space for: %s \n.',tankObj.Name);
 
 end
 
