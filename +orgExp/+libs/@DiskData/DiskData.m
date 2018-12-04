@@ -168,8 +168,11 @@ classdef DiskData
             case 2 % 2 "default" inputs provided: file type and file name
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
-               obj.access_ = access_;
-               obj.writable_ = writable_;
+               if writable_
+                  obj = unlockData(obj);
+               else
+                  obj = lockData(obj);
+               end
                switch fType
                   case 'MatFile' % Can deal with MatFiles
                      % This allows instantiation of the variable to be
@@ -253,8 +256,11 @@ classdef DiskData
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
                % Third arg is the data; don't make a copy of that
-               obj.access_ = access_;
-               obj.writable_ = writable_;
+               if writable_
+                  obj = unlockData(obj);
+               else
+                  obj = lockData(obj);
+               end
                switch fType
                   case 'MatFile'
                      eval(sprintf('%s=varargin{3};',name_));
@@ -398,7 +404,9 @@ classdef DiskData
                      tmp(S(ii).subs{:})=b;
                   else
 %                      tmp(S.subs{:})=b; % switched -MM
-                     tmp(S.subs{1})=b; 
+                     tmp(S.subs{1})=b;  % (Federico, this probably isn't 
+                                        %  I just switched it so it will
+                                        %  temporarily work -MM.)
                   end
                   
                case '.'
@@ -546,6 +554,22 @@ classdef DiskData
       function b = isempty(obj)
          %% ISEMPTY  Overloaded function for checking if DiskData array contains data
          b = all(size(obj)==0);
+      end
+      
+      function obj = lockData(obj)
+         %% LOCKDATA    Method to set write access to read-only
+         
+         obj.writable_ = false;
+         obj.access_ = 'r';
+         
+      end
+      
+      function obj = unlockData(obj)
+         %% UNLOCKDATA    Method to allow write access 
+         
+         obj.writable_ = true;
+         obj.access_ = 'w';
+         
       end
       
    end

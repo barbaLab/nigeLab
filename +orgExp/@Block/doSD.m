@@ -23,18 +23,24 @@ for iCh = 1:nCh
    chIdx = regexp(blockObj.Channels(iCh).custom_channel_name, '\d');
    chNum = blockObj.Channels(iCh).custom_channel_name(chIdx);
    fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
-   blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName));
+%    blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName));
 end
 
 %% DO SPIKE DETECTION FOR EACH CHANNEL
 disp('000%');
 for iCh = 1:nCh % For each "channel index"...
    % Do detection:
-   spk = PerChannelDetection(blockObj,iCh,pars);
+   if (iCh == 1)
+      [spk,blockObj.SDPars] = PerChannelDetection(blockObj,iCh,pars);
+   else
+      spk = PerChannelDetection(blockObj,iCh,pars);
+   end
    
    % Create the DiskData pointer to the file:
    blockObj.Channels(iCh).Spikes = ...
-      orgExp.libs.DiskData('MatFile',fullfile(fName),spk);
+      orgExp.libs.DiskData('MatFile',fullfile(fName),spk,'access','w');
+   blockObj.Channels(iCh).Spikes = lockData(...
+      blockObj.Channels(iCh).Spikes);
    
    % And update the status indicator in Command Window:
    fraction_done = 100 * (iCh / nCh);
@@ -49,11 +55,11 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spikedata,pars] = PerChannelDetection(blockObj,ch,pars)
+   function [spk,pars] = PerChannelDetection(blockObj,ch,pars)
    %% PERCHANNELDETECTION  Perform spike detection for each channel individually.
    %
-   %   spikedata = PERCHANNELDETECTION(p,ch,pars,paths)
-   %   [spikedata,pars] = PERCHANNELDETECTION(p,ch,pars,paths)
+   %   spk = PERCHANNELDETECTION(p,ch,pars,paths)
+   %   [spk,pars] = PERCHANNELDETECTION(p,ch,pars,paths)
    %
    %   --------
    %    INPUTS
@@ -70,11 +76,11 @@ flag = true;
    %   --------
    %    OUTPUT
    %   --------
-   %   spikedata       :       Struct containing 'spikes,' 'artifact,' and
+   %     spk           :       Struct containing 'spikes,' 'artifact,' and
    %                           'peak_train' fields as described by
    %                           SPIKEDETECTIONARRAY.
    %
-   %    pars           :       Updated parameters struct.
+   %     pars          :       Updated parameters struct.
    %
 
    %% LOAD FILTERED AND RE-REFERENCED MAT FILE
@@ -82,7 +88,7 @@ flag = true;
    pars.FS = blockObj.SampleRate;
 
    %% PERFORM SPIKE DETECTION
-   [spikedata,pars] = SpikeDetectionArray(data,pars);
+   [spk,pars] = SpikeDetectionArray(data,pars);
 
    end
 
