@@ -15,5 +15,5 @@ linkToData(b);
 doRawExtraction(b);  % Working...yes. ~6 minutes (?)
 doUnitFilter(b);     % Working...yes.
 doReReference(b);    % Working...yes.
-doSD(b);             % Working...?
-doLFPExtraction(b);
+doSD(b);             % Working...yes.
+doLFPExtraction(b);  % Working...yes.

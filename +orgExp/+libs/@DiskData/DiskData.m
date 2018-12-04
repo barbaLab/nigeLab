@@ -184,7 +184,7 @@ classdef DiskData
                      eval(sprintf('%s=zeros(1,1,class_);',name_));
                      if exist(fName,'file') % If it exists
                         obj.diskfile_ = matfile(fName,... % point to it
-                           'Writable',obj.writeable_);
+                           'Writable',obj.writable_);
                         info = whos(obj.diskfile_);
                         if isscalar(info)
                            data=load(fName);

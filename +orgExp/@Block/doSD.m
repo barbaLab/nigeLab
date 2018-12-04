@@ -20,7 +20,7 @@ pars.FS = blockObj.SampleRate;
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
 nCh = blockObj.NumChannels;
 
-disp('000%');
+fprintf(1,'\n000%%\n');
 for iCh = 1:nCh
    % Parse file-name information
    pNum  = num2str(blockObj.Channels(iCh).port_number);
@@ -57,7 +57,7 @@ for iCh = 1:nCh
    
    % And update the status indicator in Command Window:
    fraction_done = 100 * (iCh / nCh);
-   fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
    
 end
 

@@ -1,7 +1,10 @@
 function doLFPExtraction(blockObj)
 %% DOLFPEXTRACTION   Decimates files to retrieve LFPs.
+%
 % Sampling frequency chosen for the downsampled files is 1000Hz
 % Band of interest in LFPs is up to 250Hz.
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 
 %% INITIALIZE PARAMETERS
@@ -11,23 +14,38 @@ blockObj.LFPPars = orgExp.defaults.LFP;
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
 DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
 DecimationFactor =   blockObj.LFPPars.DecimationFactor;
-blockObj.LFPPars.DownSampledRate = blockObj.SampledRate / DecimationFactor;
+blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
-for ii=1:blockObj.NumChannels
-   lfp=double(blockObj.Channels(ii).rawData);
+fprintf(1,'Decimating raw data... %.3d%%\n',0);
+for iCh=1:blockObj.NumChannels
+   % Get the values from Raw DiskData, and decimate:
+   data=double(blockObj.Channels(iCh).Raw(:));
    for jj=1:numel(DecimateCascadeM)
-      lfp=decimate(lfp,DecimateCascadeM(jj),DecimateCascadeN(jj));
+      data=decimate(data,DecimateCascadeM(jj),DecimateCascadeN(jj));
    end
-   pNum  = num2str(blockObj.Channels(ii).port_number);
-   chNum = blockObj.Channels(ii).custom_channel_name(regexp(blockObj.Channels(ii).custom_channel_name, '\d'));
-   fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
-   save(fullfile(fName),'lfp','-v7.3');
-   blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fName)),'access','w');
-   blockObj.Channels(ii).LFP = lockData(blockObj.Channels(ii).LFP);
+   
+   % Get the file name:
+   fName = parseFileName(blockObj,iCh);
+   
+   % Assign to diskData and protect it:
+   blockObj.Channels(iCh).LFP=orgExp.libs.DiskData(blockObj.SaveFormat,...
+      fName,data,'access','w');
+   blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
+   
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   
 end
-% blockObj.DownsampledRate=DownSampleFreq;
 blockObj.updateStatus('LFP',true);
 blockObj.save;
+
+   function fName = parseFileName(blockObj,channel)
+      pNum  = num2str(blockObj.Channels(channel).port_number);
+      chIdx = regexp(blockObj.Channels(channel).custom_channel_name, '\d');
+      chNum = blockObj.Channels(channel).custom_channel_name(chIdx);
+      fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
+   end
+
 end
 
