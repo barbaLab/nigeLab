@@ -25,7 +25,7 @@ bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', pars.FSTOP1, ...
    'StopbandAttenuation1', pars.ASTOP1, ...
    'PassbandRipple', pars.APASS, ...
    'StopbandAttenuation2', pars.ASTOP2, ...
-   'SampleRate', blockObj.Sample_rate, ...
+   'SampleRate', blockObj.SampleRate, ...
    'DesignMethod', pars.METHOD);
 
 blockObj.FiltPars = pars;
@@ -33,7 +33,7 @@ blockObj.FiltPars = pars;
 %% Save amplifier_data by probe/channel
 fprintf(1,'\nApplying bandpass filtering... ');
 fprintf(1,'%.3d%%',0)
-for iCh = 1:blockObj.numChannels
+for iCh = 1:blockObj.NumChannels
    if ~pars.STIM_SUPPRESS
       % Filter and and save amplifier_data by probe/channel
       pnum  = num2str(blockObj.Channels(iCh).port_number);
@@ -45,7 +45,7 @@ for iCh = 1:blockObj.numChannels
       blockObj.Channels(iCh).Filt = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
    end
    clear data
-   fraction_done = 100 * (iCh / blockObj.numChannels);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
    if ~floor(mod(fraction_done,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
    end
