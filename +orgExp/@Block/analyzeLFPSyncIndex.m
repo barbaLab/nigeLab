@@ -13,7 +13,7 @@ function analyzeLFPSyncIndex(blockObj)
 %%
 if ~isfield(blockObj.Channels,'psd')
    for nCh=1:blockObj.numChannels
-      [pxx,~] = pwelch(blockObj.Channels(nCh).LFPData(:),[],[],[],blockObj.Downsampled_rate);
+      [pxx,~] = pwelch(blockObj.Channels(nCh).LFPData(:),[],[],[],blockObj.LFPPars.DownsampledRate);
       blockObj.Channels(nCh).psd=pxx;
       blockObj.Channels(nCh).syncIdx = computeSyncIdx(blockObj.Channels(nCh).LFPData(:),[0 4],[4 100],win*60*Downsampled_rate,Downsampled_rate);
       

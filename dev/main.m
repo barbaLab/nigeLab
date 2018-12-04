@@ -11,9 +11,9 @@ recFileName = 'R:\Rat\Intan\R18-68\R18-68_2018_07_24_1_180724_141452.rhd';
 %% MAKE BLOCK AND EXTRACT
 b = orgExp.Block('RecFile',recFileName,'SaveLoc',saveLoc);
 linkToData(b);
-% qRawExtraction(b); % ~20 minutes
-doRawExtraction(b);  % ~6 minutes (?)
-doUnitFilter(b);     % Working...
-doReReference(b);    % Working...
-doSD(b);
+% qRawExtraction(b); % Working...yes. ~20 minutes
+doRawExtraction(b);  % Working...yes. ~6 minutes (?)
+doUnitFilter(b);     % Working...yes.
+doReReference(b);    % Working...yes.
+doSD(b);             % Working...?
 doLFPExtraction(b);

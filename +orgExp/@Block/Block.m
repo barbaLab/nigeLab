@@ -127,28 +127,24 @@ classdef Block < handle
       IncludeChar
       DiscardChar
       NamingConvention
-      
-      % Properties for "q" functions
-      UNCPath
-      ClusterList
-      Cluster
    end
    
    
    %% PRIVATE PROPERTIES
    properties (SetAccess = private,GetAccess = public)
       Fields      % List of property field names
+      
+      % Parameters structs
       SDPars
       FiltPars
       LFPPars
+      QueuePars
+      
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
-      DownsampledRate % Rate for down-sampling LFP data
       
-      Samples
-      
-      
+      Samples % Total number of samples in original record
       Mask  % Whether to include channels or not
    end
    

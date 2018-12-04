@@ -7,9 +7,9 @@ function pars = LFP()
 
 %%
 pars = struct;
-pars.DownSampleFreq=1000;
 pars.DecimateCascadeM=[5 3 2];
 pars.DecimateCascadeN=[3 5 5];
+pars.DecimationFactor=prod(pars.DecimateCascadeM);
 
 end
 

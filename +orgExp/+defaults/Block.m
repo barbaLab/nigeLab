@@ -12,13 +12,6 @@ pars             = struct;
 
 pars.RecLocDefault  = 'R:/Rat';
 
-% UNC path and cluster list for Matlab Distributed Computing Toolbox
-pars.UNCPath = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
-                '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
-pars.ClusterList = {'CPLMJS'; 'CPLMJS2'; 'CPLMJS3'};
-pars.Cluster = 'CPLMJS';
-% pars.Cluster = [];
-
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
 pars.SaveLocDefault = 'P:/Rat';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist

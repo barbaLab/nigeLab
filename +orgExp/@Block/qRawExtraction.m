@@ -11,10 +11,13 @@ function flag = qRawExtraction(blockObj)
 %
 %  By: Max Murphy v1.0  06/15/2018 Original version (R2017b)
 
+%% SET QUEUE PARAMETERS FROM TEMPLATE FILE
+blockObj.QueuePars = orgExp.defaults.Queue();
+
 %% PREPARE THE PROPER PATH NAMES TO GIVE TO ISILON
 % Replace the leading string for the recording file on R:/Recorded_Data
 concatIdx = find((blockObj.RecFile == '/' ) | (blockObj.RecFile == '\'),1,'first')+1;
-recFile = [blockObj.UNCPath{1}, blockObj.RecFile(concatIdx:end)];
+recFile = [blockObj.QueuePars.UNCPath{1}, blockObj.RecFile(concatIdx:end)];
 
 % Replace the leading string for the processed data (P:/Processed_Data)
 paths = blockObj.paths;
@@ -22,7 +25,7 @@ f = reshape(fieldnames(paths),1,numel(fieldnames(paths)));
 for varName = f
    v = varName{1};
    concatIdx = find((paths.(v)== '/' ) | (paths.(v) == '\'),1,'first')+1;
-   paths.(v) = [blockObj.UNCPath{2},paths.(v)(concatIdx:end)];
+   paths.(v) = [blockObj.QueuePars.UNCPath{2},paths.(v)(concatIdx:end)];
 end
 
 %% GET CURRENT VERSION INFORMATION WIP
@@ -35,10 +38,11 @@ for ii = 1:numel(attachedFiles) %#ok<NODEF>
       attachedFiles{ii}); %#ok<AGROW>
 end
 
-if isempty(blockObj.Cluster)
-   useCluster = orgExp.libs.findGoodCluster('CLUSTER_LIST',blockObj.ClusterList);
+if isempty(blockObj.QueuePars.Cluster)
+   useCluster = orgExp.libs.findGoodCluster('CLUSTER_LIST',...
+      blockObj.QueuePars.ClusterList);
 else
-   useCluster = blockObj.Cluster;
+   useCluster = blockObj.QueuePars.Cluster;
 end
 myCluster = parcluster(useCluster);
 myJob     = createCommunicatingJob(myCluster, ...

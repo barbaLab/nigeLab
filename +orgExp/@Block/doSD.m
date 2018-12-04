@@ -12,11 +12,11 @@ function flag = doSD(blockObj)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
-blockObj.SDpars = orgExp.defaults.SD;
+blockObj.SDPars = orgExp.defaults.SD;
 pars = blockObj.SDPars;
 
 %% GO THROUGH EACH CHANNEL AND PARSE NAME INFORMATION
-nCh = blockObj.numChannels;
+nCh = blockObj.NumChannels;
 
 for iCh = 1:nCh
    pNum  = num2str(blockObj.Channels(iCh).port_number);
@@ -49,10 +49,11 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spikedata] = PerChannelDetection(blockObj,ch,pars)
+   function [spikedata,pars] = PerChannelDetection(blockObj,ch,pars)
    %% PERCHANNELDETECTION  Perform spike detection for each channel individually.
    %
    %   spikedata = PERCHANNELDETECTION(p,ch,pars,paths)
+   %   [spikedata,pars] = PERCHANNELDETECTION(p,ch,pars,paths)
    %
    %   --------
    %    INPUTS
@@ -73,15 +74,15 @@ flag = true;
    %                           'peak_train' fields as described by
    %                           SPIKEDETECTIONARRAY.
    %
-   %     fs            :       Sampling frequency.
+   %    pars           :       Updated parameters struct.
    %
 
    %% LOAD FILTERED AND RE-REFERENCED MAT FILE
    data=blockObj.Channels(ch).CAR(:,:);
-   pars.FS = blockObj.Sample_rate;
+   pars.FS = blockObj.SampleRate;
 
    %% PERFORM SPIKE DETECTION
-   spikedata = SpikeDetectionArray(data,pars);
+   [spikedata,pars] = SpikeDetectionArray(data,pars);
 
    end
 

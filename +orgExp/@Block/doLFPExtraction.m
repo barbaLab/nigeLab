@@ -6,13 +6,12 @@ function doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 
-pars = orgExp.defaults.LFP;
+blockObj.LFPPars = orgExp.defaults.LFP;
 
-DownSampleFreq =   pars.DownSampleFreq;
-DecimateCascadeM = pars.DecimateCascadeM;
-DecimateCascadeN = pars.DecimateCascadeN;
-
-blockObj.LFPPars = pars;
+DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
+DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
+DecimationFactor =   blockObj.LFPPars.DecimationFactor;
+blockObj.LFPPars.DownSampledRate = blockObj.SampledRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
 for ii=1:blockObj.NumChannels
@@ -26,7 +25,7 @@ for ii=1:blockObj.NumChannels
    save(fullfile(fName),'lfp','-v7.3');
    blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fName)));
 end
-blockObj.DownsampledRate=DownSampleFreq;
+% blockObj.DownsampledRate=DownSampleFreq;
 blockObj.updateStatus('LFP',true);
 blockObj.save;
 end
