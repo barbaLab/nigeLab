@@ -385,7 +385,7 @@ if (data_present)
       elseif rem(pct+1,5)==0 && deBounce
          deBounce = false;
       end
-      blockObj.Channels(iCh).Raw = amplifier_dataFile{iCh};
+      blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
       
       as_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);

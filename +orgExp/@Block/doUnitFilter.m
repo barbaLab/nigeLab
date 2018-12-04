@@ -42,7 +42,8 @@ for iCh = 1:blockObj.NumChannels
       iPb = blockObj.Channels(iCh).port_number;
       %             data = single(filtfilt(b,a,double(data)));
       fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
-      blockObj.Channels(iCh).Filt = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
+      blockObj.Channels(iCh).Filt = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data,'access','w');
+	  blockObj.Channels(iCh).Filt = lockData(blockObj.Channels(iCh).Filt);
    end
    clear data
    fraction_done = 100 * (iCh / blockObj.NumChannels);

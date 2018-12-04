@@ -57,7 +57,8 @@ if ~doSuppression
         data = blockObj.Channels(iCh).Filt(:);
         data = data - refMean(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
-        blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
+        blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data,'access','w');
+		blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
         fraction_done = 100 * (iCh / blockObj.NumChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%
         fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))

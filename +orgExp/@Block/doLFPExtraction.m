@@ -23,7 +23,8 @@ for ii=1:blockObj.NumChannels
    chNum = blockObj.Channels(ii).custom_channel_name(regexp(blockObj.Channels(ii).custom_channel_name, '\d'));
    fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
    save(fullfile(fName),'lfp','-v7.3');
-   blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fName)));
+   blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fName)),'access','w');
+   blockObj.Channels(ii).LFP = lockData(blockObj.Channels(ii).LFP);
 end
 % blockObj.DownsampledRate=DownSampleFreq;
 blockObj.updateStatus('LFP',true);
