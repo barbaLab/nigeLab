@@ -13,30 +13,43 @@ function flag = doSD(blockObj)
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
 blockObj.SDPars = orgExp.defaults.SD;
-pars = blockObj.SDPars;
 
-%% GO THROUGH EACH CHANNEL AND PARSE NAME INFORMATION
+pars = blockObj.SDPars;
+pars.FS = blockObj.SampleRate;
+
+%% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
 nCh = blockObj.NumChannels;
 
+disp('000%');
 for iCh = 1:nCh
+   % Parse file-name information
    pNum  = num2str(blockObj.Channels(iCh).port_number);
    chIdx = regexp(blockObj.Channels(iCh).custom_channel_name, '\d');
    chNum = blockObj.Channels(iCh).custom_channel_name(chIdx);
    fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
-%    blockObj.Channels(iCh).Spikes = orgExp.libs.DiskData('MatFile',fullfile(fName));
-end
 
-%% DO SPIKE DETECTION FOR EACH CHANNEL
-disp('000%');
-for iCh = 1:nCh % For each "channel index"...
-   % Do detection:
-   if (iCh == 1)
-      [spk,blockObj.SDPars] = PerChannelDetection(blockObj,iCh,pars);
+   % Get pointer to the correct data:
+   if (blockObj.Status(find(ismember(blockObj.Fields,'CAR'),1,'first')))
+      data=blockObj.Channels(iCh).CAR(:);  % Load CAR-filtered data
+   elseif (blockObj.Status(find(ismember(blockObj.Fields,'Filt'),1,'first')))
+      data=blockObj.Channels(iCh).Filt(:); % Load filtered data
    else
-      spk = PerChannelDetection(blockObj,iCh,pars);
+      warning('Must first perform unit filtering and re-referencing.');
+      disp('Doing those now...');
+      doUnitFilter(blockObj);
+      doReReference(blockObj);
+      doSD(blockObj);
+      return;
    end
    
-   % Create the DiskData pointer to the file:
+   % Do the detection:
+   if (iCh == 1)
+      [spk,blockObj.SDPars] = PerChannelDetection(data,pars);
+   else
+      spk = PerChannelDetection(data,pars);
+   end
+   
+   % Save using DiskData pointer to the file:
    blockObj.Channels(iCh).Spikes = ...
       orgExp.libs.DiskData('MatFile',fullfile(fName),spk,'access','w');
    blockObj.Channels(iCh).Spikes = lockData(...
@@ -44,9 +57,7 @@ for iCh = 1:nCh % For each "channel index"...
    
    % And update the status indicator in Command Window:
    fraction_done = 100 * (iCh / nCh);
-   if ~floor(mod(fraction_done,5)) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
-   end
+   fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
    
 end
 
@@ -55,48 +66,11 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spk,pars] = PerChannelDetection(blockObj,ch,pars)
-   %% PERCHANNELDETECTION  Perform spike detection for each channel individually.
+   function [spk,pars] = PerChannelDetection(data, pars)
+   %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
    %
-   %   spk = PERCHANNELDETECTION(p,ch,pars,paths)
-   %   [spk,pars] = PERCHANNELDETECTION(p,ch,pars,paths)
-   %
-   %   --------
-   %    INPUTS
-   %   --------
-   %       p           :       Number of probe.
-   %
-   %      ch           :       Number of filtered and re-referenced
-   %                           single-channel stream to load.
-   %
-   %     pars          :       Parameters structure.
-   %
-   %    paths          :       Structure containing file path name info.
-   %
-   %   --------
-   %    OUTPUT
-   %   --------
-   %     spk           :       Struct containing 'spikes,' 'artifact,' and
-   %                           'peak_train' fields as described by
-   %                           SPIKEDETECTIONARRAY.
-   %
-   %     pars          :       Updated parameters struct.
-   %
-
-   %% LOAD FILTERED AND RE-REFERENCED MAT FILE
-   data=blockObj.Channels(ch).CAR(:,:);
-   pars.FS = blockObj.SampleRate;
-
-   %% PERFORM SPIKE DETECTION
-   [spk,pars] = SpikeDetectionArray(data,pars);
-
-   end
-
-
-   function [spikedata,pars] = SpikeDetectionArray(data, pars)
-   %% SPIKEDETECTIONARRAY  Main sub-function for thresholding and detection
-   %
-   %   spikedata = SPIKEDETECTIONARRAY(data,pars)
+   %   spk = PERCHANNELDETECTION(data,pars);
+   %   [spk,pars] = PERCHANNELDETECTION(data,pars);
    %
    %   --------
    %    INPUTS
@@ -111,7 +85,7 @@ flag = true;
    %   --------
    %    OUTPUT
    %   --------
-   %   spikedata   :       Structure containing detected spikes as a sparse
+   %     spk       :       Structure containing detected spikes as a sparse
    %                       array (peak_train); artifact occurrences as a
    %                       sparse array (artifact); and spike waveforms
    %                       corresponding to each positive entry of peak_train
@@ -120,7 +94,7 @@ flag = true;
    %     pars      :       Updated parameters with new spike-related
    %                       variables.
    %
-   % See also: PERCHANNELDETECTION
+   % Adapted by: MAECI 2018 Collaboration (Federico Barban & Max Murphy)
 
    %% CONVERT PARAMETERS
    pars.w_pre       =   double(round(pars.W_PRE / 1000 * pars.FS));        % Samples before spike
@@ -264,12 +238,12 @@ flag = true;
    end
 
    %% ASSIGN OUTPUT
-   spikedata.peak_train = peak_train;      % Spike (neg.) peak times
-   spikedata.artifact = artifact;          % Artifact times
-   spikedata.spikes = spikes;              % Spike snippets
-   spikedata.features = features;          % Wavelet features
-   spikedata.pp = pp;                      % Prominence (peak min. for 'adapt')
-   spikedata.pw = pw;                      % Width (peak max. for 'adapt')
+   spk.peak_train = peak_train;      % Spike (neg.) peak times
+   spk.artifact = artifact;          % Artifact times
+   spk.spikes = spikes;              % Spike snippets
+   spk.features = features;          % Wavelet features
+   spk.pp = pp;                      % Prominence (peak min. for 'adapt')
+   spk.pw = pw;                      % Width (peak max. for 'adapt')
 
    end
 
