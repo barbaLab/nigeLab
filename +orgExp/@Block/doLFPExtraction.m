@@ -12,10 +12,10 @@ DownSampleFreq =   pars.DownSampleFreq;
 DecimateCascadeM = pars.DecimateCascadeM;
 DecimateCascadeN = pars.DecimateCascadeN;
 
-blockObj.LFP_pars = pars;
+blockObj.LFPPars = pars;
 
 %% DECIMATE DATA AND SAVE IT
-for ii=1:blockObj.numChannels
+for ii=1:blockObj.NumChannels
    lfp=double(blockObj.Channels(ii).rawData);
    for jj=1:numel(DecimateCascadeM)
       lfp=decimate(lfp,DecimateCascadeM(jj),DecimateCascadeN(jj));
@@ -26,7 +26,7 @@ for ii=1:blockObj.numChannels
    save(fullfile(fName),'lfp','-v7.3');
    blockObj.Channels(ii).LFP=orgExp.libs.DiskData(matfile(fullfile(fName)));
 end
-blockObj.Downsampled_rate=DownSampleFreq;
+blockObj.DownsampledRate=DownSampleFreq;
 blockObj.updateStatus('LFP',true);
 blockObj.save;
 end

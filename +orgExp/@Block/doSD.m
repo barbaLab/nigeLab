@@ -13,7 +13,7 @@ function flag = doSD(blockObj)
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
 blockObj.SDpars = orgExp.defaults.SD;
-pars = blockObj.SDpars;
+pars = blockObj.SDPars;
 
 %% GO THROUGH EACH CHANNEL AND PARSE NAME INFORMATION
 nCh = blockObj.numChannels;

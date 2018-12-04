@@ -28,7 +28,7 @@ if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
    doSuppression = true;
 end
 
-fprintf(1,'Applying CAR rereferncing... %.3d%%',0);
+fprintf(1,'Computing common average... %.3d%%',0);
 for iCh = 1:length(blockObj.Channels)
     if ~doSuppression
         % Filter and and save amplifier_data by probe/channel
@@ -37,7 +37,7 @@ for iCh = 1:length(blockObj.Channels)
         data = blockObj.Channels(iCh).Filt(:);
         refMean(iPb,:)=refMean(iPb,:)+data./nChanPb;
     end
-    fraction_done = 100 * (iCh / blockObj.numChannels);
+    fraction_done = 100 * (iCh / blockObj.NumChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%
         fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
     end
@@ -50,7 +50,7 @@ fprintf(1,'\b\b\b\bDone.\n');
 fprintf(1,'Saving data... %.3d%%',0);
 if ~doSuppression
     car_infoname = fullfile(blockObj.paths.CARW,[blockObj.Name '_CAR_Ref.mat']);
-    save(fullfile(car_infoname),'probe_ref','-v7.3');
+    save(fullfile(car_infoname),'refMean','-v7.3');
     for iCh = 1:length(blockObj.Channels)
         pnum  = num2str(blockObj.Channels(iCh).port_number);
         chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -58,7 +58,7 @@ if ~doSuppression
         data = data - refMean(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
         blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data);
-        fraction_done = 100 * (iCh / blockObj.numChannels);
+        fraction_done = 100 * (iCh / blockObj.NumChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%
         fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
     end
