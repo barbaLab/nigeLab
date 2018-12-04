@@ -74,15 +74,21 @@ classdef Animal < handle
       updateContents(blockObj,fieldname)    % Update files for specific field
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
-      convert(animalObj)                % Convert raw data to Matlab BLOCK
-      filterData(animalObj)
-      CAR(animalObj)
-      linkToData(animalObj)
-      extractLFP(animalObj)
+                  % Convert raw data to Matlab BLOCK
+      
       mergeBlocks(animalObj,ind,varargin)
       removeBlocks(animalObj,ind)
-      spikeDetection(animalObj)
-      freeSpace(animalObj,ask)
+      
+      % Extraction methods
+      flag = doUnitFilter(animalObj)
+      flag = doReReference(animalObj)
+      flag = doRawExtraction(animalObj)    
+      flag = doLFPExtraction(animalObj)
+      flag = doSD(animalObj)
+      
+      % Utility
+      flag = clearSpace(animalObj,ask)
+      linkToData(animalObj)
    end
    
    methods (Access = public, Hidden = true)
