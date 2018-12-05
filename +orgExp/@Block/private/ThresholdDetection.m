@@ -1,7 +1,7 @@
-function [v,ts,w,p] = Threshold_Detection(data,pars,polarity)
-%% THRESHOLD_DETECTION  Use monopolar threshold-crossing to get spike times
+function [v,ts,w,p] = ThresholdDetection(data,pars,polarity)
+%% THRESHOLDDETECTION  Use monopolar threshold-crossing to get spike times
 %
-%   [v,ts,w,p] = THRESHOLD_DETECTION(data,thresh,PLP,RP,polarity)
+%   [v,ts,w,p] = THRESHOLDDETECTION(data,thresh,PLP,RP,polarity)
 %
 %   --------
 %    INPUTS

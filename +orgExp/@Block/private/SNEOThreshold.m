@@ -1,7 +1,7 @@
-function [p2pamp,ts,pmin,dt,E] = SNEO_Threshold(data,pars,art_idx)
-%% SNEO_THRESHOLD   Smoothed nonlinear energy operator thresholding detect
+function [p2pamp,ts,pmin,dt,E] = SNEOThreshold(data,pars,art_idx)
+%% SNEOTHRESHOLD   Smoothed nonlinear energy operator thresholding detect
 %
-%  [p2pamp,ts,pmin,dt,E] = SNEO_THRESHOLD(data,pars,art_idx)
+%  [p2pamp,ts,pmin,dt,E] = SNEOTHRESHOLD(data,pars,art_idx)
 %
 %   --------
 %    INPUTS

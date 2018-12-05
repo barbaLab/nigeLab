@@ -1,5 +1,5 @@
-function [data_ART,art_idx] = Hard_Artifact_Rejection(data,pars)
-%% HARD_ARTIFACT_REJECTION  Automatically changes data to zero on samples and samples within a pre-specified window around it upon crossing a pre-specified threshold.
+function [data_ART,art_idx] = HardArtifactRejection(data,pars)
+%% HARDARTIFACTREJECTION  Automatically changes data to zero on samples and samples within a pre-specified window around it upon crossing a pre-specified threshold.
 %
 %   --------
 %    INPUTS

@@ -1,7 +1,7 @@
-function [inspk,K] = wave_features(spikes,pars)
-%% WAVE_FEATURES Calculates the spike features
+function [inspk,K] = WaveFeatures(spikes,pars)
+%% WAVEFEATURES Calculates the spike features
 %
-%   [inspk,K] = WAVE_FEATURES(spikes,pars)
+%   [inspk,K] = WAVEFEATURES(spikes,pars)
 %
 %   --------
 %    INPUTS

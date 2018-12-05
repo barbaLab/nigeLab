@@ -117,17 +117,17 @@ flag = true;
 
    %% REMOVE ARTIFACT
    if ~isempty(pars.STIM_TS)
-      data_ART = orgExp.libs.Remove_Stim_Periods(data,pars);
+      data_ART = RemoveStimPeriods(data,pars);
    else
       data_ART = data;
    end
 
    if ~isempty(pars.ARTIFACT)
-      [data_ART,art_idx] = orgExp.libs.Remove_Artifact_Periods(data_ART,pars.ARTIFACT);
+      [data_ART,art_idx] = RemoveArtifactPeriods(data_ART,pars.ARTIFACT);
    else
       art_idx = [];
    end
-   [data_ART,artifact] = orgExp.libs.Hard_Artifact_Rejection(data_ART,pars);
+   [data_ART,artifact] = HardArtifactRejection(data_ART,pars);
 
    %% COMPUTE SPIKE THRESHOLD AND DO DETECTION
    % SpikeDetection_PTSD_core.cpp;
@@ -140,8 +140,8 @@ flag = true;
       case 'both' % (old, probably not using any more -MM 8/3/2017)
          tmpdata = data_ART;
          tmpdata(art_idx) = [];
-         pars.thresh = orgExp.libs.PreciseTiming_Threshold(tmpdata,pars);
-         [spkValues, spkTimeStamps] = orgExp.libs.SpikeDetection_PTSD_core(data_ART, ...
+         pars.thresh = PreciseTimingThreshold(tmpdata,pars);
+         [spkValues, spkTimeStamps] = SpikeDetection_PTSD_core(data_ART, ...
             pars.thresh, ...
             pars.PLP, ...
             pars.RP, ...
@@ -159,21 +159,21 @@ flag = true;
 
          pars.thresh = pars.FIXED_THRESH;
 
-         [p2pamp,ts,pw,pp] = orgExp.libs.Threshold_Detection(data_ART,pars,-1);
+         [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,-1);
 
       case 'pos'
 
          pars.thresh = pars.FIXED_THRESH;
 
-         [p2pamp,ts,pw,pp] = Threshold_Detection(data_ART,pars,1);
+         [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,1);
 
       case 'adapt' % Use findpeaks in conjunction w/ adaptive thresh -12/13/17
          pars.thresh = pars.MULTCOEFF;
-         [p2pamp,ts,pw,pp] = orgExp.libs.Adaptive_Threshold(data_ART,pars);
+         [p2pamp,ts,pw,pp] = AdaptiveThreshold(data_ART,pars);
 
       case 'sneo' % Use findpeaks in conjunction w/ SNEO - 1/4/17
          pars.thresh = pars.MULTCOEFF;
-         [p2pamp,ts,pw,pp,E] = orgExp.libs.SNEO_Threshold(data_ART,pars,art_idx);
+         [p2pamp,ts,pw,pp,E] = SNEOThreshold(data_ART,pars,art_idx);
       otherwise
          error('Invalid PKDETECT specification.');
    end
@@ -201,7 +201,7 @@ flag = true;
    %% BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
    if (any(ts)) % If there are spikes in the current signal
 
-      [peak_train,spikes] = orgExp.libs.Build_Spike_Array(data,ts,p2pamp,pars);
+      [peak_train,spikes] = BuildSpikeArray(data,ts,p2pamp,pars);
 
       %No interpolation in this case
       if length(spikes) > 1
@@ -212,7 +212,7 @@ flag = true;
 
       % Extract spike features
       if size(spikes,1) > pars.MIN_SPK % Need minimum number of spikes
-         features = orgExp.libs.wave_features(spikes,pars);
+         features = WaveFeatures(spikes,pars);
          features = features./std(features);
          if ~any(isnan(p2pamp))
             tmp = (reshape(p2pamp,size(features,1),1)./max(p2pamp)-0.5)*3.0;

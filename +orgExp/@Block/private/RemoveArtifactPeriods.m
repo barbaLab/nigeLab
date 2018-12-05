@@ -1,7 +1,7 @@
-function [data_ART,art_idx] = Remove_Artifact_Periods(data,t_art)
-%% REMOVE_ARTIFACT_PERIODS  Remove pre-defined artifact periods.
+function [data_ART,art_idx] = RemoveArtifactPeriods(data,t_art)
+%% REMOVEARTIFACTPERIODS  Remove pre-defined artifact periods.
 %
-%   data_ART = REMOVE_ARTIFACT_PERIODS(data,pars)
+%   data_ART = REMOVEARTIFACTPERIODS(data,pars)
 %
 %   --------
 %    INPUTS

@@ -1,7 +1,7 @@
-function data_ART = Remove_Stim_Periods(data,pars)
-%% REMOVE_STIM_PERIODS  Blanks data around stimulation time stamps
+function data_ART = RemoveStimPeriods(data,pars)
+%% REMOVESTIMPERIODS  Blanks data around stimulation time stamps
 %
-%   data_ART = REMOVE_STIM_PERIODS(data,pars)
+%   data_ART = REMOVESTIMPERIODS(data,pars)
 %
 % By: Max Murphy    v1.1    08/03/2017  Fixed bug due to single-precision
 %                                       in lb and ub where indexing was

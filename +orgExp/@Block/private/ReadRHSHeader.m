@@ -1,5 +1,5 @@
-function header=RHD_read_header(varargin)
-%% PARSE VARARGIN
+function [header,FID] = ReadRHSHeader(varargin)
+
 if nargin >0
    VERBOSE = false;
 else
@@ -28,11 +28,11 @@ else    % Must select a directory and a file
    
    
    [file, path] = ...
-      uigetfile('*.rhd', 'Select an RHD2000 Data File', ...
+      uigetfile('*.rhs', 'Select an RHS2000 Data File', ...
       'MultiSelect', 'off');
    
    if file == 0 % Must select a file
-      error('Must select a valid RHD2000 Data File.');
+      error('Must select a valid RHS2000 Data File.');
    end
    
    NAME = [path, file];
@@ -45,10 +45,17 @@ end
 s = dir(NAME);
 filesize = s.bytes;
 
-% Check 'magic number' at beginning of file to make sure this is an Intan
-% Technologies RHD2000 data file.
+
+amplifier_channels=channel_struct;
+spike_triggers=spike_trigger_struct;
+board_adc_channels=channel_struct;
+board_dac_channels=channel_struct;
+board_dig_in_channels=channel_struct;
+board_dig_out_channels=channel_struct;
+
+
 magic_number = fread(FID, 1, 'uint32');
-if magic_number ~= hex2dec('c6912702')
+if magic_number ~= hex2dec('d69127ac')
    error('Unrecognized file type.');
 end
 
@@ -58,26 +65,25 @@ data_file_secondary_version_number = fread(FID, 1, 'int16');
 
 if VERBOSE
    fprintf(1, '\n');
-   fprintf(1, 'Reading Intan Technologies RHD2000 Data File, Version %d.%d\n', ...
+   fprintf(1, 'Reading Intan Technologies RHS2000 Data File, Version %d.%d\n', ...
       data_file_main_version_number, data_file_secondary_version_number);
    fprintf(1, '\n');
 end
 
-if (data_file_main_version_number == 1)
-   num_samples_per_data_block = 60;
-else
-   num_samples_per_data_block = 128;
-end
+
+num_samples_per_data_block = 128;
 
 % Read information of sampling rate and amplifier frequency settings.
 sample_rate = fread(FID, 1, 'single');
 dsp_enabled = fread(FID, 1, 'int16');
 actual_dsp_cutoff_frequency = fread(FID, 1, 'single');
 actual_lower_bandwidth = fread(FID, 1, 'single');
+actual_lower_settle_bandwidth = fread(FID, 1, 'single');
 actual_upper_bandwidth = fread(FID, 1, 'single');
 
 desired_dsp_cutoff_frequency = fread(FID, 1, 'single');
 desired_lower_bandwidth = fread(FID, 1, 'single');
+desired_lower_settle_bandwidth = fread(FID, 1, 'single');
 desired_upper_bandwidth = fread(FID, 1, 'single');
 
 % This tells us if a software 50/60 Hz notch filter was enabled during
@@ -93,38 +99,29 @@ end
 desired_impedance_test_frequency = fread(FID, 1, 'single');
 actual_impedance_test_frequency = fread(FID, 1, 'single');
 
+amp_settle_mode = fread(FID, 1, 'int16');
+charge_recovery_mode = fread(FID, 1, 'int16');
+
+stim_step_size = fread(FID, 1, 'single');
+charge_recovery_current_limit = fread(FID, 1, 'single');
+charge_recovery_target_voltage = fread(FID, 1, 'single');
+
 % Place notes in data strucure
 notes = struct( ...
    'note1', fread_QString(FID), ...
    'note2', fread_QString(FID), ...
    'note3', fread_QString(FID) );
 
-% If data file is from GUI v1.1 or later, see if temperature sensor data
-% was saved.
-num_temp_sensor_channels = 0;
-if ((data_file_main_version_number == 1 && data_file_secondary_version_number >= 1) ...
-      || (data_file_main_version_number > 1))
-   num_temp_sensor_channels = fread(FID, 1, 'int16');
-end
+% See if dc amplifier data was saved
+dc_amp_data_saved = fread(FID, 1, 'int16');
 
-% If data file is from GUI v1.3 or later, load eval board mode.
-eval_board_mode = 0;
-if ((data_file_main_version_number == 1 && data_file_secondary_version_number >= 3) ...
-      || (data_file_main_version_number > 1))
-   eval_board_mode = fread(FID, 1, 'int16');
-end
+% Load eval board mode.
+eval_board_mode = fread(FID, 1, 'int16');
 
-% If data file is from v2.0 or later (Intan Recording Controller),
-% load name of digital reference channel.
-if (data_file_main_version_number > 1)
-   reference_channel = fread_QString(fid);
-end
-
-% Place frequency-related information in data structure.
 frequency_parameters = struct( ...
    'amplifier_sample_rate', sample_rate, ...
    'aux_input_sample_rate', sample_rate / 4, ...
-   'supply_voltage_sample_rate', sample_rate / num_samples_per_data_block, ...
+   'supply_voltage_sample_rate', sample_rate / 60, ...
    'board_adc_sample_rate', sample_rate, ...
    'board_dig_in_sample_rate', sample_rate, ...
    'desired_dsp_cutoff_frequency', desired_dsp_cutoff_frequency, ...
@@ -138,25 +135,19 @@ frequency_parameters = struct( ...
    'desired_impedance_test_frequency', desired_impedance_test_frequency, ...
    'actual_impedance_test_frequency', actual_impedance_test_frequency );
 
-% spike_trigger_struct is defined below in its function
-new_trigger_channel = spike_trigger_struct;
-spike_triggers = spike_trigger_struct;
+stim_parameters = struct( ...
+   'stim_step_size', stim_step_size, ...
+   'charge_recovery_current_limit', charge_recovery_current_limit, ...
+   'charge_recovery_target_voltage', charge_recovery_target_voltage, ...
+   'amp_settle_mode', amp_settle_mode, ...
+   'charge_recovery_mode', charge_recovery_mode );
 
-% channel_structt is defined below in its function
-new_channel = channel_struct;
 
-% Create structure arrays for each type of data channel.
-amplifier_channels = channel_struct;
-aux_input_channels = channel_struct;
-supply_voltage_channels = channel_struct;
-board_adc_channels = channel_struct;
-board_dig_in_channels = channel_struct;
-board_dig_out_channels = channel_struct;
+reference_channel = fread_QString(FID);
 
 amplifier_index = 1;
-aux_input_index = 1;
-supply_voltage_index = 1;
 board_adc_index = 1;
+board_dac_index = 1;
 board_dig_in_index = 1;
 board_dig_out_index = 1;
 
@@ -183,6 +174,7 @@ for signal_group = 1:number_of_signal_groups
          signal_type = fread(FID, 1, 'int16');
          channel_enabled = fread(FID, 1, 'int16');
          new_channel(1).chip_channel = fread(FID, 1, 'int16');
+         fread(FID, 1, 'int16');  % ignore command_stream
          new_channel(1).board_stream = fread(FID, 1, 'int16');
          new_trigger_channel(1).voltage_trigger_mode = fread(FID, 1, 'int16');
          new_trigger_channel(1).voltage_threshold = fread(FID, 1, 'int16');
@@ -190,8 +182,6 @@ for signal_group = 1:number_of_signal_groups
          new_trigger_channel(1).digital_edge_polarity = fread(FID, 1, 'int16');
          new_channel(1).electrode_impedance_magnitude = fread(FID, 1, 'single');
          new_channel(1).electrode_impedance_phase = fread(FID, 1, 'single');
-         new_channel(1).custom_channel_name = strrep(new_channel(1).custom_channel_name,' ','');
-         new_channel(1).custom_channel_name = strrep(new_channel(1).custom_channel_name,'-','');
          
          if (channel_enabled)
             switch (signal_type)
@@ -200,18 +190,19 @@ for signal_group = 1:number_of_signal_groups
                   spike_triggers(amplifier_index) = new_trigger_channel;
                   amplifier_index = amplifier_index + 1;
                case 1
-                  aux_input_channels(aux_input_index) = new_channel;
-                  aux_input_index = aux_input_index + 1;
+                  % aux inputs; not used in RHS2000 system
                case 2
-                  supply_voltage_channels(supply_voltage_index) = new_channel;
-                  supply_voltage_index = supply_voltage_index + 1;
+                  % supply voltage; not used in RHS2000 system
                case 3
                   board_adc_channels(board_adc_index) = new_channel;
                   board_adc_index = board_adc_index + 1;
                case 4
+                  board_dac_channels(board_dac_index) = new_channel;
+                  board_dac_index = board_dac_index + 1;
+               case 5
                   board_dig_in_channels(board_dig_in_index) = new_channel;
                   board_dig_in_index = board_dig_in_index + 1;
-               case 5
+               case 6
                   board_dig_out_channels(board_dig_out_index) = new_channel;
                   board_dig_out_index = board_dig_out_index + 1;
                otherwise
@@ -225,40 +216,41 @@ end
 
 % Summarize contents of data file.
 num_amplifier_channels = amplifier_index - 1;
-num_aux_input_channels = aux_input_index - 1;
-num_supply_voltage_channels = supply_voltage_index - 1;
 num_board_adc_channels = board_adc_index - 1;
+num_board_dac_channels = board_dac_index - 1;
 num_board_dig_in_channels = board_dig_in_index - 1;
 num_board_dig_out_channels = board_dig_out_index - 1;
 
-fprintf(1, 'Found %d amplifier channel%s.\n', ...
-   num_amplifier_channels, plural(num_amplifier_channels));
-fprintf(1, 'Found %d auxiliary input channel%s.\n', ...
-   num_aux_input_channels, plural(num_aux_input_channels));
-fprintf(1, 'Found %d supply voltage channel%s.\n', ...
-   num_supply_voltage_channels, plural(num_supply_voltage_channels));
-fprintf(1, 'Found %d board ADC channel%s.\n', ...
-   num_board_adc_channels, plural(num_board_adc_channels));
-fprintf(1, 'Found %d board digital input channel%s.\n', ...
-   num_board_dig_in_channels, plural(num_board_dig_in_channels));
-fprintf(1, 'Found %d board digital output channel%s.\n', ...
-   num_board_dig_out_channels, plural(num_board_dig_out_channels));
-fprintf(1, 'Found %d temperature sensors channel%s.\n', ...
-   num_temp_sensor_channels, plural(num_temp_sensor_channels));
-fprintf(1, '\n');
-
-
+if VERBOSE
+   fprintf(1, 'Found %d amplifier channel%s.\n', ...
+      num_amplifier_channels, num_amplifier_channels);
+   if (dc_amp_data_saved ~= 0)
+      fprintf(1, 'Found %d DC amplifier channel%s.\n', ...
+         num_amplifier_channels, (num_amplifier_channels));
+   end
+   fprintf(1, 'Found %d board ADC channel%s.\n', ...
+      num_board_adc_channels, (num_board_adc_channels));
+   fprintf(1, 'Found %d board DAC channel%s.\n', ...
+      num_board_dac_channels, (num_board_dac_channels));
+   fprintf(1, 'Found %d board digital input channel%s.\n', ...
+      num_board_dig_in_channels, (num_board_dig_in_channels));
+   fprintf(1, 'Found %d board digital output channel%s.\n', ...
+      num_board_dig_out_channels, (num_board_dig_out_channels));
+   fprintf(1, '\n');
+end
 % Determine how many samples the data file contains.
 
 % Each data block contains num_samples_per_data_block amplifier samples.
 bytes_per_block = num_samples_per_data_block * 4;  % timestamp data
-bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_amplifier_channels;
-% Auxiliary inputs are sampled 4x slower than amplifiers
-bytes_per_block = bytes_per_block + (num_samples_per_data_block / 4) * 2 * num_aux_input_channels;
-% Supply voltage is sampled once per data block
-bytes_per_block = bytes_per_block + 1 * 2 * num_supply_voltage_channels;
+if (dc_amp_data_saved ~= 0)
+   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2 + 2) * num_amplifier_channels;
+else
+   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2) * num_amplifier_channels;
+end
 % Board analog inputs are sampled at same rate as amplifiers
 bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_board_adc_channels;
+% Board analog outputs are sampled at same rate as amplifiers
+bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_board_dac_channels;
 % Board digital inputs are sampled at same rate as amplifiers
 if (num_board_dig_in_channels > 0)
    bytes_per_block = bytes_per_block + num_samples_per_data_block * 2;
@@ -266,10 +258,6 @@ end
 % Board digital outputs are sampled at same rate as amplifiers
 if (num_board_dig_out_channels > 0)
    bytes_per_block = bytes_per_block + num_samples_per_data_block * 2;
-end
-% Temp sensor is sampled once per data block
-if (num_temp_sensor_channels > 0)
-   bytes_per_block = bytes_per_block + 1 * 2 * num_temp_sensor_channels;
 end
 
 % How many data blocks remain in this file?
@@ -279,30 +267,19 @@ if (bytes_remaining > 0)
    data_present = 1;
 end
 
-num_data_blocks = bytes_remaining / bytes_per_block;
+num_data_blocks = floor(bytes_remaining / bytes_per_block);
 
 num_amplifier_samples = num_samples_per_data_block * num_data_blocks;
-num_aux_input_samples = (num_samples_per_data_block / 4) * num_data_blocks;
-num_supply_voltage_samples = 1 * num_data_blocks;
-num_temp_sensor_samples = 1 * num_data_blocks;
 num_board_adc_samples = num_samples_per_data_block * num_data_blocks;
+num_board_dac_samples = num_samples_per_data_block * num_data_blocks;
 num_board_dig_in_samples = num_samples_per_data_block * num_data_blocks;
 num_board_dig_out_samples = num_samples_per_data_block * num_data_blocks;
 
 record_time = num_amplifier_samples / sample_rate;
 
-
-% if num_amplifier_samples < 60
-%     fprintf(1, 'No stream data: %s\n', [Animal '_' Rec]);
-%     fprintf(1, 'File not extracted.\n');
-%     fprintf(1, '\n');
-%     return;
-% end
-
-
 if VERBOSE
    if (data_present)
-      fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n',...
+      fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n', ...
          record_time, sample_rate / 1000, num_amplifier_samples);
       fprintf(1, '\n');
    else
@@ -311,33 +288,27 @@ if VERBOSE
       fprintf(1, '\n');
    end
 end
+
 header_size=ftell(FID);
-% Determine how many probes and channels per probe
+probes = unique([amplifier_channels.port_number]);
+num_probes = numel(probes);
 
-nPort   = [amplifier_channels(:).port_number];
-probes = unique(nPort);
-num_probes = numel(unique(nPort));
-
-for iN = 1:num_probes
-   eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
-end
 for ii=DesiredOutputs' %  DesiredOutputs defined below
    header.(ii{:})=eval(ii{:});
 end
 
-return
 end
 
-function a = fread_QString(FID)
+function a = fread_QString(fid)
 
-% a = read_QString(FID)
+% a = read_QString(fid)
 %
 % Read Qt style QString.  The first 32-bit unsigned number indicates
 % the length of the string (in bytes).  If this number equals 0xFFFFFFFF,
 % the string is null.
 
 a = '';
-length = fread(FID, 1, 'uint32');
+length = fread(fid, 1, 'uint32');
 if length == hex2num('ffffffff')
    return;
 end
@@ -345,64 +316,45 @@ end
 length = length / 2;
 
 for i=1:length
-   a(i) = fread(FID, 1, 'uint16');
+   a(i) = fread(fid, 1, 'uint16');
 end
 
-return
-end
-
-function s = plural(n)
-
-% s = plural(n)
-%
-% Utility function to optionally plurailze words based on the value
-% of n.
-
-if (n == 1)
-   s = '';
-else
-   s = 's';
-end
-
-return
 end
 
 function DesiredOutputs=DesiredOutputs()
 DesiredOutputs = {
-   'data_present';
-   'eval_board_mode';
-   'sample_rate';
-   'frequency_parameters';
-   'amplifier_channels';
-   'aux_input_channels';
-   'supply_voltage_channels';
-   'board_adc_channels';
-   'board_dig_in_channels';
-   'board_dig_out_channels';
-   'spike_triggers';
-   'num_amplifier_channels';
-   'num_aux_input_channels';
-   'num_supply_voltage_channels'
-   'num_board_adc_channels';
-   'num_temp_sensor_channels';
-   'num_board_dig_in_channels';
-   'num_board_dig_out_channels';
-   'probes';
-   'num_probes';
-   'num_data_blocks';
-   'num_samples_per_data_block';
-   'num_amplifier_samples';
-   'num_aux_input_samples';
-   'num_supply_voltage_samples';
-   'num_temp_sensor_samples';
-   'num_board_adc_samples';
-   'num_board_dig_in_samples';
-   'num_board_dig_out_samples';
-   'header_size';
-   'filesize';
-   'bytes_per_block';
-   'data_file_main_version_number';
-   };
+   
+'data_present';
+'dc_amp_data_saved';
+'sample_rate';
+'frequency_parameters';
+'stim_parameters'
+'amplifier_channels';
+'board_adc_channels';
+'board_dac_channels';
+'board_dig_in_channels';
+'board_dig_out_channels';
+'spike_triggers';
+'stim_step_size';
+'num_amplifier_channels';
+'num_board_adc_channels';
+'num_board_dac_channels';
+'num_board_dig_in_channels';
+'num_board_dig_out_channels';
+'probes';
+'num_probes';
+'num_data_blocks';
+'num_samples_per_data_block';
+'num_amplifier_samples';
+'num_board_adc_samples';
+'num_board_dac_samples';
+'num_board_dig_in_samples';
+'num_board_dig_out_samples';
+'header_size';
+'filesize';
+'bytes_per_block';
+
+};
 end
 
 function spike_trigger_struct_=spike_trigger_struct()

@@ -1,4 +1,4 @@
-function [peak_train,spikes] = Build_Spike_Array(data,ts,p2pamp,pars)
+function [peak_train,spikes] = BuildSpikeArray(data,ts,p2pamp,pars)
 %% BUILD_SPIKE_ARRAY    Creates array of spike snippet waveforms
 %
 %   peak_train = BUILD_SPIKE_ARRAY(data,ts,pars)
