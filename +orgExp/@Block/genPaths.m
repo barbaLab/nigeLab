@@ -1,53 +1,27 @@
-function flag = genPaths(blockObj)
-%% Set some useful path variables
-% Here are defined all the paths where data will be saved.
-% The folder tree is also created here(if not already exsting)
+function flag = genPaths(blockObj,tankPath)
+%% GENPATHS    Set some useful path variables to file locations
+%
+%  flag = GENPATHS(blockObj);
+%  flag = GENPATHS(blockObj,tankPath);
+%
+%     Here are defined all the paths where data will be saved.
+%     The folder tree is also created here(if not already exsting)
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+
+%%
 flag = false;
-
-[ID,~] = orgExp.defaults.Block;
-delim       = ID.Delimiter;
-RAW_ID      = [delim ID.Raw.Folder];                 % Raw stream ID
-FILT_ID     = [delim ID.Filt.Folder];                % Filtered stream ID
-CAR_ID      = [delim ID.CAR.Folder];                 % Spatial re-reference stream ID
-DIG_ID      = [delim ID.Dig.Folder];             % Digital stream ID
-LFP_ID      = [delim ID.LFP.Folder];                 % LFP stream ID
-SD_ID       = [delim ID.Spikes.Folder];              % Spike detection ID
-
 paths.TW    = fullfile(blockObj.SaveLoc);
-paths.RW    = fullfile(blockObj.SaveLoc,[blockObj.Name RAW_ID] );
-paths.FW    = fullfile(blockObj.SaveLoc,[blockObj.Name FILT_ID]);
-paths.CARW  = fullfile(blockObj.SaveLoc,[blockObj.Name CAR_ID] );
-paths.DW    = fullfile(blockObj.SaveLoc,[blockObj.Name DIG_ID] );
-paths.LW    = fullfile(blockObj.SaveLoc,[blockObj.Name LFP_ID] );
-paths.SDW   = fullfile(blockObj.SaveLoc,[blockObj.Name SD_ID]  );
 
-all_fields = fieldnames(paths);
-all_fields = reshape(all_fields,1,numel(all_fields));
-
-for paths_ = all_fields
-    % Checks if all the target paths exist, if not mkdir
-    if exist(paths.(paths_{:}),'dir')==0
-        mkdir(paths.(paths_{:}));
-    end
+if (nargin > 1) && (~isempty(blockObj.paths))
+   paths.TW_ext = [paths.TW_ext; {tankPath}];
+   paths.TW_idx = numel(paths.TW_ext);
+else
+   paths.TW_ext = {fullfile(blockObj.SaveLoc)};
+   paths.TW_idx = 1;
 end
 
-if exist(fullfile(paths.DW,'STIM_DATA'),'dir')==0
-    mkdir(fullfile(paths.DW,'STIM_DATA'));
-end
+blockObj.paths = paths;
+flag = findCorrectPath(blockObj);
 
-if exist(fullfile(paths.DW,'DC_AMP'),'dir')==0
-    mkdir(fullfile(paths.DW,'DC_AMP'));
-end
-
-% ProbeChannel    = ID.ProbeChannel;
-paths.TW_N       = fullfile(paths.TW,  [blockObj.Name ID.Time.File  '.mat']);
-paths.RW_N      = fullfile(paths.RW,  [blockObj.Name ID.Raw.File  '.mat']);
-paths.FW_N      = fullfile(paths.FW,  [blockObj.Name ID.Filt.File '.mat']);
-paths.CARW_N    = fullfile(paths.CARW,[blockObj.Name ID.Filt.File '.mat']);
-paths.DW_N      = fullfile(paths.DW,  [blockObj.Name '_DIG_%s.mat']);
-paths.LW_N      = fullfile(paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
-paths.SDW_N     = fullfile(paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);
-blockObj.paths  = paths;
-
-flag = true;
 end

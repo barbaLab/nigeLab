@@ -321,8 +321,9 @@ classdef Block < handle
       out = loadSorted(blockObj,ch)       % Load sorting file for a given channel
       L = list(blockObj) % List of current associated files for field or fields
       
-      
-      
+      % Utility methods for path stuff
+      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
+      flag = updatePaths(blockObj,tankPath) % Update associated paths
       
    end
    methods (Access = public, Hidden = true)
@@ -331,13 +332,15 @@ classdef Block < handle
       flag = RHD2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
       flag = RHS2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
       
-      flag = genPaths(blockObj)
+      flag = genPaths(blockObj,tankPath)
+      flag = findCorrectPath(blockObj)
+      
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
       
       flag = clearSpace(blockObj,ask)  % Clear space on disk
       
-      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
+      
       updateID(blockObj,name,type,value)  % Update the file or folder identifier
       updateContents(blockObj,fieldname)  % Update files for specific field
       
