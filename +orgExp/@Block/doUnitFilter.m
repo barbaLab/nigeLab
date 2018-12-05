@@ -1,4 +1,4 @@
-function doUnitFilter(blockObj,varargin)
+function flag = doUnitFilter(blockObj,varargin)
 %% DOUNITFILTER   Filter raw data using spike bandpass filter
 %
 %  blockObj = orgExp.Block;
@@ -11,6 +11,7 @@ function doUnitFilter(blockObj,varargin)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% GET DEFAULT PARAMETERS
+flag = false;
 pars = orgExp.defaults.Filt(varargin);
 
 %%
@@ -53,6 +54,7 @@ for iCh = 1:blockObj.NumChannels
 end
 fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('Filt',true);
+flag = true;
 blockObj.save;
 end
 

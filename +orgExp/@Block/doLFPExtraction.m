@@ -1,4 +1,4 @@
-function doLFPExtraction(blockObj)
+function flag = doLFPExtraction(blockObj)
 %% DOLFPEXTRACTION   Decimates files to retrieve LFPs.
 %
 % Sampling frequency chosen for the downsampled files is 1000Hz
@@ -8,7 +8,7 @@ function doLFPExtraction(blockObj)
 
 
 %% INITIALIZE PARAMETERS
-
+flag = false; 
 blockObj.LFPPars = orgExp.defaults.LFP;
 
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
@@ -39,13 +39,15 @@ for iCh=1:blockObj.NumChannels
 end
 blockObj.updateStatus('LFP',true);
 blockObj.save;
-
-   function fName = parseFileName(blockObj,channel)
-      pNum  = num2str(blockObj.Channels(channel).port_number);
-      chIdx = regexp(blockObj.Channels(channel).custom_channel_name, '\d');
-      chNum = blockObj.Channels(channel).custom_channel_name(chIdx);
-      fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
-   end
-
+flag = true; 
 end
+
+function fName = parseFileName(blockObj,channel)
+pNum  = num2str(blockObj.Channels(channel).port_number);
+chIdx = regexp(blockObj.Channels(channel).custom_channel_name, '\d');
+chNum = blockObj.Channels(channel).custom_channel_name(chIdx);
+fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
+end
+
+
 
