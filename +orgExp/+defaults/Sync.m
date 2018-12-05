@@ -8,7 +8,7 @@ function pars = Sync()
 %%
 pars = struct;
 pars.DeBounce = 250;    % de-bounce time (milliseconds)
-pars.ID = '_sync.mat';  % file identifier
+pars.ID = 'sync';       % file identifier (for digital input file)
 
 end
 

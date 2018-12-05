@@ -138,6 +138,8 @@ classdef Block < handle
       SDPars
       FiltPars
       LFPPars
+      SyncPars
+      VidPars
       QueuePars
       
       RecFile       % Raw binary recording file
@@ -306,6 +308,10 @@ classdef Block < handle
       flag = qSD(blockObj)              % Queue SD to Isilon
       flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
       flag = qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
+      flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
+      flag = doBehaviorSync(blockObj)   % Get sync from neural data for external triggers
+      flag = doVidSyncExtraction(blockObj) % Get sync info from video
+      
       
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
@@ -324,6 +330,7 @@ classdef Block < handle
       % Utility methods for path stuff
       flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = updatePaths(blockObj,tankPath) % Update associated paths
+      flag = updateVidInfo(blockObj) % Update video info
       
    end
    methods (Access = public, Hidden = true)

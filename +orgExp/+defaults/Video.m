@@ -9,12 +9,17 @@ function pars = Video()
 pars = struct;
 
 % Paths information
-pars.paths = struct;
-pars.paths.Root    = 'C:\RC_Video_Scoring'; % MUST point to where the videos are
-pars.paths.AltRoot = 'K:\Rat\Video\BilateralReach\RC';
-pars.paths.FileExt = '.avi';
-pars.paths.FileFolder = nan;
-pars.paths.FileName = nan;
+pars.Root    = 'K:\Rat\Video\BilateralReach\Murphy'; % MUST point to where the videos are
+pars.AltRoot = 'K:\Rat\Video\BilateralReach\RC';
+pars.FileExt = '.avi';
+pars.File = [];
+
+% Metadata parsing
+pars.Delimiter = '_';
+pars.DynamicVars = {'$Animal_ID','$Year','$Month','$Day','$Rec_ID','&Door','&View','&Movie_ID'};
+pars.IncludeChar = '$';
+pars.ExcludeChar = '&';
+pars.Meta = [];
 
 % Information about video scoring
 pars.user = 'MM'; % Who did the scoring?
