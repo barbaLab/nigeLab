@@ -14,8 +14,8 @@ flag = false;
 paths.TW    = fullfile(blockObj.SaveLoc);
 
 if (nargin > 1) && (~isempty(blockObj.paths))
-   paths.TW_ext = [paths.TW_ext; {tankPath}];
-   paths.TW_idx = numel(paths.TW_ext);
+   paths.TW_ext = [blockObj.paths.TW_ext; {tankPath}];
+   paths.TW_idx = numel(blockObj.paths.TW_ext);
 else
    paths.TW_ext = {fullfile(blockObj.SaveLoc)};
    paths.TW_idx = 1;

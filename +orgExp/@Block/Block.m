@@ -241,7 +241,7 @@ classdef Block < handle
       end
       
       function save(blockObj)
-         save(blockObj.SaveLoc,'blockObj');
+         save(blockObj.paths.TW,'blockObj');
       end
       
       function disp(blockObj)
