@@ -1,7 +1,7 @@
-function parsavedata(fname,varargin) 
+function ParSaveData(fname,varargin) 
 %% PARSAVEDATA  Parses variables to be saved
 %
-%   parsavedata(fname,'VARNAME1',var1,'VARNAME2',var2,...)
+%   PARSAVEDATA(fname,'VARNAME1',var1,'VARNAME2',var2,...)
 %
 %   --------
 %    INPUTS

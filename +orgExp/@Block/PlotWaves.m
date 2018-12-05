@@ -1,17 +1,12 @@
-function flag = plotWaves(blockObj,WAV,SPK)
+function flag = plotWaves(blockObj)
 %% PLOTWAVES  Uses PLOTCHANNELS for this recording BLOCK
 %
-%  flag = blockObj.PLOTWAVES
-%  flag = blockObj.PLOTWAVES(WAV)
-%  flag = blockObj.PLOTWAVES(WAV,SPK)
+%  flag = PLOTWAVES(blockObj);
 %
 %  --------
 %   INPUTS
 %  --------
-%     WAV   :     Folder containing either FILT or CARFILT waves.
-%
-%     SPK   :     Folder containing either SORTED, CLUSTERS, or
-%                 SPIKES.
+%  blockObj :     BLOCK class object from orgExp package.
 %
 %  --------
 %   OUTPUT
@@ -22,71 +17,94 @@ function flag = plotWaves(blockObj,WAV,SPK)
 %
 % By: Max Murphy  v1.1  06/14/2018  Added flag output.
 
-%% PARSE VARARGIN
-if nargin==1
-   if ~isempty(blockObj.CAR.dir)
-      WAV = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.CAR.Folder]);
-   elseif ~isempty(blockObj.Filt.dir)
-      WAV = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Filt.Folder]);
-   else
-      try
-         plotChannels;
-         flag = true;
-      catch
-         flag = false;
-      end
-      return;
+%% DEFAULTS
+flag = false;
+blockObj.PlotPars = orgExp.defaults.Plot();
+
+%% FIGURE OUT WHAT TO PLOT
+str_in = blockObj.Fields(blockObj.Status);
+[~,idx] = orgExp.utils.uidropdownbox('Choose Wave Type',...
+   'Select type of waveform to plot:',...
+   str_in);
+
+str = str_in{idx};
+if strcmp(str,'Spikes')
+   warning('Spikes overlay not yet supported.');
+   return;
+end
+
+%% GET INDEXING VECTOR
+if strcmp(str,'LFP')
+   fs = blockObj.LFPPars.DownSampledRate;
+else
+   fs = blockObj.SampleRate;
+end
+tStart = (blockObj.PlotPars.DefTime - blockObj.PlotPars.PreAlign)/1000;
+iStart = max(1,round(tStart * fs));
+
+tStop = (blockObj.PlotPars.DefTime + blockObj.PlotPars.PostAlign)/1000;
+iStop = min(blockObj.Samples,round(tStop * fs));
+
+vec = iStart:iStop;
+t = linspace(tStart,tStop,numel(vec));
+dt = mode(diff(t));
+
+%% ASSIGN CHANNEL COLORS BASED ON RMS
+load(blockObj.PlotPars.ColorMapFile,'cm');
+if isempty(blockObj.RMS)
+   if ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
+      analyzeRMS(blockObj);
    end
+end
+r = blockObj.RMS.(str);
+ic = assignColors(r); 
+
+%% MAKE FIGURE AND PLOT
+fig = figure('Name',sprintf('Multi-Channel %s Snippets',str), ...
+   'Units','Normalized', ...
+   'Position',[0.05*rand+0.1,0.05*rand+0.1,0.8,0.8],...
+   'Color','w');
+
+ax = axes(fig,'NextPlot','add');
+tickLabs = cell(blockObj.NumChannels,1);
+tickLocs = 0:blockObj.PlotPars.VertOffset:(blockObj.PlotPars.VertOffset*(...
+   blockObj.NumChannels-1));
+for iCh = 1:blockObj.NumChannels
+   tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
+   y = blockObj.Channels(iCh).(str)(vec)+tickLocs(iCh);
+   plot(t,y, ...
+      'Color',cm(ic(iCh),:), ...
+      'LineWidth',1.75); %#ok<NODEF>
    
-   if ~isempty(blockObj.Sorted.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Sorted.Folder]);
-   elseif ~isempty(blockObj.Clusters.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Clusters.Folder]);
-   elseif ~isempty(blockObj.Spikes.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Spikes.Folder]);
-   else
-      try
-         plotChannels('DIR',WAV);
-         flag = true;
-      catch
-         flag = false;
-      end
-      return;
+   text(max(t)+dt,tickLocs(iCh),...
+      sprintf('RMS: %.3g',r(iCh)),...
+      'FontName','Arial',...
+      'FontWeight','bold',...
+      'Color','k',...
+      'FontSize',14);
+   
+end
+ax.YTick = tickLocs;
+ax.YTickLabel = tickLabs;
+xlabel('Time (sec)','FontName','Arial','FontSize',14,'Color','k');
+ylabel('Channel','FontName','Arial','FontSize',14,'Color','k');
+title(sprintf('Multi-Channel %s Snippets',str),'FontName','Arial',...
+   'Color','k','FontSize',20);
+
+fname = fullfile(blockObj.paths.TW,...
+   [blockObj.Name sprintf(blockObj.PlotPars.SnippetString,str)]);
+
+savefig(fig,[fname '.fig']);
+saveas(fig,[fname '.png']);
+blockObj.Graphics.Waves.(str) = [fname '.fig']; 
+flag = true;
+
+
+   function ic = assignColors(r)
+      hvec = [-inf,linspace(0,14,3),linspace(15,19.99,40),linspace(20,35,20),inf];
+      [~,~,ic] = histcounts(r,hvec);
+      ic(isnan(ic)) = 64;
+      ic(ic < 1) = 64;
    end
-end
-
-if nargin==2
-   if ~isempty(blockObj.Sorted.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Sorted.Folder]);
-   elseif ~isempty(blockObj.Clusters.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Clusters.Folder]);
-   elseif ~isempty(blockObj.Spikes.dir)
-      SPK = fullfile(blockObj.DIR,[blockObj.Name blockObj.ID.Delimiter ...
-         blockObj.ID.Spikes.Folder]);
-   else
-      try
-         plotChannels('DIR',WAV);
-         flag = true;
-      catch
-         flag = false;
-      end
-      return;
-   end
-end
-
-try
-   blockObj.Graphics.Waves = plotChannels('DIR',WAV,'SPK',SPK);
-   flag = true;
-catch
-   flag = false;
-end
-
 
 end

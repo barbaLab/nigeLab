@@ -105,6 +105,8 @@ classdef Block < handle
       NumDACChannels    = 0
       NumDigInChannels  = 0
       NumDigOutChannels = 0
+      
+      RMS
    end
    
    properties (SetAccess = immutable,GetAccess = private)
@@ -138,6 +140,9 @@ classdef Block < handle
       SDPars
       FiltPars
       LFPPars
+      SyncPars
+      VidPars
+      PlotPars
       QueuePars
       
       RecFile       % Raw binary recording file
@@ -241,7 +246,7 @@ classdef Block < handle
       end
       
       function save(blockObj)
-         save(blockObj.SaveLoc,'blockObj');
+         save(blockObj.paths.TW,'blockObj');
       end
       
       function disp(blockObj)
@@ -306,10 +311,15 @@ classdef Block < handle
       flag = qSD(blockObj)              % Queue SD to Isilon
       flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
       flag = qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
+      flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
+      flag = doBehaviorSync(blockObj)   % Get sync from neural data for external triggers
+      flag = doVidSyncExtraction(blockObj) % Get sync info from video
+      
       
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+      analyzeRMS(blockObj,type)
       
       % Methods for data visualization:
       flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets
@@ -321,8 +331,10 @@ classdef Block < handle
       out = loadSorted(blockObj,ch)       % Load sorting file for a given channel
       L = list(blockObj) % List of current associated files for field or fields
       
-      
-      
+      % Utility methods for path stuff
+      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
+      flag = updatePaths(blockObj,tankPath) % Update associated paths
+      flag = updateVidInfo(blockObj) % Update video info
       
    end
    methods (Access = public, Hidden = true)
@@ -331,13 +343,15 @@ classdef Block < handle
       flag = RHD2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
       flag = RHS2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
       
-      flag = genPaths(blockObj)
+      flag = genPaths(blockObj,tankPath)
+      flag = findCorrectPath(blockObj)
+      
       operations = updateStatus(blockObj,operation,value)
       Status = getStatus(blockObj,stage)
       
       flag = clearSpace(blockObj,ask)  % Clear space on disk
       
-      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
+      
       updateID(blockObj,name,type,value)  % Update the file or folder identifier
       updateContents(blockObj,fieldname)  % Update files for specific field
       

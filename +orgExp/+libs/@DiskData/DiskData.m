@@ -511,7 +511,7 @@ classdef DiskData
          %% GETPATH  Overloaded function for getting path to file
          Out=obj.diskfile_.Properties.Source;
       end
-      
+
       function Out = append(obj,b)
          %% APPEND   Overloaded function for concatenating elements to DiskData array
          if ~obj.writable_

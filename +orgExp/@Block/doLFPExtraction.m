@@ -9,6 +9,10 @@ function flag = doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false; 
+if ~genPaths(blockObj)
+   warning('Something went wrong when generating paths for extraction.');
+   return;
+end
 blockObj.LFPPars = orgExp.defaults.LFP;
 
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;

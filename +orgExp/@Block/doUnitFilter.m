@@ -12,6 +12,10 @@ function flag = doUnitFilter(blockObj,varargin)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
+if ~genPaths(blockObj)
+   warning('Something went wrong when generating paths for extraction.');
+   return;
+end
 pars = orgExp.defaults.Filt(varargin);
 
 %%

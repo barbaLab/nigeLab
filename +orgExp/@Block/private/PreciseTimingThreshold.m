@@ -1,7 +1,7 @@
-function thresh = PreciseTiming_Threshold(data,pars)
-%% PRECISETIMING_THRESHOLD Automatically determine threshold for spike detection. For OFFLINE use.
+function thresh = PreciseTimingThreshold(data,pars)
+%% PRECISETIMINGTHRESHOLD Automatically determine threshold for spike detection. For OFFLINE use.
 %   
-%   thresh = PRECISETIMING_THRESHOLD(data,pars)
+%   thresh = PRECISETIMINGTHRESHOLD(data,pars)
 %   
 %   --------
 %    INPUTS
