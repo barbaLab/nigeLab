@@ -105,6 +105,8 @@ classdef Block < handle
       NumDACChannels    = 0
       NumDigInChannels  = 0
       NumDigOutChannels = 0
+      
+      RMS
    end
    
    properties (SetAccess = immutable,GetAccess = private)
@@ -140,6 +142,7 @@ classdef Block < handle
       LFPPars
       SyncPars
       VidPars
+      PlotPars
       QueuePars
       
       RecFile       % Raw binary recording file
@@ -316,6 +319,7 @@ classdef Block < handle
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
+      analyzeRMS(blockObj,type)
       
       % Methods for data visualization:
       flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets

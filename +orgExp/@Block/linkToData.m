@@ -37,6 +37,7 @@ warningString = {'RAW'; ...
 
 %% CHECK AMPLIFIER CHANNELS
 
+fprintf(1,'\nLinking RAW channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    
    %%%%%%%%%%%%% Raw data
@@ -53,10 +54,13 @@ for iCh = 1:blockObj.NumChannels
    end
    blockObj.Channels(iCh).Raw = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    if UpdateStatus, blockObj.updateStatus('Raw',true);end
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% CHECK STIMULATION DATA
 UpdateStatus = true;
+fprintf(1,'\nLinking STIMULATION channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -87,10 +91,13 @@ for iCh = 1:blockObj.NumChannels
       blockObj.Channels(iCh).dcAmpData = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    end
    if UpdateStatus, blockObj.updateStatus('Digital',true);end
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% CHECK LFP DATA
 UpdateStatus = true;
+fprintf(1,'\nLinking LFP channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -104,11 +111,14 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 if UpdateStatus, blockObj.updateStatus('LFP',true);end
 
 %% CHECK FILTERED DATA
 UpdateStatus = true;
+fprintf(1,'\nLinking FILTERED channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -122,11 +132,14 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).Filtered=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 if UpdateStatus, blockObj.updateStatus('Filt',true);end
 
 %% CHECK CAR DATA
 UpdateStatus = true;
+fprintf(1,'\nLinking CAR channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -140,11 +153,14 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).CAR=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 if UpdateStatus, blockObj.updateStatus('CAR',true); end
 
 %% CHECK SPIKES DATA
 UpdateStatus = true;
+fprintf(1,'\nLinking SPIKES channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -158,10 +174,13 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).Spikes=orgExp.libs.DiskData('MatFile',fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 
 %% CHECK SINGLE_CHANNEL ADC DATA
+fprintf(1,'\nLinking ADC channels...000%%\n');
 for i = 1:blockObj.NumADCchannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),blockObj.ADCChannels(i).custom_channel_name);
@@ -173,9 +192,12 @@ for i = 1:blockObj.NumADCchannels
       break;
    end
    blockObj.ADCChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% CHECK SINGLE-CHANNEL DAC DATA
+fprintf(1,'\nLinking DAC channels...000%%\n');
 for i = 1:blockObj.NumDACChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DACChannels(i).custom_channel_name);
@@ -187,9 +209,12 @@ for i = 1:blockObj.NumDACChannels
       break;
    end
    blockObj.DACChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% CHECK SINGLE_CHANNEL DIGITAL INPUT DATA
+fprintf(1,'\nLinking DIG-IN channels...000%%\n');
 for i = 1:blockObj.NumDigInChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigInChannels(i).custom_channel_name);
@@ -201,9 +226,12 @@ for i = 1:blockObj.NumDigInChannels
       break;
    end
    blockObj.DigInChannels(i).data=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% CHECK SINGLE_CHANNEL DIGITAL OUTPUT DATA
+fprintf(1,'\nLinking DIG-OUT channels...000%%\n');
 for i = 1:blockObj.NumDigOutChannels
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigOutChannels(i).custom_channel_name);
    fname = fullfile(fname);
@@ -214,6 +242,8 @@ for i = 1:blockObj.NumDigOutChannels
       break;
    end
    blockObj.DigOutChannels(i).data = orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
 %% GIVE USER WARNINGS
