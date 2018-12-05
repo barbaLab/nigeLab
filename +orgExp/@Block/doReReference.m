@@ -9,6 +9,10 @@ function flag = doReReference(blockObj)
 
 %%
 flag = false; % Create flag for reporting successful execution
+if ~genPaths(blockObj)
+   warning('Something went wrong when generating paths for extraction.');
+   return;
+end
 probes = unique([blockObj.Channels.port_number]);
 nChannels = length(blockObj.Channels(1).Filt);
 refMean = zeros(numel(probes),nChannels);

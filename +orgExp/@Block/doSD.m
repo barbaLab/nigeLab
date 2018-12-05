@@ -12,6 +12,10 @@ function flag = doSD(blockObj)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
+if ~genPaths(blockObj)
+   warning('Something went wrong when generating paths for extraction.');
+   return;
+end
 blockObj.SDPars = orgExp.defaults.SD;
 
 pars = blockObj.SDPars;
