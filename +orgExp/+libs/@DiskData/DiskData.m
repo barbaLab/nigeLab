@@ -512,6 +512,13 @@ classdef DiskData
          Out=obj.diskfile_.Properties.Source;
       end
       
+      function obj = setPath(obj,fname)
+         %% SETPATH  Function for setting path to file
+         if (exist(fname,'file')~=0
+           obj.diskfile_.Properties.Source = fname;
+         end
+      end
+      
       function Out = append(obj,b)
          %% APPEND   Overloaded function for concatenating elements to DiskData array
          if ~obj.writable_

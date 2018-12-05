@@ -42,7 +42,13 @@ elseif exist(tankPath,'dir')==0
 end
 
 %% IF NEW TANK PATH EXISTS, APPEND TO PATHS STRUCTURE AND UPDATE
-flag = genPaths(blockObj,tankPath);
+if ~genPaths(blockObj,tankPath)
+   warning('Could not generate new paths.');
+   return;
+end
+
+%% UPDATE MAT FILES WITH NEW FILE LOCATIONS
+flag = linkToData(blockObj);
 
 end
 

@@ -43,6 +43,8 @@ for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(1) = true;
@@ -61,6 +63,8 @@ for iCh = 1:blockObj.NumChannels
    
    stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
    fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(2) = true;
@@ -72,6 +76,8 @@ for iCh = 1:blockObj.NumChannels
    if (blockObj.DCAmpDataSaved ~= 0)
       dc_amp_fname = strrep(fullfile(blockObj.paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
       fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
+      fname = fullfile(fname);
+      
       if ~exist(fullfile(fname),'file')
          warningFlag=true;
          warningRef(3) = true;
@@ -89,6 +95,8 @@ for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(4) = true;
@@ -105,6 +113,8 @@ for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(5) = true;
@@ -121,6 +131,8 @@ for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag = true;
       warningRef(6) = true;
@@ -137,6 +149,8 @@ for iCh = 1:blockObj.NumChannels
    pnum  = num2str(blockObj.Channels(iCh).port_number);
    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(7) = true;
@@ -151,6 +165,8 @@ if UpdateStatus, blockObj.updateStatus('Spikes',true);end
 for i = 1:blockObj.NumADCchannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'),blockObj.ADCChannels(i).custom_channel_name);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(8) = true;
@@ -163,6 +179,8 @@ end
 for i = 1:blockObj.NumDACChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DACChannels(i).custom_channel_name);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(9) = true;
@@ -175,6 +193,8 @@ end
 for i = 1:blockObj.NumDigInChannels
    blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigInChannels(i).custom_channel_name);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(10) = true;
@@ -186,6 +206,8 @@ end
 %% CHECK SINGLE_CHANNEL DIGITAL OUTPUT DATA
 for i = 1:blockObj.NumDigOutChannels
    fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), blockObj.DigOutChannels(i).custom_channel_name);
+   fname = fullfile(fname);
+   
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
       warningRef(11) = true;
