@@ -1,6 +1,6 @@
 function flag = updatePaths(blockObj,tankPath)
 %% UPDATEPATHS    Update the paths struct to reflect a new TANK
-%   
+%
 %  load('blockObj.mat'); % A block object extracted using a different file
 %                        %    system, with a different naming convention
 %                        %    for each mapped drive.
@@ -26,9 +26,14 @@ function flag = updatePaths(blockObj,tankPath)
 flag = false;
 
 if nargin < 2
-   tankPath = uigetdir(blockObj.SaveLocDefault,'Select TANK path');
-   if tankPath == 0
-      fprintf(1,'Paths not updated.\n');
+   if exist(blockObj.SaveLoc,'dir')==0
+      tankPath = uigetdir(blockObj.SaveLocDefault,'Select TANK path');
+      if tankPath == 0
+         fprintf(1,'Paths not updated.\n');
+         return;
+      end
+   else
+      flag = genPaths(blockObj);
       return;
    end
 elseif exist(tankPath,'dir')==0

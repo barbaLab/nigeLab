@@ -25,6 +25,7 @@ CAR_ID      = [delim ID.CAR.Folder];                 % Spatial re-reference stre
 DIG_ID      = [delim ID.Dig.Folder];                 % Digital stream ID
 LFP_ID      = [delim ID.LFP.Folder];                 % LFP stream ID
 SD_ID       = [delim ID.Spikes.Folder];              % Spike detection ID
+META_ID     = [delim ID.Meta.Folder];
 
 %% PARSE CORRECT ROOT PATH
 N = numel(blockObj.paths.TW_ext);
@@ -51,14 +52,19 @@ blockObj.paths.CARW  = fullfile(blockObj.paths.TW,[blockObj.Name CAR_ID] );
 blockObj.paths.DW    = fullfile(blockObj.paths.TW,[blockObj.Name DIG_ID] );
 blockObj.paths.LW    = fullfile(blockObj.paths.TW,[blockObj.Name LFP_ID] );
 blockObj.paths.SDW   = fullfile(blockObj.paths.TW,[blockObj.Name SD_ID]  );
+blockObj.paths.MW    = fullfile(blockObj.paths.TW,[blockObj.Name META_ID]);
 
 all_fields = fieldnames(blockObj.paths);
 all_fields = reshape(all_fields,1,numel(all_fields));
 
 for paths_ = all_fields
     % Checks if all the target paths exist, if not mkdir
-    if exist(blockObj.paths.(paths_{:}),'dir')==0
-        mkdir(blockObj.paths.(paths_{:}));
+    if ~iscell(blockObj.paths.(paths_{:}))
+       if ~isnumeric(blockObj.paths.(paths_{:}))
+          if exist(blockObj.paths.(paths_{:}),'dir')==0
+              mkdir(blockObj.paths.(paths_{:}));
+          end
+       end
     end
 end
 
@@ -78,7 +84,10 @@ blockObj.paths.CARW_N    = fullfile(blockObj.paths.CARW,[blockObj.Name ID.Filt.F
 blockObj.paths.DW_N      = fullfile(blockObj.paths.DW,  [blockObj.Name '_DIG_%s.mat']);
 blockObj.paths.LW_N      = fullfile(blockObj.paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
 blockObj.paths.SDW_N     = fullfile(blockObj.paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);
-
+for ii = 1:numel(ID.Meta.File)
+   blockObj.paths.MW_N.(lower(strrep(ID.Meta.Tag{ii},'_',''))) = ...
+      fullfile(blockObj.paths.MW,  [blockObj.Name ID.Meta.File{ii} '.mat']);
+end
 flag = true;
 
 end

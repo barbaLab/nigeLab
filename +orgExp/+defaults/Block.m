@@ -74,7 +74,7 @@ Fields =  {'Raw';
            'Spikes';
            'Sorted';
            'Clusters';
-           'Metadata';
+           'Meta';
            %%%%%%%%%%%%%%%%%%% This names are hardcoded. They are used in
            %%%%%%%%%%%%%%%%%%% the following (Block) functions:
            %%%%%%%%%%%%%%%%%%% doRawExtraction (and ad hoc functions), 
@@ -91,7 +91,7 @@ FileNames       =   {'Raw';
                      'ptrain';
                      'sort';
                      'clus';
-                     {'probes';'experiment'};
+                     {'probes';'experiment';'sync'};
                     };
                 
 FolderNames     =   {'RawData';
@@ -119,7 +119,7 @@ for ii=1:numel(Fields)
       pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
       
    end
-   
+   pars.(Fields{ii}).Tag = FileNames{ii};
    pars.(Fields{ii}).Folder    = FolderNames{ii};
 end
 

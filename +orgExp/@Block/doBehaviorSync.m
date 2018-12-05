@@ -1,12 +1,14 @@
-function syncBehavior(blockObj,varargin)
-%% SYNCBEHAVIOR   Get event times from synchronized optiTrack record.
+function flag = doBehaviorSync(blockObj,varargin)
+%% DOBEHAVIORSYNC   Get event times from synchronized optiTrack record.
 %
-%  tEvent = SYNCBEHAVIOR(blockObj);
-%  tEvent = CPL_OPTISYNC('NAME',value,...);
+%  flag = DOBEHAVIORSYNC(blockObj);
+%  flag = DOBEHAVIORSYNC(blockObj,'NAME',value,...);
 %
 %  --------
 %   INPUTS
 %  --------
+%  blockObj    :     BLOCK class object from orgExp package.
+%
 %  varargin    :     (Optional) 'NAME', value input argument pairs.
 %                    -> 'DIR' [def: NaN]; If specified, use as a string
 %                                         path name to recording BLOCK
@@ -15,22 +17,11 @@ function syncBehavior(blockObj,varargin)
 %  --------
 %   OUTPUT
 %  --------
-%   tEvent     :     Event times struct for manually curating OptiTrack
-%                    data in Motive around those time stamps to find reach
-%                    or whatever you are tracking.
+%     flag     :     Boolean logical operator to indicate whether
+%                     synchronization
 %
-%    sync      :     Data struct containing OptiTrack sync from External
-%                    Output on OptiHub.
 %
-%    user      :     Data struct containing data stream from Manual User
-%                    Button Press. In the case of Bilateral Reach, it
-%                    corresponds to times when the rat reached, which may
-%                    mean different things depending on the Block (e.g.
-%                    sometimes it is only pressed on alternating trials;
-%                    sometimes it's pressed only for L- or R- paw for every
-%                    reach attempt--look at notes).
-%
-% By: Max Murphy  v1.0  05/03/2018  Original version (R2017b)
+% Adapted from CPLTools By: Max Murphy  v1.0  12/05/2018 version (R2017b)
 
 %% DEFAULTS
 % Path info
