@@ -256,48 +256,173 @@ classdef Block < handle
       end
       
       % Federico I will let you comment this :) -MM
-      function varargout=subsref(blockObj,S) 
-          Out = 'blockObj';
-          ii=1;
-          while ii<=numel(S)
-              switch S(ii).type
-                  case '()'
-                      if ii==1
-                          nargs=numel(S(ii).subs);
-                          if nargs<2
-                              Out = builtin('subsref',blockObj,S);
-                              varargout = {Out};
-                              return;
-                          end
-                          for jj=3:nargs
-                              ind=numel(S)+1;
-                             S(ind).subs{1}=S(ii).subs{jj};
-                             S(ind).type = '()';
-                          end
-                          Shrt = orgExp.defaults.Shortcuts();
-                          if ischar( S(ii).subs{1} )
-                              longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(ii).subs{1}),2},S(ii).subs{2});
-                          elseif isnumeric( S(ii).subs{1} )
-                              longCommand = sprintf(Shrt{S(ii).subs{1},2},S(ii).subs{2});
-                          end
-                          Out = sprintf('%s.%s',Out,longCommand);
-                      else
-                          Out = builtin('subsref',blockObj,S);
-                          varargout = {Out};
-                          return
-%                           Out = sprintf('%s(S(%d).subs{:})',Out,ii);
-                      end
-                  case '.'
-                      Out = builtin('subsref',blockObj,S);
-                      varargout = {Out};
-                      return
-%                       Out = sprintf('%s.(S(%d).subs)',Out,ii);
-                  otherwise
-              end
-              ii=ii+1;
-          end
-          Out = eval(Out);
-          varargout = {Out};
+%       function varargout=subsref(blockObj,S) 
+%          %% overrrides builtin subsref to allow shortcuts
+%          % Only explicetly handles operator () called as first argoument
+%          % Ohter cases are handled by builtin subsref directly.
+% 
+%          nOper = numel(S);
+%          
+%          if nOper == 1 && strcmp(S(1).type,'()') && numel(S(1).subs) > 2
+%             nargs=numel(S(1).subs);
+%             for jj=3:nargs
+%                ind=numel(S)+1;
+%                S(ind).subs{1}=S(1).subs{jj};
+%                S(ind).type = '()';
+%             end
+%             Shrt = orgExp.defaults.Shortcuts();
+%             if ischar( S(1).subs{1} )
+%                longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(1).subs{1}),2},S(1).subs{2});
+%             elseif isnumeric( S(1).subs{1} )
+%                longCommand = sprintf(Shrt{S(1).subs{1},2},S(1).subs{2});
+%             end
+%             Out = sprintf('blockObj.%s',longCommand);
+%             Out = eval(Out);
+%             varargout = {Out};
+%          else
+%             [varargout{1:nargout}] = builtin('subsref',blockObj,S);
+%          end
+%             
+%          
+% %          
+% %          ii=1;
+% %           while ii<=numel(S)
+% %               switch S(ii).type
+% %                   case '()'
+% %                       if ii==1
+% %                           nargs=numel(S(ii).subs);
+% %                           switch nargs
+% %                              case 1
+% %                                 Out = blockObj(S(ii).subs{:});
+% %                                 varargout = {Out};
+% %                                 ii=ii+1;
+% %                                 continue;
+% %                              case 2
+% %                              otherwise
+% %                           
+% %                           for jj=3:nargs
+% %                               ind=numel(S)+1;
+% %                              S(ind).subs{1}=S(ii).subs{jj};
+% %                              S(ind).type = '()';
+% %                           end
+% %                           Shrt = orgExp.defaults.Shortcuts();
+% %                           if ischar( S(ii).subs{1} )
+% %                               longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(ii).subs{1}),2},S(ii).subs{2});
+% %                           elseif isnumeric( S(ii).subs{1} )
+% %                               longCommand = sprintf(Shrt{S(ii).subs{1},2},S(ii).subs{2});
+% %                           end
+% %                           Out = sprintf('%s.%s',Out,longCommand);
+% %                           Out = eval(Out);
+% %                           varargout = {Out};
+% %                           end
+% %                       else
+% %                          % retrieve methods output info
+% %                          finfo = functions(eval(sprintf('@blockObj.%s',S.subs)));
+% %                          fwspace = finfo.workspace{1};
+% %                          wspacefields = fieldnames(fwspace);
+% %                          mc = metaclass(fwspace.(wspacefields{1}));
+% %                          methodsIndx=strcmp({mc.MethodList.Name},S.subs);
+% %                          nout = numel(mc.MethodList(methodsIndx).OutputNames);
+% %                          
+% %                          % call builtin subsref with appropiate number of nouts
+% %                          if nout
+% %                             varargout = {builtin('subsref',blockObj,S)};
+% %                          else
+% %                             builtin('subsref',blockObj,S);
+% %                          end
+% %                          break;
+% %                       end
+% %                   case '.'                     
+% %                     % retrieve method's output info 
+% %                      finfo = functions(eval(sprintf('@blockObj.%s',S(ii).subs)));
+% %                      fwspace = finfo.workspace{1};
+% %                      wspacefields = fieldnames(fwspace);
+% %                      mc = metaclass(fwspace.(wspacefields{1}));
+% %                      methodsIndx=strcmp({mc.MethodList.Name},S(ii).subs);
+% %                      nout = numel(mc.MethodList(methodsIndx).OutputNames);
+% %                      
+% %                      % call builtin subsref with appropiate number of nouts
+% %                      if nout
+% %                         varargout = {builtin('subsref',blockObj,S)};
+% %                      else 
+% %                         builtin('subsref',blockObj,S);                        
+% %                      end
+% %                       break;
+% %                  case '{}'
+% %                  case '[]'
+% %                end
+% %               ii=ii+1;
+% %           end
+%       end
+      
+      function varargout = subsref(blockObj,s)
+         switch s(1).type
+            case '.'
+               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+               
+            case '()'
+               if isscalar(blockObj) && ~isnumeric(s(1).subs{1})
+                  s(1).subs=[{1} s(1).subs];
+               end
+               if length(s) == 1                  
+                  nargsi=numel(s(1).subs);
+                  nargo = 1;
+                  
+                  if nargsi > 0
+                  Out = sprintf('blockObj(%d)',s.subs{1});
+                  end
+                  if nargsi > 1
+                  end
+                  if nargsi > 2
+                     Shrt = orgExp.defaults.Shortcuts();
+                     
+                     if ischar( s(1).subs{2} )
+                        longCommand = sprintf(Shrt{strcmp(Shrt(:,1),s(1).subs{2}),2},s(1).subs{3});
+                     
+                     elseif isnumeric( s(1).subs{1} )
+                        longCommand = sprintf(Shrt{s(1).subs{1},2},s(1).subs{2});
+                     end
+                     
+                     Out = sprintf('%s.%s',Out,longCommand);
+                     indx = ':';
+                     
+                     if nargsi > 3
+                        indx = sprintf('[%s]',num2str(s(1).subs{4}));                        
+                     end
+                     Out = sprintf('%s(%s)',Out,indx);
+                  end
+                  
+                  [varargout{1:nargo}] = eval(Out);
+                  
+                  
+%                elseif length(s) == 2 && strcmp(s(2).type,'.')
+%                % Implement obj(ind).PropertyName
+%                ...
+%                elseif length(s) == 3 && strcmp(s(2).type,'.') && strcmp(s(3).type,'()')
+%                % Implement obj(indices).PropertyName(indices)
+%                ...
+               else
+               % Use built-in for any other expression
+               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+               end
+            case '{}'
+              warning('{} indexing not supported')
+            otherwise
+               error('Not a valid indexing expression')
+         end
+      end
+      
+      function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
+         dot = strcmp({s(1:2).type}, '.');
+         if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
+               any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
+            
+            mc = metaclass(blockObj);
+            calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
+            n = numel(mc.MethodList(calledmethod).OutputNames);
+         else
+            n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+         end
       end
       
       % Methods for data processing:
