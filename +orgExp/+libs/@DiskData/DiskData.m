@@ -1,4 +1,4 @@
-classdef DiskData
+classdef DiskData < handle
 %% DISKDATA   Class to efficiently handle data without loading to RAM
 %
 %  D = DiskData(MatFile)
