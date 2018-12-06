@@ -438,7 +438,7 @@ classdef Block < handle
       flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
       flag = qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
       flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
-      flag = doBehaviorSync(blockObj)   % Get sync from neural data for external triggers
+      flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       
       
@@ -484,7 +484,7 @@ classdef Block < handle
       
       % For future expansion?
       takeNotes(blockObj)                 % View or update notes on current recording
-      updateNotes(blockObj,str) % Update notes for a recording
+      updateNotes(blockObj,str)           % Update notes for a recording
       varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
       flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
    end
