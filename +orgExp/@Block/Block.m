@@ -413,17 +413,14 @@ classdef Block < handle
       end
       
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
-         if numel(s) > 1
-            dot = strcmp({s(1:2).type}, '.');
-            if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
-                  any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
-
-               mc = metaclass(blockObj);
-               calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
-               n = numel(mc.MethodList(calledmethod).OutputNames);
-            else
-               n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
-            end
+         
+         dot = strcmp({s(1:min(length(s),2)).type}, '.');
+         if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
+               any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
+            
+            mc = metaclass(blockObj);
+            calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
+            n = numel(mc.MethodList(calledmethod).OutputNames);
          else
             n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
          end
