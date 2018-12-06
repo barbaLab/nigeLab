@@ -11,11 +11,12 @@ linkTic = tic; linkToData(b); linkToc = toc(linkTic);
 rawTic = tic; doRawExtraction(b);  rawToc = toc(rawTic);
 filtTic = tic; doUnitFilter(b); filtToc = toc(filtTic);     
 refTic = tic; doReReference(b); refToc = toc(refTic);    
-sdTic = tic; doSD(b); sdToc = toc(sdToc);             
+sdTic = tic; doSD(b); sdToc = toc(sdTic);             
 lfpTic = tic; doLFPExtraction(b); lfpToc = toc(lfpTic);
 
 %% OUTPUT TIMES
-fprintf(1,'\n  LINK |  RAW  |  FILT  |  REF  |  SD  |  LFP  \n');
-fprintf(1,  '-----------------------------------------------');
-fprintf(1,  ' %gs   | %gs   | %gs    | %gs   | %gs  | %gs   \n',...
+clc;
+fprintf(1,'\n\t\tLINK\t\t|\t\tRAW\t\t\t|\t\tFILT\t\t|\t\tREF\t\t\t|\t\tSD\t\t\t|\t\tLFP\t\t\n');
+fprintf(1,  '------------------------------------------------------------------------------------------------------------------------\n');
+fprintf(1,  '\t\t%.4gs\t\t|\t\t%.4gs\t\t|\t\t%.4gs\t\t|\t\t%.4gs\t\t|\t\t%.4gs\t\t|\t\t%.4gs\t\t\n',...
             linkToc,rawToc,filtToc,refToc,sdToc,lfpToc);
