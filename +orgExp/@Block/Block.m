@@ -413,7 +413,8 @@ classdef Block < handle
       end
       
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
-         dot = strcmp({s(1:2).type}, '.');
+         
+         dot = strcmp({s(1:min(length(s),2)).type}, '.');
          if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
                any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
             

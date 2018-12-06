@@ -27,11 +27,11 @@ Format = '';
 str='';
 if ~strcmp(blockObj.Meta.Rec_date,'YYMMDD')
     Format = [Format 'yyMMdd'];
-    str = [str blockObj.Meta.Rec_date];
+    str = [str blockObj.Meta.RecDate];
 end
 if ~strcmp(blockObj.Meta.Rec_time,'hhmmss')
     Format = [Format 'HHmmss' ];
-    str = [str blockObj.Meta.Rec_time];
+    str = [str blockObj.Meta.RecTime];
 end
 DateTime=datetime(str,'InputFormat',Format);
 infoFields={'Animal_ID'
@@ -39,7 +39,7 @@ infoFields={'Animal_ID'
             };
                 
 info.Recording_date=DateTime;
-info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.Sample_rate)));
+info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
 end
@@ -51,7 +51,7 @@ for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 
-info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
+info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.FileExt)};
 St = blockObj.getStatus;
 info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});
 

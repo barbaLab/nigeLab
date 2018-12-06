@@ -7,12 +7,14 @@ recFileName = 'R:\Rat\Intan\R18-68\R18-68_2018_07_24_1_180724_141452.rhd';
 
 %% MAKE BLOCK AND EXTRACT
 b = orgExp.Block('RecFile',recFileName,'SaveLoc',saveLoc);
-linkTic = tic; linkToData(b); linkToc = toc(linkTic);
+
 rawTic = tic; doRawExtraction(b);  rawToc = toc(rawTic);
 filtTic = tic; doUnitFilter(b); filtToc = toc(filtTic);     
 refTic = tic; doReReference(b); refToc = toc(refTic);    
 sdTic = tic; doSD(b); sdToc = toc(sdTic);             
 lfpTic = tic; doLFPExtraction(b); lfpToc = toc(lfpTic);
+
+linkTic = tic; linkToData(b); linkToc = toc(linkTic);
 
 %% OUTPUT TIMES
 clc;
