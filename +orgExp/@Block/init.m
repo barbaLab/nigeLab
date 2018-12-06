@@ -108,12 +108,12 @@ end
 switch blockObj.FileExt
    case '.rhd'
       blockObj.RecType='Intan';
-      header=orgExp.libs.RHD_read_header('NAME',blockObj.RecFile,...
-                                         'VERBOSE',blockObj.Verbose);
+      header=ReadRHDHeader('NAME',blockObj.RecFile,...
+                           'VERBOSE',blockObj.Verbose);
    case '.rhs'
       blockObj.RecType='Intan';
-      header=orgExp.libs.RHS_read_header('NAME',blockObj.RecFile,...
-                                         'VERBOSE',blockObj.Verbose);
+      header=ReadRHSHeader('NAME',blockObj.RecFile,...
+                           'VERBOSE',blockObj.Verbose);
    otherwise
       blockObj.RecType='other';
 end

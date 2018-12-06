@@ -42,7 +42,7 @@ filesize = s.bytes;
 
 %% Read the file header
 
-header = orgExp.libs.RHS_read_header('FID',fid);
+header = ReadRHSHeader('FID',fid);
 blockObj.Meta.Header = fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
@@ -186,11 +186,18 @@ if (data_present)
    dig_in_buffer_index = false(1,nDataPoints);
    dig_out_buffer_index = false(1,nDataPoints);
    
-   if ~isunix
+   if ~isunix % For Windows machines:
       [~,MEM]=memory;
       AvailableMemory=MEM.PhysicalMemory.Available*0.8;
-   else
-      AvailableMemory=2147483648;
+   else % For Mac machines: (? -MM 2018-12-06 untested)
+      [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
+      if status == 0
+         fprintf(1,'\nMac OSX detected. Available memory: %d\n',cmdout);
+         AvailableMemory=round(cmdout*0.8);
+      else
+         AvailableMemory=2147483648;
+      end
+      
    end
    % Each block counts like 10 : 8 indexes uint8 and the readings uint16
    nBlocks=min(num_data_blocks,floor(AvailableMemory/bytes_per_block/(9)));
