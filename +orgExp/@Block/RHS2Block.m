@@ -42,7 +42,7 @@ filesize = s.bytes;
 
 %% Read the file header
 
-header = orgExp.libs.RHS_read_header('FID',fid);
+header = ReadRHSHeader('FID',fid);
 blockObj.Meta.Header = fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
