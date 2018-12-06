@@ -74,6 +74,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);
       RW_info = amplifier_channels;
       infoname = fullfile(strrep(paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
       save(fullfile(infoname),'RW_info','-v7.3');
@@ -86,6 +87,8 @@ if (data_present)
          if exist(fName,'file'),delete(fName);end
          amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
+		 fraction_done = 100 * (iCh / num_amplifier_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
    end
    
@@ -94,6 +97,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting ADC info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting ADC info...%.3d%%\n',0);
       ADC_info = board_adc_channels;
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
       save(fullfile(infoname),'ADC_info','-v7.3');
@@ -105,6 +109,8 @@ if (data_present)
             if exist(fName,'file'),delete(fName);end
             board_adc_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
+			fraction_done = 100 * (iCh / num_board_adc_channels);
+			fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
    end
@@ -114,6 +120,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting VOLTAGE info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting VOLTAGE info...%.3d%%\n',0);
       supply_voltage_info = supply_voltage_channels;
       infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
       save(fullfile(infoname),'supply_voltage_info','-v7.3');
@@ -124,6 +131,8 @@ if (data_present)
          if exist(fName,'file'),delete(fName);end
          supply_voltage_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_supply_voltage_samples],'access','w');
+		 fraction_done = 100 * (iCh / num_supply_voltage_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
    end
    
@@ -132,6 +141,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting TEMPERATURE info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting TEMP info...%.3d%%\n',0);
       temp_sensor_info = temp_sensor_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
       save(fullfile(infoname),'temp_sensor_info','-v7.3');
@@ -143,6 +153,8 @@ if (data_present)
          if exist(fName,'file'),delete(fName);end
          temp_sensor_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_temp_sensor_samples],'access','w');
+		 fraction_done = 100 * (iCh / num_temp_sensor_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
    end
    
@@ -151,6 +163,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting AUX info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting AUX info...%.3d%%\n',0);
       AUX_info = aux_input_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
       save(fullfile(infoname),'AUX_info','-v7.3');
@@ -161,6 +174,8 @@ if (data_present)
          if exist(fName,'file'),delete(fName);end
          aux_input_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_aux_input_samples],'access','w');
+		fraction_done = 100 * (iCh / num_aux_input_channels);
+		fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
    end
    
@@ -169,6 +184,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting DIG-IN info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting DIG-IN info...%.3d%%\n',0);
       DigI_info = board_dig_in_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
       save(fullfile(infoname),'DigI_info','-v7.3');
@@ -181,6 +197,8 @@ if (data_present)
             if exist(fName,'file'),delete(fName);end
             board_dig_in_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_in_samples],'access','w');
+			fraction_done = 100 * (iCh / num_board_dig_in_channels);
+			fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
    end
@@ -191,6 +209,7 @@ if (data_present)
       if exist('myJob','var')~=0
          set(myJob,'Tag',sprintf('%s: Extracting DIG-O info',blockObj.Name));
       end
+	  fprintf(1, '\t->Extracting DIG-OUT info...%.3d%%\n',0);
       DigO_info = board_dig_out_channels;
       infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
       save(fullfile(infoname),'DigO_info','-v7.3');
@@ -202,12 +221,13 @@ if (data_present)
             if exist(fName,'file'),delete(fName);end
             board_dig_out_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','int8','size',[1 num_board_dig_out_samples],'access','w');
+			fraction_done = 100 * (iCh / num_board_dig_out_channels);
+			fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
    end
-   fprintf(1,'Matfiles created succesfully\n');
-   fprintf(1,'Exporting files...\n');
-   fprintf(1,'%.3d%%',0)
+   fprintf(1,'Matfiles created succesfully.\n');
+   fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
    
    % We need 5 buffer viarables to read data from file and save it into a
    % matlab friendly forma using matfiles. Those varibles needs to be as
@@ -371,46 +391,70 @@ if (data_present)
       
       % Scale time steps (units = seconds)
       clear('t');
-      % Write data to file  
+      % Write data to file
+	  fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
       for jj=1:num_amplifier_channels % units = microvolts
          amplifier_dataFile{jj}.append( 0.195 * (single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768));
+		 fraction_done = 100 * (iCh / num_amplifier_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
       
+	  fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
       for jj=1:num_aux_input_channels % units = volts
          aux_input_dataFile{jj}.append( 37.4e-6 * single(Buffer(aux_in_buffer_index(1:dataToRead)==jj)));
+		 fraction_done = 100 * (iCh / num_aux_input_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
+	  
+	  fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
       for jj=1:num_supply_voltage_channels  % units = volts
          supply_voltage_dataFile{jj}.append( 74.8e-6 * single(Buffer(supply_voltage_buffer_index(1:dataToRead)==jj)));
+		 fraction_done = 100 * (iCh / num_supply_voltage_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
+	  
+	  fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
       for jj=1:num_temp_sensor_channels % units = deg C
          temp_sensor_dataFile{jj}.append(single(Buffer(temp_buffer_index(1:dataToRead)==jj)) ./100 );
+		 fraction_done = 100 * (iCh / num_temp_sensor_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
       
+	  fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
       for jj=1:num_board_adc_channels % units = volts
          board_adc_dataFile{jj}.append( adc_scale * (single(Buffer(adc_buffer_index(1:dataToRead)==jj))  - adc_offset ));
+		 fraction_done = 100 * (iCh / num_board_adc_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
       end
       
+	  fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
       if num_board_dig_in_channels
          dig_in_raw=Buffer(dig_in_buffer_index(1:dataToRead));
          for jj=1:num_board_dig_in_channels
             mask = uint16(2^(board_dig_in_channels(jj).native_order) * ones(size(dig_in_raw)));
             board_dig_in_dataFile{jj}.append(int8(bitand(dig_in_raw, mask) > 0));
+			fraction_done = 100 * (iCh / num_board_dig_in_channels);
+			fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
       
+	  fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
       if num_board_dig_out_channels
          dig_out_raw=Buffer(dig_out_buffer_index(1:dataToRead));
          for jj=1:num_board_dig_out_channels
             mask =uint16( 2^(board_dig_out_channels(jj).native_order) * ones(size(dig_out_raw)));
             board_dig_out_dataFile{jj}.append(int8(bitand(dig_out_raw, mask) > 0));
+			fraction_done = 100 * (iCh / num_dig_out_channels);
+			fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
       
+	  clc;
       progress=progress+min(nBlocks,num_data_blocks-nBlocks*(i-1));
       fraction_done = 100 * (progress / num_data_blocks);
-      %         if ~floor(mod(fraction_done,5)) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))
-      %         end
+      if ~floor(mod(fraction_done,5)) % only increment counter by 5%
+		 fprintf(1,'Writing data to Matfiles...%.3d%%\n',floor(fraction_done));
+      end
    end
    fprintf(1,newline);
    
