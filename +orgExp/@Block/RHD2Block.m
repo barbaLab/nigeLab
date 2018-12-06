@@ -251,11 +251,17 @@ if (data_present)
    dig_in_buffer_index = false(1,nDataPoints);
    dig_out_buffer_index = false(1,nDataPoints);
    
-   if ~isunix
+   if ~isunix % For Windows machiens:
       [~,MEM]=memory;
       AvailableMemory=MEM.PhysicalMemory.Available*0.8;
-   else
-      AvailableMemory=2147483648;
+   else % For Mac machines: (? -MM 2018-12-06 untested)
+      [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
+      if status == 0
+         fprintf(1,'\nMac OSX detected. Available memory: %d\n',cmdout);
+         AvailableMemory=round(cmdout*0.8);
+      else
+         AvailableMemory=2147483648;
+      end
    end
    nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/(8+13))); %13 accounts for all the indexings
    %     t = zeros(1, num_samples_per_data_block);
@@ -367,7 +373,7 @@ if (data_present)
       clear('t');
       % Write data to file  
       for jj=1:num_amplifier_channels % units = microvolts
-         amplifier_dataFile{jj}.append( 0.195 * single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768);
+         amplifier_dataFile{jj}.append( 0.195 * (single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768));
       end
       
       for jj=1:num_aux_input_channels % units = volts
@@ -381,7 +387,7 @@ if (data_present)
       end
       
       for jj=1:num_board_adc_channels % units = volts
-         board_adc_dataFile{jj}.append( adc_scale * single(Buffer(adc_buffer_index(1:dataToRead)==jj))  - adc_offset );
+         board_adc_dataFile{jj}.append( adc_scale * (single(Buffer(adc_buffer_index(1:dataToRead)==jj))  - adc_offset ));
       end
       
       if num_board_dig_in_channels
