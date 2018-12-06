@@ -27,11 +27,11 @@ Format = '';
 str='';
 if ~strcmp(blockObj.Meta.Rec_date,'YYMMDD')
     Format = [Format 'yyMMdd'];
-    str = [str blockObj.Meta.RecDate];
+    str = [str blockObj.Meta.Rec_date];
 end
 if ~strcmp(blockObj.Meta.Rec_time,'hhmmss')
     Format = [Format 'HHmmss' ];
-    str = [str blockObj.Meta.RecTime];
+    str = [str blockObj.Meta.Rec_time];
 end
 DateTime=datetime(str,'InputFormat',Format);
 infoFields={'Animal_ID'
@@ -45,10 +45,10 @@ info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
 end
 
 infoFields={'RecType'
-            'numChannels'
+            'NumChannels'
             };
 for jj=1:numel(infoFields)
-info.(infoFields{jj})={blockObj.(infoFields{jj})};
+   info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 
 info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.FileExt)};
