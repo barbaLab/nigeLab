@@ -49,7 +49,7 @@ blockObj.VidPars.FilePath = pName((numel(blockObj.VidPars.Root)+1):end);
 blockObj.VidPars.FileName = fName;
 
 %% PARSE VARIABLES FROM FILE NAME
-match_str = parseVidFileName(blockObj,fName);
+match_str = parseVidFileName(blockObj,fName,true);
 
 %% MATCH AND FIND OTHER VIDEOS WITH SAME NAME CONVENTION
 F = dir(fullfile(pName,match_str));
@@ -62,27 +62,39 @@ end
 %% FOR EACH FILE, EXTRACT VIDEO INFORMATION OF INTEREST
 flag = updateVidInfo(blockObj);
 
-   function match_str = parseVidFileName(blockObj,fName)
+   function match_str = parseVidFileName(blockObj,fName,initFlag)
       %% PARSEVIDFILENAME  Get video file info from video file
+      
+      if nargin < 3
+         initFlag = false;
+      end
+      
       [~,str,~] = fileparts(fName);
       strVars = strsplit(str,blockObj.VidPars.Delimiter);
       n = min(numel(strVars),numel(blockObj.VidPars.DynamicVars));
-      blockObj.VidPars.Meta = struct;
-      match_str = [];
+      
       meta = struct;
-      for ii = 1:n
+      match_str = strVars{1};
+      meta.(blockObj.VidPars.DynamicVars{1}(2:end)) = strVars{1};
+      
+      for ii = 2:n
          meta.(blockObj.VidPars.DynamicVars{ii}(2:end)) = strVars{ii};
          if strcmp(blockObj.VidPars.DynamicVars{ii}(1),blockObj.VidPars.IncludeChar)
-            match_str = strjoin({match_str strVars{ii}},blockObj.VidPars.Delimiter);
-         else
-            match_str = strjoin({match_str '*'},blockObj.VidPars.Delimiter);
+            match_str = strjoin({match_str strVars{ii}},'*');
          end
       end
-      blockObj.VidPars.Meta = [blockObj.VidPars.Meta; ...
-         struct2table(meta)];
+      
+      if initFlag
+         blockObj.VidPars.Meta = struct2table(meta);
+      else
+         blockObj.VidPars.Meta = [blockObj.VidPars.Meta; ...
+            struct2table(meta)];
+      end
+      
       blockObj.VidPars.File = [blockObj.VidPars.File; {fName}];
       
       match_str = [match_str blockObj.VidPars.FileExt];
    end
 
 end
+

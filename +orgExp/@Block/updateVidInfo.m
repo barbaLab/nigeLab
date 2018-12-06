@@ -21,7 +21,7 @@ flag = false;
 if isempty(blockObj.VidPars)
    warning('Video parameters not yet set. Try DOVIDINFOEXTRACTION.');
    return;
-elseif isempty(blockObj.Vidpars.File)
+elseif isempty(blockObj.VidPars.File)
    warning('No video files associated (path: ~/%s).',...
       blockObj.VidPars.FilePath);
    return;
