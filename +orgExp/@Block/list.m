@@ -39,19 +39,19 @@ infoFields={'Animal_ID'
             };
                 
 info.Recording_date=DateTime;
-info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.Sample_rate)));
+info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 for jj=1:numel(infoFields)
 info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
 end
 
 infoFields={'RecType'
-            'numChannels'
+            'NumChannels'
             };
 for jj=1:numel(infoFields)
-info.(infoFields{jj})={blockObj.(infoFields{jj})};
+   info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 
-info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.File_extension)};
+info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.FileExt)};
 St = blockObj.getStatus;
 info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});
 

@@ -15,8 +15,8 @@ pars.FileExt = '.avi';
 pars.File = [];
 
 % Metadata parsing
-pars.Delimiter = '_';
-pars.DynamicVars = {'$Animal_ID','$Year','$Month','$Day','$Rec_ID','&Door','&View','&Movie_ID'};
+pars.Delimiter = {'_','-'};
+pars.DynamicVars = {'$Surg_Year','$Surg_ID','$Rec_Year','$Rec_Month','$Rec_Day','$Rec_ID','&Door','&View','&Movie_ID'};
 pars.IncludeChar = '$';
 pars.ExcludeChar = '&';
 pars.Meta = [];
