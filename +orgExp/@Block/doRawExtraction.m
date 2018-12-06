@@ -24,9 +24,9 @@ switch blockObj.RecType
       % Two types of Intan binary files: rhd and rhs
       switch blockObj.FileExt
          case '.rhs'
-            flag = RHS2Block(blockObj);
+            flag = rhs2Block(blockObj);
          case '.rhd'
-            flag = RHD2Block(blockObj);
+            flag = rhd2Block(blockObj);
          otherwise
             warning('Invalid file type (%s).',blockObj.FileExt);
             return;

@@ -1,4 +1,4 @@
-function flag = RHD2Block(blockObj,recFile,paths)
+function flag = rhd2Block(blockObj,recFile,paths)
 %% RHD2BLOCK  Convert Intan RHD binary to Matlab BLOCK format
 %
 %  b = orgExp.Block;        % create block object

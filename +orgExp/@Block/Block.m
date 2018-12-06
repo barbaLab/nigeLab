@@ -426,7 +426,7 @@ classdef Block < handle
          end
       end
       
-      % Methods for data processing:
+      % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = qRawExtraction(blockObj)   % Queue extraction to Isilon
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
@@ -441,6 +441,11 @@ classdef Block < handle
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       
+      % Methods for accessing associated data:
+      ts = getSpikeTimes(blockObj,ch,class);
+      idx = getSpikeTrain(blockObj,ch,class);
+      spikes = getSpikes(blockObj,ch,class);
+      
       
       % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
@@ -448,16 +453,11 @@ classdef Block < handle
       analyzeRMS(blockObj,type)
       
       % Methods for data visualization:
-      flag = plotWaves(blockObj,WAV,SPK)  % Plot stream snippets
+      flag = plotWaves(blockObj)  % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
       
-      % Methods for quickly accessing data [deprecated?]:
-      out = loadSpikes(blockObj,ch)       % Load spikes for a given channel
-      out = loadClusters(blockObj,ch)     % Load clusters file for a given channel
-      out = loadSorted(blockObj,ch)       % Load sorting file for a given channel
-      L = list(blockObj) % List of current associated files for field or fields
-      
       % Utility methods for path stuff
+      L = list(blockObj) % List of current associated files for field or fields
       flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = updatePaths(blockObj,tankPath) % Update associated paths
       flag = updateVidInfo(blockObj) % Update video info
@@ -466,8 +466,8 @@ classdef Block < handle
    methods (Access = public, Hidden = true)
       % Other utility methods:
       flag = setSaveLocation(blockObj,saveLoc)   % Set the BLOCK location
-      flag = RHD2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
-      flag = RHS2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
+      flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
+      flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
       
       flag = genPaths(blockObj,tankPath)
       flag = findCorrectPath(blockObj)
