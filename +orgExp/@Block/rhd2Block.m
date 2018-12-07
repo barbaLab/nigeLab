@@ -277,8 +277,8 @@ if (data_present)
    else % For Mac machines: (? -MM 2018-12-06 untested)
       [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
       if status == 0
-         fprintf(1,'\nMac OSX detected. Available memory: %d\n',cmdout);
-         AvailableMemory=round(cmdout*0.8);
+         fprintf(1,'\nMac OSX detected. Available memory: %s\n',cmdout);
+         AvailableMemory=round(str2double(cmdout)*0.8);
       else
          AvailableMemory=2147483648;
       end
