@@ -1,5 +1,5 @@
 function flag = doVidInfoExtraction(blockObj,vidFileName)
-%% DOVIDINFOEXTRACTION   Get event times from synchronized optiTrack record.
+%% DOVIDINFOEXTRACTION   Get video metadata for associated behavioral vids
 %
 %  flag = DOVIDINFOEXTRACTION(blockObj);
 %

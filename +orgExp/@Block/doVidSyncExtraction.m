@@ -1,5 +1,5 @@
 function flag = doVidSyncExtraction(blockObj)
-%% DOVIDSYNCEXTRACTION   Get event times from synchronized optiTrack record.
+%% DOVIDSYNCEXTRACTION   Get time-series for sync event cross-correlation
 %
 %  doBehaviorSync(blockObj);
 %  doVidInfoExtraction(blockObj);

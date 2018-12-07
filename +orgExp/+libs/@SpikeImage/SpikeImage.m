@@ -162,6 +162,8 @@ classdef SpikeImage < handle
          set(obj.Children{PlotNum}.Title,'FontWeight','bold');
          set(obj.Children{PlotNum}.Title,'Color','w');
          set(obj.Children{PlotNum},'YDir','normal');
+         set(obj.Children{PlotNum},'XColor','w');
+         set(obj.Children{PlotNum},'YColor','w');
          drawnow;
       end
       
