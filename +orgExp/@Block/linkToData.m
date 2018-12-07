@@ -110,7 +110,7 @@ for iCh = 1:blockObj.NumChannels
       UpdateStatus = false;
       break;
    end
-   blockObj.Channels(iCh).LFPData=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   blockObj.Channels(iCh).LFP=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    fraction_done = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
@@ -131,7 +131,7 @@ for iCh = 1:blockObj.NumChannels
       UpdateStatus = false;
       break;
    end
-   blockObj.Channels(iCh).Filtered=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
+   blockObj.Channels(iCh).Filt=orgExp.libs.DiskData(blockObj.SaveFormat,fname);
    fraction_done = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
