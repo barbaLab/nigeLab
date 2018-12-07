@@ -10,35 +10,43 @@ classdef Block < handle
    %  BLOCK Properties:
    %     Name - Name of recording BLOCK.
    %
-   %     Fields - List of property field names that may have files associated
-   %              with them.
-   %
-   %     Graphics - Graphics objects that are associated with BLOCK
-   %                object. Currently contains Spikes subfield, which is a
-   %                SPIKEIMAGE object that is available after calling the
-   %                PLOTSPIKES method. The Waves subfield is only available
-   %                after calling the PLOTWAVES method. To recall the
-   %                SPIKEIMAGE object once it has been constructed, call as
-   %                blockObj.Graphics.Spikes.Build.
+   %     Graphics - Struct that contains pointers to graphics files.
    %
    %     Status - Completion status for each element of BLOCK/FIELDS.
    %
-   %     Channels - List of channels from board, from probe, and masking.
+   %     Channels - Struct that contains data fields.
+   %                 -> blockObj.Channels(7).Raw(1:10) First 10 samples of
+   %                                                    channel 7 from the
+   %                                                    raw waveform.
+   %                 -> blockObj.Channels(1).Spikes.peak_train  Spike
+   %                                                           peak_train
+   %                                                           for chan 1.
+   %
+   %     Meta - Struct containing metadata info about recording BLOCK.
    %
    %  BLOCK Methods:
    %     Block - Class constructor. Call as blockObj = BLOCK(varargin)
    %
-   %     updateID - Update the File or Folder ID for a particular Field, which
-   %                is listed in blockObj.Fields. Call as
-   %                blockObj.UpdateID(name,type,value); name is the name of the
-   %                field, type is the ID type ('File' or 'Folder'), and value
-   %                is the new ID. For example:
-   %                blockObj.UpdateID('Spikes','Folder','pca-PT_Spikes') would
-   %                change where the BLOCK finds its spikes files.
+   %     doRawExtraction - Convert from raw data binaries to BLOCK format.
    %
-   %     updateContents - Using current information for File and Folder ID
-   %                      string identifiers, update the list of files
-   %                      associated with a particular information field.
+   %     doUnitFilter - Apply bandpass filter for unit activity.
+   %
+   %     doReReference - Apply common average re-reference for de-noising.
+   %
+   %     doSD - Run spike detection and feature extraction.
+   %
+   %     doLFPExtraction - Use cascaded lowpass filter to decimate raw data
+   %                       to a rate more suitable for LFP analyses.
+   %
+   %     doVidInfoExtraction - Get video metadata if there are related
+   %                           behavioral videos associated with a
+   %                           recording.
+   %
+   %     doVidSyncExtraction - Get time-series of "digital HIGH" times
+   %                           based on detection of ON/OFF state of a
+   %                           video element, such as a flashing LED.
+   %
+   %     doBehaviorSync - Get synchronization signal from digital inputs.
    %
    %     plotWaves -    Make a preview of the filtered waveform for all
    %                    channels, and include any sorted, clustered, or
@@ -48,18 +56,12 @@ classdef Block < handle
    %     plotSpikes -   Display all spikes for a particular channel as a
    %                    SPIKEIMAGE object.
    %
-   %     loadSpikes -   Call as x = blockObj.LoadSpikes(channel) to load spikes
-   %                    file contents to the structure x.
+   %     linkToData - Link block object to existing data structure.
    %
-   %     loadClusters - Call as x = blockObj.LoadClusters(channel) to load
-   %                    class file contents to the structure x.
+   %     clearSpace - Remove extracted RAW data, and extracted FILTERED
+   %                  data if CAR channels are present.
    %
-   %     loadSorted -   Call as x = blockObj.LoadSorted(channel) to load class file
-   %                    contents to the structure x.
-   %
-   %     set - Set a specific property of the BLOCK object.
-   %
-   %     get - Get a specific property of the BLOCK object.
+   %     analyzeRMS - Get RMS for all channels of a desired type of stream.
    %
    % Started by: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
    % Expanded by: MAECI 2018 collaboration (Federico Barban & Max Murphy)
@@ -67,68 +69,55 @@ classdef Block < handle
    %% PUBLIC PROPERTIES
    
    properties (Access = public)
-      Name
-      Meta
+      Name  % Name of the recording block
+      Meta  % Metadata about the recording
    end
    
    properties (Access = public)
-      DACChannels
-      ADCChannels
-      DigInChannels
-      DigOutChannels
-      Verbose = true; % Whether to report list of files and fields.
-      Channels    % list of channels with various metadata and recording
-      % data inside it.
-      %
-      % [ [ might actually be a better idea to create a
-      %     special channel class? ] ]
-      
-      % Graphics - Graphical objects associated with BLOCK object.
-      % -> Spikes : SPIKEIMAGE object. Once constructed, can
-      %             call as blockObj.Graphics.Spikes.Build to
-      %             recreate the spikes figure.
-      % -> Waves : AXES object. Destroyed when figure is
-      %            closed.
-      Graphics    % Graphical objects associated with block
+      DACChannels       % Struct containing info about DAC channels
+      ADCChannels       % Struct containing info about ADC channels
+      DigInChannels     % Struct containing info about digital inputs
+      DigOutChannels    % Struct containing info about digital outputs
+      Verbose = true;   % Whether to report list of files and fields.
+      Channels          % Struct that contains fields with data
+      Graphics          % Graphical objects associated with block
    end
    
    properties (SetAccess = private)
       
-      SampleRate
-      Time
-      FileExt   % Intan TDT or other
-      RecType
+      SampleRate  % Recording sample rate
+      Time        % Points to Time File
+      FileExt     % .rhd, .rhs, or other
+      RecType     % Intan / TDT / other
       
-      NumChannels       = 0
-      NumProbes         = 0
-      NumADCchannels    = 0
-      NumDACChannels    = 0
-      NumDigInChannels  = 0
-      NumDigOutChannels = 0
+      NumChannels       = 0   % Number of channels on all electrodes
+      NumProbes         = 0   % Number of electrodes
+      NumADCchannels    = 0   % Number of ADC channels
+      NumDACChannels    = 0   % Number of DAC channels
+      NumDigInChannels  = 0   % Number of digital input channels
+      NumDigOutChannels = 0   % Number of digital output channels
       
-      RMS
+      RMS                     % RMS noise table for different waveforms
    end
    
    properties (SetAccess = immutable,GetAccess = private)
-      DCAmpDataSaved
-      Date
-      Month
-      Day      
+      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+      Date              % Date of recording
+      Month             % Month of recording
+      Day               % Day of recording
    end
    
    properties (SetAccess = immutable,GetAccess = public)
-      % Properties for setting up other basic properties
-      RecLocDefault
-      SaveLocDefault
-      ForceSaveLoc
-      ProbeChannel
+      RecLocDefault     % Default location of raw binary recording
+      SaveLocDefault    % Default location of BLOCK
+      ForceSaveLoc      % Flag to force make non-existant directory
+      ProbeChannel      % String for probe and channel number parsing
       
-      % Properties for parsing name metadata
-      Delimiter
-      DynamicVarExp
-      IncludeChar
-      DiscardChar
-      NamingConvention
+      Delimiter        % Delimiter for name metadata for dynamic variables
+      DynamicVarExp    % Expression for parsing BLOCK names from raw file
+      IncludeChar      % Character indicating included name elements
+      DiscardChar      % Character indicating discarded name elements
+      NamingConvention % How to parse dynamic name variables for Block
    end
    
    
@@ -136,21 +125,20 @@ classdef Block < handle
    properties (SetAccess = private,GetAccess = public)
       Fields      % List of property field names
       
-      % Parameters structs
-      SDPars
-      FiltPars
-      LFPPars
-      SyncPars
-      VidPars
-      PlotPars
-      QueuePars
+      SDPars      % Parameters struct for spike detection
+      FiltPars    % Parameters struct for unit bandpass filter
+      LFPPars     % Parameters struct for LFP extraction & analyses
+      SyncPars    % Parameters struct for digital synchronization stream
+      VidPars     % Parameters struct for associating videos
+      PlotPars    % Parameters struct for graphical plots
+      QueuePars   % Parameters struct for queueing jobs to server
       
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
       
-      Samples % Total number of samples in original record
-      Mask  % Whether to include channels or not
+      Samples  % Total number of samples in original record
+      Mask     % Whether to include channels or not
    end
    
    properties (Access = private)
@@ -166,29 +154,6 @@ classdef Block < handle
          %
          %  blockObj = BLOCK;
          %  blockObj = BLOCK('NAME',Value,...);
-         %
-         %  ex:
-         %  blockObj = BLOCK('RecLoc','P:\Your\Block\Directory\Here');
-         %
-         %  List of 'NAME', Value input argument pairs:
-         %
-         %  -> 'RecLoc' : (def: none) Specify as string with full directory of
-         %              recording BLOCK. Specifying this will skip the UI
-         %              selection portion, so it's useful if you are
-         %              looping the expression.
-         %
-         %  -> 'Verbose' : (def: true) Setting this to false suppresses
-         %                  output list of files and folders associated
-         %                  with the CPL_BLOCK object during
-         %                  initialization.
-         %
-         %
-         %  -> 'MASK' : (def: []) If specified, use as a nChannels x 1
-         %              logical vector of true/false for channels to
-         %              include/exclude.
-         %
-         %  -> 'REMAP' : (def: []) If specified, use as a nChannels x 1
-         %               double vector of channel mappings.
          %
          % By: Max Murphy  v1.0  08/25/2017
          %     F. Barban   v2.0  11/2018
@@ -246,10 +211,12 @@ classdef Block < handle
       end
       
       function save(blockObj)
+         %% SAVE  Overload save of BLOCK
          save(blockObj.paths.TW,'blockObj');
       end
       
       function disp(blockObj)
+         %% DISP  Overload display of BLOCK contents
          if blockObj.Verbose
             builtin('disp',blockObj);
          end
@@ -356,6 +323,7 @@ classdef Block < handle
 %       end
       
       function varargout = subsref(blockObj,s)
+         %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
             case '.'
                [varargout{1:nargout}] = builtin('subsref',blockObj,s);
@@ -413,7 +381,7 @@ classdef Block < handle
       end
       
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
-         
+         %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
          if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
                any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
@@ -436,23 +404,18 @@ classdef Block < handle
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       
-      % Methods for accessing associated data:
-      ts = getSpikeTimes(blockObj,ch,class);
-      idx = getSpikeTrain(blockObj,ch,class);
-      spikes = getSpikes(blockObj,ch,class);
-      class = getSort(blockObj,ch);
+      ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
+      idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
+      spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms
+      class = getSort(blockObj,ch);             % Get spike sorted classes
       
-      
-      % Methods for data analysis:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
       analyzeRMS(blockObj,type)
       
-      % Methods for data visualization:
       flag = plotWaves(blockObj)  % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
       
-      % Utility methods for path stuff
       L = list(blockObj) % List of current associated files for field or fields
       flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = updatePaths(blockObj,tankPath) % Update associated paths
@@ -460,29 +423,19 @@ classdef Block < handle
       
    end
    methods (Access = public, Hidden = true)
-      % Other utility methods:
-      flag = setSaveLocation(blockObj,saveLoc)   % Set the BLOCK location
-      flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK format
-      flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK format
+      flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
+      flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK
       
-      flag = genPaths(blockObj,tankPath)
-      flag = findCorrectPath(blockObj)
+      flag = genPaths(blockObj,tankPath)  % Generate paths property struct
+      flag = findCorrectPath(blockObj)    % Find correct TANK
       
-      operations = updateStatus(blockObj,operation,value)
-      Status = getStatus(blockObj,stage)
+      operations = updateStatus(blockObj,operation,value) % Indicate completion of phase
+      Status = getStatus(blockObj,stage)  % Retrieve task/phase status
+      flag = clearSpace(blockObj,ask)     % Clear space on disk      
       
-      flag = clearSpace(blockObj,ask)  % Clear space on disk
-      
-      
-      updateID(blockObj,name,type,value)  % Update the file or folder identifier
-      updateContents(blockObj,fieldname)  % Update files for specific field
-      
-      
-      % For future expansion?
       takeNotes(blockObj)                 % View or update notes on current recording
       updateNotes(blockObj,str)           % Update notes for a recording
-      varargout = blockGet(blockObj,prop) % Get a specific BLOCK property
-      flag = blockSet(blockObj,prop,val)  % Set a specific BLOCK property
+
    end
    
    %% PRIVATE METHODS

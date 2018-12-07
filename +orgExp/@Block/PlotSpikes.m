@@ -30,7 +30,7 @@ function flag = plotSpikes(blockObj,ch,class)
 %
 % By: Max Murphy  v1.1  08/27/2017  Original version (R2017a)
 % Extended by: MAECI 2018 Collaboration (Max Murphy & Federico Barban)
-% See also: SPIKEIMAGE
+% See also: SPIKEIMAGE, BLOCK
 
 %% PARSE INPUT ARGUMENTS
 flag = false;

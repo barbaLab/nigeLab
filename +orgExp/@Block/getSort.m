@@ -1,5 +1,5 @@
 function class = getSort(blockObj,ch)
-%% GETSORT Retrieve list of spike times (seconds)
+%% GETSORT     Retrieve list of spike class indices for each spike
 %
 %  ts = GETSORT(blockObj,ch);
 %

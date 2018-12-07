@@ -1,5 +1,5 @@
 function flag = plotWaves(blockObj)
-%% PLOTWAVES  Uses PLOTCHANNELS for this recording BLOCK
+%% PLOTWAVES  Plot multi-channel waveform snippets for BLOCK
 %
 %  flag = PLOTWAVES(blockObj);
 %
