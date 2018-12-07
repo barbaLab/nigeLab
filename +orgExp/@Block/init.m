@@ -110,10 +110,40 @@ switch blockObj.FileExt
       blockObj.RecType='Intan';
       header=ReadRHDHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
+      blockObj.NumADCchannels = header.num_board_adc_channels;
+      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
+      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
+      blockObj.ADCChannels = header.board_adc_channels;
+      blockObj.DigInChannels = header.board_dig_in_channels;
+      blockObj.DigOutChannels = header.board_dig_out_channels;
+      
    case '.rhs'
       blockObj.RecType='Intan';
       header=ReadRHSHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
+                        
+      blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
+      blockObj.NumDACChannels = header.num_board_dac_channels;
+      blockObj.NumADCchannels = header.num_board_adc_channels;
+      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
+      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
+      blockObj.DACChannels = header.board_dac_channels;
+      blockObj.ADCChannels = header.board_adc_channels;
+      blockObj.DigInChannels = header.board_dig_in_channels;
+      blockObj.DigOutChannels = header.board_dig_out_channels;
+      
+   case ''
+      files = dir(fullfile(blockObj.RecFile,'*.t*'));
+      if ~isempty(files)
+         blockObj.RecType='TDT';
+         header=ReadTDTHeader('NAME',blockObj.RecFile,...
+                           'VERBOSE',blockObj.Verbose);
+         for ff=fieldnames(blockObj.Meta)'
+            if isfield(header.info,ff{:})
+               blockObj.Meta.(ff{:}) = header.info.(ff{:});
+            end
+         end
+      end
    otherwise
       blockObj.RecType='other';
 end
@@ -122,17 +152,9 @@ end
 blockObj.Channels = header.amplifier_channels;
 blockObj.NumChannels = header.num_amplifier_channels;
 blockObj.NumProbes = header.num_probes;
-% blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
-blockObj.NumADCchannels = header.num_board_adc_channels;
-% blockObj.NumDACChannels = header.num_board_dac_channels;
-blockObj.NumDigInChannels = header.num_board_dig_in_channels;
-blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
 blockObj.SampleRate = header.sample_rate;
 blockObj.Samples = header.num_amplifier_samples;
-% blockObj.DACChannels = header.board_dac_channels;
-blockObj.ADCChannels = header.board_adc_channels;
-blockObj.DigInChannels = header.board_dig_in_channels;
-blockObj.DigOutChannels = header.board_dig_out_channels;
+
 
 blockObj.updateStatus('init');
 if makeLink
@@ -141,6 +163,7 @@ if makeLink
    fprintf(1,'\t->complete.\n');
 end
 
+%% SAVING
 blockObj.save;
 flag = true;
 

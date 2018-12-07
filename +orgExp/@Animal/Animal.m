@@ -56,7 +56,7 @@ classdef Animal < handle
       
       function addBlock(animalObj,BlockPath)
 
-         newBlock= orgExp.Block('PATH',BlockPath,...
+         newBlock= orgExp.Block('RecFile',BlockPath,...
              'SaveLoc',animalObj.SaveLoc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
       end
