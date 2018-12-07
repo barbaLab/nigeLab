@@ -1,12 +1,26 @@
-function flag = plotSpikes(blockObj,ch)
+function flag = plotSpikes(blockObj,ch,class)
 %% PLOTSPIKES  Show all spike clusters for a given channel.
 %
 %  flag = blockObj.PLOTSPIKES(ch)
+%  flag = blockObj.PLOTSPIKES(ch,class)
 %
 %  --------
 %   INPUTS
 %  --------
-%     ch    :     Channel number to show spikes for.
+%  blockObj    :     BLOCK class in orgExp package.
+%
+%    ch        :     Channel index for retrieving spikes. Must be given as
+%                       a SCALAR positive integer.
+%
+%   class      :     (Optional) Specify the class of spikes to retrieve,
+%                       based on sorting or clustering. If not specified,
+%                       gets all spikes on channel. Otherwise, it will
+%                       check to make sure that there are actually classes
+%                       associated with the spike and issue a warning if
+%                       that part hasn't been done yet.
+%                       -> Can be given as a vector.
+%                       -> Non-negative integer.
+%                       -> Default is NaN
 %
 %  --------
 %   OUTPUT
@@ -15,34 +29,36 @@ function flag = plotSpikes(blockObj,ch)
 %
 %
 % By: Max Murphy  v1.1  08/27/2017  Original version (R2017a)
+% Extended by: MAECI 2018 Collaboration (Max Murphy & Federico Barban)
 % See also: SPIKEIMAGE
 
-%% CHECK FOR SPIKES
-if isempty(blockObj.Spikes.dir)
-   warning('No spikes currently detected on channel %d.',ch);
-   flag = false;
+%% PARSE INPUT ARGUMENTS
+flag = false;
+if ~ismember('Spikes',blockObj.Fields(blockObj.Status))
+   warning('No spikes detected yet.');
    return;
 end
 
-%% FIND CORRESPONDING CHANNELS FROM SPIKES FILE
-ind = find(abs(blockObj.Spikes.ch-ch)<eps,1,'first');
-load(fullfile(blockObj.Spikes.dir(ind).folder,...
-   blockObj.Spikes.dir(ind).name),'spikes','peak_train','pars');
+if nargin < 3
+   class = nan;
+elseif ~ismember('Sorted',blockObj.Fields(blockObj.Status))
+   class = nan;
+end
 
-fs = pars.FS;
+if ~ParseSingleChannelInput(blockObj,ch)
+   warning('Check ''ch'' input argument. SpikeImage not generated.');
+   return;
+end
 
-%% CHECK FOR CLUSTERS AND GET CORRESPONDING CHANNEL
-if ~isempty(blockObj.Sorted.dir)
-   ind = find(abs(blockObj.Sorted.ch-ch)<eps,1,'first');
-   load(fullfile(blockObj.Sorted.dir(ind).folder,...
-      blockObj.Sorted.dir(ind).name),'class');
-elseif ~isempty(blockObj.Clusters.dir)
-   ind = find(abs(blockObj.Clusters.ch-ch)<eps,1,'first');
-   load(fullfile(blockObj.Clusters.dir(ind).folder,...
-      blockObj.Clusters.dir(ind).name),'class');
-else
-   % (If no clusters yet, just make everything class "1")
+%% GET DATA FOR SPIKEIMAGE
+spikes = blockObj.getSpikes(ch,class);
+peak_train = blockObj.Channels(ch).Spikes.peak_train;
+fs = blockObj.SampleRate;
+cl = blockObj.getSort(ch);
+if isnan(cl)
    class = ones(size(spikes,1),1);
+else
+   class = cl(ismember(cl,class));
 end
 
 blockObj.Graphics.Spikes = orgExp.libs.SpikeImage(spikes,fs,peak_train,class,...

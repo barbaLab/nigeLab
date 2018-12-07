@@ -428,15 +428,10 @@ classdef Block < handle
       
       % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      flag = qRawExtraction(blockObj)   % Queue extraction to Isilon
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
-      flag = qUnitFilter(blockObj)      % Queue filter to Isilon
       flag = doReReference(blockObj)    % Do virtual common-average re-reference
-      flag = qReReference(blockObj)     % Queue CAR to Isilon
       flag = doSD(blockObj)             % Do spike detection for extracellular field
-      flag = qSD(blockObj)              % Queue SD to Isilon
       flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
-      flag = qLFPExtraction(blockObj)   % Queue LFP decimation to Isilon
       flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
@@ -445,6 +440,7 @@ classdef Block < handle
       ts = getSpikeTimes(blockObj,ch,class);
       idx = getSpikeTrain(blockObj,ch,class);
       spikes = getSpikes(blockObj,ch,class);
+      class = getSort(blockObj,ch);
       
       
       % Methods for data analysis:

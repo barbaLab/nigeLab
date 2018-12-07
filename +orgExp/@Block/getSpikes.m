@@ -60,19 +60,10 @@ if nargin < 2
    error('Must specify channel input arg.');
 end
 
-if numel(ch) > 1
-   error('Channel arg must be a scalar.');
+if ~ParseSingleChannelInput(blockObj,ch)
+   error('Check ''ch'' input argument.');
 end
-
-if ch < 1
-   error('Channel arg must be a positive integer (not %d).',ch);
-end
-
-if ch > blockObj.NumChannels
-   error('Channel arg must be <= %d (total # channels). Was %d.',...
-      blockObj.NumChannels,ch);
-end
-
+   
 %% RETRIEVE SPIKES OR FEATURES
 switch type % Could add expansion for things like 'pw' and 'pp' etc.
    case 'feat'

@@ -43,18 +43,13 @@ elseif ~ismember('Sorted',blockObj.Fields(blockObj.Status))
    class = nan;
 end
 
-if any(ch < 1)
-   error('Channel arg must be a positive integer (not %d).',ch);
-end
-
-if any(ch > blockObj.NumChannels)
-   error('Channel arg must be <= %d (total # channels). Was %d.',...
-      blockObj.NumChannels,ch);
+if ~ParseMultiChannelInput(blockObj,ch)
+   error('Check ''ch'' input argument.');
 end
 
 %% FIND SPIKE SAMPLE INDICES
 if numel(ch) > 1 % For an array of channels
-   idx = cell(numel(ch),1);
+   idx = cell(size(ch));
    for ii = 1:numel(ch) % Return a cell array
       idx{ii} = find(blockObj.Channels(ch(ii)).Spikes.peak_train);
       if ~isnan(class(1))
