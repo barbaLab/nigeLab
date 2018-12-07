@@ -428,7 +428,7 @@ classdef Block < handle
       
       flag = genPaths(blockObj,tankPath)  % Generate paths property struct
       flag = findCorrectPath(blockObj)    % Find correct TANK
-      flag = setSaveLocation(blockObj,saveLoc)  % Prompts the user to input the saving location
+      flag = setSaveLocation(blockObj,saveLoc) % Set save location
       
       operations = updateStatus(blockObj,operation,value) % Indicate completion of phase
       Status = getStatus(blockObj,stage)  % Retrieve task/phase status

@@ -75,7 +75,7 @@ Fields =  {'Raw';
            'Sorted';
            'Clusters';
            'Meta';
-           %%%%%%%%%%%%%%%%%%% This names are hardcoded. They are used in
+           %%%%%%%%%%%%%%%%%%% These names are hardcoded. They are used in
            %%%%%%%%%%%%%%%%%%% the following (Block) functions:
            %%%%%%%%%%%%%%%%%%% doRawExtraction (and ad hoc functions), 
            %%%%%%%%%%%%%%%%%%% doLFPExtraction, doReReferencing,
