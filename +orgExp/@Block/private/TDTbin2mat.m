@@ -347,8 +347,11 @@ try
         ind = ind + 1;
     end
     fclose(txt);
-    fprintf('Found Synapse note file: %s\n', notesTxtPath);
+    if VERBOSE
+       fprintf('Found Synapse note file: %s\n', notesTxtPath);
+    end
 catch
+   
     %warning('Synapse Notes file could not be processed')
 end
 
@@ -622,8 +625,9 @@ if ~useOutsideHeaders
             break
         end
     end
-    fprintf('read from t=%.2fs to t=%.2fs\n', T1, max(lastTS, T2));
-    
+    if VERBOSE
+       fprintf('read from t=%.2fs to t=%.2fs\n', T1, max(lastTS, T2));
+    end
     % put epocs into headerStruct
     for ii = 1:numel(epocs.name)
         % find all non-buddies first

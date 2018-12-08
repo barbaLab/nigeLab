@@ -64,15 +64,19 @@ end
 
 if (data_present)
    fprintf(1, 'Allocating memory for data...\n');
+   
+   fName = fullfile(paths.TW_N);
+   TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+      'class','int32','size',[1 num_amplifier_samples],'access','w');
+   
+   if (num_amplifier_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
+      end
+	  fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);   
    RW_info = amplifier_channels;
-   paths.RW=strrep(paths.RW,'\','/');
-   infoname = fullfile(paths.RW,[blockObj.Name '_RawWave_Info.mat']);
+   infoname = fullfile(strrep(paths.RW,'\','/'),[blockObj.Name '_RawWave_Info.mat']);
    save(fullfile(infoname),'RW_info','-v7.3');
-   
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Initializing DiskData arrays...',blockObj.Name));
-   end
-   
    % One file per probe and channel
    amplifier_dataFile = cell(num_amplifier_channels,1);
    stim_dataFile = cell(num_amplifier_channels,1);
@@ -80,27 +84,36 @@ if (data_present)
       dc_amplifier_dataFile = cell(num_amplifier_channels,1);
    end
    for iCh = 1:num_amplifier_channels
-      pnum  = num2str(amplifier_channels(iCh).port_number);
-      chnum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-      fname = sprintf(strrep(paths.RW_N,'\','/'), pnum, chnum);
-      amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
+      pNum  = num2str(amplifier_channels(iCh).port_number);
+      chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
+      fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+      if exist(fName,'file'),delete(fName);end
+      amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','single','size',[1 num_amplifier_samples],'access','w');
       
-      stim_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
-      fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
-      stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
+      stim_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(stim_data_fName,'\','/'), pNum, chNum);
+      if exist(fName,'file'),delete(fName);end
+      stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
          'class','single','size',[1 num_amplifier_samples],'access','w');
       
       if (dc_amp_data_saved ~= 0)
-         dc_amp_fname = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
-         fname = sprintf(strrep(dc_amp_fname,'\','/'), pnum, chnum);
-         dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
+         dc_amp_fName = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
+         fName = sprintf(strrep(dc_amp_fName,'\','/'), pNum, chNum);
+          if exist(fName,'file'),delete(fName);end
+         dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
       end
+		 fraction_done = 100 * (iCh / num_amplifier_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));       
    end
    
    % Save single-channel adc data
    if (num_board_adc_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting ADC info',blockObj.Name));
+      end
+	  fprintf(1, '\t->Extracting ADC info...%.3d%%\n',0);
       ADC_info = board_adc_channels;
       paths.DW = strrep(paths.DW, '\', '/');
       infoname = fullfile(paths.DW,[blockObj.Name '_ADC_Info.mat']);
@@ -109,15 +122,22 @@ if (data_present)
          board_adc_dataFile = cell(num_board_adc_channels,1);
          for i = 1:num_board_adc_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
-            fname = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
-            board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
+            fName = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
+           if exist(fName,'file'),delete(fName);end
+            board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
+		 fraction_done = 100 * (iCh / num_board_adc_channels);
+		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
          end
       end
    end
    
    % Save single-channel dac data
    if (num_board_dac_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting VOLTAGE info',blockObj.Name));
+      end
+	  fprintf(1, '\t->Extracting DAC info...%.3d%%\n',0);
       DAC_info = board_dac_channels;
       paths.DW = strrep(paths.DW, '\', '/');
       infoname = fullfile(paths.DW,[blockObj.Name '_DAC_Info.mat']);
@@ -126,15 +146,22 @@ if (data_present)
          board_dac_dataFile = cell(num_aux_input_channels,1);
          for i = 1:num_board_dac_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
-            fname = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
-            board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),single(0),...
+            fName = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
+           if exist(fName,'file'),delete(fName);end
+            board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
                'class','single','size',[1 num_board_dac_samples],'access','w');
+		fraction_done = 100 * (iCh / num_board_dac_channels);
+		fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
          end
       end
    end
    
    % Save single-channel digital input data
    if (num_board_dig_in_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting DIG-IN info',blockObj.Name));
+      end
+	  fprintf(1, '\t->Extracting DIG-IN info...%.3d%%\n',0);
       DigI_info = board_dig_in_channels;
       paths.DW = strrep(paths.DW, '\', '/');
       infoname = fullfile(paths.DW,[blockObj.Name '_Digital_Input_Info.mat']);
@@ -142,9 +169,12 @@ if (data_present)
       if (data_present)
          board_dig_in_dataFile = cell(num_board_dig_in_channels,1);
          for i = 1:num_board_dig_in_channels
-            fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
-            board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
+            fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
+            if exist(fName,'file'),delete(fName);end
+            board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),uint8(0),...
                'class','uint8','size',[1 num_board_dig_in_samples],'access','w');
+            fraction_done = 100 * (iCh / num_board_dig_in_channels);
+            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
    end
@@ -152,6 +182,10 @@ if (data_present)
    
    % Save single-channel digital output data
    if (num_board_dig_out_channels > 0)
+      if exist('myJob','var')~=0
+         set(myJob,'Tag',sprintf('%s: Extracting DIG-O info',blockObj.Name));
+      end
+	  fprintf(1, '\t->Extracting DIG-OUT info...%.3d%%\n',0);
       DigO_info = board_dig_out_channels;
       paths.DW = strrep(paths.DW, '\', '/');
       infoname = fullfile(paths.DW,[blockObj.Name '_Digital_Output_Info.mat']);
@@ -159,15 +193,17 @@ if (data_present)
       if (data_present)
          board_dig_out_dataFile = cell(num_board_dig_out_channels,1);
          for i = 1:num_board_dig_out_channels
-            fname = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
-            board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fname),uint8(0),...
+            fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
+            if exist(fName,'file'),delete(fName);end
+            board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),uint8(0),...
                'class','uint8','size',[1 num_board_dig_out_samples],'access','w');
+            fraction_done = 100 * (iCh / num_board_dig_out_channels);
+            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
          end
       end
    end
    fprintf(1,'Matfiles created succesfully\n');
-   fprintf(1,'Exporting files...\n');
-   fprintf(1,'%.3d%%',0)
+  fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
    
    % We need 5 buffer viarables to read data from file and save it into a
    % matlab friendly forma using matfiles. Those varibles needs to be as
@@ -286,20 +322,33 @@ if (data_present)
       %         blockObj.Time = [ blockObj.Time float(t) ./ sample_rate];
       clear('t');
       % Write data to file
-      for jj=1:num_amplifier_channels
-         amplifier_dataFile{jj}.append( single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)));
-         if (dc_amp_data_saved ~= 0)
-            dc_amplifier_dataFile{jj}.append( single(Buffer(dc_amplifier_buffer_index(1:dataToRead)==jj)) );
+      for jj=1:num_amplifier_channels  % units = microvolts
+         amplifier_dataFile{jj}.append(0.195 * ( single(Buffer(amplifier_buffer_index(1:dataToRead)==jj))- 32768 ));
+         if (dc_amp_data_saved ~= 0) % units = volts
+            dc_amplifier_dataFile{jj}.append(-0.01923 *( single(Buffer(dc_amplifier_buffer_index(1:dataToRead)==jj)) -512));
          end
-         stim_dataFile{jj}.append ( single(Buffer(stim_buffer_index(1:dataToRead)==jj)) );
+         
+      stim_data = single(Buffer(stim_buffer_index(1:dataToRead)==jj));
+      compliance_limit_data = stim_data >= 2^15;
+      stim_data = stim_data - (compliance_limit_data * 2^15);
+      charge_recovery_data = stim_data >= 2^14;
+      stim_data = stim_data - (charge_recovery_data * 2^14);
+      amp_settle_data = stim_data >= 2^13;
+      stim_data = stim_data - (amp_settle_data * 2^13);
+      stim_polarity = stim_data >= 2^8;
+      stim_data = stim_data - (stim_polarity * 2^8);
+      stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
+      stim_data = stim_data .* stim_polarity;
+      stim_dataFile{jj}.append (  stim_step_size * stim_data / 1.0e-6 ); % units = microamps
+      
       end
       
-      for jj=1:num_board_adc_channels
-         board_adc_dataFile{jj}.append ( single(Buffer(adc_buffer_index(1:dataToRead)==jj)) );
+      for jj=1:num_board_adc_channels  % units = volts
+         board_adc_dataFile{jj}.append ( 312.5e-6 *(single(Buffer(adc_buffer_index(1:dataToRead)==jj)) - 32768));
       end
       
-      for jj=1:num_board_dac_channels
-         board_dac_dataFile{jj}.append( single(Buffer(dac_buffer_index(1:dataToRead)==jj)) );
+      for jj=1:num_board_dac_channels % units = volts
+         board_dac_dataFile{jj}.append( 312.5e-6 *  (single(Buffer(dac_buffer_index(1:dataToRead)==jj)) - 32768));
       end
       
       if num_board_dig_in_channels
@@ -338,38 +387,6 @@ fclose(fid);
 
 if (data_present)
    
-   fprintf(1, 'Parsing data...\n');
-   
-   compliance_limit_data = false(num_amplifier_channels,num_amplifier_samples);
-   charge_recovery_data = compliance_limit_data;
-   amp_settle_data = charge_recovery_data;
-   % Scaling variables appropriatly.
-   for jj=1:num_amplifier_channels
-      stim_data = stim_dataFile{jj}(:);
-      % Scale voltage levels appropriately.
-      amplifier_dataFile{jj}(:) = 0.195 * (single(amplifier_dataFile{jj}) - 32768); % units = microvolts
-      if (dc_amp_data_saved ~= 0)
-         dc_amplifier_dataFile{jj}(:) = -0.01923 * (single(dc_amplifier_dataFile{jj}) - 512); % units = volts
-      end
-      compliance_limit_data(jj,:) = stim_data >= 2^15;
-      stim_data = stim_data - (compliance_limit_data(jj,:) * 2^15);
-      charge_recovery_data(jj,:) = stim_data >= 2^14;
-      stim_data = stim_data - (charge_recovery_data(jj,:) * 2^14);
-      amp_settle_data(jj,:) = stim_data >= 2^13;
-      stim_data = stim_data - (amp_settle_data(jj,:) * 2^13);
-      stim_polarity = stim_data >= 2^8;
-      stim_data = stim_data - (stim_polarity * 2^8);
-      stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
-      stim_data = stim_data .* stim_polarity;
-      stim_dataFile{jj}(:) = stim_step_size * stim_data / 1.0e-6; % units = microamps
-   end
-   for jj=1:num_board_adc_channels
-      board_adc_dataFile{jj}(:) = 312.5e-6 * (single(board_adc_dataFile{jj}) - 32768); % units = volts
-   end
-   for jj=1:num_board_dac_channels
-      board_dac_dataFile{jj}(:) = 312.5e-6 * (single(board_dac_dataFile{jj}) - 32768); % units = volts
-   end
-   
    % Check for gaps in timestamps.
    if (num_gaps == 0)
       fprintf(1, 'No missing timestamps in data.\n');
@@ -394,23 +411,23 @@ if (data_present)
       end
       blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
       
-      as_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
-      fname = sprintf(strrep(as_data_fname,'\','/'), pnum, chnum);
+      as_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(as_data_fName,'\','/'), pNum, chNum);
       data = single(amp_settle_data(iCh,:));
-      save(fullfile(fname),'data','-v7.3');
-      blockObj.Channels(iCh).amp_settle_data= orgExp.libs.DiskData(matfile(fname));
+      save(fullfile(fName),'data','-v7.3');
+      blockObj.Channels(iCh).amp_settle_data= orgExp.libs.DiskData(matfile(fName));
       
-      cr_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
-      fname = sprintf(strrep(cr_data_fname,'\','/'), pnum, chnum);
+      cr_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(cr_data_fName,'\','/'), pNum, chNum);
       data = single(charge_recovery_data(iCh,:));
-      save(fullfile(fname),'data','-v7.3');
-      blockObj.Channels(iCh).charge_recovery_data= orgExp.libs.DiskData(matfile(fname));
+      save(fullfile(fName),'data','-v7.3');
+      blockObj.Channels(iCh).charge_recovery_data= orgExp.libs.DiskData(matfile(fName));
       
-      cl_data_fname = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
-      fname = sprintf(strrep(cl_data_fname,'\','/'), pnum, chnum);
+      cl_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(cl_data_fName,'\','/'), pNum, chNum);
       data = single(compliance_limit_data(iCh,:));
-      save(fullfile(fname),'data','-v7.3');
-      blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fname));
+      save(fullfile(fName),'data','-v7.3');
+      blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fName));
    end
 end
 flag = true;

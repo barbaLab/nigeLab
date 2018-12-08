@@ -129,7 +129,7 @@ switch heads.stores.((wav_data{1})).dform
 end
 num_amplifier_channels = numel(amplifier_channels);
 npts = (heads.stores.((wav_data{1})).size-10) * 4/sz;
-num_amplifier_samples = npts * numel(heads.stores.((wav_data{1})).data)/num_amplifier_channels;
+num_amplifier_samples = double(npts * numel(heads.stores.((wav_data{1})).data)/num_amplifier_channels);
 
 % board_adc_channels = channel_struct;
 % board_dig_in_channels = channel_struct;
@@ -174,6 +174,7 @@ DesiredOutputs = {
 %    'num_board_dig_out_samples';
    'filesize';
    'info';
+   'wav_data';
    };
 end
 

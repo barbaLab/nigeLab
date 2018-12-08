@@ -543,4 +543,34 @@ for iF = 1:numel(f)
 end
 end
 
+function progress(varargin)
+if nargin ==0
+   fprintf(1,'Writing data to Matfiles...%.3d%%\n',0); 
+   fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);     
+   fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);     
+   fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0); 
+   fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0); 
+   fprintf(1, '\t->Saving ADC data...%.3d%%\n',0); 
+   fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0); 
+   fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0); 
+else
+prog = varargin{1};
+l(1)= 32;
+l(2) = 23;
+l(3) = 23;
+l(4) = 36;
+l(5) = 33;
+l(6) = 23;
+l(7) = 27;
+l(8) = 28;
 
+fprintf(1,'%sWriting data to Matfiles...%.3d%%\n',0); 
+fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
+fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
+fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
+fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
+fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
+fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
+fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
+end
+end

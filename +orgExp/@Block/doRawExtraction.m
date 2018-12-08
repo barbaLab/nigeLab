@@ -35,9 +35,9 @@ switch blockObj.RecType
    case 'TDT'
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
-      warning('%s is not yet supported, but will be added.',...
+      warning('%s extraction is still WIP.',...
          blockObj.RecType);
-      return;
+      flag = tdt2Block(blockObj);
       
    case 'mat'
       % Federico did you add this? I don't think there are plans to add
