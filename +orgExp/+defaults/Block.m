@@ -82,7 +82,6 @@ Fields =  {'Raw';
            %%%%%%%%%%%%%%%%%%% doSpikeDetection, linkToData
                     };
                 
-                
 FileNames       =   {'Raw';
                      {'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'};
                      'Filt';
@@ -91,7 +90,7 @@ FileNames       =   {'Raw';
                      'ptrain';
                      'sort';
                      'clus';
-                     {'probes';'experiment';'sync'};
+                     {'probes.xlsx';'experiment.txt';'sync.mat'};
                     };
                 
 FolderNames     =   {'RawData';
@@ -113,7 +112,7 @@ for ii=1:numel(Fields)
       nFiles = numel(FileNames{ii}); % Make cell array for all of them
       pars.(Fields{ii}).File = cell(nFiles,1);
       for ik = 1:nFiles
-         pars.(Fields{ii}).File{ik} = [Del FileNames{ii}{ik} P_C];
+         pars.(Fields{ii}).File{ik} = [Del FileNames{ii}{ik}];
       end
    else
       pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];

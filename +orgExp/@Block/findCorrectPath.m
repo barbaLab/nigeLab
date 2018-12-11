@@ -85,8 +85,11 @@ blockObj.paths.DW_N      = fullfile(blockObj.paths.DW,  [blockObj.Name '_DIG_%s.
 blockObj.paths.LW_N      = fullfile(blockObj.paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
 blockObj.paths.SDW_N     = fullfile(blockObj.paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);
 for ii = 1:numel(ID.Meta.File)
-   blockObj.paths.MW_N.(lower(strrep(ID.Meta.Tag{ii},'_',''))) = ...
-      fullfile(blockObj.paths.MW,  [blockObj.Name ID.Meta.File{ii} '.mat']);
+   propName = lower(strrep(ID.Meta.Tag{ii},'_',''));
+   propName = strsplit(propName,'.');
+   propName = propName{1};
+   blockObj.paths.MW_N.(propName) = ...
+      fullfile(blockObj.paths.MW,  [blockObj.Name ID.Meta.File{ii}]);
 end
 flag = true;
 
