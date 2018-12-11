@@ -133,6 +133,7 @@ classdef Block < handle
       PlotPars    % Parameters struct for graphical plots
       QueuePars   % Parameters struct for queueing jobs to server
       ExpPars     % Parameters struct for experimental notes
+      ProbePars   % Parameters struct for parsing probe layout info
       
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data

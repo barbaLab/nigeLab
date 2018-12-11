@@ -33,7 +33,8 @@ warningString = {'RAW'; ...
    'DAC'; ...
    'DIG-IN'; ...
    'DIG-OUT'; ...
-   'METADATA'};
+   'EXPERIMENT-NOTES'; ...
+   'PROBES'};
 
 warningRef     = false(size(warningString));
 
@@ -262,36 +263,88 @@ for i = 1:blockObj.NumDigOutChannels
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
-%% PARSE OTHER METADATA
+%% PARSE EXPERIMENT METADATA
 UpdateStatus = true;
 notes = orgExp.defaults.Experiment();
-blockObj.ExpPars.Delimiter = notes.Delimiter;
+probes = orgExp.defaults.Probes();
+blockObj.ExpPars = notes;
+blockObj.ProbePars = probes;
+
+fprintf(1,'\nLinking %s...000%%\n',warningString{12});
 if exist(blockObj.paths.MW_N.experiment,'file')==0
    copyfile(fullfile(notes.Folder,notes.File),...
       blockObj.paths.MW_N.experiment,'f');
 end
 h = blockObj.takeNotes;
 waitfor(h);
+warningRef(12) = true;
+fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
 
-% fprintf(1,'\nLinking %s...000%%\n',warningString{12});
-% for iCh = 1:blockObj.NumChannels
-%    pnum  = num2str(blockObj.Channels(iCh).port_number);
-%    chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-%    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
-%    fname = fullfile(fname);
-%    
-%    if ~exist(fullfile(fname),'file')
-%       warningFlag=true;
-%       warningRef(12) = true;
-%       UpdateStatus = false;
-%       break;
-%    end
-% %    blockObj.Channels(iCh).
-%    
-%    fraction_done = 100 * (iCh / blockObj.NumChannels);
-%    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
-% end
-% if UpdateStatus, blockObj.updateStatus('Meta',true);end
+%% PARSE PROBE INFORMATION
+if isfield(blockObj.ExpPars,'Probes')
+   fprintf(1,'\nLinking %s...000%%\n',warningString{13});
+   probePorts = fieldnames(blockObj.ExpPars.Probes);
+   % Get the correct file associated with this recording in terms of
+   % experimental probes. 
+   for ii = 1:numel(probePorts)
+      probeName = blockObj.ExpPars.Probes.(probePorts{ii}).name;
+      probeFile = sprintf(probes.Str,probeName);
+      fName = fullfile(blockObj.paths.MW,[blockObj.Name ...
+                        probes.Delimiter probeFile]);
+      if exist(fName,'file')==0
+         % If the electrode file doesn't exist from default location
+         eName = fullfile(probes.ElectrodesFolder,probeFile);
+         if exist(eName,'file')==0
+            % Create one using template
+            copyfile(fullfile(probes.Folder,probes.File),fName,'f');
+         else
+            % Otherwise copy over the existing electrode file
+            copyfile(eName,fName,'f');
+         end
+      end
+      blockObj.ExpPars.Probes.(probePorts{ii}).Ch = readtable(fName);
+   end
+   
+   % For each channel, update metadata from probe config file
+   for iCh = 1:blockObj.NumChannels
+
+      if ~exist(fullfile(fname),'file')
+         warningFlag=true;
+         warningRef(13) = true;
+         UpdateStatus = false;
+         break;
+      end
+      
+      curCh = blockObj.Channels(iCh).chip_channel;
+      streamIdx = blockObj.Channels(iCh).board_stream;
+      % Go through all ports (or boards, really)
+      for ii = 1:numel(probePorts)
+         % If this is the correct one
+         if blockObj.ExpPars.Probes.(probePorts{ii}).stream==streamIdx
+            % Get the metadata for the correct channel
+            ch = blockObj.ExpPars.Probes.(probePorts{ii}).Ch;
+            v = ch.Properties.VariableNames;
+            if strcmp(blockObj.FileExt,'.rhs')
+               probeInfo = ch(RHD2RHS(ch.RHD_Channel)==curCh,:);
+            else
+               probeInfo = ch(ch.RHD_Channel==curCh,:);
+            end
+            
+            % Assign all the included variables (columns) to channel
+            % metadata.
+            for iV = 1:numel(v)
+               blockObj.Channels(iCh).(v{iV})=probeInfo.(v{iV});
+            end
+            break;
+         end
+      end
+      
+
+      fraction_done = 100 * (iCh / blockObj.NumChannels);
+      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   end
+   if UpdateStatus, blockObj.updateStatus('Meta',true);end
+end
 
 %% GIVE USER WARNINGS
 if warningFlag && ~preExtractedFlag
