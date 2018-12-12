@@ -132,6 +132,8 @@ classdef Block < handle
       VidPars     % Parameters struct for associating videos
       PlotPars    % Parameters struct for graphical plots
       QueuePars   % Parameters struct for queueing jobs to server
+      ExpPars     % Parameters struct for experimental notes
+      ProbePars   % Parameters struct for parsing probe layout info
       
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
@@ -383,12 +385,16 @@ classdef Block < handle
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
-         if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
-               any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
-            
-            mc = metaclass(blockObj);
-            calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
-            n = numel(mc.MethodList(calledmethod).OutputNames);
+         if numel(dot) < 2
+            if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
+                  any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
+
+               mc = metaclass(blockObj);
+               calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
+               n = numel(mc.MethodList(calledmethod).OutputNames);
+            else
+               n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+            end
          else
             n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
          end
@@ -413,14 +419,17 @@ classdef Block < handle
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
       analyzeRMS(blockObj,type)
       
-      flag = plotWaves(blockObj)  % Plot stream snippets
+      flag = plotWaves(blockObj)          % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
+      flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
       L = list(blockObj) % List of current associated files for field or fields
       flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = updatePaths(blockObj,tankPath) % Update associated paths
       flag = updateVidInfo(blockObj) % Update video info
       
+      h = takeNotes(blockObj)             % View or update notes on current recording
+      parseNotes(blockObj,str)            % Update notes for a recording
    end
    methods (Access = public, Hidden = true)
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
@@ -433,9 +442,6 @@ classdef Block < handle
       operations = updateStatus(blockObj,operation,value) % Indicate completion of phase
       Status = getStatus(blockObj,stage)  % Retrieve task/phase status
       flag = clearSpace(blockObj,ask)     % Clear space on disk      
-      
-      takeNotes(blockObj)                 % View or update notes on current recording
-      updateNotes(blockObj,str)           % Update notes for a recording
 
    end
    

@@ -1,0 +1,9 @@
+TANK|tankname
+ANIMAL|surgname
+ID|a1
+GROUP|control
+LESION|none
+STATUS|pilot
+SURGERY|YYYY-MM-DD
+PROBE_P1|ID-###
+PROBE_P2|MM-022
