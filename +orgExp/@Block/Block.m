@@ -419,8 +419,9 @@ classdef Block < handle
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
       analyzeRMS(blockObj,type)
       
-      flag = plotWaves(blockObj)  % Plot stream snippets
+      flag = plotWaves(blockObj)          % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
+      flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
       L = list(blockObj) % List of current associated files for field or fields
       flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
