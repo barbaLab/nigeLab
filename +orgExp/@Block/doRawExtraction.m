@@ -54,5 +54,6 @@ switch blockObj.RecType
          blockObj.RecType);
       return;
 end
-
+blockObj.updateStatus('Raw',true);
+blockObj.save;
 end

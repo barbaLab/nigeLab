@@ -40,10 +40,10 @@ VariableNames = {'Animals';
                     };
                 
 GatherFunction = { @(an) an.Name;
-                   @(an) unique(datetime(cat(1,an.Blocks.Recording_date),'InputFormat','yyMMdd'));
-                   @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.File_extension})];
+                   @(an) getAnimalDate(an)
+                   @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.FileExt})];
                    @(an) numel(an.Blocks);
-                   @(an) unique(cat(1,an.Blocks.numChannels));
+                   @(an) unique(cat(1,an.Blocks.NumChannels));
                    @(an) getAnimalStatus(an);
     };
 
@@ -70,4 +70,9 @@ function Status = getAnimalStatus(animalObj)
     L = animalObj.list;
     Status = unique(L.Status)';
     Status = sprintf([repmat('%s;',1,numel(Status)) '\b'],Status{:});
+end
+
+function D = getAnimalDate(animalObj)
+tmp = cat(1,animalObj.Blocks.Meta);
+D = unique(datetime({tmp.RecDate},'InputFormat','yyMMdd'));
 end

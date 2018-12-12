@@ -13,16 +13,26 @@ end
 
 
 supportedFormats={'rhs','rhd','tdt'};
-Recordings=[];
-for i=supportedFormats
- Recordings = [ Recordings dir(fullfile(animalObj.DIR,['*.' i{:}]))];
-end
+
+Recordings = dir(fullfile(animalObj.DIR));
 Recordings=Recordings(~ismember({Recordings.name},{'.','..'}));
-Recordings=Recordings(~[Recordings.isdir]);
 
 for bb=1:numel(Recordings)
-    RecFile=fullfile(Recordings(bb).folder,Recordings(bb).name);
-    animalObj.addBlock(RecFile);
+   [PATHSTR,NAME,ext] = fileparts(Recordings(bb).name);
+   addBlock=false;
+   if Recordings(bb).isdir
+      tmp=dir(fullfile(animalObj.DIR,Recordings(bb).name,'*.tev'));
+      if ~isempty(tmp)
+         addBlock=true;
+      end
+   elseif any(strcmp(ext,supportedFormats))
+      addBlock=true;
+   end
+   
+   if  addBlock
+      RecFile=fullfile(Recordings(bb).folder,Recordings(bb).name);
+      animalObj.addBlock(RecFile);
+   end
 end
 animalObj.save;
 end

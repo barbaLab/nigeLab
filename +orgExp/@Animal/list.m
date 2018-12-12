@@ -2,7 +2,8 @@ function L = list(animalObj)
 %% LIST  Give list of properties asso
 
 jj=1;
-for ii=animalObj.Blocks
+for jj=1:numel(animalObj.Blocks)
+   ii = animalObj.Blocks(jj);
     tmp=ii.list;
     I=ismember(tmp.Properties.VariableNames,'Animals');
     L_(jj,:)=[tmp(1,I),tmp(1,~I)];

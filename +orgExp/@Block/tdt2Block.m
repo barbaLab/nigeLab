@@ -53,6 +53,7 @@ fprintf(1, 'Allocating memory for data...\n');
     block = TDTbin2mat(recFile,'TYPE',{'STREAMS'},'CHANNEL',ch,'VERBOSE',false);
     data = single(block.streams.(wav_data{pb}).data * 10^6);  %#ok<*NASGU>
     amplifier_dataFile{iCh}.append(data);
+    blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
     fraction_done = 100 * (iCh / num_amplifier_channels);
     fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
    end

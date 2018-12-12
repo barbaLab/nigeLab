@@ -52,11 +52,12 @@ dt = mode(diff(t));
 %% ASSIGN CHANNEL COLORS BASED ON RMS
 load(blockObj.PlotPars.ColorMapFile,'cm');
 if isempty(blockObj.RMS)
-   if ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
-      analyzeRMS(blockObj);
-   end
+   analyzeRMS(blockObj);   
+elseif ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
+   analyzeRMS(blockObj);
 end
-r = blockObj.RMS.CAR;
+
+r = blockObj.RMS.(str);
 ic = assignColors(r); 
 
 %% MAKE FIGURE AND PLOT
