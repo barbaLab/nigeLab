@@ -315,7 +315,8 @@ if (data_present)
       t=Buffer(time_buffer_index(1:dataToRead));
       tmp=dec2bin(t,16);
       t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
-%       t = reshape(t,1,numel(t)); % ensure correct orientation
+      t = reshape(t,1,numel(t)); % ensure correct orientation
+      TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds).
@@ -429,6 +430,7 @@ if (data_present)
       save(fullfile(fName),'data','-v7.3');
       blockObj.Channels(iCh).compliance_limit_data= orgExp.libs.DiskData(matfile(fName));
    end
+    blockObj.Time = TimeFile;
 end
 flag = true;
 

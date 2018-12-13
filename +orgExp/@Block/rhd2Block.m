@@ -386,7 +386,7 @@ if (data_present)
       tmp=dec2bin(t,16);
       t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
       t = reshape(t,1,numel(t)); % ensure correct orientation
-%       TimeFile.append(t);
+      TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds)
@@ -515,6 +515,7 @@ if (data_present)
    for iCh=1:num_amplifier_channels
       blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
    end
+   blockObj.Time = TimeFile;
 end
 
 % % % % % % % % % % % % % % % % % % % % % % 
