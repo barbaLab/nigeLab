@@ -269,51 +269,51 @@ if (data_present)
    time_buffer_index=repmat(time_buffer_index,1,nBlocks);
    
    if (num_amplifier_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+      end_=end_+num_samples_per_data_block * num_amplifier_channels;
       amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
       amplifier_buffer_index=repmat(amplifier_buffer_index,1,nBlocks);
       
       if (dc_amp_data_saved ~= 0)
-         index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-         end_=index(end);
+         index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+         end_=end_+num_samples_per_data_block * num_amplifier_channels;
          dc_amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
          dc_amplifier_buffer_index=repmat(dc_amplifier_buffer_index,1,nBlocks);
       end
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+      end_=end_+num_samples_per_data_block * num_amplifier_channels;
       stim_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
       stim_buffer_index=repmat(stim_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_adc_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_board_adc_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_board_adc_channels);
+      end_=end_+num_samples_per_data_block * num_board_adc_channels;
       adc_buffer_index(index)=uint16(reshape(repmat(1:num_board_adc_channels,num_samples_per_data_block,1),1,[]));
       adc_buffer_index=repmat(adc_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dac_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_board_dac_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_board_dac_channels);
+      end_=end_+num_samples_per_data_block * num_board_dac_channels;
       dac_buffer_index(index)=uint16(reshape(repmat(1:num_board_dac_channels,num_samples_per_data_block,1),1,[]));
       dac_buffer_index=repmat(dac_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dig_in_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * 1;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * 1);
+      end_=end_+num_samples_per_data_block * 1;
       dig_in_buffer_index(index)=true;
       dig_in_buffer_index=repmat(dig_in_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dig_out_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * 1;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * 1);
+%       end_=end_+num_samples_per_data_block * 1;
       dig_out_buffer_index(index)=true;
       dig_out_buffer_index=repmat(dig_out_buffer_index,1,nBlocks);
       
@@ -331,7 +331,7 @@ if (data_present)
       %%% Read binary data.
       blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
       dataToRead = blocksToread*nDataPoints;
-      Buffer=uint16(fread(fid, dataToRead, 'uint16=>uint16'))';
+      Buffer=fread(fid, dataToRead, 'uint16=>uint16')';
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Update the files
