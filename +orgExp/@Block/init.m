@@ -122,7 +122,7 @@ switch blockObj.FileExt
       header=ReadRHSHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
                         
-      blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
+%       blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
       blockObj.NumDACChannels = header.num_board_dac_channels;
       blockObj.NumADCchannels = header.num_board_adc_channels;
       blockObj.NumDigInChannels = header.num_board_dig_in_channels;
