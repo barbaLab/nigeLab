@@ -6,7 +6,7 @@ function init(tankObj)
 %  By: Max Murphy v1.0  06/14/2018 Original version (R2017b)
  
 %% PARSE NAME AND SAVE LOCATION
-tankObj.Name = strsplit(tankObj.DIR,filesep);
+tankObj.Name = strsplit(tankObj.RecDir,filesep);
 tankObj.Name = tankObj.Name{end};
 tankObj.setSaveLocation(tankObj.SaveLoc);
 
@@ -25,7 +25,7 @@ end
 % the rat class.
 
 tankObj.Animals=[];
-AnimalsNames=dir(tankObj.DIR);
+AnimalsNames=dir(tankObj.RecDir);
 AnimalsNames=AnimalsNames(~ismember({AnimalsNames.name},{'.','..'}));   % remove . and ..
 AnimalsNames=AnimalsNames([AnimalsNames.isdir]); % take only folders, just in case
 for rr=1:numel(AnimalsNames)

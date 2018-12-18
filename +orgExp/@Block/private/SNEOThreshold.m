@@ -60,6 +60,7 @@ if sum(pk) <= 1
    ts = [];
    pmin = [];
    dt = [];
+   E = [];
    return
 end
 

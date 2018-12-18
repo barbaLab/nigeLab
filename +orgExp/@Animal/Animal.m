@@ -10,7 +10,7 @@ classdef Animal < handle
    end
    
    properties (Access = public) %debugging purpose, is private
-      DIR         % directory with raw binary data in intan format
+      RecDir         % directory with raw binary data in intan format
       Blocks       % Children (BLOCK)
       SaveLoc
       ExtractFlag
@@ -38,14 +38,14 @@ classdef Animal < handle
          end
          
          %% LOOK FOR ANIMAL DIRECTORY
-         if isempty(animalObj.DIR)
-            animalObj.DIR = uigetdir(animalObj.DEF,'Select directory with the the recordings');
-            if animalObj.DIR == 0
+         if isempty(animalObj.RecDir)
+            animalObj.RecDir = uigetdir(animalObj.DEF,'Select directory with the the recordings');
+            if animalObj.RecDir == 0
                error('No animal selected. Object not created.');
             end
          else
-            if exist(animalObj.DIR,'dir')==0
-               error('%s is not a valid block directory.',animalObj.DIR);
+            if exist(animalObj.RecDir,'dir')==0
+               error('%s is not a valid block directory.',animalObj.RecDir);
             end
          end
          

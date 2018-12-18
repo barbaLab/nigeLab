@@ -14,6 +14,7 @@ if ~genPaths(blockObj)
    return;
 end
 probes = unique([blockObj.Channels.port_number]);
+probesNames = unique({blockObj.Channels.port_prefix});
 nChannels = length(blockObj.Channels(1).Filt);
 refMean = zeros(numel(probes),nChannels);
 
@@ -53,8 +54,11 @@ fprintf(1,'\b\b\b\bDone.\n');
 % Save amplifier_data CAR by probe/channel
 fprintf(1,'Saving data... %.3d%%',0);
 if ~doSuppression
-    car_infoname = fullfile(blockObj.paths.CARW,[blockObj.Name '_CAR_Ref.mat']);
-    save(fullfile(car_infoname),'refMean','-v7.3');
+   for pb = 1:numel(probes)
+      car_infoname = fullfile(blockObj.paths.CARW,sprintf('%s_CAR_Ref_%c.mat',blockObj.Name,probesNames{pb}));
+      refMeanFile{pb} = orgExp.libs.DiskData(blockObj.SaveFormat,car_infoname,refMean(pb,:),'access','w');
+   end
+    
     for iCh = 1:length(blockObj.Channels)
         pnum  = num2str(blockObj.Channels(iCh).port_number);
         chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
@@ -62,7 +66,8 @@ if ~doSuppression
         data = data - refMean(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
         blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data,'access','w');
-		blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
+        blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
+        blockObj.Channels(iCh).refMean = lockData(refMeanFile{blockObj.Channels(iCh).port_number});
         fraction_done = 100 * (iCh / blockObj.NumChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%
         fprintf(1,'\b\b\b\b%.3d%%',floor(fraction_done))

@@ -5,7 +5,7 @@ classdef Tank < handle
 %  tankObj = TANK('NAME','VALUE',...);   
 %
 %  ex: 
-%  tankObj = TANK('DIR','P:\Your\Recording\Directory\Here');
+%  tankObj = TANK('RecDir','P:\Your\Recording\Directory\Here');
 %
 %  TANK Properties:
 %     Name - Name of experimental TANK.
@@ -34,7 +34,7 @@ classdef Tank < handle
    end
    %% PRIVATE PROPERTIES
    properties (Access = public) %debugging purposes, is private
-      DIR                     % Directory of the TANK
+      RecDir                     % Directory of the TANK
       Animals                 % Children (ANIMAL)
 
       BlockNameVars           % Metadata variables from BLOCK names
@@ -62,11 +62,11 @@ classdef Tank < handle
          %  tankObj = TANK('NAME',Value,...);
          %
          %  ex: 
-         %  tankObj = TANK('DIR','P:\Your\Block\Directory\Here');
+         %  tankObj = TANK('RecDir','P:\Your\Block\Directory\Here');
          %
          %  List of 'NAME', Value input argument pairs:
          %
-         %  -> 'DIR' : (def: none) Specify as string with full directory of
+         %  -> 'RecDir' : (def: none) Specify as string with full directory of
          %              recording BLOCK. Specifying this will skip the UI
          %              selection portion, so it's useful if you are
          %              looping the expression.
@@ -89,15 +89,15 @@ classdef Tank < handle
          end
          
          %% LOOK FOR BLOCK DIRECTORY
-         if isempty(tankObj.DIR)
-            tankObj.DIR = uigetdir(tankObj.DefaultTankLoc,...
+         if isempty(tankObj.RecDir)
+            tankObj.RecDir = uigetdir(tankObj.DefaultTankLoc,...
                                    'Select TANK folder');
-            if tankObj.DIR == 0
+            if tankObj.RecDir == 0
                error('No block selected. Object not created.');
             end
          else
-            if exist(tankObj.DIR,'dir')==0
-               error('%s is not a valid block directory.',tankObj.DIR);
+            if exist(tankObj.RecDir,'dir')==0
+               error('%s is not a valid block directory.',tankObj.RecDir);
             end
          end
          
@@ -111,7 +111,7 @@ classdef Tank < handle
               AnimalFolder=[];
           end
           if isempty(AnimalFolder)
-            AnimalFolder = uigetdir(tankObj.DIR,...
+            AnimalFolder = uigetdir(tankObj.RecDir,...
                                    'Select animal folder');
             if AnimalFolder == 0
                error('No animal selected. Object not created.');
@@ -122,7 +122,7 @@ classdef Tank < handle
             end
          end
           
-         newAnimal= orgExp.Animal('DIR',AnimalFolder,...
+         newAnimal= orgExp.Animal('RecDir',AnimalFolder,...
              'SaveLoc',tankObj.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
       end

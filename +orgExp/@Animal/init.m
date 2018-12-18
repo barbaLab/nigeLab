@@ -1,5 +1,5 @@
 function init(animalObj)
-[~,NAME] = fileparts(animalObj.DIR);
+[~,NAME] = fileparts(animalObj.RecDir);
 animalObj.Name = NAME;
 
 animalObj.setSaveLocation(animalObj.SaveLoc);
@@ -14,14 +14,14 @@ end
 
 supportedFormats={'rhs','rhd','tdt'};
 
-Recordings = dir(fullfile(animalObj.DIR));
+Recordings = dir(fullfile(animalObj.RecDir));
 Recordings=Recordings(~ismember({Recordings.name},{'.','..'}));
 
 for bb=1:numel(Recordings)
    [PATHSTR,NAME,ext] = fileparts(Recordings(bb).name);
    addBlock=false;
    if Recordings(bb).isdir
-      tmp=dir(fullfile(animalObj.DIR,Recordings(bb).name,'*.tev'));
+      tmp=dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
       if ~isempty(tmp)
          addBlock=true;
       end
