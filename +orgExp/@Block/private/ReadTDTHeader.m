@@ -58,9 +58,10 @@ s1 = datenum([1970, 1, 1, 0, 0, heads.startTime]);
 s2 = datenum([1970, 1, 1, 0, 0, heads.stopTime]);
 info.date = datestr(s1,'yyyy-mmm-dd');
 if ~isnan(heads.startTime)
-   info.Year = year(s1);
-   info.Month = month(s1);
-   info.Day = day(s1);
+    d = datevec(s1);
+   info.Year = d(1);
+   info.Month = d(2);
+   info.Day = d(3);
    info.RecDate = datestr(s1,'yymmdd');
    info.RecTime = datestr(s1,'hhmmss');
    
