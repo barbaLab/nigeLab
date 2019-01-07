@@ -54,6 +54,8 @@ pars.FEAT_VIEW = [-5 13]; % 3-D view angle
 
 %% COULD ADD PARSING FOR PROPERTY VALIDITY HERE?
 % To look into for future...
+%
+%  e.g. Check that "SDMAX" is numeric, and greater than "SDMIN" etc...
 
 %% UPDATE PARS PROPERTY
 sortObj.pars = pars;

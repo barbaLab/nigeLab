@@ -13,7 +13,11 @@ function flag = initData(sortObj,nigelObj)
 flag = false;
 if nargin > 1
    % Parse input argument type
-   switch class(
+   switch class(nigelObj)
+      case 
+         
+      otherwise
+   end
    
 else
    
