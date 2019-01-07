@@ -1,4 +1,4 @@
-function flag = plotOverlay(blockObj)
+function flag = plotOverlay(blockObj,val)
 %% PLOTOVERLAY  Overlay multi-channel values, superimposed on image
 %
 %  flag = PLOTOVERLAY(blockObj);
@@ -7,6 +7,10 @@ function flag = plotOverlay(blockObj)
 %   INPUTS
 %  --------
 %  blockObj :     BLOCK class object from orgExp package.
+%
+%     val   :     (Optional) Sets the overlay in one call to PLOTOVERLAY()
+%                    method, instead of a separate call to SETOVERLAY()
+%                    method.
 %
 %  --------
 %   OUTPUT
@@ -20,12 +24,16 @@ flag = false;
 blockObj.PlotPars = orgExp.defaults.Plot();
 
 %% CHECK THAT OVERLAY HAS BEEN SET
-% for iCh = 1:blockObj.NumChannels
-%    if ~isfield(blockObj.Channels(iCh),'overlay')
-%       warning('Overlay has not been set. Try blockObj.setOverlay method.');
-%       return;   
-%    end
-% end
+if nargin == 2
+   blockObj.setOverlay(val);
+else
+   for iCh = 1:blockObj.NumChannels
+      if ~isfield(blockObj.Channels(iCh),'overlay')
+         warning('Overlay has not been set. Try blockObj.setOverlay method.');
+         return;   
+      end
+   end
+end
 
 %%
 if ~isfield(blockObj.Graphics,'Overlay')
