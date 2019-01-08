@@ -13,10 +13,11 @@ function flag = parseAnimals(sortObj,animalObj)
 %
 % By: Max Murphy  v1.0    2019/01/08  Original version (R2017a)
 
-%% PARSE INPUT
-flag = false;
-
-
-flag = true;
+%% CONCATENATE ALL BLOCKS AND THEN PARSE BLOCK ARRAY
+blockObjArray = [];
+for ii = 1:numel(animalObj)
+   blockObjArray = [blockObjArray; animalObj(ii).Blocks]; %#ok<AGROW>
+end
+flag = parseBlocks(sortObj,blockObjArray);
 
 end

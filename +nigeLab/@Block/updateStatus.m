@@ -1,6 +1,8 @@
 function operations = updateStatus(blockObj,operation,value)
 %% updates status of block
 
+% This seems redundant, is there a purpose to have it instead of just
+% referencing blockObj.Fields? -MM 2019/01/08
 [~,operations_] = nigeLab.defaults.Block();
 
 

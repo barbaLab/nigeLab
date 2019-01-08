@@ -30,7 +30,7 @@ end
 
 %% SET VALUES
 for iCh = 1:blockObj.NumChannels
-   blockObj.Channel(iCh).overlay = val(iCh);
+   blockObj.Channels(iCh).overlay = val(iCh);
 end
 
 flag = true;

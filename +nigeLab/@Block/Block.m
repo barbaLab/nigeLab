@@ -66,14 +66,12 @@ classdef Block < handle
    % Started by: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
    % Expanded by: MAECI 2018 collaboration (Federico Barban & Max Murphy)
    
-   %% PUBLIC PROPERTIES
+   %% PROPERTIES
    
-   properties (Access = public)
+   properties (SetAccess = public,GetAccess = public)
       Name  % Name of the recording block
       Meta  % Metadata about the recording
-   end
-   
-   properties (Access = public)
+
       DACChannels       % Struct containing info about DAC channels
       ADCChannels       % Struct containing info about ADC channels
       DigInChannels     % Struct containing info about digital inputs
@@ -83,8 +81,7 @@ classdef Block < handle
       Graphics          % Graphical objects associated with block
    end
    
-   properties (SetAccess = private)
-      
+   properties (SetAccess = private,GetAccess = public)
       SampleRate  % Recording sample rate
       Time        % Points to Time File
       FileExt     % .rhd, .rhs, or other
@@ -98,31 +95,7 @@ classdef Block < handle
       NumDigOutChannels = 0   % Number of digital output channels
       
       RMS                     % RMS noise table for different waveforms
-   end
-   
-   properties (SetAccess = immutable,GetAccess = private)
-      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
-      Date              % Date of recording
-      Month             % Month of recording
-      Day               % Day of recording
-   end
-   
-   properties (SetAccess = immutable,GetAccess = public)
-      RecLocDefault     % Default location of raw binary recording
-      SaveLocDefault    % Default location of BLOCK
-      ForceSaveLoc      % Flag to force make non-existant directory
-      ProbeChannel      % String for probe and channel number parsing
       
-      Delimiter        % Delimiter for name metadata for dynamic variables
-      DynamicVarExp    % Expression for parsing BLOCK names from raw file
-      IncludeChar      % Character indicating included name elements
-      DiscardChar      % Character indicating discarded name elements
-      NamingConvention % How to parse dynamic name variables for Block
-   end
-   
-   
-   %% PRIVATE PROPERTIES
-   properties (SetAccess = private,GetAccess = public)
       Fields      % List of property field names
       
       SDPars      % Parameters struct for spike detection
@@ -141,12 +114,28 @@ classdef Block < handle
       
       Samples  % Total number of samples in original record
       Mask     % Whether to include channels or not
-   end
-   
-   properties (Access = private)
+      
       Status      % Completion status for each element of BLOCK/FIELDS
       paths       % Detailed paths specifications for all the saved files
       Notes       % Notes from text file
+
+      ProbeChannel      % String for probe and channel number parsing
+      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+      Date              % Date of recording
+      Month             % Month of recording
+      Day               % Day of recording
+   end
+  
+   properties (SetAccess = private,GetAccess = private)      
+      ForceSaveLoc      % Flag to force make non-existant directory      
+      RecLocDefault     % Default location of raw binary recording
+      SaveLocDefault    % Default location of BLOCK
+      
+      Delimiter        % Delimiter for name metadata for dynamic variables
+      DynamicVarExp    % Expression for parsing BLOCK names from raw file
+      IncludeChar      % Character indicating included name elements
+      DiscardChar      % Character indicating discarded name elements
+      NamingConvention % How to parse dynamic name variables for Block
    end
    
    %% METHODS

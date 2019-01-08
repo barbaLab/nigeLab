@@ -47,12 +47,12 @@ classdef Sort < handle
    
    %% PROPERTIES
    properties (Access = public)
-      Data     % Array of orgExp block objects
-      Channels % Struct containing channels info
+      Blocks      % Array of orgExp block objects
+      Channels    % Struct containing channels info
    end
    
    properties (Access = private)
-      pars  % Parameters
+      pars     % Parameters
       handles  % Graphics handles
    end
    

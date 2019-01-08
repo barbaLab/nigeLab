@@ -1,28 +1,23 @@
 function L = list(blockObj)
 %% LIST  Give list of current files associated with field.
 %
-%  flag = blockObj.LIST;
-%  flag = blockObj.LIST(name);
-%
-%  Note: If called without an input argument, returns names of all
-%  associated files for all fields.
+%  L = blockObj.LIST;
 %
 %  --------
 %   INPUTS
 %  --------
-%    name   :  Name of a particular field you want to return a
-%              list of files for.
+%  blockObj :     nigeLab.Block class object.
 %
 %  --------
 %   OUTPUT
 %  --------
-%    flag   :  Returns true if no input argument is specified, if ANY file
-%              is associated with the BLOCK. Otherwise returns false. If
-%              name is specified, returns false if no files are associated
-%              with the BLOCK.
+%     L     :     Table with information about blockObj.
 %
 % By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
 %                 v1.1  06/14/2018 Added flag output
+%                 v1.2  ?? ?? ???? Assume modified by FB ? 
+
+%% PARSE DATE AND TIME INFO
 Format = '';
 str='';
 if ~strcmp(blockObj.Meta.Rec_date,'YYMMDD')
@@ -34,16 +29,19 @@ if ~strcmp(blockObj.Meta.Rec_time,'hhmmss')
     str = [str blockObj.Meta.Rec_time];
 end
 DateTime=datetime(str,'InputFormat',Format);
-infoFields={'Animal_ID'
-            'Rec_ID'
-            };
                 
 info.Recording_date=DateTime;
 info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
+
+%% PARSE ANIMAL AND RECORDING ID
+infoFields={'Animal_ID'
+            'Rec_ID'
+            };
 for jj=1:numel(infoFields)
-info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
+   info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
 end
 
+%% PARSE RECORDING TYPE AND TOTAL NUMBER OF CHANNELS
 infoFields={'RecType'
             'NumChannels'
             };
@@ -51,25 +49,33 @@ for jj=1:numel(infoFields)
    info.(infoFields{jj})={blockObj.(infoFields{jj})};
 end
 
+% Update RecType (for example, for Intan .rhd or .rhs; TDT will not have a
+% file extension though.
 info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.FileExt)};
+
+%% PARSE CURRENT STATUS OF PROCESSING
 St = blockObj.getStatus;
 info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});
 
 
+%% CONVERT STRUCT INTO TABLE FORMAT SO IT CAN BE PRINTED TO COMMAND WINDOW
 L_=struct2table(info,'AsArray',true);
 for ii=1:length(L_.Properties.VariableNames)
     switch L_.Properties.VariableNames{ii}
-        case 'Corresponding_animal'
+        case 'Corresponding_animal' % Deprecated I think ? -MM
             L_.Properties.VariableNames{ii}='Animal';
         case 'RecType'
             L_.Properties.VariableNames{ii}='RecordingType';
-        case 'numChannels'
+        case 'numChannels' % Deprecated as well? -MM
             L_.Properties.VariableNames{ii}='NumberOfChannels';
     end
 end
+
+%% IF OUTPUT ARGUMENT IS REQUESTED, DO NOT DISPLAY IT
 if nargout==0
     disp(L_);
 else
     L=L_;
 end
+
 end

@@ -16,10 +16,14 @@ function ts = getSpikeTimes(blockObj,ch,class)
 %
 %   class      :     (Optional) Specify the class of spikes to retrieve,
 %                       based on sorting or clustering. If not specified,
-%                       gets all spikes on channel. Otherwise, it will
-%                       check to make sure that there are actually classes
-%                       associated with the spike and issue a warning if
-%                       that part hasn't been done yet.
+%                       depends on if sorting has been done. 
+%                       If sorting is done, then it will only include
+%                       classes that correspond to TAGS which relate to
+%                       spiking activity. Otherwise it gets all spikes. 
+%                       If class is specified, it will check to make sure 
+%                       that there are actually classes associated with the
+%                       spike and issue a warning if that part hasn't been 
+%                       done yet.
 %                       -> Can be given as a vector.
 %                       -> Non-negative integer.
 %

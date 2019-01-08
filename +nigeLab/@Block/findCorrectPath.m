@@ -25,6 +25,8 @@ CAR_ID      = [delim ID.CAR.Folder];                 % Spatial re-reference stre
 DIG_ID      = [delim ID.Dig.Folder];                 % Digital stream ID
 LFP_ID      = [delim ID.LFP.Folder];                 % LFP stream ID
 SD_ID       = [delim ID.Spikes.Folder];              % Spike detection ID
+CLU_ID      = [delim ID.Clusters.Folder];
+SORT_ID     = [delim ID.Sorted.Folder];
 META_ID     = [delim ID.Meta.Folder];
 
 %% PARSE CORRECT ROOT PATH
@@ -52,6 +54,8 @@ blockObj.paths.CARW  = fullfile(blockObj.paths.TW,[blockObj.Name CAR_ID] );
 blockObj.paths.DW    = fullfile(blockObj.paths.TW,[blockObj.Name DIG_ID] );
 blockObj.paths.LW    = fullfile(blockObj.paths.TW,[blockObj.Name LFP_ID] );
 blockObj.paths.SDW   = fullfile(blockObj.paths.TW,[blockObj.Name SD_ID]  );
+blockObj.paths.CLUW  = fullfile(blockObj.paths.TW,[blockObj.Name CLU_ID] );
+blockObj.paths.SORTW = fullfile(blockObj.paths.TW,[blockObj.Name SORT_ID]);
 blockObj.paths.MW    = fullfile(blockObj.paths.TW,[blockObj.Name META_ID]);
 
 all_fields = fieldnames(blockObj.paths);
@@ -84,6 +88,8 @@ blockObj.paths.CARW_N    = fullfile(blockObj.paths.CARW,[blockObj.Name ID.CAR.Fi
 blockObj.paths.DW_N      = fullfile(blockObj.paths.DW,  [blockObj.Name '_DIG_%s.mat']);
 blockObj.paths.LW_N      = fullfile(blockObj.paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
 blockObj.paths.SDW_N     = fullfile(blockObj.paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);
+blockObj.paths.CLUW_N  = fullfile(blockObj.paths.CLUW,[blockObj.Name ID.Clusters.File '.mat'] );
+blockObj.paths.SORTW_N = fullfile(blockObj.paths.SORTW,[blockObj.Name ID.Sorted.File '.mat']);
 for ii = 1:numel(ID.Meta.File)
    propName = lower(strrep(ID.Meta.Tag{ii},'_',''));
    propName = strsplit(propName,'.');

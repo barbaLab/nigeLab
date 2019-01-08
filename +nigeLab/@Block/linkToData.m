@@ -29,6 +29,8 @@ warningString = {'RAW'; ...
    'FILTERED'; ...
    'CAR'; ...
    'SPIKES'; ...
+   'CLUSTERS';...
+   'SORTED';...
    'ADC'; ...
    'DAC'; ...
    'DIG-IN'; ...
@@ -38,15 +40,19 @@ warningString = {'RAW'; ...
 
 warningRef     = false(size(warningString));
 
+%% GET CHANNEL INFO
+channelID = nigeLab.utils.parseChannelID(blockObj);
+
 %% CHECK AMPLIFIER CHANNELS
 
 fprintf(1,'\nLinking RAW channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    
    %%%%%%%%%%%%% Raw data
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
-   fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), pnum, chnum);
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
+   fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), ...
+      channelID(iCh,1), );
    fname = fullfile(fname);
    
    if ~exist(fullfile(fname),'file')
@@ -65,8 +71,8 @@ if updateStatus, blockObj.updateStatus('Raw',true);end
 updateStatus = true;
 fprintf(1,'\nLinking STIMULATION channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
    
    stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
    fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
@@ -105,8 +111,8 @@ if updateStatus, blockObj.updateStatus('Digital',true);end
 updateStatus = true;
 fprintf(1,'\nLinking LFP channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
    fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -126,8 +132,8 @@ if updateStatus, blockObj.updateStatus('LFP',true);end
 updateStatus = true;
 fprintf(1,'\nLinking FILTERED channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
    fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -147,8 +153,8 @@ if updateStatus, blockObj.updateStatus('Filt',true);end
 updateStatus = true;
 fprintf(1,'\nLinking CAR channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
    fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -168,8 +174,8 @@ if updateStatus, blockObj.updateStatus('CAR',true); end
 updateStatus = true;
 fprintf(1,'\nLinking SPIKES channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = num2str(blockObj.Channels(iCh).port_number);
-   chnum = blockObj.Channels(iCh).custom_channel_name(regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -180,12 +186,63 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).Spikes=nigeLab.libs.DiskData('MatFile',fname);
+   
+   
+   
    fraction_done = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 if updateStatus, blockObj.updateStatus('Spikes',true);end
 
+%% CHECK CLUSTERS DATA
+updateStatus = true;
+fprintf(1,'\nLinking CLUSTERED channels...000%%\n');
+for iCh = 1:blockObj.NumChannels
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
+   fname = sprintf(strrep(blockObj.paths.CLUW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
+   if ~exist(fullfile(fname),'file')
+      warningFlag=true;
+      warningRef(8) = true;
+      updateStatus = false;
+      break;
+   end
+   blockObj.Channels(iCh).Clusters=nigeLab.libs.DiskData('MatFile',fname);
+   
+   
+   
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+end
+if updateStatus, blockObj.updateStatus('Clusters',true);end
 
+   
+   
+%% CHECK SORTED DATA
+updateStatus = true;
+fprintf(1,'\nLinking SORTED channels...000%%\n');
+for iCh = 1:blockObj.NumChannels
+   pnum  = channelID(iCh,1);
+   chnum = channelID(iCh,2);
+   fname = sprintf(strrep(blockObj.paths.SORTW_N,'\','/'), pnum, chnum);
+   fname = fullfile(fname);
+   
+   if ~exist(fullfile(fname),'file')
+      warningFlag=true;
+      warningRef(9) = true;
+      updateStatus = false;
+      break;
+   end
+   blockObj.Channels(iCh).Sorted=nigeLab.libs.DiskData('MatFile',fname);
+   
+   
+   
+   fraction_done = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+end
+if updateStatus, blockObj.updateStatus('Sorted',true);end   
 
 
 %% CHECK SINGLE_CHANNEL ADC DATA
@@ -199,7 +256,7 @@ for i = 1:blockObj.NumADCchannels
    
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
-      warningRef(8) = true;
+      warningRef(10) = true;
       break;
    end
    blockObj.ADCChannels(i).data=nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
@@ -218,7 +275,7 @@ for i = 1:blockObj.NumDACChannels
    
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
-      warningRef(9) = true;
+      warningRef(11) = true;
       break;
    end
    blockObj.DACChannels(i).data=nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
@@ -237,7 +294,7 @@ for i = 1:blockObj.NumDigInChannels
    
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
-      warningRef(10) = true;
+      warningRef(12) = true;
       break;
    end
    blockObj.DigInChannels(i).data=nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
@@ -255,7 +312,7 @@ for i = 1:blockObj.NumDigOutChannels
    
    if ~exist(fullfile(fname),'file')
       warningFlag=true;
-      warningRef(11) = true;
+      warningRef(13) = true;
       break;
    end
    blockObj.DigOutChannels(i).data = nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
@@ -274,10 +331,12 @@ fprintf(1,'\nLinking %s...000%%\n',warningString{12});
 if exist(blockObj.paths.MW_N.experiment,'file')==0
    copyfile(fullfile(notes.Folder,notes.File),...
       blockObj.paths.MW_N.experiment,'f');
+   warningFlag = true;
+   warningRef(14) = true;
 end
 h = blockObj.takeNotes;
 waitfor(h);
-warningRef(12) = true;
+
 fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
 
 %% PARSE PROBE INFORMATION
@@ -310,7 +369,7 @@ if isfield(blockObj.ExpPars,'Probes')
 
       if ~exist(fullfile(fname),'file')
          warningFlag=true;
-         warningRef(13) = true;
+         warningRef(15) = true;
          UpdateStatus = false;
          break;
       end
