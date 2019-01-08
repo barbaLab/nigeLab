@@ -150,6 +150,10 @@ end
 
 %% ASSIGN DATA FIELDS USING HEADER INFO
 blockObj.Channels = header.amplifier_channels;
+if ~blockObj.parseProbeNumbers % Depends on recording system
+   warning('Could not properly parse probe identifiers.');
+   return;
+end
 blockObj.NumChannels = header.num_amplifier_channels;
 blockObj.NumProbes = header.num_probes;
 blockObj.SampleRate = header.sample_rate;

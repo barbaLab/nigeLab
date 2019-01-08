@@ -52,9 +52,9 @@ dt = mode(diff(t));
 %% ASSIGN CHANNEL COLORS BASED ON RMS
 load(blockObj.PlotPars.ColorMapFile,'cm');
 if isempty(blockObj.RMS)
-   if ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
-      analyzeRMS(blockObj);
-   end
+   analyzeRMS(blockObj);
+elseif ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
+   analyzeRMS(blockObj);
 end
 r = blockObj.RMS.CAR;
 ic = assignColors(r); 
@@ -74,14 +74,16 @@ for iCh = 1:blockObj.NumChannels
    y = blockObj.Channels(iCh).(str)(vec)+tickLocs(iCh);
    plot(ax,t,y, ...
       'Color',cm(ic(iCh),:), ...
-      'LineWidth',1.75); %#ok<NODEF>
+      'LineWidth',1.75,...
+      'UserData',iCh); %#ok<NODEF>
    
    text(ax,max(t)+dt,tickLocs(iCh),...
          sprintf('RMS: %.3g',r(iCh)),...
          'FontName','Arial',...
          'FontWeight','bold',...
          'Color','k',...
-         'FontSize',14);
+         'FontSize',14,...
+         'UserData',iCh);
    
 end
 ax.YTick = tickLocs;
@@ -96,7 +98,7 @@ fname = fullfile(blockObj.paths.TW,...
 
 savefig(fig,[fname '.fig']);
 saveas(fig,[fname '.png']);
-blockObj.Graphics.Waves.(str) = [fname '.fig']; 
+blockObj.Graphics.Waves = fig; 
 flag = true;
 
 

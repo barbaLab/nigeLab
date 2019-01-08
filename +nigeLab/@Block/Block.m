@@ -410,6 +410,9 @@ classdef Block < handle
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       
+      flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
+      flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
+      
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
       spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms

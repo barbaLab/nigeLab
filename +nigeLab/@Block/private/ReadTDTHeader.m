@@ -1,6 +1,9 @@
 function [header] = ReadTDTHeader(varargin)
 %% Reads TDT header file. For now uses TDT own functions.
 % TODO reimplement everything since TDT code is... well TDT code.
+%								^ @ FB <-- LOL // MM 2019-01-07
+%
+
 if nargin >0
    VERBOSE = false;
 else
@@ -81,7 +84,7 @@ end
 
 
 num_probes = length(wav_data);
-probes = char((1:num_probes) -1 + double('A'));
+probes = char((1:num_probes) -1 + double('A')); % nice
 amplifier_channels = channel_struct;
 for pb = 1:num_probes
    Chans = unique(heads.stores.(wav_data{pb}).chan);
@@ -198,6 +201,7 @@ channel_struct_ = struct( ...
    'port_name', {}, ...
    'port_prefix', {}, ...
    'port_number', {}, ...
+   'probe', {}, ...
    'electrode_impedance_magnitude', {}, ...
    'electrode_impedance_phase', {} );
 return

@@ -32,8 +32,10 @@ function [y,h] = uiGetVerticalSpacing(n,varargin)
 % By: Max Murphy  v1.0  08/30/2018   Original version (R2017b)
 
 %% DEFAULTS
-TOP = 0.025;
-BOT = 0.025;
+TOP = 0.025; % Offset from bottom border of graphical item
+BOT = 0.025; % Offset from top border of graphical item
+
+YLIM = nan;
 
 %% PARSE VARARGIN
 for iV = 1:2:numel(varargin)
@@ -41,8 +43,19 @@ for iV = 1:2:numel(varargin)
 end
 
 %% COMPUTE
-h = (1/n) - (TOP + BOT);
-y = linspace(BOT,1-TOP-h,n);
+if isnan(YLIM(1))
+   h = (1/n) - (TOP + BOT);
+   if h<=0
+      error('TOP and/or BOT offset is too large.');
+   end
+   y = linspace(BOT,1-TOP-h,n);
+else
+   h = (diff(YLIM)/n) - (TOP + BOT);
+   if h<=0
+      error('TOP and/or BOT offset is too large.');
+   end
+   y = linspace(YLIM(1)+BOT,YLIM(2)-TOP-h,n);
+end
 
 
 end
