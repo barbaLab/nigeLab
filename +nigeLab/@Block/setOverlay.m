@@ -20,7 +20,10 @@ function flag = setOverlay(blockObj,val)
 
 %% DEFAULTS
 flag = false;
-blockObj.PlotPars = nigeLab.defaults.Plot();
+if ~blockObj.updateParams('Plot')
+   warning('Could not set Plot parameters successfully.');
+   return;
+end
 
 %% PARSE INPUT
 if numel(val)~=blockObj.NumChannels

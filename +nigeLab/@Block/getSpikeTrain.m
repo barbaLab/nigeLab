@@ -1,8 +1,8 @@
 function idx = getSpikeTrain(blockObj,ch,class)
 %% GETSPIKETRAIN  Retrieve list of spike peak sample indices
 %
-%  ts = GETSPIKETRAIN(blockObj,ch);
-%  ts = GETSPIKETRAIN(blockObj,ch,class);
+%  idx = GETSPIKETRAIN(blockObj,ch);
+%  idx = GETSPIKETRAIN(blockObj,ch,class);
 %
 %  --------
 %   INPUTS
@@ -47,9 +47,9 @@ end
 if isnan(class(1)) && ...
       getStatus(blockObj,'Sorted') && ...
       getStatus(blockObj,'Clusters') && ...
-      isfield(blockObj.Meta,'Spike_tags')
+      isfield(blockObj.SortPars,'SPIKETAGS')
    % Make class equal to all "good" spike classes
-   class = find(blockObj.Meta.Spike_tags);
+   class = find(blockObj.SortPars.SPIKETAGS);
 end
 
 if ~ParseMultiChannelInput(blockObj,ch)
@@ -73,5 +73,7 @@ else % Otherwise, only one channel index was given
       idx = idx(ismember(blockObj.Channels(ch).Sorted.class,class));
    end
 end
+
+idx = reshape(idx,numel(idx),1);
 
 end

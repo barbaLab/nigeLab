@@ -1,5 +1,5 @@
 classdef Animal < handle
-%% Animal object 
+%% ANIMAL   Class for handling each nigeLab.Block for one animal
 
 %% PUBLIC PROPERTIES
    properties (Access = public)

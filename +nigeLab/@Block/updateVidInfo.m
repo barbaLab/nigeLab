@@ -21,17 +21,17 @@ flag = false;
 if isempty(blockObj.VidPars)
    warning('Video parameters not yet set. Try DOVIDINFOEXTRACTION.');
    return;
-elseif isempty(blockObj.VidPars.File)
+elseif isempty(blockObj.VideoPars.File)
    warning('No video files associated (path: ~/%s).',...
-      blockObj.VidPars.FilePath);
+      blockObj.VideoPars.FilePath);
    return;
 end
 
-Props = cell(numel(blockObj.VidPars.File),1);
-for iV = 1:numel(blockObj.VidPars.File)
-   V = VideoReader(fullfile(blockObj.VidPars.Root,...
-                            blockObj.VidPars.FilePath,...
-                            blockObj.VidPars.File{iV})); %#ok<TNMLP>
+Props = cell(numel(blockObj.VideoPars.File),1);
+for iV = 1:numel(blockObj.VideoPars.File)
+   V = VideoReader(fullfile(blockObj.VideoPars.Root,...
+                            blockObj.VideoPars.FilePath,...
+                            blockObj.VideoPars.File{iV})); %#ok<TNMLP>
                          
    propNames = properties(V);
    Props{iV} = struct;
@@ -41,7 +41,7 @@ for iV = 1:numel(blockObj.VidPars.File)
    
 end
 clear V
-blockObj.VidPars.Props = Props;
+blockObj.VideoPars.Props = Props;
 
 flag = true;
 

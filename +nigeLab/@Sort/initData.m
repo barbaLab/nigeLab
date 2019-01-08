@@ -76,6 +76,81 @@ else
    
 end
 
+%% INITIALIZE SPK AND CLU PROPERTY STRUCTS
+
+sortObj.spk.include.in = cell(sortObj.Channels.N,1);
+sortObj.spk.include.cur = cell(sortObj.Channels.N,1);
+sortObj.spk.fs = nan(sortObj.Channels.N,1);
+sortObj.spk.nfeat = nan(sortObj.Channels.N,1);
+sortObj.spk.peak_train = cell(sortObj.Channels.N,1);
+sortObj.clu.num.centroid=cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
+sortObj.clu.tag.name = cell(sortObj.Channels.N,1);
+sortObj.clu.tag.val = cell(sortObj.Channels.N,1);
+sortObj.clu.num.class.in=cell(sortObj.Channels.N,1);
+sortObj.clu.num.class.cur = cell(sortObj.Channels.N,1);
+sortObj.clu.sel.in = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
+sortObj.clu.sel.base = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
+sortObj.clu.sel.cur = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
+
+sortObj.pars.zmax = 0;
+sortObj.pars.nfeatmax = 0;
+for iCh = 1:sortObj.Channels.N % get # clusters per channel   
+  
+   sortObj.spk.include.in{iCh,1} = true(size(in_feat.features,1),1);
+   sortObj.spk.include.cur{iCh,1} = true(size(in_feat.features,1),1);
+   sortObj.spk.nfeat(iCh) = size(in_feat.features,2);
+   
+   sortObj.pars.nfeatmax = max(sortObj.pars.nfeatmax,sortObj.spk.nfeat(iCh));
+
+   
+   % Load classes. 1 == OUT; all others (up to NCLUS) are valid
+   if sorted_flag
+      in_class = load(sortObj.clu.fname{iCh},'class');
+   else
+      in_class = struct;
+      in_class.class = ones(size(in_feat.features,1),1);
+   end
+   
+   if min(in_class.class) < 1
+      in_class.class = in_class.class + 1;
+   end
+   
+   % Assign "other" clusters as OUT
+   in_class.class(in_class.class > numel(sortObj.clu.tag.defs)) = 1;
+   in_class.class(isnan(in_class.class)) = 1;
+   
+   % For "selected" make copy of original as well.
+   sortObj.clu.num.class.in{iCh} = in_class.class;
+   sortObj.clu.num.class.cur{iCh} = in_class.class;
+   sortObj.clu.tag.name{iCh} = sortObj.clu.tag.defs(in_class.class);
+   
+   % Get each cluster centroid and membership
+   val = [];
+   for iN = 1:sortObj.pars.NCLUS_MAX
+      if isempty(sortObj.clu.tag.defs{iN})
+         tags_val = 1;
+      else
+         tags_val = find(ismember(sortObj.pars.Labels(2:end),...
+            sortObj.clu.tag.defs(iN)),1,'first');
+         if isempty(tags_val)
+            tags_val = 1;
+         else
+            tags_val = tags_val + 1;
+         end
+      end
+      val = [val, tags_val]; %#ok<AGROW>
+      sortObj.clu.num.centroid{iCh,iN} = median(in_feat.features(...
+         in_class.class==iN,:));
+      sortObj.clu.sel.in{iCh,iN}=find(sortObj.clu.num.class.in{iCh}==iN);
+      sortObj.clu.sel.base{iCh,iN}=find(sortObj.clu.num.class.in{iCh}==iN);
+      sortObj.clu.sel.cur{iCh,iN}=find(sortObj.clu.num.class.in{iCh}==iN);
+   end
+   sortObj.clu.tag.val{iCh} = val;
+   
+end
+clear features
+fprintf(1,'complete.\n');
+
 
 flag = true;
 end

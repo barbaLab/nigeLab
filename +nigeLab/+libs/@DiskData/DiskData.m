@@ -209,6 +209,7 @@ classdef DiskData < handle
                         obj.class_ = class_;
                      end
                      obj.type_='MatFile'; 
+                  
                   case 'Hybrid' % Deals with both MatFile and HDF5-ish ?
                      % The default name is 'data'
                      data=zeros(1,1,class_); % start with a small vector
@@ -232,7 +233,8 @@ classdef DiskData < handle
                         % weird file like the SPIKES file etc. that have
                         % snippet matrices. Check for this:
                         if size(I,2)~=1
-                           error('Your file looks weird.\nI wasn''t able to properly connect it to DiskData');
+                           error(['Your file looks weird (%d max elements).\n' ...
+                                  'I wasn''t able to properly connect it to DiskData.'],size(I,2));
                         end
                         obj.bytes_ = info(I).bytes;
                         obj.name_ = info(I).name;
@@ -480,12 +482,12 @@ classdef DiskData < handle
          dim=obj.size_(n);
       end
       
-      function cl=class(obj)
-         %% CLASS  Overloaded function for getting DiskData array class
-         % Note: I changed this to reflect the Matlab class naming
-         %       convention that uses the '.' notation. -MM
-         cl = sprintf('DiskData.%s', obj.class_);
-      end
+%       function cl=class(obj)
+%          %% CLASS  Overloaded function for getting DiskData array class
+%          % Note: I changed this to reflect the Matlab class naming
+%          %       convention that uses the '.' notation. -MM
+%          cl = sprintf('DiskData.%s', obj.class_);
+%       end
       
       function l=length(obj)
          %% LENGTH  Overloaded function for getting DiskData array length

@@ -9,13 +9,13 @@ function parseNotes(blockObj,str)
 %% PARSE EXPERIMENTAL METADATA
 probes = struct;
 for ii = 1:size(str,1)
-   info = strsplit(str{ii},blockObj.ExpPars.Delimiter);
-   blockObj.ExpPars.(strtrim(info{1})) = strtrim(info{2});
+   info = strsplit(str{ii},blockObj.ExperimentPars.Delimiter);
+   blockObj.ExperimentPars.(strtrim(info{1})) = strtrim(info{2});
    probes = parseProbeName(probes,info{1},info{2},...
                            blockObj.ProbePars.ProbeIndexParseFcn);
    
 end
-blockObj.ExpPars.Probes = probes;
+blockObj.ExperimentPars.Probes = probes;
 
    function probes = parseProbeName(probes,varName,varValue,idxParseFcn)
       strParts = strsplit(varName,'_');

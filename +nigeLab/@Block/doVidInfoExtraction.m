@@ -21,32 +21,32 @@ function flag = doVidInfoExtraction(blockObj,vidFileName)
 
 %% DEFAULTS
 flag = false;
-blockObj.VidPars = nigeLab.defaults.Video;
-if exist(blockObj.VidPars.Root,'dir')~=0
-   defPath = blockObj.VidPars.Root;
-elseif exist(blockObj.VidPars.AltRoot,'dir')~=0
+blockObj.VideoPars = nigeLab.defaults.Video;
+if exist(blockObj.VideoPars.Root,'dir')~=0
+   defPath = blockObj.VideoPars.Root;
+elseif exist(blockObj.VideoPars.AltRoot,'dir')~=0
    defPath = blockObj.vidPars.AltRoot;
 else
    defPath = [];
 end
-blockObj.VidPars.Root = defPath;
+blockObj.VideoPars.Root = defPath;
 
 %% GET VIDEO FILE(S)
 if nargin < 2
-   [fName,pName, ~] = uigetfile(blockObj.VidPars.FileExt,...
-      'Select VIDEO', blockObj.VidPars.Root);
+   [fName,pName, ~] = uigetfile(blockObj.VideoPars.FileExt,...
+      'Select VIDEO', blockObj.VideoPars.Root);
 else
    [fName,pName,ext] = fileparts(vidFileName);
    fName = [fName ext];
-   blockObj.VidPars.FileType = ['.' ext];
+   blockObj.VideoPars.FileType = ['.' ext];
 end
 if fName==0
    disp('No video selected.');
    return;
 end
 
-blockObj.VidPars.FilePath = pName((numel(blockObj.VidPars.Root)+1):end);
-blockObj.VidPars.FileName = fName;
+blockObj.VideoPars.FilePath = pName((numel(blockObj.VideoPars.Root)+1):end);
+blockObj.VideoPars.FileName = fName;
 
 %% PARSE VARIABLES FROM FILE NAME
 match_str = parseVidFileName(blockObj,fName,true);
@@ -70,30 +70,30 @@ flag = updateVidInfo(blockObj);
       end
       
       [~,str,~] = fileparts(fName);
-      strVars = strsplit(str,blockObj.VidPars.Delimiter);
-      n = min(numel(strVars),numel(blockObj.VidPars.DynamicVars));
+      strVars = strsplit(str,blockObj.VideoPars.Delimiter);
+      n = min(numel(strVars),numel(blockObj.VideoPars.DynamicVars));
       
       meta = struct;
       match_str = strVars{1};
-      meta.(blockObj.VidPars.DynamicVars{1}(2:end)) = strVars{1};
+      meta.(blockObj.VideoPars.DynamicVars{1}(2:end)) = strVars{1};
       
       for ii = 2:n
-         meta.(blockObj.VidPars.DynamicVars{ii}(2:end)) = strVars{ii};
-         if strcmp(blockObj.VidPars.DynamicVars{ii}(1),blockObj.VidPars.IncludeChar)
+         meta.(blockObj.VideoPars.DynamicVars{ii}(2:end)) = strVars{ii};
+         if strcmp(blockObj.VideoPars.DynamicVars{ii}(1),blockObj.VideoPars.IncludeChar)
             match_str = strjoin({match_str strVars{ii}},'*');
          end
       end
       
       if initFlag
-         blockObj.VidPars.Meta = struct2table(meta);
+         blockObj.VideoPars.Meta = struct2table(meta);
       else
-         blockObj.VidPars.Meta = [blockObj.VidPars.Meta; ...
+         blockObj.VideoPars.Meta = [blockObj.VideoPars.Meta; ...
             struct2table(meta)];
       end
       
-      blockObj.VidPars.File = [blockObj.VidPars.File; {fName}];
+      blockObj.VideoPars.File = [blockObj.VideoPars.File; {fName}];
       
-      match_str = [match_str blockObj.VidPars.FileExt];
+      match_str = [match_str blockObj.VideoPars.FileExt];
    end
 
 end

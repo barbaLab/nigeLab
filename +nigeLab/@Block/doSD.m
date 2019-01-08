@@ -16,7 +16,10 @@ if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-blockObj.SDPars = nigeLab.defaults.SD;
+if ~blockObj.updateParams('SD')
+   warning('Could not update the spike detection parameters.');
+   return;
+end
 
 pars = blockObj.SDPars;
 pars.FS = blockObj.SampleRate;

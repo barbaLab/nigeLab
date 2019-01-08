@@ -41,7 +41,7 @@ warningString = {'RAW'; ...
 warningRef     = false(size(warningString));
 
 %% GET CHANNEL INFO
-channelID = nigeLab.utils.parseChannelID(blockObj);
+channelID = parseChannelID(blockObj);
 
 %% CHECK AMPLIFIER CHANNELS
 
@@ -49,10 +49,10 @@ fprintf(1,'\nLinking RAW channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
    
    %%%%%%%%%%%%% Raw data
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.RW_N,'\','/'), ...
-      channelID(iCh,1), );
+      pnum,chnum);
    fname = fullfile(fname);
    
    if ~exist(fullfile(fname),'file')
@@ -71,8 +71,8 @@ if updateStatus, blockObj.updateStatus('Raw',true);end
 updateStatus = true;
 fprintf(1,'\nLinking STIMULATION channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    
    stim_data_fname = strrep(fullfile(blockObj.paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
    fname = sprintf(strrep(stim_data_fname,'\','/'), pnum, chnum);
@@ -111,8 +111,8 @@ if updateStatus, blockObj.updateStatus('Digital',true);end
 updateStatus = true;
 fprintf(1,'\nLinking LFP channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -132,8 +132,8 @@ if updateStatus, blockObj.updateStatus('LFP',true);end
 updateStatus = true;
 fprintf(1,'\nLinking FILTERED channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.FW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -153,8 +153,8 @@ if updateStatus, blockObj.updateStatus('Filt',true);end
 updateStatus = true;
 fprintf(1,'\nLinking CAR channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -174,8 +174,8 @@ if updateStatus, blockObj.updateStatus('CAR',true); end
 updateStatus = true;
 fprintf(1,'\nLinking SPIKES channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -198,8 +198,8 @@ if updateStatus, blockObj.updateStatus('Spikes',true);end
 updateStatus = true;
 fprintf(1,'\nLinking CLUSTERED channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.CLUW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -210,8 +210,6 @@ for iCh = 1:blockObj.NumChannels
       break;
    end
    blockObj.Channels(iCh).Clusters=nigeLab.libs.DiskData('MatFile',fname);
-   
-   
    
    fraction_done = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
@@ -224,8 +222,8 @@ if updateStatus, blockObj.updateStatus('Clusters',true);end
 updateStatus = true;
 fprintf(1,'\nLinking SORTED channels...000%%\n');
 for iCh = 1:blockObj.NumChannels
-   pnum  = channelID(iCh,1);
-   chnum = channelID(iCh,2);
+   pnum  = num2str(channelID(iCh,1));
+   chnum = num2str(channelID(iCh,2),'%03g');
    fname = sprintf(strrep(blockObj.paths.SORTW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    
@@ -322,10 +320,11 @@ end
 
 %% PARSE EXPERIMENT METADATA
 UpdateStatus = true;
+
 notes = nigeLab.defaults.Experiment();
-probes = nigeLab.defaults.Probes();
-blockObj.ExpPars = notes;
-blockObj.ProbePars = probes;
+probe = nigeLab.defaults.Probe();
+blockObj.updateParams('Experiment');
+blockObj.updateParams('Probe');
 
 fprintf(1,'\nLinking %s...000%%\n',warningString{12});
 if exist(blockObj.paths.MW_N.experiment,'file')==0
@@ -340,28 +339,28 @@ waitfor(h);
 fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
 
 %% PARSE PROBE INFORMATION
-if isfield(blockObj.ExpPars,'Probes')
+if isfield(notes,'Probes')
    fprintf(1,'\nLinking %s...000%%\n',warningString{13});
-   probePorts = fieldnames(blockObj.ExpPars.Probes);
+   probePorts = fieldnames(notes.Probes);
    % Get the correct file associated with this recording in terms of
    % experimental probes. 
    for ii = 1:numel(probePorts)
-      probeName = blockObj.ExpPars.Probes.(probePorts{ii}).name;
-      probeFile = sprintf(probes.Str,probeName);
+      probeName = notes.Probes.(probePorts{ii}).name;
+      probeFile = sprintf(probe.Str,probeName);
       fName = fullfile(blockObj.paths.MW,[blockObj.Name ...
-                        probes.Delimiter probeFile]);
+                        probe.Delimiter probeFile]);
       if exist(fName,'file')==0
          % If the electrode file doesn't exist from default location
-         eName = fullfile(probes.ElectrodesFolder,probeFile);
+         eName = fullfile(probe.ElectrodesFolder,probeFile);
          if exist(eName,'file')==0
             % Create one using template
-            copyfile(fullfile(probes.Folder,probes.File),fName,'f');
+            copyfile(fullfile(probe.Folder,probe.File),fName,'f');
          else
             % Otherwise copy over the existing electrode file
             copyfile(eName,fName,'f');
          end
       end
-      blockObj.ExpPars.Probes.(probePorts{ii}).Ch = readtable(fName);
+      notes.Probes.(probePorts{ii}).Ch = readtable(fName);
    end
    
    % For each channel, update metadata from probe config file
@@ -379,9 +378,9 @@ if isfield(blockObj.ExpPars,'Probes')
       % Go through all ports (or boards, really)
       for ii = 1:numel(probePorts)
          % If this is the correct one
-         if blockObj.ExpPars.Probes.(probePorts{ii}).stream==streamIdx
+         if notes.Probes.(probePorts{ii}).stream==streamIdx
             % Get the metadata for the correct channel
-            ch = blockObj.ExpPars.Probes.(probePorts{ii}).Ch;
+            ch = notes.Probes.(probePorts{ii}).Ch;
             v = ch.Properties.VariableNames;
             if strcmp(blockObj.FileExt,'.rhs')
                probeInfo = ch(RHD2RHS(ch.RHD_Channel)==curCh,:);

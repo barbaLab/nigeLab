@@ -1,5 +1,5 @@
 classdef Sort < handle
-%% SORT  Use "cluster-cutting" to manually curate and sort Spikes
+%% SORT  User interface for "cluster-cutting" to manually classify spikes
 %
 %  nigeLab.Sort;
 %  sortObj = nigeLab.Sort;
@@ -46,14 +46,16 @@ classdef Sort < handle
 %                   v1.0    08/04/2017  Original version (R2017a)
    
    %% PROPERTIES
-   properties (Access = public)
+   properties (SetAccess = public, GetAccess = public)
       Blocks      % Array of orgExp block objects
       Channels    % Struct containing channels info
    end
    
-   properties (Access = private)
+   properties (SetAccess = private, GetAccess = private)
       pars     % Parameters
-      handles  % Graphics handles
+      spk      % Spike snippet info struct
+      clu      % Cluster assignment info struct
+      UI       % UI controller variable
    end
    
    %% METHODS
@@ -90,6 +92,8 @@ classdef Sort < handle
 
       end
       
+      channelName = parseChannelName(sortObj);
+      
    end
    
    methods (Access = private)
@@ -98,8 +102,10 @@ classdef Sort < handle
       flag = initData(sortObj,nigelObj);
       flag = initUI(sortObj);
       
-      flag = sortBlocks(sortObj,nigelObj);
-      flag = sortAnimals(sortObj,nigelObj);
+      flag = parseBlocks(sortObj,nigelObj);
+      flag = parseAnimals(sortObj,nigelObj);
+      
+      flag = setAxesPositions(sortObj);
       
    end
    

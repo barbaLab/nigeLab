@@ -1,7 +1,7 @@
-function pars = Probes()
-%% PROBES   Template for initializing parameters for probe data
+function pars = Probe()
+%% PROBE   Template for initializing parameters for probe data
 %
-%   pars = nigeLab.defaults.Probes;
+%   pars = nigeLab.defaults.Probe;
 %
 % By: MAECI 2018 collaboration (MM, FB, SB)
 

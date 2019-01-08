@@ -18,89 +18,6 @@ if ~isfield(sortObj.pars,'AX_POS')
    end
 end      
 
-%% GET UNSUPERVISED CLASS ASSIGNMENTS & FEATURES
-in = load('CRC_Tags.mat','TAGS');
-pars.cl.tag.defs = in.TAGS;
-in = load('CRC_Colors.mat','Colors');
-pars.COLS = in.Colors;
-in = load('CRC_Labels.mat','Labels');
-pars.Labels = in.Labels;
-pars.spk.feat = cell(pars.files.N,1);
-pars.spk.include.in = cell(pars.files.N,1);
-pars.spk.include.cur = cell(pars.files.N,1);
-pars.spk.fs = nan(pars.files.N,1);
-pars.spk.nfeat = nan(pars.files.N,1);
-pars.spk.peak_train = cell(pars.files.N,1);
-pars.cl.num.centroid=cell(pars.files.N,pars.NCLUS_MAX);
-pars.cl.tag.name = cell(pars.files.N,1);
-pars.cl.tag.val = cell(pars.files.N,1);
-pars.cl.num.class.in=cell(pars.files.N,1);
-pars.cl.num.class.cur = cell(pars.files.N,1);
-pars.cl.sel.in = cell(pars.files.N,pars.NCLUS_MAX);
-pars.cl.sel.base = cell(pars.files.N,pars.NCLUS_MAX);
-pars.cl.sel.cur = cell(pars.files.N,pars.NCLUS_MAX);
-
-pars.zmax = 0;
-pars.nfeatmax = 0;
-for iCh = 1:pars.files.N % get # clusters per channel   
-   in_feat = load(pars.spk.fname{iCh},'features');
-   pars.spk.feat{iCh,1} = in_feat.features; 
-   
-   pars.spk.include.in{iCh,1} = true(size(in_feat.features,1),1);
-   pars.spk.include.cur{iCh,1} = true(size(in_feat.features,1),1);
-   pars.spk.nfeat(iCh) = size(in_feat.features,2);
-   
-   pars.nfeatmax = max(pars.nfeatmax,pars.spk.nfeat(iCh));
-
-   
-   % Load classes. 1 == OUT; all others (up to NCLUS) are valid
-   if sorted_flag
-      in_class = load(pars.cl.fname{iCh},'class');
-   else
-      in_class = struct;
-      in_class.class = ones(size(in_feat.features,1),1);
-   end
-   
-   if min(in_class.class) < 1
-      in_class.class = in_class.class + 1;
-   end
-   
-   % Assign "other" clusters as OUT
-   in_class.class(in_class.class > numel(pars.cl.tag.defs)) = 1;
-   in_class.class(isnan(in_class.class)) = 1;
-   
-   % For "selected" make copy of original as well.
-   pars.cl.num.class.in{iCh} = in_class.class;
-   pars.cl.num.class.cur{iCh} = in_class.class;
-   pars.cl.tag.name{iCh} = pars.cl.tag.defs(in_class.class);
-   
-   % Get each cluster centroid and membership
-   val = [];
-   for iN = 1:pars.NCLUS_MAX
-      if isempty(pars.cl.tag.defs{iN})
-         tags_val = 1;
-      else
-         tags_val = find(ismember(pars.Labels(2:end),...
-            pars.cl.tag.defs(iN)),1,'first');
-         if isempty(tags_val)
-            tags_val = 1;
-         else
-            tags_val = tags_val + 1;
-         end
-      end
-      val = [val, tags_val]; %#ok<AGROW>
-      pars.cl.num.centroid{iCh,iN} = median(in_feat.features(...
-         in_class.class==iN,:));
-      pars.cl.sel.in{iCh,iN}=find(pars.cl.num.class.in{iCh}==iN);
-      pars.cl.sel.base{iCh,iN}=find(pars.cl.num.class.in{iCh}==iN);
-      pars.cl.sel.cur{iCh,iN}=find(pars.cl.num.class.in{iCh}==iN);
-   end
-   pars.cl.tag.val{iCh} = val;
-   
-end
-clear features
-fprintf(1,'complete.\n');
-
 %% UI CONTROLLER VARIABLES
 pars.UI.ch = 1;
 pars.UI.cl = 1;
@@ -143,6 +60,5 @@ for iCh = 1:pars.files.N
    pars.UI.channels{iCh} = strrep(pars.files.spk.ch{iCh},'_',' ');
 end
 
-warning('on','MATLAB:load:variableNotFound');
 
 end

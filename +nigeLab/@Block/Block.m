@@ -98,15 +98,18 @@ classdef Block < handle
       
       Fields      % List of property field names
       
-      SDPars      % Parameters struct for spike detection
-      FiltPars    % Parameters struct for unit bandpass filter
-      LFPPars     % Parameters struct for LFP extraction & analyses
-      SyncPars    % Parameters struct for digital synchronization stream
-      VidPars     % Parameters struct for associating videos
-      PlotPars    % Parameters struct for graphical plots
-      QueuePars   % Parameters struct for queueing jobs to server
-      ExpPars     % Parameters struct for experimental notes
-      ProbePars   % Parameters struct for parsing probe layout info
+      ExperimentPars    % Parameters struct for experimental notes
+      FiltPars          % Parameters struct for unit bandpass filter
+      LFPPars           % Parameters struct for LFP extraction & analyses
+      PlotPars          % Parameters struct for graphical plots
+      ProbePars         % Parameters struct for parsing probe layout info
+      QueuePars         % Parameters struct for queueing jobs to server
+      SDPars            % Parameters struct for spike detection
+      SortPars          % Parameters for nigeLab.Sort interface
+      SyncPars          % Parameters struct for digital sync stream
+      VideoPars         % Parameters struct for associating videos
+      
+      
       
       RecFile       % Raw binary recording file
       SaveLoc       % Saving path for extracted/processed data
@@ -212,6 +215,8 @@ classdef Block < handle
             builtin('disp',blockObj);
          end
       end
+      
+      % Can we remove this comment block?
       
       % Federico I will let you comment this :) -MM
 %       function varargout=subsref(blockObj,S) 
@@ -401,6 +406,9 @@ classdef Block < handle
       
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
+      
+      channelID = parseChannelID(blockObj); % Get unique ID for a channel
+      tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices

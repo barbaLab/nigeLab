@@ -1,5 +1,5 @@
 classdef Tank < handle
-%% TANK  Create a datastore for a related group of experimental recordings
+%% TANK  Class to handle each nigeLab.Animal for a whole experiment
 %
 %  tankObj = TANK;
 %  tankObj = TANK('NAME','VALUE',...);   

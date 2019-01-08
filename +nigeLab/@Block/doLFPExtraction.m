@@ -13,8 +13,12 @@ if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-blockObj.LFPPars = nigeLab.defaults.LFP;
 
+if ~blockObj.updateParams('LFP')
+   warning('Something went wrong setting the LFP parameters.');
+   return;
+end
+   
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
 DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
 DecimationFactor =   blockObj.LFPPars.DecimationFactor;
