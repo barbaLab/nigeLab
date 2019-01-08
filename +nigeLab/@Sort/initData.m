@@ -1,5 +1,5 @@
 function flag = initData(sortObj,nigelObj)
-%% INIT Initialize handles structure for Combine/Restrict Cluster UI.
+%% INITDATA  Initialize data structure for Spike Sorting UI
 %
 %  flag = INITDATA(sortObj);
 %  flag = INITDATA(sortObj,nigelObj);
@@ -25,15 +25,24 @@ if nargin > 1
    % Parse input argument type
    switch class(nigelObj(1))
       case 'nigeLab.Block'
-         parseBlocks(nigelObj);
+         if ~parseBlocks(sortObj,nigelObj)
+            warning('Could not parse nigeLab.Block objects.');
+            return;
+         end
       case 'nigeLab.Animal'
-         parseAnimals(nigelObj);
+         if ~parseAnimals(sortObj,nigelObj)
+            warning('Could not parse nigeLab.Animal objects.');
+            return;
+         end
       case 'nigeLab.Tank'
          if numel(nigelObj) > 1
             warning('Only 1 nigeLab.Tank object can be scored at a time.');
             return;            
          else
-            sortObj.data = parseAnimals(nigelObj.Animals);
+            if ~parseAnimals(sortObj,nigelObj.Animals)
+               warning('Could not parse nigeLab.Animal objects.');
+               return;
+            end
          end         
       otherwise
          warning(['%s is an invalid input type.\n' ...
@@ -43,7 +52,28 @@ if nargin > 1
    end
    
 else   
+   [fName,pName,~] = uigetfile(sortObj.pars.INFILE_FILT,...
+                               sortObj.pars.INFILE_PROMPT,...
+                               sortObj.pars.INFILE_DEF_DIR,...
+                               'MultiSelect','on');
+                               
+   if iscell(fName) % Load array and run using recursion
+      nigelObjArray = [];
+      for ii = 1:numel(fName)
+         in = load(fullfile(pName,fName{ii}));
+         f = fieldnames(in);
+         nigelObjArray = [nigelObjArray; in.(f{1})]; %#ok<AGROW>
+      end
+      flag = initData(sortObj,nigelObjArray);
+      return;
+      
+   else % Otherwise, just load it and run init using recursion
+      in = load(fullfile(pName,fName));
+      f = fieldnames(in);
+      flag = initData(sortObj,in.(f{1}));
+      return;
+   end
    
 end
-
+flag = true;
 end

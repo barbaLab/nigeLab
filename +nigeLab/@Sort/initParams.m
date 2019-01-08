@@ -1,5 +1,5 @@
 function flag = initParams(sortObj)
-%% INIT Initialize handles structure for Combine/Restrict Cluster UI.
+%% INITPARAMS  Initialize parameters structure for Spike Sorting UI.
 %
 %  flag = INITPARAMS(sortObj);
 %
@@ -15,7 +15,12 @@ flag = false;
 pars = struct;                   % carries all parameter variables
 pars.OUT_ID  = 'Sorted';         % output folder ID
 pars.IN_ID   = 'Clusters';       % input folder ID
-pars.DEF_DIR = 'P:\Rat';         % Default directory to look
+
+% Defaults for selecting input files
+pars.INFILE_FILT = {'*_Block.mat';'*_Animal.mat';'*_Tank.mat'};
+pars.INFILE_PROMPT = 'Select BLOCK(S), ANIMAL(S), or TANK';
+pars.INFILE_DEF_DIR = 'P:\Rat';     
+
 pars.SDMAX = 4;                  % Max # SD to allow from medroid
 pars.SDMIN = 0;                  % Min # SD to allow from medroid
 pars.T_RES = 1;      % Time resolution (in minutes)

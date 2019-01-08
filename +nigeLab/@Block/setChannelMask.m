@@ -53,9 +53,10 @@ maskVal = zeros(1,numel(b));
 for ii = 1:numel(b)
    maskVal(ii) = b{ii}.Value;
 end
+blockObj.Mask = find(maskVal);
+
 
 waitfor(h);
-blockObj.Mask = find(maskVal);
 flag = true;
 
    function [fig,n,pos] = parseWavesTickBoxLayout(fig)

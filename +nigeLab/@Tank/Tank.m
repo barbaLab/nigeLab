@@ -132,7 +132,7 @@ classdef Tank < handle
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(tankObj.SaveLoc,'tankObj') 
+         save(fullfile([tankObj.SaveLoc '_Tank.mat']),'tankObj','-v7.3') 
       end
       
       % Extraction methods

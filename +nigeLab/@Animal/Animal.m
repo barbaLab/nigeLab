@@ -66,7 +66,7 @@ classdef Animal < handle
           for ii=1:numel(B)
               B(ii).save;
           end
-          save(animalObj.SaveLoc,'animalObj');
+          save(fullfile([animalObj.SaveLoc '_Animal.mat']),'animalObj','-v7.3');
       end
       
 %       updateID(blockObj,name,type,value)    % Update the file or folder identifier

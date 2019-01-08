@@ -214,7 +214,7 @@ classdef Block < handle
       
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(blockObj.paths.TW,'blockObj');
+         save(fullfile([blockObj.paths.TW '_Block.mat']),'blockObj','-v7.3');
       end
       
       function disp(blockObj)

@@ -80,7 +80,7 @@ end
 blockObj.paths.TW_N       = fullfile(blockObj.paths.TW,  [blockObj.Name ID.Time.File  '.mat']);
 blockObj.paths.RW_N      = fullfile(blockObj.paths.RW,  [blockObj.Name ID.Raw.File  '.mat']);
 blockObj.paths.FW_N      = fullfile(blockObj.paths.FW,  [blockObj.Name ID.Filt.File '.mat']);
-blockObj.paths.CARW_N    = fullfile(blockObj.paths.CARW,[blockObj.Name ID.Filt.File '.mat']);
+blockObj.paths.CARW_N    = fullfile(blockObj.paths.CARW,[blockObj.Name ID.CAR.File '.mat']);
 blockObj.paths.DW_N      = fullfile(blockObj.paths.DW,  [blockObj.Name '_DIG_%s.mat']);
 blockObj.paths.LW_N      = fullfile(blockObj.paths.LW,  [blockObj.Name ID.LFP.File '.mat']);
 blockObj.paths.SDW_N     = fullfile(blockObj.paths.SDW,  [blockObj.Name ID.Spikes.File '.mat']);

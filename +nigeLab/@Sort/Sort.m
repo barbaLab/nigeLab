@@ -47,12 +47,13 @@ classdef Sort < handle
    
    %% PROPERTIES
    properties (Access = public)
-      data     % Array of orgExp block objects
-      handles  % Graphics handles
+      Data     % Array of orgExp block objects
+      Channels % Struct containing channels info
    end
    
    properties (Access = private)
       pars  % Parameters
+      handles  % Graphics handles
    end
    
    %% METHODS
@@ -94,8 +95,11 @@ classdef Sort < handle
    methods (Access = private)
       
       flag = initParams(sortObj);
-      flag = initData(sortObj,orgExpObj);
+      flag = initData(sortObj,nigelObj);
       flag = initUI(sortObj);
+      
+      flag = sortBlocks(sortObj,nigelObj);
+      flag = sortAnimals(sortObj,nigelObj);
       
    end
    

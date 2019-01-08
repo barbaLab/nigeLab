@@ -1,5 +1,5 @@
 function flag = initUI(sortObj)
-%% INIT Initialize handles structure for Combine/Restrict Cluster UI.
+%% INITUI  Initialize graphics handles for Spike Sorting UI.
 %
 %  flag = INITUI(sortObj);
 %
