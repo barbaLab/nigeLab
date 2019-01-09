@@ -9,10 +9,11 @@ function pars = SD(varargin)
 %        data-sets generally. - MM
 %
 % By: MAECI 2018 collaboration (Max Murphy & Federico Barban)
+%                 01/09/2019 :: 4.0.0 -> 4.0.1 = Fix FEAT_NAMES generation
 
 %% DEFAULTS
 % General settings
-VERSION  = 'v4.0.0';     % Version, to be passed with parameters
+VERSION  = 'v4.0.1';     % Version, to be passed with parameters
 LIBDIR   = 'C:\MyRepos\_SD\APP_Code';% Location of associated sub-functions
 DEF_DIR  = 'P:\';        % Default location to look for extracted data file
 ED_ID = '\*P*Ch*.mat';    % Extracted data identifier (for input)
@@ -198,5 +199,22 @@ pars = struct;
     [pars.Lo_D,pars.Hi_D] = wfilters(pars.WAVELET,'d');
     pars.USE_CLUSTER = USE_CLUSTER;
     pars.VERSION = VERSION;
+    
+    switch pars.FEAT
+       case 'raw'
+          pars.FEAT_NAMES = cell(1,2*pars.NINPUT + 1);
+          for ii = 1:pars.NINPUT
+             pars.FEAT_NAMES{ii} = sprintf('wav-%02d',ii);
+          end
+          for ik = 1:pars.NINPUT
+             pars.FEAT_NAMES{ii+ik} = sprintf('raw-%02d',ik);
+          end
+          pars.FEAT_NAMES{ii+ik+1} = 'raw-mean';
+       otherwise
+          pars.FEAT_NAMES = cell(1,pars.NINPUT);
+          for ii = 1:pars.NINPUT
+             pars.FEAT_NAMES{ii} = sprintf('%s-%02d',pars.FEAT,ii);
+          end
+    end
     
 end

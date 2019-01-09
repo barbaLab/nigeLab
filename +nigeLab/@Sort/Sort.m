@@ -96,8 +96,6 @@ classdef Sort < handle
 
       end
       
-      channelName = parseChannelName(sortObj); % Get all channel names
-      
    end
    
    methods (Access = private)
@@ -106,12 +104,14 @@ classdef Sort < handle
       flag = initData(sortObj,nigelObj); % Initialize data structures
       flag = initUI(sortObj); % Initializes spike scoring UI parameters
       
-      flag = getAllSpikeSnippets(sortObj); % Get snippets from all channels
+      flag = getAllSpikeData(sortObj); % Get spike info from all channels
       
       flag = parseBlocks(sortObj,nigelObj);  % Assigns Blocks property
       flag = parseAnimals(sortObj,nigelObj); % Assigns Blocks from Animals
       
       flag = setAxesPositions(sortObj); % Draw axes positions
+      
+      channelName = parseChannelName(sortObj); % Get all channel names
       
    end
    

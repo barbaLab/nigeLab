@@ -1,5 +1,5 @@
 function channelName = parseChannelName(sortObj)
-%% PARSECHANNELID    Get unique channel/probe combination for identifier
+%% PARSECHANNELNAME    Get unique channel/probe combination for identifier
 %
 %  channelName = PARSECHANNELNAME(sortObj);
 %

@@ -18,39 +18,15 @@ if ~isfield(sortObj.pars,'AX_POS')
    end
 end      
 
-%% UI CONTROLLER VARIABLES
+%% SET UI CONTROLLER VARIABLES
 sortObj.UI.ch = 1;
 sortObj.UI.cl = 1;
 sortObj.UI.zm = ones(sortObj.NCLUS_MAX,1) * 100;
 sortObj.UI.spk_ylim = repmat(sortObj.SPK_YLIM,sortObj.NCLUS_MAX,1);
 
-% Initialize first set of spikes
-% sortObj.plot = load(sortObj.spk.fname{sortObj.UI.ch},'spikes');
-if ~getAllSpikeSnippets(sortObj)
-   warning('Could not access spike waveforms.');
-end
-   
-% Initialize cluster assignments
-sortObj.cl.num.assign.cur = cell(sortObj.files.N,1);
-
-% Initialize cluster radii and feature plots properties
-sortObj.cl.num.rad = cell(sortObj.files.N,1);
-fprintf(1,'->\tGetting spike times...');
-for iCh = 1:sortObj.files.N
-   in = load(sortObj.spk.fname{iCh},'pars','peak_train');
-   sortObj.spk.fs(iCh) = in.pars.FS;
-   sortObj.spk.peak_train{iCh,1} = in.peak_train;
-   sortObj.zmax = max(sortObj.zmax,numel(in.peak_train)/in.pars.FS/60);
-   
-   sortObj.cl.num.assign.cur{iCh,1} = 1:sortObj.NCLUS_MAX;
-   sortObj.cl.num.rad{iCh,1} = inf*ones(1,sortObj.NCLUS_MAX);
-end
-fprintf(1,'complete.\n');
-
 % Initialize "features" info
-sortObj.feat.this = 1;
-sortObj.featcomb = flipud(...
-   combnk(1:sortObj.spk.nfeat(sortObj.UI.ch),2));
+sortObj.UI.feat = 1;
+sortObj.featcomb = combnk(1:size(sortObj.spk.feat{1},2),2);
 sortObj.featname = cell(sortObj.nfeatmax,1);
 for iN = 1:size(sortObj.featcomb,1)
    sortObj.featname{iN,1} = sprintf('x: %s-%d || y: %s-%d',sortObj.sc,...
