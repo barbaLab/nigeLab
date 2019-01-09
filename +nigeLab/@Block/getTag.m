@@ -52,12 +52,18 @@ if numel(blockObj) > 1
 end
 
 %% RETURN VALUES FROM SINGLE BLOCK OBJECT
-if isempty(blockObj,'SortPars')
+if isempty(blockObj.SortPars)
    tag = [];
    str = [];
    return;
 end
 tag = blockObj.Channels(ch).Sorted.tag;
+
+% If it's old format, convert it properly:
+if ~isnumeric(tag)
+   tag = parseSpikeTagIdx(blockObj,tag);
+end
+
 str = blockObj.SortPars.TAG(unique(tag));
 
 end

@@ -414,6 +414,7 @@ classdef Block < handle
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
       spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms
       class = getSort(blockObj,ch);             % Get spike sorted classes
+      [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
       
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index

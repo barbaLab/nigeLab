@@ -56,9 +56,10 @@ for ii = vec
    
    % Retrieve associated tag
    tmp = getTag(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
+   tag = [tag; tmp];
    
    % Make sure to associate each element with the corresponding block
-   blockIdx = [blockIdx; ones(size(class)).*ii];
+   blockIdx = [blockIdx; ones(size(tmp)).*ii];
 end
 
 
