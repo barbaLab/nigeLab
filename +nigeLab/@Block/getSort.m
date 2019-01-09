@@ -24,11 +24,11 @@ function class = getSort(blockObj,ch)
 
 %% PARSE INPUT
 if nargin < 2
-   ch = 1:blockObj.NumChannels;
+   ch = 1:blockObj(1).NumChannels;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
-if (numel(ch)>1)
+if (numel(ch) > 1)
    class = cell(size(ch));
    for ii = 1:numel(ch)
       class{ii} = getSort(blockObj,ch(ii));
@@ -37,7 +37,7 @@ if (numel(ch)>1)
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
-if numel(blockObj) > 1
+if (numel(blockObj) > 1)
    class = [];
    for ii = 1:numel(blockObj)
       class = [class; getSort(blockObj,ch(ii))]; %#ok<AGROW>
@@ -51,7 +51,5 @@ if isfield(blockObj.Channels,'Sorted')
 else
    class = [];
 end
-
-
 
 end

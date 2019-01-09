@@ -36,7 +36,7 @@ function ts = getSpikeTimes(blockObj,ch,class)
 
 %% PARSE INPUT
 if nargin < 2
-   ch = 1:blockObj.NumChannels;
+   ch = 1:blockObj(1).NumChannels;
 end
 
 if nargin < 3
@@ -44,7 +44,7 @@ if nargin < 3
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
-if (numel(ch)>1)
+if (numel(ch) > 1)
    ts = cell(size(ch));
    for ii = 1:numel(ch)
       ts{ii} = getSpikeTimes(blockObj,ch(ii),class); 

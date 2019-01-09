@@ -66,14 +66,14 @@ end
 
 % If multiple blocks, use recursion
 spikes = [];
-if (numel(blockObj)>1) 
+if (numel(blockObj) > 1) 
    for ii = 1:numel(blockObj)
       spikes = [spikes; getSpikes(blockObj(ii),ch,class,type)]; %#ok<AGROW>
    end   
    return;
 end
 
-if ~getStatus(blockObj,'Sorted')
+if ~isfield(blockObj.Channels,'Sorted')
    class = nan;
 end
    

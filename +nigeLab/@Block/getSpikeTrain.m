@@ -39,7 +39,7 @@ end
 
 %% PARSE INPUTS
 if nargin < 2
-   ch = 1:blockObj.NumChannels;
+   ch = 1:blockObj(1).NumChannels;
 end
 
 if nargin < 3 % If only 2 arguments or less, class wasn't given
@@ -48,7 +48,7 @@ end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
 idx = [];
-if (numel(ch)>1) 
+if (numel(ch) > 1) 
    idx = cell(size(ch));
    for ii = 1:numel(ch)
       idx{ii} = getSpikeTrain(blockObj,ch(ii),class); 
@@ -66,7 +66,7 @@ if numel(blockObj) > 1
 end
 
 %% CHECK THAT THIS BLOCK WAS SORTED AND RETURN SPIKE INDICES
-if ~getStatus(blockObj,'Sorted') % If sorting wasn't done, set to NaN
+if ~isfield(blockObj.Channels,'Sorted')% If sorting wasn't done, set to NaN
    class = nan;
 end
 
