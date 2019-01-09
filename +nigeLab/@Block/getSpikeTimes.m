@@ -17,9 +17,7 @@ function ts = getSpikeTimes(blockObj,ch,class)
 %   class      :     (Optional) Specify the class of spikes to retrieve,
 %                       based on sorting or clustering. If not specified,
 %                       depends on if sorting has been done. 
-%                       If sorting is done, then it will only include
-%                       classes that correspond to TAGS which relate to
-%                       spiking activity. Otherwise it gets all spikes. 
+%                       Otherwise it gets all spikes. 
 %                       If class is specified, it will check to make sure 
 %                       that there are actually classes associated with the
 %                       spike and issue a warning if that part hasn't been 
@@ -45,17 +43,28 @@ if nargin < 3
    class = nan;
 end
 
+%% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
+if (numel(ch)>1)
+   ts = cell(size(ch));
+   for ii = 1:numel(ch)
+      ts{ii} = getSpikeTimes(blockObj,ch(ii),class); 
+   end   
+   return;
+end
+
+%% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
+if numel(blockObj) > 1
+   ts = [];
+   for ii = 1:numel(blockObj)
+      ts = [ts; getSpikeTimes(blockObj(ii),ch,class)]; %#ok<AGROW>
+   end 
+   return;
+end
+
 %% GET SPIKE PEAK SAMPLES AND CONVERT TO TIMES
 idx = getSpikeTrain(blockObj,ch,class);
+ts = idx ./ blockObj.SampleRate;
 
-if numel(ch) > 1
-   ts = cell(size(idx));
-   for ii = 1:numel(ch)
-      ts{ii} = idx{ii} ./ blockObj.SampleRate;
-   end 
-else
-   ts = idx ./ blockObj.SampleRate;
-end
 
 
 end

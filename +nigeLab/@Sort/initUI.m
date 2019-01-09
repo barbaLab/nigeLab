@@ -19,46 +19,50 @@ if ~isfield(sortObj.pars,'AX_POS')
 end      
 
 %% UI CONTROLLER VARIABLES
-pars.UI.ch = 1;
-pars.UI.cl = 1;
-pars.UI.zm = ones(pars.NCLUS_MAX,1) * 100;
-pars.UI.spk_ylim = repmat(pars.SPK_YLIM,pars.NCLUS_MAX,1);
+sortObj.UI.ch = 1;
+sortObj.UI.cl = 1;
+sortObj.UI.zm = ones(sortObj.NCLUS_MAX,1) * 100;
+sortObj.UI.spk_ylim = repmat(sortObj.SPK_YLIM,sortObj.NCLUS_MAX,1);
 
 % Initialize first set of spikes
-pars.plot = load(pars.spk.fname{pars.UI.ch},'spikes');
-
+% sortObj.plot = load(sortObj.spk.fname{sortObj.UI.ch},'spikes');
+if ~getAllSpikeSnippets(sortObj)
+   warning('Could not access spike waveforms.');
+end
+   
 % Initialize cluster assignments
-pars.cl.num.assign.cur = cell(pars.files.N,1);
+sortObj.cl.num.assign.cur = cell(sortObj.files.N,1);
 
 % Initialize cluster radii and feature plots properties
-pars.cl.num.rad = cell(pars.files.N,1);
+sortObj.cl.num.rad = cell(sortObj.files.N,1);
 fprintf(1,'->\tGetting spike times...');
-for iCh = 1:pars.files.N
-   in = load(pars.spk.fname{iCh},'pars','peak_train');
-   pars.spk.fs(iCh) = in.pars.FS;
-   pars.spk.peak_train{iCh,1} = in.peak_train;
-   pars.zmax = max(pars.zmax,numel(in.peak_train)/in.pars.FS/60);
+for iCh = 1:sortObj.files.N
+   in = load(sortObj.spk.fname{iCh},'pars','peak_train');
+   sortObj.spk.fs(iCh) = in.pars.FS;
+   sortObj.spk.peak_train{iCh,1} = in.peak_train;
+   sortObj.zmax = max(sortObj.zmax,numel(in.peak_train)/in.pars.FS/60);
    
-   pars.cl.num.assign.cur{iCh,1} = 1:pars.NCLUS_MAX;
-   pars.cl.num.rad{iCh,1} = inf*ones(1,pars.NCLUS_MAX);
+   sortObj.cl.num.assign.cur{iCh,1} = 1:sortObj.NCLUS_MAX;
+   sortObj.cl.num.rad{iCh,1} = inf*ones(1,sortObj.NCLUS_MAX);
 end
 fprintf(1,'complete.\n');
 
 % Initialize "features" info
-pars.feat.this = 1;
-pars.featcomb = flipud(...
-   combnk(1:pars.spk.nfeat(pars.UI.ch),2));
-pars.featname = cell(pars.nfeatmax,1);
-for iN = 1:size(pars.featcomb,1)
-   pars.featname{iN,1} = sprintf('x: %s-%d || y: %s-%d',pars.sc,...
-      pars.featcomb(iN,1),pars.sc,pars.featcomb(iN,2));
+sortObj.feat.this = 1;
+sortObj.featcomb = flipud(...
+   combnk(1:sortObj.spk.nfeat(sortObj.UI.ch),2));
+sortObj.featname = cell(sortObj.nfeatmax,1);
+for iN = 1:size(sortObj.featcomb,1)
+   sortObj.featname{iN,1} = sprintf('x: %s-%d || y: %s-%d',sortObj.sc,...
+      sortObj.featcomb(iN,1),sortObj.sc,sortObj.featcomb(iN,2));
 end
 
 % Initialize string for channels in nice format for popupmenu
-pars.UI.channels = cell(pars.files.N,1);
-for iCh = 1:pars.files.N
-   pars.UI.channels{iCh} = strrep(pars.files.spk.ch{iCh},'_',' ');
+sortObj.UI.channels = cell(sortObj.files.N,1);
+for iCh = 1:sortObj.files.N
+   sortObj.UI.channels{iCh} = strrep(sortObj.files.spk.ch{iCh},'_',' ');
 end
 
+flag = true;
 
 end

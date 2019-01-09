@@ -9,6 +9,10 @@ function spikes = getSpikes(blockObj,ch,class,type)
 %   INPUTS
 %  --------
 %  blockObj    :     BLOCK class in orgExp package.
+%                       -> If given as an array, uses the same value for ch
+%                             for each block (without checking if it is the
+%                             same channel/probe ID combination on each
+%                             block).
 %
 %    ch        :     Channel index for retrieving spikes. Must be given as
 %                       a SCALAR positive integer.
@@ -27,6 +31,7 @@ function spikes = getSpikes(blockObj,ch,class,type)
 %                       -> 'feat' : Retrieves the features extracted during
 %                                   spike detection (currently defaulted to
 %                                   Wavelet coefficients).
+%                       -> 'spikes' : Retrieves the waveform.
 %
 %  --------
 %   OUTPUT
@@ -41,27 +46,35 @@ function spikes = getSpikes(blockObj,ch,class,type)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% PARSE INPUTS
-if nargin < 4
-   type = 'spikes';
-end
-
-if nargin < 3
-   class = nan;
-end
-
-if nargin < 3
-   class = nan;
-elseif ~ismember('Sorted',blockObj.Fields(blockObj.Status))
-   class = nan;
-end
-
+%% ERROR CHECKING
 if nargin < 2
    error('Must specify channel input arg.');
 end
 
 if ~ParseSingleChannelInput(blockObj,ch)
    error('Check ''ch'' input argument.');
+end
+
+%% PARSE INPUTS
+if nargin < 4
+   type = 'spikes';
+end
+
+if nargin < 3
+   class = nan;   
+end
+
+% If multiple blocks, use recursion
+spikes = [];
+if (numel(blockObj)>1) 
+   for ii = 1:numel(blockObj)
+      spikes = [spikes; getSpikes(blockObj(ii),ch,class,type)]; %#ok<AGROW>
+   end   
+   return;
+end
+
+if ~getStatus(blockObj,'Sorted')
+   class = nan;
 end
    
 %% RETRIEVE SPIKES OR FEATURES

@@ -76,44 +76,29 @@ else
    
 end
 
-%% INITIALIZE SPK AND CLU PROPERTY STRUCTS
+%% INITIALIZE SPK, CLU, AND ORIG PROPERTY STRUCTS
+% Create store for all original info and block ID for each element
+sortObj.orig.block = cell(sortObj.Channels.N,1);
+sortObj.orig.class = cell(sortObj.Channels.N,1);
 
-sortObj.spk.include.in = cell(sortObj.Channels.N,1);
-sortObj.spk.include.cur = cell(sortObj.Channels.N,1);
-sortObj.spk.fs = nan(sortObj.Channels.N,1);
-sortObj.spk.nfeat = nan(sortObj.Channels.N,1);
-sortObj.spk.peak_train = cell(sortObj.Channels.N,1);
-sortObj.clu.num.centroid=cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
-sortObj.clu.tag.name = cell(sortObj.Channels.N,1);
-sortObj.clu.tag.val = cell(sortObj.Channels.N,1);
-sortObj.clu.num.class.in=cell(sortObj.Channels.N,1);
-sortObj.clu.num.class.cur = cell(sortObj.Channels.N,1);
-sortObj.clu.sel.in = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
-sortObj.clu.sel.base = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
-sortObj.clu.sel.cur = cell(sortObj.Channels.N,sortObj.pars.NCLUS_MAX);
+% Create store for all concatenated spike info
+sortObj.spk.fs = sortObj.Block(1).SampleRate;
+sortObj.spk.class = cell(sortObj.Channels.N,1);
+sortObj.spk.spikes = cell(sortObj.Channels.N,1);
+sortObj.spk.feat = cell(sortObj.Channels.N,1);
+sortObj.spk.tag = cell(sortObj.Channels.N,1);
 
-sortObj.pars.zmax = 0;
-sortObj.pars.nfeatmax = 0;
+% Create store for previous classes for "UNDO"
+sortObj.prev.class = cell(sortObj.Channels.N,1);
+
 for iCh = 1:sortObj.Channels.N % get # clusters per channel   
-  
-   sortObj.spk.include.in{iCh,1} = true(size(in_feat.features,1),1);
-   sortObj.spk.include.cur{iCh,1} = true(size(in_feat.features,1),1);
-   sortObj.spk.nfeat(iCh) = size(in_feat.features,2);
+   % Get all associated spike data for that channel, from all blocks
+   [sortObj.spk.spikes{iCh},...
+    sortObj.spk.feat{iCh},...
+    sortObj.spk.class{iCh},...
+    sortObj.orig.block{iCh}] = getAllSpikeData(sortObj,iCh);
+ 
    
-   sortObj.pars.nfeatmax = max(sortObj.pars.nfeatmax,sortObj.spk.nfeat(iCh));
-
-   
-   % Load classes. 1 == OUT; all others (up to NCLUS) are valid
-   if sorted_flag
-      in_class = load(sortObj.clu.fname{iCh},'class');
-   else
-      in_class = struct;
-      in_class.class = ones(size(in_feat.features,1),1);
-   end
-   
-   if min(in_class.class) < 1
-      in_class.class = in_class.class + 1;
-   end
    
    % Assign "other" clusters as OUT
    in_class.class(in_class.class > numel(sortObj.clu.tag.defs)) = 1;

@@ -32,6 +32,11 @@ function idx = getSpikeTrain(blockObj,ch,class)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
+%% CHECK ERRORS
+if ~ParseMultiChannelInput(blockObj,ch)
+   error('Check ''ch'' input argument.');
+end
+
 %% PARSE INPUTS
 if nargin < 2
    ch = 1:blockObj.NumChannels;
@@ -39,41 +44,39 @@ end
 
 if nargin < 3 % If only 2 arguments or less, class wasn't given
    class = nan;
-elseif ~getStatus(blockObj,'Sorted') % If sorting wasn't done, set to NaN
+end
+
+%% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
+idx = [];
+if (numel(ch)>1) 
+   idx = cell(size(ch));
+   for ii = 1:numel(ch)
+      idx{ii} = getSpikeTrain(blockObj,ch(ii),class); 
+   end   
+   return;
+end
+
+%% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
+if numel(blockObj) > 1 
+   idx = [];
+   for ii = 1:numel(blockObj) % Concatenate all block contents together
+      idx = [idx; getSpikeTrain(blockObj(ii),ch,class)]; %#ok<AGROW>
+   end
+   return;
+end
+
+%% CHECK THAT THIS BLOCK WAS SORTED AND RETURN SPIKE INDICES
+if ~getStatus(blockObj,'Sorted') % If sorting wasn't done, set to NaN
    class = nan;
 end
 
-% If class is not specified, but Sorting and Clustering was done...
-if isnan(class(1)) && ...
-      getStatus(blockObj,'Sorted') && ...
-      getStatus(blockObj,'Clusters') && ...
-      isfield(blockObj.SortPars,'SPIKETAGS')
-   % Make class equal to all "good" spike classes
-   class = find(blockObj.SortPars.SPIKETAGS);
+% Find peak occurrence indices and narrow by spike class if desired
+idx = find(blockObj.Channels(ch).Spikes.peak_train); % Return vector
+if ~isnan(class(1))
+   idx = idx(ismember(blockObj.Channels(ch).Sorted.class,class));
 end
 
-if ~ParseMultiChannelInput(blockObj,ch)
-   error('Check ''ch'' input argument.');
-end
-
-%% FIND SPIKE SAMPLE INDICES
-if numel(ch) > 1 % For an array of channels
-   idx = cell(size(ch));
-   for ii = 1:numel(ch) % Return a cell array
-      idx{ii} = find(blockObj.Channels(ch(ii)).Spikes.peak_train);
-      if ~isnan(class(1))
-         idx{ii} = idx{ii}(...
-            ismember(blockObj.Channels(ch(ii)).Sorted.class,class));
-      end
-   end
-   
-else % Otherwise, only one channel index was given
-   idx = find(blockObj.Channels(ch).Spikes.peak_train); % Return vector
-   if ~isnan(class(1))
-      idx = idx(ismember(blockObj.Channels(ch).Sorted.class,class));
-   end
-end
-
+% Make sure it is shaped in a consistent output dimension
 idx = reshape(idx,numel(idx),1);
 
 end

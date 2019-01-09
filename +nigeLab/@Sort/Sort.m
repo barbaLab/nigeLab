@@ -51,11 +51,15 @@ classdef Sort < handle
       Channels    % Struct containing channels info
    end
    
+   properties (SetAccess = private, GetAccess = public)
+      spk      % Contains spike snippets
+      UI       % UI controller variable
+   end
+   
    properties (SetAccess = private, GetAccess = private)
       pars     % Parameters
-      spk      % Spike snippet info struct
-      clu      % Cluster assignment info struct
-      UI       % UI controller variable
+      orig     % Original assignments and which block they're from
+      prev     % Previous assignments
    end
    
    %% METHODS
@@ -92,20 +96,22 @@ classdef Sort < handle
 
       end
       
-      channelName = parseChannelName(sortObj);
+      channelName = parseChannelName(sortObj); % Get all channel names
       
    end
    
    methods (Access = private)
       
-      flag = initParams(sortObj);
-      flag = initData(sortObj,nigelObj);
-      flag = initUI(sortObj);
+      flag = initParams(sortObj); % Initialize general parameters
+      flag = initData(sortObj,nigelObj); % Initialize data structures
+      flag = initUI(sortObj); % Initializes spike scoring UI parameters
       
-      flag = parseBlocks(sortObj,nigelObj);
-      flag = parseAnimals(sortObj,nigelObj);
+      flag = getAllSpikeSnippets(sortObj); % Get snippets from all channels
       
-      flag = setAxesPositions(sortObj);
+      flag = parseBlocks(sortObj,nigelObj);  % Assigns Blocks property
+      flag = parseAnimals(sortObj,nigelObj); % Assigns Blocks from Animals
+      
+      flag = setAxesPositions(sortObj); % Draw axes positions
       
    end
    

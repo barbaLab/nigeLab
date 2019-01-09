@@ -52,7 +52,6 @@ end
 
 %% GET DATA FOR SPIKEIMAGE
 spikes = blockObj.getSpikes(ch,class);
-peak_train = blockObj.Channels(ch).Spikes.peak_train;
 fs = blockObj.SampleRate;
 cl = blockObj.getSort(ch);
 if isnan(cl)
@@ -61,7 +60,7 @@ else
    class = cl(ismember(cl,class));
 end
 
-blockObj.Graphics.Spikes = nigeLab.libs.SpikeImage(spikes,fs,peak_train,class,...
+blockObj.Graphics.Spikes = nigeLab.libs.SpikeImage(spikes,fs,class,...
                         'NumClus_Max',numel(unique(class)));
 flag = true;
 end

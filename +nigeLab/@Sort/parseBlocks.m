@@ -18,8 +18,8 @@ flag = false;
 
 sortObj.Channels.ID = parseChannelID(blockObj(1));
 sortObj.Channels.Name = nigeLab.utils.parseChannelName(sortObj.Channels.ID);
-sortObj.Channels.Idx = cell(numel(blockObj),1);
 sortObj.Channels.N = size(sortObj.Channels.ID,1);
+sortObj.Channels.Idx = nan(sortObj.Channels.N,numel(blockObj));
 sortObj.Channels.Sorted = false(sortObj.Channels.N,1);
 
 %% FIND CORRESPONDING CHANNELS FOR REST OF BLOCK ELEMENTS
@@ -30,12 +30,13 @@ for ii = 1:numel(blockObj)
    end
    channelID = parseChannelID(blockObj(ii));
    idx = [];
-   for iCh = 1:size(channelID,1)
+   for iCh = 1:sortObj.Channels.N
       tmp = find(ismember(sortObj.Channels.ID,channelID(iCh,:),'rows'),...
          1,'first');
-      idx = [idx, tmp]; %#ok<AGROW>
+      if ~isempty(tmp)
+         sortObj.Channels.Idx(iCh,ii) = tmp;
+      end
    end
-   sortObj.Channels.Idx{ii} = idx;
    
    % If previous sorting is available:
    if getStatus(blockObj(ii),'Sorted')
