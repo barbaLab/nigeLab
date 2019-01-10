@@ -66,6 +66,7 @@ if (data_present)
    fprintf(1, 'Allocating memory for data...\n');
    
    fName = fullfile(paths.TW_N);
+   if exist(fName,'file'),delete(fName);end
    TimeFile = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
       'class','int32','size',[1 num_amplifier_samples],'access','w');
    
@@ -80,6 +81,11 @@ if (data_present)
    % One file per probe and channel
    amplifier_dataFile = cell(num_amplifier_channels,1);
    stim_dataFile = cell(num_amplifier_channels,1);
+   amp_settle_dataFile = cell(num_amplifier_channels,1);
+   charge_recovery_dataFile = cell(num_amplifier_channels,1);
+   compliance_limit_dataFile = cell(num_amplifier_channels,1);
+   
+   
    if (dc_amp_data_saved ~= 0)
       dc_amplifier_dataFile = cell(num_amplifier_channels,1);
    end
@@ -97,11 +103,30 @@ if (data_present)
       stim_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
          'class','single','size',[1 num_amplifier_samples],'access','w');
       
+      as_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(as_data_fName,'\','/'), pNum, chNum);
+      if exist(fName,'file'),delete(fName);end
+      amp_settle_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+         'class','uint8','size',[1 num_amplifier_samples],'access','w');
+      
+      cr_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(cr_data_fName,'\','/'), pNum, chNum);
+      if exist(fName,'file'),delete(fName);end
+      charge_recovery_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+         'class','uint8','size',[1 num_amplifier_samples],'access','w');
+      
+      cl_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
+      fName = sprintf(strrep(cl_data_fName,'\','/'), pNum, chNum);
+      if exist(fName,'file'),delete(fName);end
+      compliance_limit_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+         'class','uint8','size',[1 num_amplifier_samples],'access','w');
+      
+      
       if (dc_amp_data_saved ~= 0)
          dc_amp_fName = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
          fName = sprintf(strrep(dc_amp_fName,'\','/'), pNum, chNum);
           if exist(fName,'file'),delete(fName);end
-         dc_amplifier_dataFile{iCh} =  nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
+         dc_amplifier_dataFile{iCh} =  nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
       end
 		 fraction_done = 100 * (iCh / num_amplifier_channels);
@@ -124,7 +149,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
            if exist(fName,'file'),delete(fName);end
-            board_adc_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
+            board_adc_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
 		 fraction_done = 100 * (iCh / num_board_adc_channels);
 		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
@@ -143,12 +168,12 @@ if (data_present)
       infoname = fullfile(paths.DW,[blockObj.Name '_DAC_Info.mat']);
       save(fullfile(infoname),'DAC_info','-v7.3');
       if (data_present)
-         board_dac_dataFile = cell(num_aux_input_channels,1);
+         board_dac_dataFile = cell(num_board_dac_channels,1);
          for i = 1:num_board_dac_channels
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
            if exist(fName,'file'),delete(fName);end
-            board_dac_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
+            board_dac_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_dac_samples],'access','w');
 		fraction_done = 100 * (iCh / num_board_dac_channels);
 		fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
@@ -171,7 +196,7 @@ if (data_present)
          for i = 1:num_board_dig_in_channels
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
             if exist(fName,'file'),delete(fName);end
-            board_dig_in_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),uint8(0),...
+            board_dig_in_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','uint8','size',[1 num_board_dig_in_samples],'access','w');
             fraction_done = 100 * (iCh / num_board_dig_in_channels);
             fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
@@ -195,7 +220,7 @@ if (data_present)
          for i = 1:num_board_dig_out_channels
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
             if exist(fName,'file'),delete(fName);end
-            board_dig_out_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),uint8(0),...
+            board_dig_out_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','uint8','size',[1 num_board_dig_out_samples],'access','w');
             fraction_done = 100 * (iCh / num_board_dig_out_channels);
             fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
@@ -244,51 +269,51 @@ if (data_present)
    time_buffer_index=repmat(time_buffer_index,1,nBlocks);
    
    if (num_amplifier_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+      end_=end_+num_samples_per_data_block * num_amplifier_channels;
       amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
       amplifier_buffer_index=repmat(amplifier_buffer_index,1,nBlocks);
       
       if (dc_amp_data_saved ~= 0)
-         index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-         end_=index(end);
+         index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+         end_=end_+num_samples_per_data_block * num_amplifier_channels;
          dc_amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
          dc_amplifier_buffer_index=repmat(dc_amplifier_buffer_index,1,nBlocks);
       end
-      index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_amplifier_channels);
+      end_=end_+num_samples_per_data_block * num_amplifier_channels;
       stim_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
       stim_buffer_index=repmat(stim_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_adc_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_board_adc_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_board_adc_channels);
+      end_=end_+num_samples_per_data_block * num_board_adc_channels;
       adc_buffer_index(index)=uint16(reshape(repmat(1:num_board_adc_channels,num_samples_per_data_block,1),1,[]));
       adc_buffer_index=repmat(adc_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dac_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * num_board_dac_channels;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * num_board_dac_channels);
+      end_=end_+num_samples_per_data_block * num_board_dac_channels;
       dac_buffer_index(index)=uint16(reshape(repmat(1:num_board_dac_channels,num_samples_per_data_block,1),1,[]));
       dac_buffer_index=repmat(dac_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dig_in_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * 1;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * 1);
+      end_=end_+num_samples_per_data_block * 1;
       dig_in_buffer_index(index)=true;
       dig_in_buffer_index=repmat(dig_in_buffer_index,1,nBlocks);
       
    end
    
    if (num_board_dig_out_channels > 0)
-      index=end_+1:end_+num_samples_per_data_block * 1;
-      end_=index(end);
+      index=end_+(1:num_samples_per_data_block * 1);
+%       end_=end_+num_samples_per_data_block * 1;
       dig_out_buffer_index(index)=true;
       dig_out_buffer_index=repmat(dig_out_buffer_index,1,nBlocks);
       
@@ -306,16 +331,14 @@ if (data_present)
       %%% Read binary data.
       blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
       dataToRead = blocksToread*nDataPoints;
-      Buffer=uint16(fread(fid, dataToRead, 'uint16=>uint16'))';
+      Buffer=fread(fid, dataToRead, 'uint16=>uint16')';
       
       %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
       %%% Update the files
       index =uint32( index(end) + 1 : index(end)+num_samples_per_data_block*blocksToread);
       
-      t=Buffer(time_buffer_index(1:dataToRead));
-      tmp=dec2bin(t,16);
-      t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
-%       t = reshape(t,1,numel(t)); % ensure correct orientation
+      t=typecast(Buffer(time_buffer_index(1:dataToRead)),'int32');t = reshape(t,1,numel(t)); % ensure correct orientation
+      TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds).
@@ -328,19 +351,21 @@ if (data_present)
             dc_amplifier_dataFile{jj}.append(-0.01923 *( single(Buffer(dc_amplifier_buffer_index(1:dataToRead)==jj)) -512));
          end
          
-      stim_data = single(Buffer(stim_buffer_index(1:dataToRead)==jj));
-      compliance_limit_data = stim_data >= 2^15;
-      stim_data = stim_data - (compliance_limit_data * 2^15);
-      charge_recovery_data = stim_data >= 2^14;
-      stim_data = stim_data - (charge_recovery_data * 2^14);
-      amp_settle_data = stim_data >= 2^13;
-      stim_data = stim_data - (amp_settle_data * 2^13);
-      stim_polarity = stim_data >= 2^8;
-      stim_data = stim_data - (stim_polarity * 2^8);
-      stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
-      stim_data = stim_data .* stim_polarity;
-      stim_dataFile{jj}.append (  stim_step_size * stim_data / 1.0e-6 ); % units = microamps
-      
+         stim_data = single(Buffer(stim_buffer_index(1:dataToRead)==jj));
+         compliance_limit_data = stim_data >= 2^15;
+         stim_data = stim_data - (compliance_limit_data * 2^15);
+         charge_recovery_data = stim_data >= 2^14;
+         stim_data = stim_data - (charge_recovery_data * 2^14);
+         amp_settle_data = stim_data >= 2^13;
+         stim_data = stim_data - (amp_settle_data * 2^13);
+         stim_polarity = stim_data >= 2^8;
+         stim_data = stim_data - (stim_polarity * 2^8);
+         stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
+         stim_data = stim_data .* stim_polarity;
+         stim_dataFile{jj}.append (  stim_step_size * stim_data / 1.0e-6 ); % units = microamps
+         amp_settle_dataFile{jj}.append (uint8(amp_settle_data));
+         charge_recovery_dataFile{jj}.append (uint8(charge_recovery_data));
+         compliance_limit_dataFile{jj}.append (uint8(compliance_limit_data));
       end
       
       for jj=1:num_board_adc_channels  % units = volts
@@ -410,25 +435,11 @@ if (data_present)
          deBounce = false;
       end
       blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
-      
-      as_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
-      fName = sprintf(strrep(as_data_fName,'\','/'), pNum, chNum);
-      data = single(amp_settle_data(iCh,:));
-      save(fullfile(fName),'data','-v7.3');
-      blockObj.Channels(iCh).amp_settle_data= nigeLab.libs.DiskData(matfile(fName));
-      
-      cr_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
-      fName = sprintf(strrep(cr_data_fName,'\','/'), pNum, chNum);
-      data = single(charge_recovery_data(iCh,:));
-      save(fullfile(fName),'data','-v7.3');
-      blockObj.Channels(iCh).charge_recovery_data= nigeLab.libs.DiskData(matfile(fName));
-      
-      cl_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
-      fName = sprintf(strrep(cl_data_fName,'\','/'), pNum, chNum);
-      data = single(compliance_limit_data(iCh,:));
-      save(fullfile(fName),'data','-v7.3');
-      blockObj.Channels(iCh).compliance_limit_data= nigeLab.libs.DiskData(matfile(fName));
+      blockObj.Channels(iCh).amp_settle_data= lockData(amp_settle_dataFile{iCh});
+      blockObj.Channels(iCh).charge_recovery_data= lockData(charge_recovery_dataFile{iCh});
+      blockObj.Channels(iCh).compliance_limit_data= lockData(compliance_limit_dataFile{iCh});
    end
+    blockObj.Time = TimeFile;
 end
 flag = true;
 
@@ -453,6 +464,6 @@ for iF = 1:numel(f)
    str = strjoin(str,'');
    header_out.(str) = header_in.(f{iF});
 end
-end
+
 
 

@@ -31,12 +31,14 @@ classdef NotesUI < matlab.apps.AppBase
          if ~isempty(app.Parent)
             app.Parent.parseNotes(app.NotesTextArea.Value);
          end
-         selection = questdlg('Save successful. Finished taking notes?',...
-            'Close Request',...
-            'Exit','Cancel','Exit');
-         if strcmp(selection,'Exit')
+         %%%%%% I understand the goal of this dialog, i agree on its
+         %%%%%% usefulness but it's freaking annoying
+%          selection = questdlg('Save successful. Finished taking notes?',...
+%             'Close Request',...
+%             'Exit','Cancel','Exit');
+%          if strcmp(selection,'Exit')
             ExitNotes(app);
-         end
+%          end
       end
       
       % Button pushed function: ExitButton

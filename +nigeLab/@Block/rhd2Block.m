@@ -67,6 +67,7 @@ if (data_present)
    fprintf(1, 'Allocating memory for data...\n');
    
    fName = fullfile(paths.TW_N);
+   if exist(fName,'file'),delete(fName);end
    TimeFile = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
       'class','int32','size',[1 num_amplifier_samples],'access','w');
    
@@ -382,11 +383,10 @@ if (data_present)
       %%% Update the files
       index =uint32( index(end) + 1 : index(end)+num_samples_per_data_block*blocksToread);
       
-      t=Buffer(time_buffer_index(1:dataToRead));
-      tmp=dec2bin(t,16);
-      t=int32(bin2dec([tmp(2:2:end,:) tmp(1:2:end,:)]));  % time is sampled as 32bit integer, the file is read as 16 bit integer. This takes care of the conversion
+      t=typecast(Buffer(time_buffer_index(1:dataToRead)),'int32');t = reshape(t,1,numel(t)); % ensure correct orientation
+      TimeFile.append(t);
       t = reshape(t,1,numel(t)); % ensure correct orientation
-%       TimeFile.append(t);
+      TimeFile.append(t);
       num_gaps = num_gaps + sum(diff(t) ~= 1);
       
       % Scale time steps (units = seconds)
@@ -515,6 +515,7 @@ if (data_present)
    for iCh=1:num_amplifier_channels
       blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
    end
+   blockObj.Time = TimeFile;
 end
 
 % % % % % % % % % % % % % % % % % % % % % % 
