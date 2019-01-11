@@ -79,6 +79,7 @@ classdef Block < handle
       Verbose = true;   % Whether to report list of files and fields.
       Channels          % Struct that contains fields with data
       Graphics          % Graphical objects associated with block
+      Events            % Cell array of events structs
    end
    
    properties (SetAccess = private,GetAccess = public)
@@ -175,10 +176,9 @@ classdef Block < handle
             str = varName{1}; % remove from cell container
             
             % Check to see if it matches any of the listed properties
-            idx = ismember(upper(P), upper( deblank( str)));
-            if sum(idx)==1 % Should only be one match
-               Prop = P{idx};
-               blockObj.(Prop) = pars.(str);
+%             idx = ismember(upper(P), upper( deblank( str)));
+            if isprop(blockObj,str) % Should only be one match
+               blockObj.(str) = pars.(str);
             end
          end
          

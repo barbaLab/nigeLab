@@ -79,7 +79,8 @@ for iCh = 1:blockObj.NumChannels
    fname = fullfile(fname);
    
    if (~exist(fullfile(fname),'file') && ismember(blockObj.FileExt,...
-         {'.rhs','tdt'}))
+         {'.rhs',...        % Intan
+         '', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'})) % TDT
       warningFlag=true;
       warningRef(2) = true;
       updateStatus = false;

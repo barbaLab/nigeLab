@@ -24,13 +24,14 @@ for bb=1:numel(Recordings)
       tmp=dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
       if ~isempty(tmp)
          addBlock=true;
+         RecFile=fullfile(tmp.folder,tmp.name);
       end
    elseif any(strcmp(ext,supportedFormats))
       addBlock=true;
+      RecFile=fullfile(Recordings(bb).folder,Recordings(bb).name);
    end
    
    if  addBlock
-      RecFile=fullfile(Recordings(bb).folder,Recordings(bb).name);
       animalObj.addBlock(RecFile);
    end
 end

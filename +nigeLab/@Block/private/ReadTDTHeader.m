@@ -51,8 +51,15 @@ filesize = sum([s.bytes]);
 heads = TDTbin2mat(NAME, 'HEADERS', 1,'NODATA',1);
 block_fields = fieldnames(heads);
 
+[TDTNaming] = nigeLab.defaults.TDT();
 fn = fieldnames(heads.stores);
-wav_data = fn(contains(fn,'Wav'));
+wav_data = fn(contains(fn,TDTNaming.WaveformName));
+
+dataType = cell(1,numel(fn));
+for ii=1:numel(fn)
+  dataType{ii} = heads.stores.(fn{ii}).typeStr; 
+end
+dataType = unique(dataType);
 
 data_present = any(contains(block_fields, 'stores')) ;
 sample_rate =  heads.stores.(wav_data{1}).fs;
@@ -133,7 +140,7 @@ switch heads.stores.((wav_data{1})).dform
 end
 num_amplifier_channels = numel(amplifier_channels);
 npts = (heads.stores.((wav_data{1})).size-10) * 4/sz;
-num_amplifier_samples = double(npts * numel(heads.stores.((wav_data{1})).data)/num_amplifier_channels);
+num_amplifier_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_amplifier_channels;
 
 % board_adc_channels = channel_struct;
 % board_dig_in_channels = channel_struct;
@@ -153,7 +160,6 @@ num_amplifier_samples = double(npts * numel(heads.stores.((wav_data{1})).data)/n
 for ii=DesiredOutputs' %  DesiredOutputs defined below
    header.(ii{:})=eval(ii{:});
 end
-   header.(ii{:})=eval(ii{:});
 end
 
 function DesiredOutputs=DesiredOutputs()
@@ -178,7 +184,8 @@ DesiredOutputs = {
 %    'num_board_dig_out_samples';
    'filesize';
    'info';
-   'wav_data';
+   'dataType';
+   'fn';
    };
 end
 
