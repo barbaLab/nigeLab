@@ -52,7 +52,7 @@ for iBk = 1:M % For each block
    
    for iCh = 1:N % For each channel
       % Match the channel ID to the correct row (if it exists)
-      tmp = find(ismember(sortObj.Channels.ID,channelID(iCh,:),'rows'),...
+      tmp = find(ismember(masterID,channelID(iCh,:),'rows'),...
          1,'first');
       if ~isempty(tmp)
          masterIdx(iCh,iBk) = tmp;

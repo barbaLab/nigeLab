@@ -457,6 +457,10 @@ classdef Block < handle
       
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
+      
+      % Put these as public for debugging
+      flag = initEvents(blockObj); % Initialize events property
+      
    end
    methods (Access = public, Hidden = true)
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK

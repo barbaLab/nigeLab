@@ -163,16 +163,9 @@ blockObj.Samples = header.num_amplifier_samples;
 
 
 %% INITIALIZE EVENTS STRUCT
-blockObj.updateParams('Event');
-blockObj.Events = struct;
-for ii = 1:numel(blockObj.EventPars.Events)
-   blockObj.Events.(blockObj.EventPars.Events{ii}) = struct;
-   blockObj.Events.(blockObj.EventPars.Events{ii}).type = ...
-      blockObj.EventPars.Type(ii);
-   evtFields = blockObj.EventPars.TypeID{blockObj.EventPars.Type(ii)};
-   for ik = 1:numel(evtFields)
-      blockObj.Events.(blockObj.EventPars.Events{ii}).(evtFields{ik}) = [];
-   end
+if ~blockObj.initEvents
+   warning('Could not initialize events structure property.');
+   return;
 end
 
 blockObj.updateStatus('init');

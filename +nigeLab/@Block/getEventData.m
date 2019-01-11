@@ -134,14 +134,14 @@ if (numel(blockObj) > 1)
    for iBk = 1:numel(blockObj)
       [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),type,field,...
          masterIdx(ch,iBk));
-      data = [data, tmpData];
-      blockIdx = [blockIdx, tmpBlockIdx.*iBk];
+      data = [data; tmpData];
+      blockIdx = [blockIdx; tmpBlockIdx.*iBk];
    end
    return;
 end
 
 %% SHOULD ADD ERROR CHECKING HERE FOR IF THE FIELD IS UNAVAILABLE
-if strnmpi(type,'Events',5)
+if strncmpi(type,'Events',5)
    data = blockObj.Events(ch).(field);
    if ~isnan(matchValue(1))
       dataSelector = blockObj.Events(ch).(matchField);
