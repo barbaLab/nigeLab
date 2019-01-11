@@ -44,7 +44,8 @@ for ii = vec
    end
    
    % Retrieve associated spikes
-   tmp = getEventData(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
+   tmp = getEventData(sortObj.Blocks(ii),'Spikes','snippet',...
+      sortObj.Channels.Idx(ch,ii));
    spikes = [spikes; tmp]; %#ok<*AGROW>
    
    % Retrieve associated features

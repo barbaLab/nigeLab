@@ -75,7 +75,7 @@ end
 
 blockObj.Meta = dynamicVars;
 
-%% PARSE BLOCKOBJ.NAME, USING BLOCKOBJ.NAMINGCONVENTION
+%% PARSE FILE NAME USING THE NAMING CONVENTION FROM TEMPLATE
 str = [];
 nameCon = blockObj.NamingConvention;
 for ii = 1:numel(nameCon)
@@ -88,95 +88,31 @@ end
 blockObj.Name = str(1:(end-1));
 
 %% GET/CREATE SAVE LOCATION FOR BLOCK
-
-% blockObj.SaveLoc is probably empty [] at this point, which will prompt a
-% UI to point to the block save directory:
-if ~blockObj.setSaveLocation(blockObj.SaveLoc)
+% blockObj.AnimalLoc is probably empty [] at this point, which will prompt 
+% a UI to point to the block save directory:
+if ~blockObj.getSaveLocation(blockObj.AnimalLoc)
    flag = false;
    warning('Save location not set successfully.');
    return;
 end
 
-if exist(blockObj.SaveLoc,'dir')==0
-   mkdir(fullfile(blockObj.SaveLoc));
-   makeLink = false;
-else
-   makeLink = true;
-end
-
 %% EXTRACT HEADER INFORMATION
-switch blockObj.FileExt
-   case '.rhd'
-      blockObj.RecType='Intan';
-      header=ReadRHDHeader('NAME',blockObj.RecFile,...
-                           'VERBOSE',blockObj.Verbose);
-      blockObj.NumADCchannels = header.num_board_adc_channels;
-      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
-      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
-      blockObj.ADCChannels = header.board_adc_channels;
-      blockObj.DigInChannels = header.board_dig_in_channels;
-      blockObj.DigOutChannels = header.board_dig_out_channels;
-      
-   case '.rhs'
-      blockObj.RecType='Intan';
-      header=ReadRHSHeader('NAME',blockObj.RecFile,...
-                           'VERBOSE',blockObj.Verbose);
-                        
-%       blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
-      blockObj.NumDACChannels = header.num_board_dac_channels;
-      blockObj.NumADCchannels = header.num_board_adc_channels;
-      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
-      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
-      blockObj.DACChannels = header.board_dac_channels;
-      blockObj.ADCChannels = header.board_adc_channels;
-      blockObj.DigInChannels = header.board_dig_in_channels;
-      blockObj.DigOutChannels = header.board_dig_out_channels;
-      
-   case {'', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
-      files = dir(fullfile(dName,'*.t*'));
-      if ~isempty(files)
-         blockObj.RecType='TDT';
-         blockObj.RecFile = fullfile(dName);
-         header=ReadTDTHeader('NAME',blockObj.RecFile,...
-                           'VERBOSE',blockObj.Verbose);
-         for ff=fieldnames(blockObj.Meta)'
-            if isfield(header.info,ff{:})
-               blockObj.Meta.(ff{:}) = header.info.(ff{:});
-            end
-         end
-      end
-   otherwise
-      blockObj.RecType='other';
+if ~blockObj.initChannels
+   warning('Could not initialize Channels structure headers properly.');
 end
-
-%% ASSIGN DATA FIELDS USING HEADER INFO
-blockObj.Channels = header.amplifier_channels;
-
-if ~blockObj.parseProbeNumbers % Depends on recording system
-   warning('Could not properly parse probe identifiers.');
-   return;
-end
-blockObj.NumChannels = header.num_amplifier_channels;
-blockObj.NumProbes = header.num_probes;
-blockObj.SampleRate = header.sample_rate;
-blockObj.Samples = header.num_amplifier_samples;
-
 
 %% INITIALIZE EVENTS STRUCT
 if ~blockObj.initEvents
-   warning('Could not initialize events structure property.');
+   warning('Could not initialize Events structure properly.');
    return;
 end
-
 blockObj.updateStatus('init');
-if makeLink
-   fprintf(1,'Extracted files found, linking data...\n');
-   blockObj.linkToData(makeLink);
-   fprintf(1,'\t->complete.\n');
-end
 
-%% SAVING
-blockObj.save;
-flag = true;
+% Link to data and save
+flag = blockObj.linkToData(true);
+if ~flag
+   warning('Could not successfully link %s to data.',blockObj.Name);
+end
+   
 
 end

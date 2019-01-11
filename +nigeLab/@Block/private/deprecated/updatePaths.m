@@ -27,7 +27,7 @@ flag = false;
 
 if nargin < 2
    if exist(blockObj.SaveLoc,'dir')==0
-      tankPath = uigetdir(blockObj.SaveLocDefault,'Select TANK path');
+      tankPath = uigetdir(blockObj.AnimalLocDefault,'Select ANIMAL path');
       if tankPath == 0
          fprintf(1,'Paths not updated.\n');
          return;

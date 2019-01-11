@@ -101,6 +101,7 @@ for iCh = sortObj.Channels.Mask % get # clusters per channel
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
 
+
 % Create store for previous classes for "UNDO" and "RESET"
 sortObj.prev = sortObj.spk.class;
 sortObj.orig = sortObj.spk.class;

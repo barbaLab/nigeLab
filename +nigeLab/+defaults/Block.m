@@ -5,7 +5,7 @@ function [pars,Fields] = Block()
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% Modify all properties here         
+%% Modify all properties here
 % Define general values used when parsing metadata from file name and
 % structure:
 pars             = struct;
@@ -13,16 +13,20 @@ pars             = struct;
 pars.RecLocDefault  = 'R:/Rat';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
-pars.SaveLocDefault = 'P:/Rat';
+pars.AnimalLocDefault = 'P:/Rat';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
-CH_ID = 'Ch';           % precedes the channel number delimited variable
-pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
+
+% Bookkeeping for unique channel files
+CH_ID = 'Ch';
+CHANNEL_TAG = [pars.Delimiter 'P%s',...
+   pars.Delimiter CH_ID,...
+   pars.Delimiter '%s.mat'];
 
 %% Here You can specify the naming format of your block recording
 % The block name will be splitted using Delimiter (defined above) and each
-% segment will be assigned to the property definied here. 
+% segment will be assigned to the property definied here.
 % Using namingConvention you can define to what varible each piece of the
 % block name should be assigned to. Use the includeChar and discardChar to
 % specify if that piece of info should be kept or discarded when creating
@@ -30,9 +34,9 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 %
 % Example 1
 % ---------
-% The recording name R18-68_2018_07_24_0_180724_141203.rhd, with dynamic 
+% The recording name R18-68_2018_07_24_0_180724_141203.rhd, with dynamic
 % parsing and naming conventions set as:
-% 
+%
 % pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
 % pars.IncludeChar='$';
 % pars.DiscardChar='&';
@@ -54,8 +58,8 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 % pars.DischardChar='&';
 % pars.NamingConvention={'Animal_ID','Rec_ID','Rec_date','Rec_time'};
 %
-% Will also extract Recording_date and Recording_time, but will not parse 
-% variables for 'Year,' 'Month,' or 'Date.' 
+% Will also extract Recording_date and Recording_time, but will not parse
+% variables for 'Year,' 'Month,' or 'Date.'
 % The BLOCK will be named:
 %
 % ~/path/R18-68_0_180724_141203
@@ -66,69 +70,114 @@ pars.IncludeChar='$';
 pars.DiscardChar='&';
 pars.NamingConvention={'Animal_ID','Rec_ID'};
 
-%% 
-Fields =  {'Raw';
-           'Filt';
-           'CAR';
-           'LFP';
-           'Spikes';
-           'Clusters';
-           'Sorted';
-           'Dig';
-           'Stim';
-           'DC';
-           'Meta';
-           %%%%%%%%%%%%%%%%%%% These names are hardcoded. They are used in
-           %%%%%%%%%%%%%%%%%%% the following (Block) functions:
-           %%%%%%%%%%%%%%%%%%% doRawExtraction (and ad hoc functions), 
-           %%%%%%%%%%%%%%%%%%% doLFPExtraction, doReReferencing,
-           %%%%%%%%%%%%%%%%%%% doSpikeDetection, linkToData
-                    };
-                
-FileNames       =   {'Raw';
-                     'Filt';
-                     'FiltCAR';
-                     'LFP';
-                     'ptrain';
-                     'clus';
-                     'sort';
-                     {'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'};
-                     'STIM';
-                     'DCAmp';
-                     {'probes.xlsx';'experiment.txt';'sync.mat'};
-                    };
-                
-FolderNames     =   {'RawData';
-                     'Filtered';
-                     'FilteredCAR';
-                     'LFPData';
-                     'wav-sneo_CAR_Spikes';
-                     'wav-sneo_SPC_CAR_Clusters';
-                     'wav-sneo_SPC_CAR_Sorted';
-                     'Digital';
-                     'StimData';
-                     'StimData';
-                     'Metadata';
-                    };
+%%
+Fields =  ...
+   {'Raw';
+   'Filt';
+   'CAR';
+   'LFP';
+   'Spikes';
+   'SpikeFeatures';
+   'Clusters';
+   'Sorted';
+   'DigIO';
+   'DigEvents';
+   'Video';
+   'Stim';
+   'DC';
+   'Time';
+   'Probes';
+   'Notes'};
 
-% Concatenate identifier for each file-type:
-Del = pars.Delimiter;
-P_C = pars.ProbeChannel;
-for ii=1:numel(Fields)
-   if iscell(FileNames{ii}) % If multiple file names for a given type of file
-      nFiles = numel(FileNames{ii}); % Make cell array for all of them
-      pars.(Fields{ii}).File = cell(nFiles,1);
-      for ik = 1:nFiles
-         pars.(Fields{ii}).File{ik} = [Del FileNames{ii}{ik}];
-      end
-   else
-      pars.(Fields{ii}).File      = [Del FileNames{ii} P_C];
-      
-   end
-   pars.(Fields{ii}).Tag = FileNames{ii};
-   pars.(Fields{ii}).Folder    = FolderNames{ii};
+FieldType = { ...
+   'Channels';
+   'Channels';
+   'Channels';
+   'Channels';
+   'Channels';
+   'Channels';
+   'Channels';
+   'Channels';
+   'Streams';
+   'Events';
+   'Streams';
+   'Events';
+   'Channels';
+   'Streams';
+   'Meta';
+   'Meta'};
+   
+
+OldNames       =   ...
+   {{'*Raw*'};
+   {'*Filt*'};
+   {'*FiltCAR*'};
+   {'*LFP*'};
+   {'*ptrain*'};
+   {'*SpikeFeatures*'};
+   {'*clus*'};
+   {'*sort*'};
+   {'*AUX*';'*sync*';'*user*';'*beam*'};
+   {'*Scoring.mat'};
+   {'*Paw.mat';'*Kinematics.mat'};
+   {'*STIM*'};
+   {'*DC*'};
+   {'*Time*'};
+   {'*probes.xlsx'};
+   {'*experiment.txt'}};
+
+FolderNames     =   ...
+   {'RawData';
+   'Filtered';
+   'FilteredCAR';
+   'LFPData';
+   '%s_Spikes';
+   '%s_SpikeFeatures';
+   '%s_Clusters';
+   '%s_Sorted';
+   'Digital';
+   'Digital';
+   'Video';
+   'StimData';
+   'StimData';
+   'Digital';
+   'Metadata';
+   'Metadata'};
+
+%% DO ERROR PARSING
+% Check that all have correct number of elements
+N = numel(Fields);
+if numel(FieldType)~=N
+   error('FieldType (%d) must have same # elements as Fields (%d).',...
+      numel(FieldType),N);
+elseif numel(OldNames)~=N
+   error('OldNames (%d) must have same # elements as Fields (%d).',...
+      numel(OldNames),N);
+elseif numel(FolderNames)~=N
+   error('FolderNames (%d) must have same # elements as Fields (%d).',...
+      numel(FolderNames),N);
 end
 
-pars.Time.File = [Del 'Time'];
+% Check that FieldType is viable
+VIABLE_FIELDS = {'Channels';'Events';'Streams';'Meta'};
+idx = ~cellfun(@(x)ismember(x,VIABLE_FIELDS),FieldType);
+if sum(idx)>0
+   idx = find(idx);
+   warning('\nInvalid: FieldType{%d} (%s)\n',idx,FieldType{idx});
+   pars = [];
+   Fields = [];
+   return;
+end
+
+
+%% MAKE DIRECTORY PARAMETERS STRUCT
+% Concatenate identifier for each file-type:
+Del = pars.Delimiter;
+pars.BlockPars = struct;
+for ii=1:numel(Fields)
+   pars.BlockPars.(Fields{ii}).Folder    = FolderNames{ii};
+   pars.BlockPars.(Fields{ii}).File      = [Del Fields{ii} CHANNEL_TAG];
+   pars.BlockPars.(Fields{ii}).OldFile   = OldNames{ii};
+end
 
 end

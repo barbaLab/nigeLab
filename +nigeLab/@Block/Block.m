@@ -68,37 +68,50 @@ classdef Block < handle
    
    %% PROPERTIES
    
-   properties (SetAccess = public,GetAccess = public)
+   properties (SetAccess = public, GetAccess = public)
       Name  % Name of the recording block
       Meta  % Metadata about the recording
 
-      DACChannels       % Struct containing info about DAC channels
-      ADCChannels       % Struct containing info about ADC channels
-      DigInChannels     % Struct containing info about digital inputs
-      DigOutChannels    % Struct containing info about digital outputs
-      Verbose = true;   % Whether to report list of files and fields.
-      Channels          % Struct that contains fields with data
-      Graphics          % Graphical objects associated with block
-      Events            % Cell array of events structs
+      Channels   % Struct array of neurophysiological stream data
+      Events     % Struct array of asynchronous events
+      Streams    % Struct array of non-electrode data streams
+      
+      Graphics   % Struct for associated graphics objects      
    end
    
-   properties (SetAccess = private,GetAccess = public)
+   properties (SetAccess = private, GetAccess = public)
       SampleRate  % Recording sample rate
+      Samples     % Total number of samples in original record
       Time        % Points to Time File
-      FileExt     % .rhd, .rhs, or other
-      RecType     % Intan / TDT / other
       
-      NumChannels       = 0   % Number of channels on all electrodes
-      NumProbes         = 0   % Number of electrodes
+      RMS         % RMS noise table for different waveforms
+      Fields      % List of property field names
+      
+      Mask        % Vector of indices of included elements of Channels
+      
+      NumProbes         = 0   % Number of electrode arrays
+      NumChannels       = 0   % Number of electrodes on all arrays
       NumADCchannels    = 0   % Number of ADC channels
       NumDACChannels    = 0   % Number of DAC channels
       NumDigInChannels  = 0   % Number of digital input channels
       NumDigOutChannels = 0   % Number of digital output channels
       
-      RMS                     % RMS noise table for different waveforms
+      Status      % Completion status for each element of BLOCK/FIELDS
+      Paths       % Detailed paths specifications for all the saved files
+      Notes       % Notes from text file
       
-      Fields      % List of property field names
+      RecType     % Intan / TDT / other
+      FileExt     % .rhd, .rhs, or other
+   end
+   
+   properties (SetAccess = private, GetAccess = public, Hidden = true)
+      Date              % Date of recording
+      Month             % Month of recording
+      Day               % Day of recording
       
+      FieldType         % Indicates types for each element of Field
+      
+      BlockPars         % Parameters struct for block construction
       EventPars         % Parameters struct for events
       ExperimentPars    % Parameters struct for experimental notes
       FiltPars          % Parameters struct for unit bandpass filter
@@ -111,41 +124,29 @@ classdef Block < handle
       SyncPars          % Parameters struct for digital sync stream
       VideoPars         % Parameters struct for associating videos
       
-      
-      
       RecFile       % Raw binary recording file
-      SaveLoc       % Saving path for extracted/processed data
+      AnimalLoc     % Saving path for extracted/processed data
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
-      
-      Samples  % Total number of samples in original record
-      Mask     % Whether to include channels or not
-      
-      Status      % Completion status for each element of BLOCK/FIELDS
-      paths       % Detailed paths specifications for all the saved files
-      Notes       % Notes from text file
-
-      ProbeChannel      % String for probe and channel number parsing
-      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
-      Date              % Date of recording
-      Month             % Month of recording
-      Day               % Day of recording
    end
   
-   properties (SetAccess = private,GetAccess = private)      
-      ForceSaveLoc      % Flag to force make non-existant directory      
+   properties (SetAccess = private, GetAccess = private)      
+      ForceSaveLoc      % Flag to force make non-existent directory      
       RecLocDefault     % Default location of raw binary recording
-      SaveLocDefault    % Default location of BLOCK
+      AnimalLocDefault  % Default location of BLOCK
       ChannelID         % Unique channel ID for BLOCK
+      Verbose = true;   % Whether to report list of files and fields.
       
       Delimiter        % Delimiter for name metadata for dynamic variables
       DynamicVarExp    % Expression for parsing BLOCK names from raw file
       IncludeChar      % Character indicating included name elements
       DiscardChar      % Character indicating discarded name elements
       NamingConvention % How to parse dynamic name variables for Block
+      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
    end
    
    %% METHODS
    methods (Access = public)
+      % Overloaded methods:
       function blockObj = Block(varargin)
          %% BLOCK Create a datastore object based on CPL data structure
          %
@@ -156,19 +157,13 @@ classdef Block < handle
          %     F. Barban   v2.0  11/2018
          
          %% PARSE VARARGIN
-         P = properties(blockObj);
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue;
             end
-%             % Check to see if it matches any of the listed properties
-%             idx = ismember(upper(P), upper( deblank( varargin{iV})));
-%             if sum(idx)==1 % Should only be one match
-%                Prop = P{idx};
-%                blockObj.(Prop) = varargin{iV+1};
-%             end
-            if isprop(blockObj,deblank(varargin{iV}))
-               blockObj.(deblank(varargin{iV})) = varargin{iV+1};
+            % Check to see if it matches any of the listed properties
+            if isprop(blockObj,varargin{iV})
+               blockObj.(varargin{iV}) = varargin{iV+1};
             end            
          end
          
@@ -176,17 +171,10 @@ classdef Block < handle
          [pars,blockObj.Fields] = nigeLab.defaults.Block;
          allNames = fieldnames(pars);
          allNames = reshape(allNames,1,numel(allNames));
-         for varName = allNames
-            str = varName{1}; % remove from cell container
-            
-%             % Check to see if it matches any of the listed properties
-%             idx = ismember(upper(P), upper( deblank( str)));
-%             if sum(idx)==1 % Should only be one match
-%                Prop = P{idx};
-%                blockObj.(Prop) = pars.(str);
-%             end
-            if isprop(blockObj,deblank(str))
-               blockObj.(deblank(str)) = pars.(str);
+         for name_ = allNames
+            % Check to see if it matches any of the listed properties
+            if isprop(blockObj,name_{:})
+               blockObj.(name_{:}) = pars.(name_{:});
             end
          end
          
@@ -196,7 +184,6 @@ classdef Block < handle
                'Select recording BLOCK');
             blockObj.RecFile = fullfile(path,file);
             if blockObj.RecFile == 0
-
                error('No block selected. Object not created.');
             end
          else
@@ -211,121 +198,16 @@ classdef Block < handle
          end
          
       end
-      
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
          save(fullfile([blockObj.paths.TW '_Block.mat']),'blockObj','-v7.3');
       end
-      
       function disp(blockObj)
          %% DISP  Overload display of BLOCK contents
          if blockObj.Verbose
             builtin('disp',blockObj);
          end
-      end
-      
-      % Can we remove this comment block?
-      
-      % Federico I will let you comment this :) -MM
-%       function varargout=subsref(blockObj,S) 
-%          %% overrrides builtin subsref to allow shortcuts
-%          % Only explicetly handles operator () called as first argoument
-%          % Ohter cases are handled by builtin subsref directly.
-% 
-%          nOper = numel(S);
-%          
-%          if nOper == 1 && strcmp(S(1).type,'()') && numel(S(1).subs) > 2
-%             nargs=numel(S(1).subs);
-%             for jj=3:nargs
-%                ind=numel(S)+1;
-%                S(ind).subs{1}=S(1).subs{jj};
-%                S(ind).type = '()';
-%             end
-%             Shrt = nigeLab.defaults.Shortcuts();
-%             if ischar( S(1).subs{1} )
-%                longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(1).subs{1}),2},S(1).subs{2});
-%             elseif isnumeric( S(1).subs{1} )
-%                longCommand = sprintf(Shrt{S(1).subs{1},2},S(1).subs{2});
-%             end
-%             Out = sprintf('blockObj.%s',longCommand);
-%             Out = eval(Out);
-%             varargout = {Out};
-%          else
-%             [varargout{1:nargout}] = builtin('subsref',blockObj,S);
-%          end
-%             
-%          
-% %          
-% %          ii=1;
-% %           while ii<=numel(S)
-% %               switch S(ii).type
-% %                   case '()'
-% %                       if ii==1
-% %                           nargs=numel(S(ii).subs);
-% %                           switch nargs
-% %                              case 1
-% %                                 Out = blockObj(S(ii).subs{:});
-% %                                 varargout = {Out};
-% %                                 ii=ii+1;
-% %                                 continue;
-% %                              case 2
-% %                              otherwise
-% %                           
-% %                           for jj=3:nargs
-% %                               ind=numel(S)+1;
-% %                              S(ind).subs{1}=S(ii).subs{jj};
-% %                              S(ind).type = '()';
-% %                           end
-% %                           Shrt = nigeLab.defaults.Shortcuts();
-% %                           if ischar( S(ii).subs{1} )
-% %                               longCommand = sprintf(Shrt{strcmp(Shrt(:,1),S(ii).subs{1}),2},S(ii).subs{2});
-% %                           elseif isnumeric( S(ii).subs{1} )
-% %                               longCommand = sprintf(Shrt{S(ii).subs{1},2},S(ii).subs{2});
-% %                           end
-% %                           Out = sprintf('%s.%s',Out,longCommand);
-% %                           Out = eval(Out);
-% %                           varargout = {Out};
-% %                           end
-% %                       else
-% %                          % retrieve methods output info
-% %                          finfo = functions(eval(sprintf('@blockObj.%s',S.subs)));
-% %                          fwspace = finfo.workspace{1};
-% %                          wspacefields = fieldnames(fwspace);
-% %                          mc = metaclass(fwspace.(wspacefields{1}));
-% %                          methodsIndx=strcmp({mc.MethodList.Name},S.subs);
-% %                          nout = numel(mc.MethodList(methodsIndx).OutputNames);
-% %                          
-% %                          % call builtin subsref with appropiate number of nouts
-% %                          if nout
-% %                             varargout = {builtin('subsref',blockObj,S)};
-% %                          else
-% %                             builtin('subsref',blockObj,S);
-% %                          end
-% %                          break;
-% %                       end
-% %                   case '.'                     
-% %                     % retrieve method's output info 
-% %                      finfo = functions(eval(sprintf('@blockObj.%s',S(ii).subs)));
-% %                      fwspace = finfo.workspace{1};
-% %                      wspacefields = fieldnames(fwspace);
-% %                      mc = metaclass(fwspace.(wspacefields{1}));
-% %                      methodsIndx=strcmp({mc.MethodList.Name},S(ii).subs);
-% %                      nout = numel(mc.MethodList(methodsIndx).OutputNames);
-% %                      
-% %                      % call builtin subsref with appropiate number of nouts
-% %                      if nout
-% %                         varargout = {builtin('subsref',blockObj,S)};
-% %                      else 
-% %                         builtin('subsref',blockObj,S);                        
-% %                      end
-% %                       break;
-% %                  case '{}'
-% %                  case '[]'
-% %                end
-% %               ii=ii+1;
-% %           end
-%       end
-      
+      end    
       function varargout = subsref(blockObj,s)
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
@@ -383,7 +265,6 @@ classdef Block < handle
                error('Not a valid indexing expression')
          end
       end
-      
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
@@ -412,32 +293,44 @@ classdef Block < handle
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       
+      % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
-      
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
-      tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       
+      % Methods for parsing spike info (to be deprecated):
+      tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
       spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms
       class = getSort(blockObj,ch);             % Get spike sorted classes
       [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
       
-      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
-      analyzeLFPSyncIndex(blockObj)                       % LFP synchronization index
-      analyzeRMS(blockObj,type)
+      % Method for getting event info:
+      [data,blockIdx] = getEventData(blockObj,type,field,ch,matchValue,matchField) % Retrieve event data
       
+      % Computational methods:
+      [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
+      analyzeLFPSyncIndex(blockObj)  % LFP synchronization index
+      analyzeRMS(blockObj,type)  % Compute RMS for channels
+      
+      % Methods for producing graphics:
       flag = plotWaves(blockObj)          % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
       flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
+      % Methods for associating/displaying info about blocks:
       L = list(blockObj) % List of current associated files for field or fields
-      flag = updatePaths(blockObj,tankPath) % Update associated paths
       flag = updateVidInfo(blockObj) % Update video info
+      flag = linkToData(blockObj,suppressWarning) % Link to existing data
+      flag = linkField(blockObj,fieldIndex)     % Link field to data
+      flag = linkChannelsField(blockObj,field)  % Link Channels field data
+      flag = linkEventsField(blockObj,field)    % Link Events field data
+      flag = linkStreamsField(blockObj,field)   % Link Streams field data
+      flag = linkNotes(blockObj);    % Link notes metadata
+      flag = linkProbe(blockObj);    % Link probe metadata
       
-      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = linkRaw(blockObj);  % Link raw data
       flag = linkFilt(blockObj); % Link filtered data
       flag = linkStim(blockObj); % Link stimulation data
@@ -449,26 +342,25 @@ classdef Block < handle
       flag = linkADC(blockObj);      % Link ADC data
       flag = linkDAC(blockObj);      % Link DAC data
       flag = linkDigIO(blockObj);    % Link Digital-In and Digital-Out data
-      flag = linkMeta(blockObj);     % Link notes metadata
-      flag = linkProbe(blockObj);    % Link probe metadata
       
+      
+      % Methods for parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
-      
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
       
-      % Put these as public for debugging
-      flag = initEvents(blockObj); % Initialize events property
-      
+      % Temporarily public methods (for debugging):
+      flag = initChannels(blockObj); % Initialize Channels property
+      flag = initEvents(blockObj); % Initialize Events property      
    end
    methods (Access = public, Hidden = true)
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
       flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK
       
-      flag = genPaths(blockObj,tankPath)  % Generate paths property struct
-      flag = findCorrectPath(blockObj)    % Find correct TANK
-      flag = setSaveLocation(blockObj,saveLoc) % Set save location
+      flag = genPaths(blockObj,tankPath) % Generate paths property struct
+      flag = findCorrectPath(blockObj,paths)   % Find correct Animal path
+      flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
       
       flag = clearSpace(blockObj,ask)     % Clear space on disk      
 

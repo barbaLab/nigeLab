@@ -10,23 +10,22 @@ function flag = linkDAC(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% CHECK SINGLE-CHANNEL DAC DATA
-flag = false;
+flag = false(1,blockObj.NumDACChannels);
 if blockObj.NumDACChannels > 0
    fprintf(1,'\nLinking DAC channels...000%%\n');
 
-   for i = 1:blockObj.NumDACChannels
+   for iCh = 1:blockObj.NumDACChannels
       blockObj.paths.DW_N = strrep(blockObj.paths.DW_N, '\', '/');
       fname = sprintf(strrep(blockObj.paths.DW_N,'\','/'), ...
-         blockObj.DACChannels(i).custom_channel_name);
+         blockObj.DACChannels(iCh).custom_channel_name);
       fname = fullfile(fname);
       
-      if ~exist(fullfile(fname),'file')
-         flag = true;
-      else
-         blockObj.DACChannels(i).data = ...
+      if exist(fullfile(fname),'file')~=0
+         flag(iCh) = true;
+         blockObj.Streams(iCh).data = ...
             nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
       end
-      fraction_done = 100 * (i / blockObj.NumDACChannels);
+      fraction_done = 100 * (iCh / blockObj.NumDACChannels);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
    end
 end

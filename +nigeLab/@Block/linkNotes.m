@@ -1,8 +1,8 @@
-function flag = linkMeta(blockObj)
-%% LINKMETA   Connect notes metadata saved on the disk to the structure
+function flag = linkNotes(blockObj)
+%% LINKNOTES   Connect notes metadata saved on the disk to the structure
 %
 %  b = nigeLab.Block;
-%  flag = LINKMETA(b);
+%  flag = LINKNOTES(b);
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
