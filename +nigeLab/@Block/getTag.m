@@ -47,7 +47,7 @@ if numel(blockObj) > 1
    for ii = 1:numel(blockObj)
       tag = [tag; getTag(blockObj(ii),ch)]; %#ok<AGROW>
    end 
-   str = blockObj.SortPars.TAG(unique(tag));
+   str = blockObj.SortPars.TagOpts(unique(tag));
    return;
 end
 
@@ -64,6 +64,6 @@ if ~isnumeric(tag)
    tag = parseSpikeTagIdx(blockObj,tag);
 end
 
-str = blockObj.SortPars.TAG(unique(tag));
+str = blockObj.SortPars.TagOpts(unique(tag));
 
 end

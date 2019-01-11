@@ -39,6 +39,6 @@ for ii = 1:blockObj.NumChannels
       channelID(ii,2) = blockObj.Channels(ii).native_order;
    end
 end
-
+blockObj.ChannelID = channelID;
 
 end

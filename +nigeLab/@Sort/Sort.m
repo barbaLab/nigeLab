@@ -58,7 +58,7 @@ classdef Sort < handle
    
    properties (SetAccess = private, GetAccess = private)
       pars     % Parameters
-      orig     % Original assignments and which block they're from
+      orig     % Original assignments
       prev     % Previous assignments
    end
    
@@ -96,6 +96,63 @@ classdef Sort < handle
 
       end
       
+      function flag = set(sortObj,name,value)
+         %% SET   Overloaded set method for the nigeLab.Sort class object
+         
+         flag = false;
+         switch lower(name)
+            case 'channel'
+               if ~isnumeric(value) || (value < 1)
+                  warning('Channel value must be a positive integer.');
+                  return;
+               end
+               
+               if (value > sortObj.Channels.N)
+                  warning('Only %d channels detected. %d is too large.',...
+                     sortObj.Channels.N,value);
+                  return;
+               end
+               
+               sortObj.UI.ch = value;
+               
+            case 'cluster'
+               if ~isnumeric(value) || (value < 1)
+                  warning('Channel value must be a positive integer.');
+                  return;
+               end
+               
+               if (value > sortObj.pars.NCLUS_MAX)
+                  warning('Only %d clusters allowed. %d is too large.',...
+                     sortObj.pars.NCLUS_MAX,value);
+                  return;
+               end
+               
+               sortObj.UI.cl = value;
+            
+            otherwise
+               builtin('set',sortObj,name,value);
+         end
+         flag = true;
+               
+         
+      end
+      function value = get(sortObj,name)
+         %% GET   Overloaded get method for the nigeLab.Sort class object
+         switch lower(name)
+            case 'channel'
+               value = sortObj.UI.ch;
+               
+            case 'cluster'              
+               value = sortObj.UI.cl;
+            
+            otherwise
+               builtin('get',sortObj,name);
+         end
+               
+         
+      end
+      
+      setChannel(sortObj,~,~) % Set the current channel in the UI
    end
    
    methods (Access = private)
@@ -104,7 +161,7 @@ classdef Sort < handle
       flag = initData(sortObj,nigelObj); % Initialize data structures
       flag = initUI(sortObj); % Initializes spike scoring UI parameters
       
-      flag = getAllSpikeData(sortObj); % Get spike info from all channels
+      [spikes,feat,class,tag,ts,blockIdx] = getAllSpikeData(sortObj,ch); % Get spike info from all channels
       
       flag = parseBlocks(sortObj,nigelObj);  % Assigns Blocks property
       flag = parseAnimals(sortObj,nigelObj); % Assigns Blocks from Animals

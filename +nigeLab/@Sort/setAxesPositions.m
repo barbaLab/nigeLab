@@ -18,27 +18,30 @@ function flag = setAxesPositions(sortObj)
 %% GET NUMBER OF COLUMNS AND ROWS BASED ON TOTAL NUMBER OF PLOTS
 flag = false;
 
-ncol = ceil(sqrt(sortObj.pars.NCLUS_MAX));
-nrow = ceil((sortObj.pars.NCLUS_MAX)/ncol);
+ncol = ceil(sqrt(sortObj.pars.SpikePlotN));
+nrow = ceil((sortObj.pars.SpikePlotN)/ncol);
 
 %% DETERMINE WIDTH AND HEIGHT BASED ON COLUMNS AND ROWS
-sortObj.pars.AX_POS = cell(sortObj.pars.NCLUS_MAX,1);
-sortObj.pars.LAB_POS = cell(sortObj.pars.NCLUS_MAX,1);
-xw = sortObj.pars.SPK_AX(1)/ncol - sortObj.pars.AX_SPACE;
-yw = sortObj.pars.SPK_AX(2)/nrow - sortObj.pars.AX_SPACE;
+sortObj.UI.plot.pos= cell(sortObj.pars.SpikePlotN,1);
+sortObj.UI.plot.labPos = cell(sortObj.pars.SpikePlotN,1);
+w = sortObj.pars.SpikePlotXYExtent(1)/ncol - sortObj.pars.SpikePlotSpacing;
+h = sortObj.pars.SpikePlotXYExtent(2)/nrow - sortObj.pars.SpikePlotSpacing;
 
 %% LOOP AND CREATE POSITION VECTORS FOR EACH PLOT
 iN = 1;
-for iRow = nrow:-1:1
+% Work backwards to get elements in correct order later
+for iRow = nrow:-1:1 
    for iCol = 1:ncol
-      sortObj.pars.AX_POS{iN} = [sortObj.pars.AX_SPACE*iCol + xw*(iCol-1), ...
-         sortObj.pars.AX_SPACE*iRow + yw*(iRow-1), ...
-         xw, ...
-         yw];
-      sortObj.pars.LAB_POS{iN} = [sortObj.pars.AX_POS{iN}(1), ...
-         sortObj.pars.AX_SPACE*(iRow)+yw*(iRow), ...
-         xw, ...
-         0.03];
+      % Compute spike plot position vector
+      x = sortObj.pars.SpikePlotSpacing*iCol + xw*(iCol-1);
+      y = sortObj.pars.SpikePlotSpacing*iRow + yw*(iRow-1);
+      sortObj.UI.plot.pos{iN} = [x,y,w,h];
+      
+      % Compute spike plot label (title) position vector
+      x = sortObj.pars.SpikePlotXYExtent{iN}(1);
+      y = sortObj.pars.SpikePlotSpacing*(iRow)+yw*(iRow);
+      sortObj.UI.plot.labPos{iN} = [x,y,w,sortObj.pars.SpikePlotLabOffset]; 
+      
       iN = iN + 1;
    end
 end

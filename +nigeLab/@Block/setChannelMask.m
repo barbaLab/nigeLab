@@ -27,6 +27,7 @@ if nargin > 1 % Then "includedChannelIndices" was supplied
    
    % Set the channel mask
    blockObj.Mask = includedChannelIndices;
+   return;
 else
    
    blockObj.plotWaves;

@@ -11,34 +11,64 @@ function flag = initUI(sortObj)
 %% DETERMINE AXES POSITIONS
 flag = false;
 
-if ~isfield(sortObj.pars,'AX_POS')
+if ~isfield(sortObj.pars,'SpikePlotXYExtent')
    if ~sortObj.setAxesPositions
       warning('Could not set axes positions correctly.');
       return;
    end
-end      
+end
 
 %% SET UI CONTROLLER VARIABLES
 sortObj.UI.ch = 1;
 sortObj.UI.cl = 1;
-sortObj.UI.zm = ones(sortObj.NCLUS_MAX,1) * 100;
-sortObj.UI.spk_ylim = repmat(sortObj.SPK_YLIM,sortObj.NCLUS_MAX,1);
+
+% Initialize parameters for spike plots
+sortObj.UI.plot.zoom = ones(sortObj.pars.SpikePlotN,1) * 100;
+sortObj.UI.plot.ylim = repmat(sortObj.pars.SpikePlotYLim,...
+   sortObj.pars.SpikePlotN,1);
 
 % Initialize "features" info
-sortObj.UI.feat = 1;
-sortObj.featcomb = combnk(1:size(sortObj.spk.feat{1},2),2);
-sortObj.featname = cell(sortObj.nfeatmax,1);
-for iN = 1:size(sortObj.featcomb,1)
-   sortObj.featname{iN,1} = sprintf('x: %s-%d || y: %s-%d',sortObj.sc,...
-      sortObj.featcomb(iN,1),sortObj.sc,sortObj.featcomb(iN,2));
-end
+sortObj.UI.feat.cur = 1;
+sortObj.UI.feat.combo = combnk(1:size(sortObj.spk.feat{1},2),2);
+sortObj.UI.feat.n = size(sortObj.UI.feat.combo,1);
+sortObj.UI.feat.name = parseFeatNames(sortObj);
+sortObj.UI.feat.label = parseFeatLabels(sortObj);
 
-% Initialize string for channels in nice format for popupmenu
-sortObj.UI.channels = cell(sortObj.files.N,1);
-for iCh = 1:sortObj.files.N
-   sortObj.UI.channels{iCh} = strrep(sortObj.files.spk.ch{iCh},'_',' ');
-end
+%% USE EXISTING CLASSES TO BUILD INTERFACE WINDOWS
+sortObj.UI.ChannelSelector = nigeLab.libs.ChannelUI(sortObj);
+sortObj.UI.SpikeImage = nigeLab.libs.SpikeImage(sortObj);
+addlistener(sortObj.UI.ChannelSelector,'NewChannel',@sortObj.setChannel);
+
 
 flag = true;
+
+   function featName = parseFeatNames(sortObj)
+      % Get feature names from parameters struct or generate them if they
+      % do not already exist (from an old version of SD code)
+      pars = sortObj.Blocks(1).Channels(1).Spikes.pars;
+      n = size(sortObj.spk.feat{1},2);
+      
+      if isfield(pars,'FEAT_NAMES')
+         featName = pars.FEAT_NAMES;
+      else
+         featName = cell(1,n);
+         for i = 1:n
+            featName{i} = sprintf('feat-%02g',i);
+         end
+      end
+   end
+
+   function featLabel = parseFeatLabels(sortObj)
+      % Get feature name combinations for all possible 2D scatter
+      % combinations, which will be used on the "features" plot axis to
+      % visualize separation of clusters.
+      featLabel = cell(sortObj.UI.feat.n,1);
+      for i = 1:sortObj.UI.feat.n
+         featLabel{i} = sprintf('x: %s || y: %s',...
+            sortObj.UI.feat.name{sortObj.UI.feat.combo(i,1)},...
+            sortObj.UI.feat.name{sortObj.UI.feat.combo(i,2)});
+         
+      end
+   end
 
 end

@@ -34,13 +34,14 @@ classdef SpikeImage < handle
 %%
    properties (Access = public)
       Spikes % Contains all info relating to spike waves and classes
-      Figure = figure('Name','SpikeImage',... % Container for graphics
+      Figure = figure('Name','Spike Profiles',... % Container for graphics
                       'Units','Normalized',...
                       'MenuBar','none',...
                       'ToolBar','none',...
                       'NumberTitle','off',...
-                      'Position',[0.2 0.2 0.6 0.6],...
+                      'Position',[0.050,0.075,0.800,0.850],...
                       'Color','k'); 
+      Labels   % Labels above the subplots
       Images   % Figure subplots that contain flattened spike image
       Axes     % Axes containers for images
       Parent   % Only set if called by nigeLab.Sort class object
@@ -116,7 +117,7 @@ classdef SpikeImage < handle
          if isa(spikes,'nigeLab.Sort')
             obj.Parent = spikes;
             fs = obj.Parent.spk.fs;
-            class = obj.Parent.clu.cur;
+            class = obj.Parent.spk.class;
             spikes = obj.Parent.spk.spikes;
          else
             obj.Parent = struct(...
@@ -130,7 +131,7 @@ classdef SpikeImage < handle
          obj.UpdateChannel;
       end
       
-      function UpdateChannel(obj)
+      function UpdateChannel(obj,~,~)
 
          % Interpolate spikes
          obj.Interpolate(obj.Parent.spk.spikes{obj.Parent.UI.ch});

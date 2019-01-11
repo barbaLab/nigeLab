@@ -1,7 +1,7 @@
-function [spikes,feat,class,tag,blockIdx] = getAllSpikeData(sortObj,ch)
+function [spikes,feat,class,tag,ts,blockIdx] = getAllSpikeData(sortObj,ch)
 %% GETALLSPIKEDATA  Concatenate all spike data for a given channel
 %
-%  [spikes,feat,class,tag,blockIdx] = GETALLSPIKEDATA(sortObj)
+%  [spikes,feat,class,tag,ts,blockIdx] = GETALLSPIKEDATA(sortObj)
 %
 %  --------
 %   INPUTS
@@ -21,6 +21,8 @@ function [spikes,feat,class,tag,blockIdx] = getAllSpikeData(sortObj,ch)
 %
 %    tag       :     Current tag assignment for each spike.
 %
+%     ts       :     Spike time of each spike.
+%
 %   blockIdx   :     Index of each block for each spike.
 %
 % By: Max Murphy  v1.0  2019/01/09  Original version (R2017a)
@@ -33,6 +35,7 @@ spikes = [];
 feat = [];
 class = [];
 tag = [];
+ts = [];
 blockIdx = [];
 for ii = vec
    % If multiple sample rates, warn the user and exit
@@ -51,12 +54,16 @@ for ii = vec
    % Retrieve associated class
    tmp = getSort(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
    tmp(tmp < 1) = 1; % Anything less than 1 is assigned to 'OUT' cluster
-   tmp(tmp > sortObj.pars.NCLUS_MAX) = 1; % Any too large is also 'OUT'
+   tmp(tmp > sortObj.pars.SpikePlotN) = 1; % Any too large is also 'OUT'
    class = [class; tmp];
    
    % Retrieve associated tag
    tmp = getTag(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
    tag = [tag; tmp];
+   
+   % Retrieve associated ts
+   tmp = getSpikeTimes(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
+   ts = [ts; tmp];
    
    % Make sure to associate each element with the corresponding block
    blockIdx = [blockIdx; ones(size(tmp)).*ii];

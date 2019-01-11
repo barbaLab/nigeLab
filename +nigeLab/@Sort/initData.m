@@ -52,9 +52,9 @@ if nargin > 1
    end
    
 else   
-   [fName,pName,~] = uigetfile(sortObj.pars.INFILE_FILT,...
-                               sortObj.pars.INFILE_PROMPT,...
-                               sortObj.pars.INFILE_DEF_DIR,...
+   [fName,pName,~] = uigetfile(sortObj.pars.InFileFilt,...
+                               sortObj.pars.InFilePrompt,...
+                               sortObj.pars.InFileDefDir,...
                                'MultiSelect','on');
                                
    if iscell(fName) % Load array and run using recursion
@@ -78,27 +78,32 @@ end
 
 %% INITIALIZE SPK, CLU, AND ORIG PROPERTY STRUCTS
 % Create store for all concatenated spike info
-sortObj.spk.spikes = cell(sortObj.Channels.N,1);
-sortObj.spk.feat = cell(sortObj.Channels.N,1);
-sortObj.spk.class = cell(sortObj.Channels.N,1);
-sortObj.spk.tag = cell(sortObj.Channels.N,1);
-sortObj.spk.fs = sortObj.Block(1).SampleRate;
+sortObj.spk.spikes = cell(sortObj.Channels.N,1); % Spike waveforms
+sortObj.spk.feat = cell(sortObj.Channels.N,1); % Spike dimreduced features
+sortObj.spk.class = cell(sortObj.Channels.N,1);% Spike assigned classes
+sortObj.spk.tag = cell(sortObj.Channels.N,1);  % Spike qualitative tags
+sortObj.spk.ts = cell(sortObj.Channels.N,1);   % Spike times
+sortObj.spk.block = cell(sortObj.Channels.N,1);% Original block for spikes
+sortObj.spk.fs = sortObj.Blocks(1).SampleRate; % Sample rate for all blocks
 
-% Create store for all original info and block ID for each element
-sortObj.orig.block = cell(sortObj.Channels.N,1);
-sortObj.orig.class = cell(sortObj.Channels.N,1);
-
-% Create store for previous classes for "UNDO"
-sortObj.prev.class = cell(sortObj.Channels.N,1);
-
-for iCh = 1:sortObj.Channels.N % get # clusters per channel   
+fprintf(1,'\nImporting spike info for %d Blocks...000%%\n',...
+   numel(sortObj.Blocks));
+for iCh = sortObj.Channels.Mask % get # clusters per channel   
    % Get all associated spike data for that channel, from all blocks
    [sortObj.spk.spikes{iCh},...
     sortObj.spk.feat{iCh},...
     sortObj.spk.class{iCh},...
     sortObj.spk.tag{iCh},...
-    sortObj.orig.block{iCh}] = getAllSpikeData(sortObj,iCh);   
+    sortObj.spk.ts{iCh},...
+    sortObj.spk.block{iCh}] = getAllSpikeData(sortObj,iCh);  
+ 
+   fraction_done = 100 * (iCh / sortObj.Channels.N);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
 end
+
+% Create store for previous classes for "UNDO" and "RESET"
+sortObj.prev = sortObj.spk.class;
+sortObj.orig = sortObj.spk.class;
 
 flag = true;
 end

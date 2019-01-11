@@ -133,6 +133,7 @@ classdef Block < handle
       ForceSaveLoc      % Flag to force make non-existant directory      
       RecLocDefault     % Default location of raw binary recording
       SaveLocDefault    % Default location of BLOCK
+      ChannelID         % Unique channel ID for BLOCK
       
       Delimiter        % Delimiter for name metadata for dynamic variables
       DynamicVarExp    % Expression for parsing BLOCK names from raw file
@@ -158,13 +159,15 @@ classdef Block < handle
             if ~ischar(varargin{iV})
                continue;
             end
-            % Check to see if it matches any of the listed properties
-            idx = ismember(upper(P), upper( deblank( varargin{iV})));
-            if sum(idx)==1 % Should only be one match
-               Prop = P{idx};
-               blockObj.(Prop) = varargin{iV+1};
-            end
-            
+%             % Check to see if it matches any of the listed properties
+%             idx = ismember(upper(P), upper( deblank( varargin{iV})));
+%             if sum(idx)==1 % Should only be one match
+%                Prop = P{idx};
+%                blockObj.(Prop) = varargin{iV+1};
+%             end
+            if isprop(blockObj,deblank(varargin{iV}))
+               blockObj.(deblank(varargin{iV})) = varargin{iV+1};
+            end            
          end
          
          %% LOAD DEFAULT BLOCK PARAMETERS
@@ -174,11 +177,14 @@ classdef Block < handle
          for varName = allNames
             str = varName{1}; % remove from cell container
             
-            % Check to see if it matches any of the listed properties
-            idx = ismember(upper(P), upper( deblank( str)));
-            if sum(idx)==1 % Should only be one match
-               Prop = P{idx};
-               blockObj.(Prop) = pars.(str);
+%             % Check to see if it matches any of the listed properties
+%             idx = ismember(upper(P), upper( deblank( str)));
+%             if sum(idx)==1 % Should only be one match
+%                Prop = P{idx};
+%                blockObj.(Prop) = pars.(str);
+%             end
+            if isprop(blockObj,deblank(str))
+               blockObj.(deblank(str)) = pars.(str);
             end
          end
          
@@ -425,12 +431,29 @@ classdef Block < handle
       flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
       L = list(blockObj) % List of current associated files for field or fields
-      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
       flag = updatePaths(blockObj,tankPath) % Update associated paths
       flag = updateVidInfo(blockObj) % Update video info
       
+      flag = linkToData(blockObj,preExtractedFlag) % Link to existing data
+      flag = linkRaw(blockObj);  % Link raw data
+      flag = linkFilt(blockObj); % Link filtered data
+      flag = linkStim(blockObj); % Link stimulation data
+      flag = linkLFP(blockObj);  % Link LFP data
+      flag = linkCAR(blockObj);  % Link CAR data
+      flag = linkSpikes(blockObj);   % Link Spikes data
+      flag = linkClusters(blockObj); % Link Clusters data
+      flag = linkSorted(blockObj);   % Link Sorted data
+      flag = linkADC(blockObj);      % Link ADC data
+      flag = linkDAC(blockObj);      % Link DAC data
+      flag = linkDigIO(blockObj);    % Link Digital-In and Digital-Out data
+      flag = linkMeta(blockObj);     % Link notes metadata
+      flag = linkProbe(blockObj);    % Link probe metadata
+      
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
+      
+      opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
+      status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
    end
    methods (Access = public, Hidden = true)
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
@@ -440,8 +463,6 @@ classdef Block < handle
       flag = findCorrectPath(blockObj)    % Find correct TANK
       flag = setSaveLocation(blockObj,saveLoc) % Set save location
       
-      operations = updateStatus(blockObj,operation,value) % Indicate completion of phase
-      Status = getStatus(blockObj,stage)  % Retrieve task/phase status
       flag = clearSpace(blockObj,ask)     % Clear space on disk      
 
    end

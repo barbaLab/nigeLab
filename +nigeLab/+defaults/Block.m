@@ -67,13 +67,15 @@ pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
 
 %% 
 Fields =  {'Raw';
-           'Dig';
            'Filt';
            'CAR';
            'LFP';
            'Spikes';
-           'Sorted';
            'Clusters';
+           'Sorted';
+           'Dig';
+           'Stim';
+           'DC';
            'Meta';
            %%%%%%%%%%%%%%%%%%% These names are hardcoded. They are used in
            %%%%%%%%%%%%%%%%%%% the following (Block) functions:
@@ -83,24 +85,28 @@ Fields =  {'Raw';
                     };
                 
 FileNames       =   {'Raw';
-                     {'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'};
                      'Filt';
                      'FiltCAR';
                      'LFP';
                      'ptrain';
-                     'sort';
                      'clus';
+                     'sort';
+                     {'AAUX1';'AAUX2';'AAUX3';'BAUX1';'BAUX2';'BAUX3';'sync';'user'};
+                     'STIM';
+                     'DCAmp';
                      {'probes.xlsx';'experiment.txt';'sync.mat'};
                     };
                 
 FolderNames     =   {'RawData';
-                     'Digital';
                      'Filtered';
                      'FilteredCAR';
                      'LFPData';
                      'wav-sneo_CAR_Spikes';
-                     'wav-sneo_SPC_CAR_Sorted';
                      'wav-sneo_SPC_CAR_Clusters';
+                     'wav-sneo_SPC_CAR_Sorted';
+                     'Digital';
+                     'StimData';
+                     'StimData';
                      'Metadata';
                     };
 
