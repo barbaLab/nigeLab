@@ -1,10 +1,11 @@
-function data = getEventData(blockObj,type,field,ch)
+function [data,blockIdx] = getEventData(blockObj,type,field,ch)
 %% GETEVENTDATA     Retrieve data for a given event
 %
-%   data = GETEVENTDATA(blockObj);
-%   data = GETEVENTDATA(blockObj,type);
-%   data = GETEVENTDATA(blockObj,type,field);
-%   data = GETEVENTDATA(blockObj,type,field,ch);
+%  data = GETEVENTDATA(blockObj);
+%  data = GETEVENTDATA(blockObj,type);
+%  data = GETEVENTDATA(blockObj,type,field);
+%  data = GETEVENTDATA(blockObj,type,field,ch);
+%  [data,blockIdx] = GETEVENTDATA(blockObj,___);
 %
 %  --------
 %   INPUTS
@@ -42,6 +43,8 @@ function data = getEventData(blockObj,type,field,ch)
 %  --------
 %    data      :     Data stored in field for a specific channel.
 %
+%  blockIdx    :     Index of the block that matches each element of data.
+%
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE INPUT
@@ -58,13 +61,20 @@ end
 % Would be good to add something here that links up the channels from
 % unique Blocks, similar to as is done in the nigeLab.Sort object.
 if nargin < 4
-   ch = 1:blockObj(1).NumChannels;
+   if isempty(blockObj(1).Mask)
+      warning('No channel mask set for %s, using all channels.',...
+         blockObj.Name);
+      ch = 1:blockObj(1).NumChannels;
+   else
+      ch = blockObj(1).Mask;
+   end
+   
 else
    f = fieldnames(blockObj(1).Events);
    if iscell(ch)
       idx = [];
       for ii = 1:numel(ch)
-         tmp = [tmp, find(strcmpi(f,ch{ii}))]; %#ok<AGROW>
+         tmp = [tmp, find(strcmpi(f,ch{ii}))];  %#ok<*AGROW>
       end
       ch = tmp;
    elseif ischar(ch)
@@ -80,8 +90,10 @@ end
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
 if (numel(ch) > 1)
    data = cell(size(ch));
-   for ii = 1:numel(ch)
-      data{ii} = getEventData(blockObj,ch(ii));
+   blockIdx = cell(size(ch));
+   for iCh = 1:numel(ch)
+      [data{iCh},blockIdx{iCh}] = getEventData(blockObj,...
+         type,field,ch(iCh));
    end
    return;
 end
@@ -89,8 +101,14 @@ end
 %% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
 if (numel(blockObj) > 1)
    data = [];
-   for ii = 1:numel(blockObj)
-      data = [data; getEventData(blockObj,ch(ii))]; %#ok<AGROW>
+   blockIdx = [];
+   masterID = parseChannelID(blockObj(1));
+   masterIdx = matchChannelID(blockObj,masterID);
+   for iBk = 1:numel(blockObj)
+      [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),type,field,...
+         masterIdx(ch,iBk)); 
+      data = [data, tmpData]; 
+      blockIdx = [blockIdx, tmpBlockIdx.*iBk];
    end
    return;
 end
@@ -102,7 +120,29 @@ else
    f = fieldnames(blockObj.Channels(ch));
    fIdx = strncmpi(f,type,4);
    if sum(fIdx)==1
-      data = blockObj.Channels(ch).(f{fIdx}).(field);
+      try
+         data = blockObj.Channels(ch).(f{fIdx}).(field);
+      catch me % Parse for old file format
+         if strcmp(me.identifier,'MATLAB:MatFile:VariableNotInFile')
+            switch field
+               case 'value'
+                  data = blockObj.Channels(ch).(f{fIdx}).class;
+                  
+               case 'snippet'
+                  data = blockObj.Channels(ch).(f{fIdx}).spikes;
+                  
+               case 'ts'
+                  idx = blockObj.Channels(ch).(f{fIdx}).peak_train;
+                  data = find(idx)./blockObj.SampleRate;
+                  
+               otherwise
+                  warning('Unsure how to handle variable: %s',field);
+                  rethrow(me);
+            end
+         else
+            rethrow(me);
+         end
+      end
    elseif sum(fIdx)==0
       warning('Event type (%s) is missing. Returning empty array.',type);
       data = [];
@@ -111,6 +151,6 @@ else
       data = [];
    end
 end
-
+blockIdx = ones(size(data,1),1);
 
 end

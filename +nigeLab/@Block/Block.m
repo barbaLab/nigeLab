@@ -416,6 +416,7 @@ classdef Block < handle
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
       
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
+      masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)

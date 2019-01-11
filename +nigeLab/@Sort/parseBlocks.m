@@ -20,7 +20,7 @@ sortObj.Channels.ID = parseChannelID(blockObj(1));
 sortObj.Channels.Mask = blockObj(1).Mask;
 sortObj.Channels.Name = parseChannelName(sortObj);
 sortObj.Channels.N = size(sortObj.Channels.ID,1);
-sortObj.Channels.Idx = nan(sortObj.Channels.N,numel(blockObj));
+sortObj.Channels.Idx = matchChannelID(blockObj,sortObj.Channels.ID);
 sortObj.Channels.Sorted = false(sortObj.Channels.N,1);
 
 %% FIND CORRESPONDING CHANNELS FOR REST OF BLOCK ELEMENTS
@@ -28,16 +28,7 @@ for ii = 1:numel(blockObj)
    if ~blockObj(ii).updateParams('Sort')
       warning('Parameters unset for %s. Skipping...',blockObj(ii).Name);
       continue;
-   end
-   channelID = parseChannelID(blockObj(ii));
-   idx = [];
-   for iCh = 1:sortObj.Channels.N
-      tmp = find(ismember(sortObj.Channels.ID,channelID(iCh,:),'rows'),...
-         1,'first');
-      if ~isempty(tmp)
-         sortObj.Channels.Idx(iCh,ii) = tmp;
-      end
-   end
+   end   
    
    % If previous sorting is available:
    if getStatus(blockObj(ii),'Sorted')
