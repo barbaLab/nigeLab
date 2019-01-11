@@ -79,6 +79,7 @@ classdef Block < handle
       Verbose = true;   % Whether to report list of files and fields.
       Channels          % Struct that contains fields with data
       Graphics          % Graphical objects associated with block
+      Events            % Cell array of events structs
    end
    
    properties (SetAccess = private,GetAccess = public)
@@ -385,7 +386,7 @@ classdef Block < handle
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
-         if numel(dot) < 2
+         if sum(dot) < 2
             if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
                   any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
 

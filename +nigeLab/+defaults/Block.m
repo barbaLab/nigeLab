@@ -60,10 +60,11 @@ pars.ProbeChannel= [pars.Delimiter 'P%s_' CH_ID '_%s'];
 %
 % ~/path/R18-68_0_180724_141203
 
-pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
+% pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
+pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID';
 pars.IncludeChar='$';
 pars.DiscardChar='&';
-pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'};
+pars.NamingConvention={'Animal_ID','Rec_ID'};
 
 %% 
 Fields =  {'Raw';

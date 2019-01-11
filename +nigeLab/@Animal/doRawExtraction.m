@@ -10,8 +10,8 @@ function flag = doRawExtraction(animalObj)
 B=animalObj.Blocks;
 flag = false(1,numel(B));
 for ii=1:numel(B)
-    flag(ii) = doRawExtraction(B(ii));
+    flag = doRawExtraction(B(ii));
 end
 fprintf(1,'Raw conversion completed for: %s \n.',animalObj.Name);
-
+flag = all(flag);
 end

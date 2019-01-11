@@ -14,6 +14,7 @@ for ii=1:numel(A)
    flag(ii) = extractLFP(A(ii));
 end
 fprintf(1,'LFP extraction completed for: %s \n.',tankObj.Name);
+flag = all(flag);
 
 end
 

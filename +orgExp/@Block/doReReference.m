@@ -1,7 +1,7 @@
 function flag = doReReference(blockObj)
 %% DOREREFERENCE  Perform common-average re-referencing (CAR)
 %
-%  b = nigeLab.Block();
+%  b = orgExp.Block();
 %  doExtraction(b);
 %  doReReference(b);
 %
@@ -56,7 +56,7 @@ fprintf(1,'Saving data... %.3d%%',0);
 if ~doSuppression
    for pb = 1:numel(probes)
       car_infoname = fullfile(blockObj.paths.CARW,sprintf('%s_CAR_Ref_%c.mat',blockObj.Name,probesNames{pb}));
-      refMeanFile{pb} = nigeLab.libs.DiskData(blockObj.SaveFormat,car_infoname,refMean(pb,:),'access','w');
+      refMeanFile{pb} = orgExp.libs.DiskData(blockObj.SaveFormat,car_infoname,refMean(pb,:),'access','w');
    end
     
     for iCh = 1:length(blockObj.Channels)
@@ -65,8 +65,8 @@ if ~doSuppression
         data = blockObj.Channels(iCh).Filt(:);
         data = data - refMean(blockObj.Channels(iCh).port_number,:); % rereferencing        
         fname = sprintf(strrep(blockObj.paths.CARW_N,'\','/'), pnum, chnum);     % save CAR data
-        blockObj.Channels(iCh).CAR = nigeLab.libs.DiskData(blockObj.SaveFormat,fname,data,'access','w');
-		blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
+        blockObj.Channels(iCh).CAR = orgExp.libs.DiskData(blockObj.SaveFormat,fname,data,'access','w');
+        blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
         blockObj.Channels(iCh).refMean = lockData(refMeanFile{blockObj.Channels(iCh).port_number});
         fraction_done = 100 * (iCh / blockObj.NumChannels);
     if ~floor(mod(fraction_done,5)) % only increment counter by 5%

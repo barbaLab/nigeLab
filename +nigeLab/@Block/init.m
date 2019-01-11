@@ -16,8 +16,8 @@ function flag = init(blockObj)
 flag = false; 
 
 % Parse name and extension. "nameParts" contains parsed variable strings:
-[~,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
-nameParts=strsplit(fName,{blockObj.Delimiter '.'});
+[dName,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
+nameParts=strsplit(fName,[blockObj.Delimiter {'.'}]);
 
 % Parse variables from defaults.Block "template," which match delimited
 % elements of block recording name:
@@ -45,7 +45,7 @@ dynamicVars = struct;
 for ii=1:nMin 
    splitStrIdx = incVarIdx(ii);
    varName = deblank( splitStr{splitStrIdx}(2:end));
-   dynamicVars.(varName) = nameParts{ii};
+   dynamicVars.(varName) = nameParts{incVarIdx(ii)};
 end
 
 % If Recording_date isn't one of the specified "template" variables from
@@ -122,7 +122,7 @@ switch blockObj.FileExt
       header=ReadRHSHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
                         
-      blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
+%       blockObj.DcAmpDataSaved = header.dc_amp_data_saved;
       blockObj.NumDACChannels = header.num_board_dac_channels;
       blockObj.NumADCchannels = header.num_board_adc_channels;
       blockObj.NumDigInChannels = header.num_board_dig_in_channels;
@@ -132,10 +132,11 @@ switch blockObj.FileExt
       blockObj.DigInChannels = header.board_dig_in_channels;
       blockObj.DigOutChannels = header.board_dig_out_channels;
       
-   case ''
-      files = dir(fullfile(blockObj.RecFile,'*.t*'));
+   case {'', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+      files = dir(fullfile(dName,'*.t*'));
       if ~isempty(files)
          blockObj.RecType='TDT';
+         blockObj.RecFile = fullfile(dName);
          header=ReadTDTHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
          for ff=fieldnames(blockObj.Meta)'

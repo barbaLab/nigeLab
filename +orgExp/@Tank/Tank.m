@@ -1,5 +1,5 @@
 classdef Tank < handle
-%% TANK  Class to handle each nigeLab.Animal for a whole experiment
+%% TANK  Create a datastore for a related group of experimental recordings
 %
 %  tankObj = TANK;
 %  tankObj = TANK('NAME','VALUE',...);   
@@ -122,7 +122,7 @@ classdef Tank < handle
             end
          end
           
-         newAnimal= nigeLab.Animal('RecDir',AnimalFolder,...
+         newAnimal= orgExp.Animal('RecDir',AnimalFolder,...
              'SaveLoc',tankObj.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
       end
@@ -132,7 +132,7 @@ classdef Tank < handle
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(fullfile([tankObj.SaveLoc '_Tank.mat']),'tankObj','-v7.3') 
+         save(tankObj.SaveLoc,'tankObj') 
       end
       
       % Extraction methods

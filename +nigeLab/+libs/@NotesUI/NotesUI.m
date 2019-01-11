@@ -31,12 +31,14 @@ classdef NotesUI < matlab.apps.AppBase
          if ~isempty(app.Parent)
             app.Parent.parseNotes(app.NotesTextArea.Value);
          end
-         selection = questdlg('Save successful. Finished taking notes?',...
-            'Close Request',...
-            'Exit','Cancel','Exit');
-         if strcmp(selection,'Exit')
+         %%%%%% I understand the goal of this dialog, i agree on its
+         %%%%%% usefulness but it's freaking annoying
+%          selection = questdlg('Save successful. Finished taking notes?',...
+%             'Close Request',...
+%             'Exit','Cancel','Exit');
+%          if strcmp(selection,'Exit')
             ExitNotes(app);
-         end
+%          end
       end
       
       % Button pushed function: ExitButton
@@ -72,11 +74,29 @@ classdef NotesUI < matlab.apps.AppBase
       % Create UIFigure and components
       function createComponents(app)
          
-         % Create UIFigure
+         % Create normalized coordinates, thank you mathworks
+         screenSize = get(groot,'ScreenSize');
+         screenWidth = screenSize(3);
+         screenHeight = screenSize(4);
+         left = screenWidth*.2;
+         bottom = screenHeight*.2;
+         width = screenWidth*.2;
+         height = screenHeight*.3;
+         
+         % Create UIFigure         
          app.UIFigure = uifigure;
-         app.UIFigure.Position = [700 600 640 480];
+         app.UIFigure.Position = [left bottom width height];
          app.UIFigure.Name = 'UI Figure';
          app.UIFigure.CloseRequestFcn = createCallbackFcn(app, @CheckSavedState, true);
+         
+         % Create normalized coordinates... again, thank you mathworks
+         FigSize = get(app.UIFigure,'Position');
+         FigWidth = FigSize(3);
+         FigHeight = FigSize(4);
+         left = FigWidth;
+         bottom = FigHeight;
+         width = FigWidth;
+         height = FigHeight;
          
          % Create NotesTextAreaLabel
          app.NotesTextAreaLabel = uilabel(app.UIFigure);
@@ -84,7 +104,7 @@ classdef NotesUI < matlab.apps.AppBase
          app.NotesTextAreaLabel.FontName = 'Arial';
          app.NotesTextAreaLabel.FontSize = 16;
          app.NotesTextAreaLabel.FontWeight = 'bold';
-         app.NotesTextAreaLabel.Position = [20 446 477 20];
+         app.NotesTextAreaLabel.Position = [left*.02 bottom*.92 width*.5 height*.1];
          
          [~,name,~] = fileparts(app.Notes.File);
          name = strrep(name,'_',' ');
@@ -93,7 +113,7 @@ classdef NotesUI < matlab.apps.AppBase
          
          % Create NotesTextArea
          app.NotesTextArea = uitextarea(app.UIFigure);
-         app.NotesTextArea.Position = [20 34 477 403];
+         app.NotesTextArea.Position = [left*.05 bottom*.25 width*.9 height*.65];
          if app.loadNotes
             app.NotesTextArea.Value = app.Notes.String;
          end
@@ -103,7 +123,7 @@ classdef NotesUI < matlab.apps.AppBase
          app.SaveButton.ButtonPushedFcn = createCallbackFcn(app, @SaveNotes, true);
          app.SaveButton.FontName = 'Arial';
          app.SaveButton.FontSize = 16;
-         app.SaveButton.Position = [519 84 100 29];
+         app.SaveButton.Position = [left*.05 bottom*.1 width*.2 height*.1];
          app.SaveButton.Text = 'Save';
          
          % Create ExitButton
@@ -111,7 +131,7 @@ classdef NotesUI < matlab.apps.AppBase
          app.ExitButton.ButtonPushedFcn = createCallbackFcn(app, @ExitNotes, true);
          app.ExitButton.FontName = 'Arial';
          app.ExitButton.FontSize = 16;
-         app.ExitButton.Position = [519 34 100 28];
+         app.ExitButton.Position = [left*.75 bottom*.1 width*.2 height*.1];
          app.ExitButton.Text = 'Exit';
       end
    end

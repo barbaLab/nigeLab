@@ -718,6 +718,10 @@ end
 
 if doHeadersOnly
     data = headerStruct;
+    if ~useOutsideHeaders
+        if (tsq), fclose(tsq); end
+    end
+    if exist('tev','var'), if tev, fclose(tev); end; end
     return;
 end
 

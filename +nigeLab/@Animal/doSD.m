@@ -16,6 +16,7 @@ for ii=1:numel(B)
     flag(ii) = doSD(B(ii));
 end
 fprintf(1,'Spike detection completed for: %s \n.',animalObj.Name);
+flag = all(flag);
 
 end
 

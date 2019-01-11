@@ -44,7 +44,7 @@ while blockObj.paths.TW_idx < N
 end
 
 if ~tankExists % If it still doesn't exist, check for new one
-   updatePaths(blockObj);
+%    updatePaths(blockObj); %%%%%%%%%% Unsure about this
 end
 
 %% UPDATE ALL OTHER PATHS TO REFLECT CORRECT ROOT PATH

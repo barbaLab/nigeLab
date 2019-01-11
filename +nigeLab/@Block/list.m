@@ -20,13 +20,13 @@ function L = list(blockObj)
 %% PARSE DATE AND TIME INFO
 Format = '';
 str='';
-if ~strcmp(blockObj.Meta.Rec_date,'YYMMDD')
+if ~strcmp(blockObj.Meta.RecDate,'YYMMDD')
     Format = [Format 'yyMMdd'];
-    str = [str blockObj.Meta.Rec_date];
+    str = [str blockObj.Meta.RecDate];
 end
-if ~strcmp(blockObj.Meta.Rec_time,'hhmmss')
+if ~strcmp(blockObj.Meta.RecTime,'hhmmss')
     Format = [Format 'HHmmss' ];
-    str = [str blockObj.Meta.Rec_time];
+    str = [str blockObj.Meta.RecTime];
 end
 DateTime=datetime(str,'InputFormat',Format);
                 

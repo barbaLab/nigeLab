@@ -39,6 +39,7 @@ warningRef     = false(1,numel(warningString));
 parseChannelID(blockObj);
 if isempty(blockObj.Mask)
    blockObj.Mask = 1:blockObj.NumChannels;
+         '', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'})) % TDT
 else
    blockObj.Mask = reshape(blockObj.Mask,1,numel(blockObj.Mask));
 end

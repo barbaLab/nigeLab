@@ -7,7 +7,7 @@ function setSaveLocation(tankObj,saveloc)
 
 %% Prompt for location using previously set location
 if nargin<2 || isempty(saveloc)
-tmp = uigetdir(tankObj.DIR,...
+tmp = uigetdir(tankObj.SaveLoc,...
    'Set Processed Tank Location');
 elseif nargin==2
    tmp = saveloc;

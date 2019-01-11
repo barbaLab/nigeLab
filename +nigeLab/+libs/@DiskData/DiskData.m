@@ -367,7 +367,7 @@ classdef DiskData < handle
                   warning('curly indexing not supported yet')
                case '.'
                   s=methods(obj);
-                  if any(strcmp(s,S(ii).subs))
+                  if any(strcmp(s,S(ii).subs)) && ~strcmp('class',S(ii).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
                      Out = builtin('subsref',obj,S);
                      varargout(1) = {Out};
                      return;
@@ -482,13 +482,6 @@ classdef DiskData < handle
          dim=obj.size_(n);
       end
       
-%       function cl=class(obj)
-%          %% CLASS  Overloaded function for getting DiskData array class
-%          % Note: I changed this to reflect the Matlab class naming
-%          %       convention that uses the '.' notation. -MM
-%          cl = sprintf('DiskData.%s', obj.class_);
-%       end
-      
       function l=length(obj)
          %% LENGTH  Overloaded function for getting DiskData array length
          info = whos(obj.diskfile_);
@@ -521,7 +514,7 @@ classdef DiskData < handle
          end
          Out = obj;
          varname_ = ['/' obj.name_];
-         if not(strcmp(class(obj),sprintf('DiskData.%s',class(b)))|isa(b,'nigeLab.libs.DiskData'))
+         if not(strcmp(obj.class_,class(b)) | isa(b,'nigeLab.libs.DiskData'))
             error('Cannot concatenate objects of different classes');
          end
          h5write(obj.getPath, varname_, b(1,:),[1,(obj.size(2)+1)],size(b));
@@ -574,6 +567,12 @@ classdef DiskData < handle
          
       end
       
+      function cl=class(obj)
+          %% CLASS  Overloaded function for getting DiskData array class
+          % Note: I changed this to reflect the Matlab class naming
+          %       convention that uses the '.' notation. -MM
+          cl = sprintf('DiskData.%s', obj.class_);
+      end
    end
 end
 

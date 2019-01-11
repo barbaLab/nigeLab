@@ -1,7 +1,7 @@
 function flag = rhs2Block(blockObj,recFile,paths)
 %% RHS2BLOCK  Convert Intan RHS binary to Matlab BLOCK format
 %
-%  b = nigeLab.Block;        % create block object
+%  b = orgExp.Block;        % create block object
 %  doRawExtraction(b);      % RHS2Block is run from DORAWEXTRACTION
 %
 %  --------
@@ -67,7 +67,7 @@ if (data_present)
    
    fName = fullfile(paths.TW_N);
    if exist(fName,'file'),delete(fName);end
-   TimeFile = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+   TimeFile = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
       'class','int32','size',[1 num_amplifier_samples],'access','w');
    
    if (num_amplifier_channels > 0)
@@ -94,31 +94,31 @@ if (data_present)
       chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
       fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+      amplifier_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','single','size',[1 num_amplifier_samples],'access','w');
       
       stim_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
       fName = sprintf(strrep(stim_data_fName,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      stim_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),single(0),...
+      stim_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','single','size',[1 num_amplifier_samples],'access','w');
       
       as_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_ASD_P%s_Ch_%s.mat']),'\','/');
       fName = sprintf(strrep(as_data_fName,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      amp_settle_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+      amp_settle_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','uint8','size',[1 num_amplifier_samples],'access','w');
       
       cr_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CRD_P%s_Ch_%s.mat']),'\','/');
       fName = sprintf(strrep(cr_data_fName,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      charge_recovery_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+      charge_recovery_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','uint8','size',[1 num_amplifier_samples],'access','w');
       
       cl_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_CLD_P%s_Ch_%s.mat']),'\','/');
       fName = sprintf(strrep(cl_data_fName,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      compliance_limit_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+      compliance_limit_dataFile{iCh} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','uint8','size',[1 num_amplifier_samples],'access','w');
       
       
@@ -126,7 +126,7 @@ if (data_present)
          dc_amp_fName = strrep(fullfile(paths.DW,'DC_AMP',[blockObj.Name '_DCAMP_P%s_Ch_%s.mat']),'\','/');
          fName = sprintf(strrep(dc_amp_fName,'\','/'), pNum, chNum);
           if exist(fName,'file'),delete(fName);end
-         dc_amplifier_dataFile{iCh} =  nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+         dc_amplifier_dataFile{iCh} =  orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_amplifier_samples],'access','w');
       end
 		 fraction_done = 100 * (iCh / num_amplifier_channels);
@@ -149,7 +149,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_adc_channels(i).custom_channel_name);
            if exist(fName,'file'),delete(fName);end
-            board_adc_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+            board_adc_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_adc_samples],'access','w');
 		 fraction_done = 100 * (iCh / num_board_adc_channels);
 		 fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
@@ -173,7 +173,7 @@ if (data_present)
             paths.DW_N = strrep(paths.DW_N, '\', '/');
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dac_channels(i).custom_channel_name);
            if exist(fName,'file'),delete(fName);end
-            board_dac_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+            board_dac_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_board_dac_samples],'access','w');
 		fraction_done = 100 * (iCh / num_board_dac_channels);
 		fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));            
@@ -196,7 +196,7 @@ if (data_present)
          for i = 1:num_board_dig_in_channels
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_in_channels(i).custom_channel_name);
             if exist(fName,'file'),delete(fName);end
-            board_dig_in_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+            board_dig_in_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','uint8','size',[1 num_board_dig_in_samples],'access','w');
             fraction_done = 100 * (iCh / num_board_dig_in_channels);
             fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
@@ -220,7 +220,7 @@ if (data_present)
          for i = 1:num_board_dig_out_channels
             fName = sprintf(strrep(paths.DW_N,'\','/'), board_dig_out_channels(i).custom_channel_name);
             if exist(fName,'file'),delete(fName);end
-            board_dig_out_dataFile{i} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
+            board_dig_out_dataFile{i} = orgExp.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','uint8','size',[1 num_board_dig_out_samples],'access','w');
             fraction_done = 100 * (iCh / num_board_dig_out_channels);
             fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));

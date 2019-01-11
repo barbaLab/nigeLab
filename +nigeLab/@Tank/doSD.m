@@ -16,6 +16,7 @@ for ii=1:numel(A)
     flag(ii) = doSD(A(ii));
 end
 fprintf(1,'Spike detection completed for: %s \n.',tankObj.Name);
+flag = all(flag);
 
 end
 
