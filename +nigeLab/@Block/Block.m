@@ -99,6 +99,7 @@ classdef Block < handle
       
       Fields      % List of property field names
       
+      EventPars         % Parameters struct for events
       ExperimentPars    % Parameters struct for experimental notes
       FiltPars          % Parameters struct for unit bandpass filter
       LFPPars           % Parameters struct for LFP extraction & analyses

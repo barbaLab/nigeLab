@@ -48,10 +48,10 @@ for ii = 1:numel(blockObj)
          tag = blockObj(ii).Channels(iCh).Sorted.tag(:);
          
          if iscell(tag) % Re-make the file
-            class = getSort(blockObj,iCh);
+            value = getSort(blockObj,iCh);
             tag = parseSpikeTagIdx(blockObj,tag);
             fName = getPath(blockObj(ii).Channels(iCh).Sorted);
-            sorted = struct('class',class,'tag',tag);
+            sorted = struct('value',value,'tag',tag);
             
             blockObj(ii).Channels(iCh).Sorted = ...
                nigeLab.libs.DiskData('MatFile',fullfile(fName),...
@@ -82,7 +82,7 @@ for ii = 1:numel(blockObj)
                pnum, chnum);
             fName = fullfile(fname);
             
-            class = blockObj(ii).Channels(iCh).Clusters.class;
+            value = blockObj(ii).Channels(iCh).Clusters.class;
             tag = ones(size(class)) * sortObj.pars.TagInit(1);
             sorted = struct('class',class,'tag',tag);
             

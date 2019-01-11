@@ -30,12 +30,11 @@ classdef Tank < handle
    %% PUBLIC PROPERTIES
    properties (Access = public)
       Name	% Name of experiment (TANK)
-      
+      Animals                 % Children (ANIMAL)
    end
    %% PRIVATE PROPERTIES
    properties (Access = public) %debugging purposes, is private
       RecDir                     % Directory of the TANK
-      Animals                 % Children (ANIMAL)
 
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
