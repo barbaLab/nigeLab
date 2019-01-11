@@ -122,7 +122,7 @@ classdef Tank < handle
             end
          end
           
-         newAnimal= orgExp.Animal('RecDir',AnimalFolder,...
+         newAnimal= nigeLab.Animal('RecDir',AnimalFolder,...
              'SaveLoc',tankObj.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
       end

@@ -14,6 +14,7 @@ for ii=1:numel(B)
     flag(ii) = doUnitFilter(B(ii));
 end
 fprintf(1,'Bandpass filtering completed for: %s \n.',animalObj.Name);
+flag = all(flag);
 
 end
 

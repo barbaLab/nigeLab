@@ -15,5 +15,7 @@ for ii=1:numel(B)
     flag(ii) = doReReference(B(ii));
 end
 fprintf(1,'CAR completed for: %s \n.',animalObj.Name);
+flag = all(flag);
+
 end
 

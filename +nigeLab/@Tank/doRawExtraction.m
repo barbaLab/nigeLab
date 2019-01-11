@@ -13,5 +13,6 @@ for ii=1:numel(A)
    flag(ii) = doRawExtraction(A(ii)); 
 end
 fprintf(1,'Raw conversion completed for: %s \n.',tankObj.Name);
+flag = all(flag);
 
 end

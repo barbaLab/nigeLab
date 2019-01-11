@@ -15,6 +15,6 @@ for ii=1:numel(B)
 end
 animalObj.save;
 fprintf(1,'LFP extraction completed for: %s \n.',animalObj.Name);
-
+flag = all(flag);
 end
 
