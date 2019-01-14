@@ -51,6 +51,7 @@ for iF = 1:numel(F) % For each field, update field type
    % Parse for both old and new versions of file naming convention
    paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[blockObj.Name p.File]);
    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}));
+   paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[blockObj.Name p.Info]);
 end
 
 blockObj.Paths = paths; % Assign the paths struct

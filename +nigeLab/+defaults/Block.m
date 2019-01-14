@@ -18,11 +18,24 @@ pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
 
-% Bookkeeping for unique channel files
-CH_ID = 'Ch';
-CHANNEL_TAG = [pars.Delimiter 'P%s',...
-   pars.Delimiter CH_ID,...
+% Bookkeeping for tags to be appended to different FieldTypes. The total
+% number of fields of TAG determines the valid entries for FieldTypes.
+TAG = struct;
+TAG.Channels = ... % Channels: neurophysiological recording channels
+   [pars.Delimiter 'P%s',...
+   pars.Delimiter 'Ch',...
    pars.Delimiter '%s.mat'];
+TAG.Events = ... % Events: asynchronous events with associated values
+   [pars.Delimiter '%s', ...
+   pars.Delimiter 'Events.mat'];
+TAG.Meta = ... % Meta: generic recording metadata (notes, probe configs)
+   [pars.Delimiter '%s', ...
+   pars.Delimiter 'Meta.mat'];
+TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
+   [pars.Delimiter '%s', ...
+   pars.Delimiter '%s', ...
+   pars.Delimiter 'Stream.mat'];
+
 
 %% Here You can specify the naming format of your block recording
 % The block name will be splitted using Delimiter (defined above) and each
@@ -81,6 +94,7 @@ Fields =  ...
    'Clusters';
    'Sorted';
    'DigIO';
+   'AnalogIO';
    'DigEvents';
    'Video';
    'Stim';
@@ -98,6 +112,7 @@ FieldType = { ...
    'Channels';
    'Channels';
    'Channels';
+   'Streams';
    'Streams';
    'Events';
    'Streams';
@@ -117,7 +132,8 @@ OldNames       =   ...
    {'*SpikeFeatures*'};
    {'*clus*'};
    {'*sort*'};
-   {'*AUX*';'*sync*';'*user*';'*beam*'};
+   {'*DIG*'};
+   {'*ANA*'};
    {'*Scoring.mat'};
    {'*Paw.mat';'*Kinematics.mat'};
    {'*STIM*'};
@@ -159,7 +175,7 @@ elseif numel(FolderNames)~=N
 end
 
 % Check that FieldType is viable
-VIABLE_FIELDS = {'Channels';'Events';'Streams';'Meta'};
+VIABLE_FIELDS = fieldnames(TAG);
 idx = ~cellfun(@(x)ismember(x,VIABLE_FIELDS),FieldType);
 if sum(idx)>0
    idx = find(idx);
@@ -169,15 +185,15 @@ if sum(idx)>0
    return;
 end
 
-
 %% MAKE DIRECTORY PARAMETERS STRUCT
 % Concatenate identifier for each file-type:
 Del = pars.Delimiter;
 pars.BlockPars = struct;
 for ii=1:numel(Fields)
-   pars.BlockPars.(Fields{ii}).Folder    = FolderNames{ii};
-   pars.BlockPars.(Fields{ii}).File      = [Del Fields{ii} CHANNEL_TAG];
-   pars.BlockPars.(Fields{ii}).OldFile   = OldNames{ii};
+   pars.BlockPars.(Fields{ii}).Folder     = FolderNames{ii};
+   pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
+   pars.BlockPars.(Fields{ii}).File = [Del Fields{ii} TAG.(FieldType{ii})];
+   pars.BlockPars.(Fields{ii}).Info = [Del Fields{ii} '-Info.mat'];
 end
 
 end

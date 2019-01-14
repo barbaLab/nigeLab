@@ -1,100 +1,145 @@
-function flag = rhd2Block(blockObj,recFile,paths)
-%% RHD2BLOCK  Convert Intan RHD binary to Matlab BLOCK format
+function flag = intan2Block(blockObj,fields,paths)
+%% INTAN2BLOCK  Convert Intan binary to nigeLab.Block file structure
 %
-%  b = nigeLab.Block;        % create block object
-%  doRawExtraction(b);      % RHD2Block is run from DORAWEXTRACTION
+%  flag = INTAN2BLOCK(blockObj);
+%  flag = INTAN2BLOCK(blockObj,fields);
+%  flag = INTAN2BLOCK(blockObj,fields,paths);
+%
+%  b = nigeLab.Block;      % create block object
+%  doRawExtraction(b);     % INTAN2BLOCK is run from DORAWEXTRACTION
 %
 %  --------
 %   INPUTS
 %  --------
 %  blockObj    :     Block Class object.
 %
-%  recFile     :     (Optional) If different than the value associated with
-%                               blockObj property, specify here.
+%   fields     :     (optional) cell array of field names to extract.
+%                       Syntax should match cell array of strings in
+%                       blockObj.Fields property. If not specified, this
+%                       defaults to blockObj.Fields.
 %
-%   paths      :     (Optional) If different than the value associated with
-%                               blockObj property, specify here.
+%   paths      :     (optional) paths struct, which might be modified if
+%                       submitted via QRAWEXTRACTION (so that UNC paths can
+%                       be used instead of normal paths). This is generated
+%                       as blockObj.pars from GENPATHS method. If not
+%                       specified, this defaults to a pre-specified list of
+%                       fields that also depends on the FileExt property
+%                       (e.g. .rhd vs .rhs).
 %
 %  --------
 %   OUTPUT
 %  --------
-%  Creates filtered streams *.mat files in TANK-BLOCK hierarchy format.
+%  Creates file hierarchy of *.mat files in nigeLab-compatible structure.
 %
 % See also: DORAWEXTRACTION, QRAWEXTRACTION
 
 %% PARSE INPUT
-if nargin < 3
-   paths = blockObj.paths;
-else % Otherwise, it was run via a "q" command
+flag = false;
+if nargin < 3 % If 2 inputs, need to specify default paths struct
+   paths = blockObj.Paths;
+   myJob = nan;
+else % Otherwise, it was run via a "q" command (hence different paths)
    myJob = getCurrentJob;
 end
 
-if nargin < 2
-   recFile = blockObj.RecFile;
+if nargin < 2 % If 1 input, need to specify default fields
+   switch blockObj.FileExt
+      case '.rhd'
+         fields = {'Time','Raw','DigIO','AnalogIO'};
+         
+      case '.rhs'
+         fields = {'Time','Raw','DigIO','AnalogIO','Stim','DC'};
+      otherwise
+         warning('Intan extraction not setup for %s files. Canceled.',...
+            blockObj.FileExt);
+         return;
+   end
+else % otherwise just make sure it is correct orientation
+   fields = reshape(fields,1,numel(fields));
 end
 
-%% READ FILE
-tic;
-flag = false;
-fid = fopen(recFile, 'r');
-s = dir(recFile);
+%% PARSE HEADER
+fid = fopen(blockObj.RecFile, 'r');
+s = dir(blockObj.RecFile);
 filesize = s.bytes;
+switch blockObj.FileExt
+   case '.rhd'
+      header = ReadRHDHeader('FID',fid);
+   case '.rhs'
+      header = ReadRHSHeader('FID',fid);
+end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Read the file header
-
-header = ReadRHDHeader('FID',fid);
 blockObj.Meta.Header = fixNamingConvention(header);
 
-% this is laziness at its best, I should go through the code and change
-% each variable that was inserted in the header structure to header.variable
-% but I'm to lazy to do that
-
-FIELDS=fields(header);
-for ii=1:numel(FIELDS)
-   eval([FIELDS{ii} '=header.(FIELDS{ii});']);
-end
-if ~data_present
+if ~blockObj.Meta.DataPresent
    warning('No data found in %s.',recFile);
    return;
 end
-
 
 %% PRE-ALLOCATE MEMORY FOR WRITING RECORDED VARIABLES TO DISK FILES
 % preallocates matfiles for varible that otherwise would require
 % nChannles*nSamples matrices
 
-diskPars = struct('format',blockObj.SaveFormat,...
-   'name',[],...
-   'size',[1 num_amplifier_samples],...
-   'access','w',...
-   'class','int32');
-Files = struct;
+
 
 fprintf(1, 'Allocating memory for data...\n');
-diskPars.name = fullfile(paths.Time.info);
-Files.Time = makeDiskFile(diskPars);
-
-if (num_amplifier_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
+Files = struct;
+for f = fields
+   idx = find(strcmpi(blockObj.Fields,f),1,'first');
+   if isempty(idx)
+      warning('Field: %s is invalid. Skipped its extraction.',f);
+      continue;
+   else
+      this = blockObj.Fields{idx}; % Make sure case syntax is correct
    end
-   fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);
-   info = amplifier_channels;
-   infoname = fullfile(paths.Raw.info);
-   save(fullfile(infoname),'info','-v7.3');
-   % One file per probe and channel
-   Files.Raw = cell(num_amplifier_channels,1);
-   for iCh = 1:num_amplifier_channels
-      pNum  = num2str(amplifier_channels(iCh).port_number);
-      chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-      fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
-      amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_amplifier_samples],'access','w');
-      fraction_done = 100 * (iCh / num_amplifier_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+   
+   
+   switch blockObj.FieldType{idx}
+      case 'Channels' % Each "Channels" file has multiple channels
+         notifyUser(blockObj,myJob,this);
+         infoField = [this 'Channels'];
+         info = blockObj.Meta.Header;
+         infoname = fullfile(paths.Raw.info);
+         save(fullfile(infoname),'info','-v7.3');
+         % One file per probe and channel
+         Files.Raw = cell(num_amplifier_channels,1);
+         diskPars.class = 'single';
+         for iCh = 1:num_amplifier_channels
+            pNum  = num2str(amplifier_channels(iCh).port_number);
+            chNum = amplifier_channels(iCh).custom_channel_name(...
+               regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
+            fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+            diskPars.name = fName;
+            Files.Raw{iCh} = makeDiskFile(diskPars);
+            notifyUser(blockObj,myJob,this,iCh,N)
+            
+            
+         end
+      case 'Events' % {{{ To be added: Automate event extraction HERE }}}
+         
+         
+      case 'Meta' % Each "Meta" file should only have one "channel"
+         diskPars = struct('format',blockObj.SaveFormat,...
+            'name',fullfile(paths.(this).info),...
+            'size',[1 num_amplifier_samples],...
+            'access','w',...
+            'class','int32');
+         Files.(this) = makeDiskFile(diskPars);
+         
+      case 'Streams'
+         
+         
+      otherwise
+         warning('No extraction handling for FieldType: %s.',...
+            blockObj.FieldType{idx});
+         continue;
    end
+   
 end
+
+
+
+
 
 % Save single-channel adc data
 if (num_board_adc_channels > 0)
@@ -207,7 +252,6 @@ if (num_board_dig_in_channels > 0)
    end
 end
 
-
 % Save single-channel digital output data
 if (num_board_dig_out_channels > 0)
    if exist('myJob','var')~=0
@@ -233,39 +277,11 @@ end
 fprintf(1,'Matfiles created succesfully.\n');
 fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
 
-% We need 5 buffer viarables to read data from file and save it into a
-% matlab friendly forma using matfiles. Those varibles needs to be as
+% We need buffer viarables to read data from file and save it into a
+% matlab friendly format using matfiles. Those varibles needs to be as
 % big as possible to speed up the process. in order to do that we will
 % alocate 4/5 of the available memory to those variables.
-
-%     nDataPoints=num_samples_per_data_block*2;   %time
-%     if (num_amplifier_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %amplifier_data
-%         if (dc_amp_data_saved ~= 0)
-%             nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %dc_amplifier_data
-%         end
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %stim_data
-%     end
-%
-%     if (num_board_adc_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_adc_channels; %board_adc_data
-%     end
-%
-%     if (num_board_dac_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dac_channels;    %board_dac_data
-%     end
-%
-%     if (num_board_dig_in_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_in_channels; %board_dig_in_raw
-%     end
-%
-%     if (num_board_dig_out_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_board_dig_out_channels; %board_dig_out_raw
-%     end
-
 nDataPoints=bytes_per_block/2; % reading uint16
-
-
 time_buffer_index = false(1,nDataPoints);
 amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
 supply_voltage_buffer_index = zeros(1,nDataPoints,'uint16');
@@ -275,16 +291,16 @@ adc_buffer_index = zeros(1,nDataPoints,'uint16');
 dig_in_buffer_index = false(1,nDataPoints);
 dig_out_buffer_index = false(1,nDataPoints);
 
-if ~isunix % For Windows machiens:
+if ~isunix % For Windows machines:
    [~,MEM]=memory;
    AvailableMemory=MEM.PhysicalMemory.Available*0.8;
-else % For Mac machines: (? -MM 2018-12-06 untested)
+else % For Mac machines:
    [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
    if status == 0
       fprintf(1,'\nMac OSX detected. Available memory: %s\n',cmdout);
       AvailableMemory=round(str2double(cmdout)*0.8);
    else
-      AvailableMemory=2147483648;
+      AvailableMemory=2147483648; % (2^31)
    end
 end
 nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/(8+13))); %13 accounts for all the indexings
@@ -524,6 +540,31 @@ diskFile = nigeLab.libs.DiskData(...
    'access',diskPars.access);
 end
 
+function notifyUser(blockObj,myJob,curField,curIdx,totIdx)
+%% NOTIFYUSER  Update user of job processing status
+% Compute overall completion percentage
+if nargin < 5
+   pctComplete = 0;
+else
+   pctComplete = floor(100 * (curIdx / totIdx));
+end
+
+% If parallel job, update the job status tag so you can track progress
+% using the Parallel Job Monitor
+if isa(myJob,'parallel.job.CJSCommunicatingJob')
+   set(myJob,'Tag',sprintf('%s: Extracting %s info...%.3d%%',...
+      blockObj.Name,curField,pctComplete));
+   
+else % Otherwise, print to Command Window
+   if pctComplete==0
+      fprintf(1, '\t->Extracting %s info...%.3d%%\n',...
+         curField,jobPct);
+   else
+      fprintf(1,'\b\b\b\b\b%.3d%%\n',pctComplete);
+   end
+end
+end
+
 % function progress(varargin)
 % if nargin ==0
 %    fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
@@ -544,7 +585,7 @@ end
 %    l(6) = 23;
 %    l(7) = 27;
 %    l(8) = 28;
-%    
+%
 %    fprintf(1,'%sWriting data to Matfiles...%.3d%%\n',0);
 %    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
 %    fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);

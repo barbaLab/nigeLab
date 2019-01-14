@@ -10,6 +10,7 @@ flag = false;
 switch blockObj.FileExt
    case '.rhd'
       blockObj.RecType='Intan';
+      blockObj.
       header=ReadRHDHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
       blockObj.NumADCchannels = header.num_board_adc_channels;
