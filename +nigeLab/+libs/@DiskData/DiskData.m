@@ -1,61 +1,69 @@
 classdef DiskData < handle
-%% DISKDATA   Class to efficiently handle data without loading to RAM
-%
-%  D = DiskData(MatFile)
-%  D = DiskData(Datatype_,DataPath)
-%  D = DiskData(Datatype_,DataPath,Data)
-%  D = DiskData(___,'name',value,...)
-%
-%  --------
-%   INPUTS
-%  --------
-%  MatFile     :     Class matlab.io.MatFile object that points to data
-%                       saved on the disk.
-%
-%    ---
-%
-%  Datatype_   :     If 2 arguments are specified, the first argument
-%                       becomes Datatype_, which is either 'MatFile' or
-%                       'Hybrid' currently (string). This must be specified
-%                       in conjunction with DataPath (below).
-%
-%  DataPath    :     (String) full filename of data file being pointed to
-%                       by the DiskData class.
-%
-%    ---
-%
-%   Data       :     Data to be associated with the DiskData object. This
-%                       will automatically write the contents of Data to
-%                       that file.
-%
-%    ---
-%  
-%  varargin    :     (Optional) 'name', value input argument pairs:
-%                       -> 'name'
-%                       -> 'size'
-%                       -> 'class'
-%                       -> 'access' : 'r' (default, read-only) or 'w' 
-%                                     'w' (for write access)
-%
-%  DISKDATA Properties:
-%     diskfile_ - Contains actual 'MatFile'
-%     type_ - 'MatFile' (only MatFile) or 'Hybrid' (combo H5 stuff)
-%     name_ - Name of variable pointed to by DiskData array
-%     size_ - Size (dimensions) of DiskData array
-%     bytes_ - Number of bytes in DiskData
-%     class_ - Class of data pointed to by DiskData array
-%     chunks_ - Size of "chunks" to read
-%     access_ - Whether access is read-only (default) or writable
-%     writable_ - Whether file is writable (parsed from access_)
-%
-%  DISKDATA Methods:
-%     DiskData - Class constructor.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+   %% DISKDATA   Class to efficiently handle data without loading to RAM
+   %
+   %  D = DiskData(MatFile)
+   %  D = DiskData(Datatype_,DataPath)
+   %  D = DiskData(Datatype_,DataPath,Data)
+   %  D = DiskData(___,'name',value,...)
+   %
+   %  --------
+   %   INPUTS
+   %  --------
+   %  MatFile     :     Class matlab.io.MatFile object that points to data
+   %                       saved on the disk.
+   %
+   %    ---
+   %
+   %  Datatype_   :     If 2 arguments are specified, the first argument
+   %                       becomes Datatype_, which is either 'MatFile' or
+   %                       'Hybrid' currently (string). This must be specified
+   %                       in conjunction with DataPath (below).
+   %
+   %  DataPath    :     (String) full filename of data file being pointed to
+   %                       by the DiskData class.
+   %
+   %    ---
+   %
+   %   Data       :     Data to be associated with the DiskData object. This
+   %                       will automatically write the contents of Data to
+   %                       that file.
+   %
+   %    ---
+   %
+   %  varargin    :     (Optional) 'name', value input argument pairs:
+   %                       -> 'name'
+   %                       -> 'size'
+   %                       -> 'class'
+   %                       -> 'access' : 'r' (default, read-only) or 'w'
+   %                                     'w' (for write access)
+   %
+   %  DISKDATA Properties:
+   %     diskfile_ - Contains actual 'MatFile'
+   %     type_ - 'MatFile' (only MatFile) or 'Hybrid' (combo H5 stuff)
+   %     name_ - Name of variable pointed to by DiskData array
+   %     size_ - Size (dimensions) of DiskData array
+   %     bytes_ - Number of bytes in DiskData
+   %     class_ - Class of data pointed to by DiskData array
+   %     chunks_ - Size of "chunks" to read
+   %     access_ - Whether access is read-only (default) or writable
+   %     writable_ - Whether file is writable (parsed from access_)
+   %
+   %  DISKDATA Methods:
+   %     DiskData - Class constructor.
+   %
+   % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+   properties (GetAccess = public, SetAccess = private)
+      type     % Event type
+      value    % Value associated with event (e.g. spike cluster class)
+      tag      % Tag associated with event (e.g. spike cluster label)
+      ts       % Time of event (seconds)
+      snippet  % Values around the event
+      data     % Values stored in 'Hybrid' and 'MatFile' format
+   end
    
-   properties (Access = private)
+   properties (SetAccess = private, GetAccess = private)
       diskfile_   % Contains actual 'MatFile'
-      type_       % 'MatFile' (only MatFile) or 'Hybrid' (combo H5 stuff) 
+      type_       % 'MatFile' (only MatFile) or 'Hybrid' (combo H5 stuff) or 'Event' (spikes etc)
       name_       % Name of variable pointed to by DiskData array
       size_       % Size (dimensions) of DiskData array
       bytes_            % Number of bytes in DiskData
@@ -76,24 +84,24 @@ classdef DiskData < handle
          %  --------
          %   INPUTS
          %  --------
-         %  MatFile     :     Class matlab.io.MatFile object that points to 
+         %  MatFile     :     Class matlab.io.MatFile object that points to
          %                       data saved on the disk.
          %
          %    ---
          %
-         %  Datatype_   :     If 2 arguments are specified, the first 
-         %                       argument becomes Datatype_, which is 
-         %                       either 'MatFile' or 'Hybrid' currently 
-         %                       (string). This must be specified in 
+         %  Datatype_   :     If 2 arguments are specified, the first
+         %                       argument becomes Datatype_, which is
+         %                       either 'MatFile' or 'Hybrid' currently
+         %                       (string). This must be specified in
          %                       conjunction with DataPath (below).
          %
-         %  DataPath    :     (String) full filename of data file being 
+         %  DataPath    :     (String) full filename of data file being
          %                       pointed to by the DiskData class.
          %
          %    ---
          %
-         %   Data       :     Data to be associated with the DiskData 
-         %                       object. This will automatically write the 
+         %   Data       :     Data to be associated with the DiskData
+         %                       object. This will automatically write the
          %                       contents of Data to that file.
          %
          % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
@@ -141,7 +149,7 @@ classdef DiskData < handle
          
          %% PARSE VARARGIN
          % "Variable" part of varargin allows setting of "non-default"
-         % input arguments. 
+         % input arguments.
          for iV = jj:2:numel(varargin)
             eval(sprintf([lower(varargin{iV}), '_=varargin{iV+1};']));
          end
@@ -208,8 +216,8 @@ classdef DiskData < handle
                         obj.bytes_ = 0;
                         obj.class_ = class_;
                      end
-                     obj.type_='MatFile'; 
-                  
+                     obj.type_='MatFile';
+                     
                   case 'Hybrid' % Deals with both MatFile and HDF5-ish ?
                      % The default name is 'data'
                      data=zeros(1,1,class_); % start with a small vector
@@ -234,7 +242,7 @@ classdef DiskData < handle
                         % snippet matrices. Check for this:
                         if size(I,2)~=1
                            error(['Your file looks weird (%d max elements).\n' ...
-                                  'I wasn''t able to properly connect it to DiskData.'],size(I,2));
+                              'I wasn''t able to properly connect it to DiskData.'],size(I,2));
                         end
                         obj.bytes_ = info(I).bytes;
                         obj.name_ = info(I).name;
@@ -242,6 +250,49 @@ classdef DiskData < handle
                         obj.class_ = info(I).class;
                      end
                      obj.type_='Hybrid';
+                     
+                     if data % If data has been found, do some H5 handling
+                        fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
+                        H5L.delete(fid,'data','H5P_DEFAULT');
+                        H5F.close(fid);
+                        varname_ = ['/' obj.name_];
+                        h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
+                     end
+                     
+                  case 'Event' % Deal with Spikes and other Events
+                     % The default name is 'data'
+                     obj.class_ = 'double';
+                     data = zeros(1,5,obj.class_);
+                     if ~exist(fName,'file')
+                        data=ones(1,5,obj.class_);
+                        
+                        save(fName,name_,'-v7.3');
+                        obj.name_ = name_;
+                        obj.size_ = [0 0];
+                        obj.bytes_ = 0;
+                        obj.class_ = class_;
+                        obj.diskfile_ = matfile(fName,...
+                           'Writable',obj.writable_);
+                     else
+                        obj.diskfile_ = matfile(fName,...
+                           'Writable',obj.writable_);
+                        info = whos(obj.diskfile_);
+                        [~,I]=max(cat(1,info(:).size),[],1);
+                        I=unique(I);
+                        % If the file already exists, and it is not a
+                        % column vector, then you might have accessed a
+                        % weird file like the SPIKES file etc. that have
+                        % snippet matrices. Check for this:
+                        if size(I,2)~=1
+                           error(['Your file looks weird (%d max elements).\n' ...
+                              'I wasn''t able to properly connect it to DiskData.'],size(I,2));
+                        end
+                        obj.bytes_ = info(I).bytes;
+                        obj.name_ = info(I).name;
+                        obj.size_ = info(I).size;
+                        obj.class_ = info(I).class;
+                     end
+                     obj.type_='Event';
                      
                      if data % If data has been found, do some H5 handling
                         fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
@@ -308,6 +359,34 @@ classdef DiskData < handle
                      % And parse the data about that file
                      info = whos(obj.diskfile_);
                      obj.bytes_ = info.bytes;
+                  case 'Event'
+                     % This initially creates a file with a variable,
+                     % 'data', that is written to it.
+                     data=zeros(1,1,class_);
+                     save(fName,'data','-v7.3');
+                     
+                     % Now that the file exists, make a matfile pointing to
+                     % it, and then append the data structure in
+                     % varargin{3} to that file on the disk.
+                     obj.diskfile_ = matfile(fName,...
+                        'Writable',obj.writable_);
+                     
+                     obj.type_='Event';
+                     obj.name_ = name_;
+                     obj.size_ = size(varargin{3});
+                     obj.class_ = class_;
+                     fid = H5F.open(fName,'H5F_ACC_RDWR','H5P_DEFAULT');
+                     H5L.delete(fid,'data','H5P_DEFAULT');
+                     H5F.close(fid);
+                     varname_ = ['/' obj.name_];
+                     h5create(fName, varname_, size_,'DataType',class_);
+                     
+                     h5write(fName, '/data', varargin{3},[1 1],size(varargin{3}));
+                     
+                     % And parse the data about that file
+                     info = whos(obj.diskfile_);
+                     obj.bytes_ = info.bytes;
+                     
                   otherwise
                      error('Unknown data format');
                end
@@ -320,64 +399,154 @@ classdef DiskData < handle
          %% SUBSREF  Overloaded function for referencing DiskData array
          Out = 'obj';
          readDat=true;
-         for ii=1:numel(S)
-            switch S(ii).type
-               case '()'
-                  nArgs=numel(S(ii).subs);
-                  if nArgs==1
-                     if ~exist('sz','var'),sz=size(obj);end
-                     [~,I]=max(sz);
-                     tmp=S(ii).subs{1};
-                     S(ii).subs(1:numel(size(obj)))={1};
-                     S(ii).subs{I}=tmp;
-                  end
-                  SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
-                  
-                  if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
-                     error('Index exceeds matrix dimension.');
-                  end
-                  if readDat && strcmp(obj.type_,'Hybrid')
-                     %                             if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
-                     if any(strcmp(S(ii).subs,':'))
+         
+         switch obj.type_
+            case 'Event'
+               switch S(1).type
+                  case '()'
+                     
+                     if any(strcmp(S(1).subs,':'))
                         indx = [1 inf];
+                        
                      else
-                        interindx=find(diff(S(ii).subs{2})-1);
+                        interindx=find(diff(S(1).subs{1})-1);
                         indx=0;
                         for nn=1:numel(interindx)
-                           indx=[indx (interindx(nn)) (interindx(nn))];
+                           indx=[indx (interindx(nn)) (interindx(nn))]; %#ok<AGROW>
                         end
-                        indx=reshape([indx numel(S(ii).subs{2})],2,[])'+[1 0];
-                        indx=S(ii).subs{2}(indx);
+                        indx=reshape([indx numel(S(1).subs{1})],2,[])'+[1 0];
+                        indx=S(1).subs{1}(indx);
                      end
                      indx=[indx(:,1) diff(indx,[],2)+1];
-                     Out = [];
-                     varname=['/' obj.name_];
-                     for kk=1:size(indx,1)
-                        Out=[Out h5read(obj.getPath,varname,[1 indx(kk,1)],[1 indx(kk,2)])];
+                     N = sum(indx(:,2));
+                     if isinf(N)
+                        N = obj.size_(1);
+                        indx(end,2) = N;
                      end
-                     varargout(1) = {Out};
+                     data = nan(N,obj.size_(2)); %#ok<*PROPLC>
+                     ii = 1;
+                     for kk=1:size(indx,1)
+                        vec = ii:(ii+indx(kk,2)-1);
+                        data(vec,:) = h5read(obj.getPath,'/data',...
+                           [indx(kk,1),1],[indx(kk,2),obj.size_(2)]);
+                        ii = ii + indx(kk,2);
+                     end
+                     varargout = {...
+                        data(:,1), ...    % "type"
+                        data(:,2), ...    % "value"
+                        data(:,3), ...    % "tag"
+                        data(:,4), ...    % "ts"
+                        data(:,5:end)};   % "snippet"
+                     
+                     
                      return;
-                  elseif readDat && strcmp(obj.type_,'MatFile')
-                     Out = sprintf('%s(S(%d).subs{:})',Out,ii);
-                  else
-                     Out = sprintf('%s(S(%d).subs{:})',Out,ii);
-                  end
-                  readDat=false;
-               case '{}'
-                  warning('curly indexing not supported yet')
-               case '.'
-                  s=methods(obj);
-                  if any(strcmp(s,S(ii).subs)) && ~strcmp('class',S(ii).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
-                     Out = builtin('subsref',obj,S);
-                     varargout(1) = {Out};
+                     
+                  case '.'
+                     if numel(S) > 1
+                        interindx=find(diff(S(2).subs{1})-1);
+                        indx=0;
+                        for nn=1:numel(interindx)
+                           indx=[indx (interindx(nn)) (interindx(nn))]; %#ok<AGROW>
+                        end
+                        indx=reshape([indx numel(S(2).subs{1})],2,[])'+[1 0];
+                        indx=S(2).subs{1}(indx);
+                     else
+                        indx = [1 inf];
+                     end
+                     
+                     indx=[indx(:,1) diff(indx,[],2)+1];
+                     N = sum(indx(:,2));
+                     if isinf(N)
+                        N = obj.size_(1);
+                        indx(end,2) = N;
+                     end
+                     data = nan(N,obj.size_(2));
+                     ii = 1;
+                     for kk=1:size(indx,1)
+                        vec = ii:(ii+indx(kk,2)-1);
+                        data(vec,:) = h5read(obj.getPath,'/data',...
+                           [indx(kk,1),1],[indx(kk,2),obj.size_(2)]);
+                        ii = ii + indx(kk,2);
+                     end
+                     switch lower(S(1).subs)
+                        case 'type'
+                           varargout = {data(:,1)};
+                        case 'value'
+                           varargout = {data(:,2)};
+                        case 'tag'
+                           varargout = {data(:,3)};
+                        case 'ts'
+                           varargout = {data(:,4)};
+                        case 'snippet'
+                           varargout = {data(:,5:end)};
+                        otherwise
+                           error('%s is not supported for Events type.');
+                     end
                      return;
-                     %                             Out = sprintf('obj.%s',S(ii).subs);
-                  else
-                     readDat = true;
-                     sz = size(obj.diskfile_.(S(ii).subs));
-                     Out = sprintf('obj.diskfile_.%s',S(ii).subs);
+               end
+               
+               
+            otherwise
+               
+               for ii=1:numel(S)
+                  switch S(ii).type
+                     case '()'
+                        nArgs=numel(S(ii).subs);
+                        if nArgs==1
+                           if ~exist('sz','var'),sz=size(obj);end
+                           [~,I]=max(sz);
+                           tmp=S(ii).subs{1};
+                           S(ii).subs(1:numel(size(obj)))={1};
+                           S(ii).subs{I}=tmp;
+                        end
+                        SizeCheck=cellfun( @(x) max(x), S(ii).subs )>obj.size;
+                        
+                        if any(SizeCheck(~any(strcmp(S(ii).subs,':'))))
+                           error('Index exceeds matrix dimension.');
+                        end
+                        if readDat && strcmp(obj.type_,'Hybrid')
+                           %                             if cellfun( @(x) any(diff(x)-1), S(ii).subs(2))
+                           if any(strcmp(S(ii).subs,':'))
+                              indx = [1 inf];
+                           else
+                              interindx=find(diff(S(ii).subs{2})-1);
+                              indx=0;
+                              for nn=1:numel(interindx)
+                                 indx=[indx (interindx(nn)) (interindx(nn))];
+                              end
+                              indx=reshape([indx numel(S(ii).subs{2})],2,[])'+[1 0];
+                              indx=S(ii).subs{2}(indx);
+                           end
+                           indx=[indx(:,1) diff(indx,[],2)+1];
+                           Out = [];
+                           varname=['/' obj.name_];
+                           for kk=1:size(indx,1)
+                              Out=[Out h5read(obj.getPath,varname,[1 indx(kk,1)],[1 indx(kk,2)])];
+                           end
+                           varargout(1) = {Out};
+                           return;
+                        elseif readDat && strcmp(obj.type_,'MatFile')
+                           Out = sprintf('%s(S(%d).subs{:})',Out,ii);
+                        else
+                           Out = sprintf('%s(S(%d).subs{:})',Out,ii);
+                        end
+                        readDat=false;
+                     case '{}'
+                        warning('curly indexing not supported yet')
+                     case '.'
+                        s=methods(obj);
+                        if any(strcmp(s,S(ii).subs)) && ~strcmp('class',S(ii).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
+                           Out = builtin('subsref',obj,S);
+                           varargout(1) = {Out};
+                           return;
+                           %                             Out = sprintf('obj.%s',S(ii).subs);
+                        else
+                           readDat = true;
+                           sz = size(obj.diskfile_.(S(ii).subs));
+                           Out = sprintf('obj.diskfile_.%s',S(ii).subs);
+                        end
                   end
-            end
+               end
          end
          Out = eval(Out);
          varargout(1) = {Out};
@@ -405,10 +574,10 @@ classdef DiskData < handle
                      clear('tmp');
                      tmp(S(ii).subs{:})=b;
                   else
-%                      tmp(S.subs{:})=b; % switched -MM
-                     tmp(S.subs{1})=b;  % (Federico, this probably isn't 
-                                        %  I just switched it so it will
-                                        %  temporarily work -MM.)
+                     %                      tmp(S.subs{:})=b; % switched -MM
+                     tmp(S.subs{1})=b;  % (Federico, this probably isn't
+                     %  I just switched it so it will
+                     %  temporarily work -MM.)
                   end
                   
                case '.'
@@ -506,7 +675,7 @@ classdef DiskData < handle
          %% GETPATH  Overloaded function for getting path to file
          Out=obj.diskfile_.Properties.Source;
       end
-
+      
       function Out = append(obj,b)
          %% APPEND   Overloaded function for concatenating elements to DiskData array
          if ~obj.writable_
@@ -560,7 +729,7 @@ classdef DiskData < handle
       end
       
       function obj = unlockData(obj)
-         %% UNLOCKDATA    Method to allow write access 
+         %% UNLOCKDATA    Method to allow write access
          
          obj.writable_ = true;
          obj.access_ = 'w';
@@ -568,10 +737,10 @@ classdef DiskData < handle
       end
       
       function cl=class(obj)
-          %% CLASS  Overloaded function for getting DiskData array class
-          % Note: I changed this to reflect the Matlab class naming
-          %       convention that uses the '.' notation. -MM
-          cl = sprintf('DiskData.%s', obj.class_);
+         %% CLASS  Overloaded function for getting DiskData array class
+         % Note: I changed this to reflect the Matlab class naming
+         %       convention that uses the '.' notation. -MM
+         cl = sprintf('DiskData.%s', obj.class_);
       end
    end
 end
