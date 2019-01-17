@@ -4,9 +4,9 @@ function flag = doSD(blockObj)
 %  EXAMPLE USAGE
 %  -------------------------------------------------------
 %  b = nigeLab.Block();    % point to experiment
-%  doRawExtraction(b);    % convert binary data
-%  doUnitFilter(b);       % filter the data
-%  doSD(b);   % detect extracellular spiking
+%  doRawExtraction(b);     % convert binary data
+%  doUnitFilter(b);        % filter the data
+%  doSD(b);                % detect extracellular spiking
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
@@ -28,17 +28,20 @@ pars.FS = blockObj.SampleRate;
 nCh = blockObj.NumChannels;
 
 fprintf(1,'\n000%%\n');
-for iCh = 1:nCh
+for iCh = blockObj.Mask
+   
    % Parse file-name information
-   pNum  = num2str(blockObj.Channels(iCh).port_number);
-   chIdx = regexp(blockObj.Channels(iCh).custom_channel_name, '\d');
-   chNum = blockObj.Channels(iCh).custom_channel_name(chIdx);
-   fName = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pNum, chNum);
+   pNum  = num2str(blockObj.Channels(iCh).probe);
+   chNum = blockObj.Channels(iCh).chStr;
+   fNameSpikes = sprintf(strrep(blockObj.Paths.Spikes.file,'\','/'),...
+      pNum,chNum);
+   fNameFeats = sprintf(strrep(blockObj.Paths.SpikeFeatures.file,'\','/'),...
+      pNum,chNum);
    
    % Get pointer to the correct data:
-   if (blockObj.Status(find(ismember(blockObj.Fields,'CAR'),1,'first')))
+   if getStatus(blockObj,'CAR',iCh)
       data=blockObj.Channels(iCh).CAR(:);  % Load CAR-filtered data
-   elseif (blockObj.Status(find(ismember(blockObj.Fields,'Filt'),1,'first')))
+   elseif getStatus(blockObj,'Filt',iCh)
       data=blockObj.Channels(iCh).Filt(:); % Load filtered data
    else
       warning('Must first perform unit filtering and re-referencing.');
@@ -51,14 +54,15 @@ for iCh = 1:nCh
    
    % Do the detection:
    if (iCh == 1)
-      [spk,blockObj.SDPars] = PerChannelDetection(data,pars);
+      [spk,feats,blockObj.SDPars] = PerChannelDetection(data,pars);
    else
-      spk = PerChannelDetection(data,pars);
+      [spk,feats] = PerChannelDetection(data,pars);
    end
    
    % Save using DiskData pointer to the file:
    blockObj.Channels(iCh).Spikes = ...
-      nigeLab.libs.DiskData('MatFile',fullfile(fName),spk,'access','w');
+      nigeLab.libs.DiskData('MatFile',fullfile(fNameSpikes),...
+      spk,'access','w');
    blockObj.Channels(iCh).Spikes = lockData(...
       blockObj.Channels(iCh).Spikes);
    
@@ -73,11 +77,12 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spk,pars] = PerChannelDetection(data, pars)
+   function [spk,feats,pars] = PerChannelDetection(data, pars)
       %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
       %
       %   spk = PERCHANNELDETECTION(data,pars);
-      %   [spk,pars] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feats] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feats,pars] = PERCHANNELDETECTION(data,pars);
       %
       %   --------
       %    INPUTS
@@ -97,6 +102,9 @@ flag = true;
       %                       sparse array (artifact); and spike waveforms
       %                       corresponding to each positive entry of peak_train
       %                       (spikes).
+      %
+      %     feats    :        Contains the features corresponding to
+      %                       detected spikes.
       %
       %     pars      :       Updated parameters with new spike-related
       %                       variables.
@@ -257,12 +265,14 @@ flag = true;
       end
       
       %% ASSIGN OUTPUT
+      spk = struct;  % Event struct for spikes
       spk.peak_train = peak_train;      % Spike (neg.) peak times
       spk.artifact = artifact;          % Artifact times
       spk.spikes = spikes;              % Spike snippets
+      
+      feats = struct; % Event struct for 
       spk.features = features;          % Wavelet features
-      spk.pp = pp;                      % Prominence (peak min. for 'adapt')
-      spk.pw = pw;                      % Width (peak max. for 'adapt')
+      
       
    end
 

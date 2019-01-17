@@ -24,6 +24,8 @@ else
    pars = blockObj.FiltPars;
 end
 
+fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
+
 %% DESIGN FILTER
 bp_Filt = designfilt('bandpassiir', 'StopbandFrequency1', pars.FSTOP1, ...
    'PassbandFrequency1', pars.FPASS1, ...
@@ -50,7 +52,7 @@ for iCh = blockObj.Mask
       fName = sprintf(strrep(blockObj.Paths.Filt.file,'\','/'), ...
          pNum, chNum);
       blockObj.Channels(iCh).Filt = nigeLab.libs.DiskData(...
-         'Hybrid',fName,data,'access','w');
+         fType,fName,data,'access','w');
       blockObj.Channels(iCh).Filt = lockData(blockObj.Channels(iCh).Filt);
    else
       warning('STIM SUPPRESSION method not yet available.');

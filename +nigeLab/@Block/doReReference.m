@@ -21,6 +21,7 @@ if isempty(blockObj.Mask) % need to set the mask before doing CAR
 end
 
 %% GET METADATA FOR THIS REFERENCING
+fType = blockObj.FileType{strcmpi(blockObj.Fields,'CAR')};
 probe = unique([blockObj.Channels.probe]);
 nSamples = length(blockObj.Channels(1).Filt);
 nProbes = numel(probe);
@@ -70,7 +71,7 @@ for iProbe = 1:nProbes
       strrep(blockObj.Paths.CAR.file,'\','/'),...
       num2str(probe(iProbe)),'REF'));
    refMeanFile{iProbe} = nigeLab.libs.DiskData(...
-      'Hybrid',refName,refMean(iProbe,:),'access','w');
+      fType,refName,refMean(iProbe,:),'access','w');
 end
 
 %% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
@@ -89,7 +90,7 @@ for iCh = blockObj.Mask
    
    % Save CAR data
    blockObj.Channels(iCh).CAR = nigeLab.libs.DiskData(...
-      'Hybrid',fName,data,'access','w');
+      fType,fName,data,'access','w');
    blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
    blockObj.Channels(iCh).refMean = lockData(...
       refMeanFile{blockObj.Channels(iCh).probe});
