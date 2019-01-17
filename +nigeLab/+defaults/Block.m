@@ -169,15 +169,15 @@ FileType = { ...
    'Hybrid';   % 2
    'Hybrid';   % 3
    'Hybrid';   % 4
-   'MatFile';  % 5
-   'MatFile';  % 6
-   'MatFile';  % 7
-   'MatFile';  % 8
+   'Event';    % 5
+   'Event';    % 6
+   'Event';    % 7
+   'Event';    % 8
    'Hybrid';   % 9
    'Hybrid';   % 10
-   'MatFile';  % 11
+   'Event';    % 11
    'Hybrid';   % 12
-   'MatFile';  % 13
+   'Event';    % 13
    'Hybrid';   % 14
    'Hybrid';   % 15
    'Other';    % 16
