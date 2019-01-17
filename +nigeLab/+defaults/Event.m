@@ -38,20 +38,9 @@ pars.Fields = {...
    'DigIO';       % 11) 'AnalogIO' as well?
    'DigIO';       % 12) Could be 'Notes' ?
    };
- 
-pars.Type = [4, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 3];
-            
-pars.TypeID = {{'value'}; ...                         % Type 1
-               {'value', 'tag'}; ...                  % Type 2
-               {'value', 'tag', 'ts'}; ...            % Type 3
-               {'value', 'tag', 'ts', 'snippet'}; ... % Type 4
-               {'value', 'ts'}};                      % Type 5
         
 %% DO ERROR PARSING
-if numel(pars.Events) ~= numel(pars.Type)
-   error('Dimension mismatch for pars.Events (%d) and pars.Type (%d).',...
-      numel(pars.Events), numel(pars.Type));
-elseif numel(pars.Events) ~= numel(pars.Fields)
+if numel(pars.Events) ~= numel(pars.Fields)
    error('Dimension mismatch for pars.Events (%d) and pars.Type (%d).',...
       numel(pars.Events), numel(pars.Fields));
 end
