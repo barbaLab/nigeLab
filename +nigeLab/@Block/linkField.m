@@ -12,13 +12,15 @@ function flag = linkField(blockObj,fieldIndex)
 %%
 flag = false;
 field = blockObj.Fields{fieldIndex};
+fType = blockObj.FileType{fieldIndex};
 switch blockObj.FieldType{fieldIndex}
    case 'Channels'
       % Streamed data from the high-resolution neurophysiological
       % amplifiers. Typically this is a relatively high channel count that
       % is acquired in parallel and manipulated together for downstream
       % processing and analyses.
-      flag = blockObj.linkChannelsField(field);
+      
+      flag = blockObj.linkChannelsField(field,fType);
    case 'Streams'
       % Streams are like Channels, but from DAC or ADC, etc. so they are
       % not associated with the neurophysiological recording Channels
@@ -37,6 +39,8 @@ switch blockObj.FieldType{fieldIndex}
          case 'probes'
             flag = blockObj.linkProbe;
             blockObj.updateStatus(field,true);
+         case 'time'
+            flag = blockObj.linkTime;
          otherwise
             warning('Parsing is not configured for FieldType: %s',...
                blockObj.FieldType{fieldIndex});

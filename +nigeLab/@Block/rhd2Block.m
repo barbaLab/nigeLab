@@ -24,7 +24,7 @@ function flag = rhd2Block(blockObj,recFile,paths)
 
 %% PARSE INPUT
 if nargin < 3
-   paths = blockObj.paths;
+   paths = blockObj.Paths;
 else % Otherwise, it was run via a "q" command
    myJob = getCurrentJob;
 end
@@ -66,7 +66,7 @@ end
 
 diskPars = struct('format',blockObj.SaveFormat,...
    'name',[],...
-   'size',[1 num_amplifier_samples],...
+   'size',[1 num_raw_samples],...
    'access','w',...
    'class','int32');
 Files = struct;
@@ -75,23 +75,23 @@ fprintf(1, 'Allocating memory for data...\n');
 diskPars.name = fullfile(paths.Time.info);
 Files.Time = makeDiskFile(diskPars);
 
-if (num_amplifier_channels > 0)
+if (num_raw_channels > 0)
    if exist('myJob','var')~=0
       set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
    end
    fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);
-   info = amplifier_channels;
+   info = raw_channels;
    infoname = fullfile(paths.Raw.info);
    save(fullfile(infoname),'info','-v7.3');
    % One file per probe and channel
-   Files.Raw = cell(num_amplifier_channels,1);
-   for iCh = 1:num_amplifier_channels
-      pNum  = num2str(amplifier_channels(iCh).port_number);
-      chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-      fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+   amplifier_dataFile = cell(num_raw_channels,1);
+   for iCh = 1:num_raw_channels
+      pNum  = num2str(raw_channels(iCh).port_number);
+      chNum = raw_channels(iCh).custom_channel_name(regexp(raw_channels(iCh).custom_channel_name, '\d'));
+      fName = sprintf(strrep(paths.Raw.file,'\','/'), pNum, chNum);
       amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_amplifier_samples],'access','w');
-      fraction_done = 100 * (iCh / num_amplifier_channels);
+         'class','single','size',[1 num_raw_samples],'access','w');
+      fraction_done = 100 * (iCh / num_raw_channels);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
    end
 end
@@ -109,7 +109,7 @@ if (num_board_adc_channels > 0)
       board_adc_dataFile = cell(num_board_adc_channels,1);
       for iCh = 1:num_board_adc_channels
          chNum = board_adc_channels(iCh).custom_channel_name;
-         fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
+         fName = sprintf(strrep(paths.Adc,'\','/'),chNum);
          if exist(fName,'file'),delete(fName);end
          board_adc_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
             'class','single','size',[1 num_board_adc_samples],'access','w');
@@ -239,12 +239,12 @@ fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
 % alocate 4/5 of the available memory to those variables.
 
 %     nDataPoints=num_samples_per_data_block*2;   %time
-%     if (num_amplifier_channels > 0)
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %amplifier_data
+%     if (num_raw_channels > 0)
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_raw_channels;    %amplifier_data
 %         if (dc_amp_data_saved ~= 0)
-%             nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %dc_amplifier_data
+%             nDataPoints=nDataPoints+num_samples_per_data_block * num_raw_channels;    %dc_amplifier_data
 %         end
-%         nDataPoints=nDataPoints+num_samples_per_data_block * num_amplifier_channels;    %stim_data
+%         nDataPoints=nDataPoints+num_samples_per_data_block * num_raw_channels;    %stim_data
 %     end
 %
 %     if (num_board_adc_channels > 0)
@@ -294,10 +294,10 @@ time_buffer_index(1:num_samples_per_data_block*2)=true;
 end_=num_samples_per_data_block*2;
 time_buffer_index=repmat(time_buffer_index,1,nBlocks);
 
-if (num_amplifier_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
+if (num_raw_channels > 0)
+   index=end_+1:end_+num_samples_per_data_block * num_raw_channels;
    end_=index(end);
-   amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
+   amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_raw_channels,num_samples_per_data_block,1),1,[]));
    amplifier_buffer_index=repmat(amplifier_buffer_index,1,nBlocks);
 end
 
@@ -396,9 +396,9 @@ for i=1:ceil(num_data_blocks/nBlocks)
    clear('t');
    % Write data to file
    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-   for jj=1:num_amplifier_channels % units = microvolts
+   for jj=1:num_raw_channels % units = microvolts
       amplifier_dataFile{jj}.append( 0.195 * (single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768));
-      fraction_done = 100 * (iCh / num_amplifier_channels);
+      fraction_done = 100 * (iCh / num_raw_channels);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
    end
    
@@ -477,7 +477,7 @@ if (data_present)
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    % DiskData makes it easy to access data stored in matfies.
    % Assigning each file to the right channel
-   for iCh=1:num_amplifier_channels
+   for iCh=1:num_raw_channels
       blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
    end
    blockObj.Time = Files.Time;
@@ -523,35 +523,3 @@ diskFile = nigeLab.libs.DiskData(...
    'size',diskPars.size,...
    'access',diskPars.access);
 end
-
-% function progress(varargin)
-% if nargin ==0
-%    fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
-% else
-%    prog = varargin{1};
-%    l(1)= 32;
-%    l(2) = 23;
-%    l(3) = 23;
-%    l(4) = 36;
-%    l(5) = 33;
-%    l(6) = 23;
-%    l(7) = 27;
-%    l(8) = 28;
-%    
-%    fprintf(1,'%sWriting data to Matfiles...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
-% end
-% end

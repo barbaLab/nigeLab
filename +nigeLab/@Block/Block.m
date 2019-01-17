@@ -91,13 +91,11 @@ classdef Block < handle
       
       NumProbes         = 0   % Number of electrode arrays
       NumChannels       = 0   % Number of electrodes on all arrays
-      NumADCchannels    = 0   % Number of ADC channels
-      NumDACChannels    = 0   % Number of DAC channels
-      NumDigInChannels  = 0   % Number of digital input channels
-      NumDigOutChannels = 0   % Number of digital output channels
+      
       
       Status      % Completion status for each element of BLOCK/FIELDS
       Paths       % Detailed paths specifications for all the saved files
+      Probes      % Probe configurations associated with saved recording
       Notes       % Notes from text file
       
       RecType     % Intan / TDT / other
@@ -110,6 +108,14 @@ classdef Block < handle
       Day               % Day of recording
       
       FieldType         % Indicates types for each element of Field
+      FileType          % Indicates DiskData file type for each Field
+      
+      NumADCchannels    = 0   % Number of ADC channels
+      NumDACChannels    = 0   % Number of DAC channels
+      NumDigInChannels  = 0   % Number of digital input channels
+      NumDigOutChannels = 0   % Number of digital output channels
+      NumAnalogIO
+      NumDigIO
       
       BlockPars         % Parameters struct for block construction
       EventPars         % Parameters struct for events
@@ -122,6 +128,7 @@ classdef Block < handle
       SDPars            % Parameters struct for spike detection
       SortPars          % Parameters for nigeLab.Sort interface
       SyncPars          % Parameters struct for digital sync stream
+      TDTPars           % Parameters struct for parsing TDT info
       VideoPars         % Parameters struct for associating videos
       
       RecFile       % Raw binary recording file
@@ -200,7 +207,7 @@ classdef Block < handle
       end
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.paths.TW '_Block.mat']),'blockObj','-v7.3');
+         save(fullfile([blockObj.Paths.Block '_Block.mat']),'blockObj','-v7.3');
       end
       function disp(blockObj)
          %% DISP  Overload display of BLOCK contents
@@ -296,8 +303,6 @@ classdef Block < handle
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
-      channelID = parseChannelID(blockObj); % Get unique ID for a channel
-      masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       
       % Methods for parsing spike info (to be deprecated):
       tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
@@ -325,9 +330,10 @@ classdef Block < handle
       flag = updateVidInfo(blockObj) % Update video info
       flag = linkToData(blockObj,suppressWarning) % Link to existing data
       flag = linkField(blockObj,fieldIndex)     % Link field to data
-      flag = linkChannelsField(blockObj,field)  % Link Channels field data
+      flag = linkChannelsField(blockObj,field,fType)  % Link Channels field data
       flag = linkEventsField(blockObj,field)    % Link Events field data
       flag = linkStreamsField(blockObj,field)   % Link Streams field data
+      flag = linkTime(blockObj);     % Link Time stream
       flag = linkNotes(blockObj);    % Link notes metadata
       flag = linkProbe(blockObj);    % Link probe metadata
       
@@ -343,18 +349,18 @@ classdef Block < handle
       flag = linkDAC(blockObj);      % Link DAC data
       flag = linkDigIO(blockObj);    % Link Digital-In and Digital-Out data
       
-      
-      % Methods for parsing metadata:
+      % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
-      
-      % Temporarily public methods (for debugging):
-      flag = initChannels(blockObj); % Initialize Channels property
-      flag = initEvents(blockObj); % Initialize Events property      
+   
    end
-   methods (Access = public, Hidden = true)
+   
+   methods (Access = public, Hidden = true) % Can make things PRIVATE later
+      flag = intan2Block(blockObj,fields,paths) % Convert Intan to BLOCK
+      flag = tdt2Block(blockObj) % Convert TDT to BLOCK
+      
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
       flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK
       
@@ -364,11 +370,13 @@ classdef Block < handle
       
       flag = clearSpace(blockObj,ask)     % Clear space on disk      
 
-   end
-   
-   %% PRIVATE METHODS
-   methods (Access = 'private') % debugging purpose, is private
       flag = init(blockObj) % Initializes the BLOCK object
+      flag = initChannels(blockObj);   % Initialize Channels property
+      flag = initEvents(blockObj);     % Initialize Events property 
+      flag = initStreams(blockObj);    % Initialize Streams property
       
+      meta = parseNamingMetadata(blockObj); % Get metadata struct from recording name
+      channelID = parseChannelID(blockObj); % Get unique ID for a channel
+      masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
    end
 end

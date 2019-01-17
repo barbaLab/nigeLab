@@ -11,6 +11,10 @@ function flag = updateParams(blockObj,paramType)
 %
 %  paramType   :     (optional; char array) Name of parameter type to
 %                       update
+%                    -> Can be passed as cell array to update multiple
+%                       parameters.
+%                    -> If specified as 'all', then initializes all
+%                       parameters fields except for Block and Shortcuts.
 %
 %  --------
 %   OUTPUT
@@ -32,6 +36,21 @@ if nargin < 2 % if not supplied, select from list...
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
 else
+   % Use recursion to run if cell array is given
+   if iscell(paramType)
+      flag = false(size(paramType));
+      for i = 1:numel(paramType)
+         flag(i) = blockObj.updateParams(paramType{i});
+      end
+      return;      
+   else % otherwise, if 'all' option is invoked:
+      if strcmpi(paramType,'all')
+         paramType = tmp;
+         flag = blockObj.updateParams(paramType);
+         return;
+      end
+   end
+   
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(tmp,paramType,3),1,'first');
    if isempty(idx)

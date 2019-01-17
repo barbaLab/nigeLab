@@ -7,6 +7,6 @@ function h = takeNotes(blockObj)
 %                 v1.1  12/11/2018  Bugfixes
 
 %%
-h = nigeLab.libs.NotesUI(blockObj.paths.MW_N.experiment,blockObj);
+h = nigeLab.libs.NotesUI(blockObj.Paths.Notes.name,blockObj);
 
 end

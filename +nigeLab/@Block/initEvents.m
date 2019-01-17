@@ -8,16 +8,28 @@ function flag = initEvents(blockObj)
 %%
 flag = false;
 blockObj.updateParams('Event');
-blockObj.Events = struct;
-for ii = 1:numel(blockObj.EventPars.Events)
-   blockObj.Events.(blockObj.EventPars.Events{ii}) = struct;
-   blockObj.Events.(blockObj.EventPars.Events{ii}).type = ...
-      blockObj.EventPars.Type(ii);
-   evtFields = blockObj.EventPars.TypeID{blockObj.EventPars.Type(ii)};
-   for ik = 1:numel(evtFields)
-      blockObj.Events.(blockObj.EventPars.Events{ii}).(evtFields{ik}) = [];
-   end
+nEventTypes = numel(blockObj.EventPars.Events);
+if nEventTypes == 0
+   flag = true;
+   disp('No EVENTS to initialize.');
+   return;
+end
+
+blockObj.Events = buildEventStruct(nEventTypes);
+for ii = 1:nEventTypes
+   blockObj.Events(ii).name = blockObj.EventPars.Events{ii};
+   blockObj.Events(ii).type = blockObj.EventPars.Type(ii);
+   blockObj.Events(ii).status = false;
 end
 flag = true;
+
+   function evtStruct = buildEventStruct(n)
+      
+      evtStruct = struct(...
+         'name',cell(n,1),...
+         'type',cell(n,1),...
+         'status',cell(n,1)...
+         );
+   end
 
 end

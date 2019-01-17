@@ -12,31 +12,41 @@ function flag = linkStreamsField(blockObj,field)
 %%
 flag = false;
 updateFlag = false(1,blockObj.NumChannels);
+info = blockObj.Streams.(field);
 
-fprintf(1,'\nLinking Channels field: %s ...000%%\n',field);
+fprintf(1,'\nLinking Streams field: %s ...000%%\n',field);
 counter = 0;
-for iCh = blockObj.Mask
-   
-   % Get file name
-   pnum  = num2str(blockObj.ChannelID(iCh,1));
-   chnum = num2str(blockObj.ChannelID(iCh,2),'%03g');
-   fname = sprintf(strrep(blockObj.Paths.(field).file,'\','/'), ...
-      pnum,chnum);
-   fname = fullfile(fname);
+for iCh = 1:numel(info)
+   % Parse info from channel struct
+   fName = parseNameFromChannelStruct(blockObj.Paths,field,info,iCh);
    
    % If file is not detected
-   if ~exist(fullfile(fname),'file')
+   if ~exist(fullfile(fName),'file')
       flag = true;
    else
       updateFlag(iCh) = true;
-      blockObj.Channels(iCh).(field) = ...
-         nigeLab.libs.DiskData(blockObj.SaveFormat,fname);
+      blockObj.Streams(iCh).(field)=nigeLab.libs.DiskData('Hybrid',fName);
    end
    
    counter = counter + 1;
-   fraction_done = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   pct = 100 * (counter / numel(blockObj.Mask));
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
 blockObj.updateStatus(field,updateFlag);
+
+   function fName = parseNameFromChannelStruct(paths,field,info,ch)
+      %% PARSENAMEFROMCHANNELSTRUCT    Get file name based on channel info
+      sigType = info(ch).signal_type;
+      
+      if isempty(sigType)
+         sigType = field;
+         name = num2str(ch,'%03g');
+      else
+         name = info(ch).custom_channel_name;
+      end
+      
+      fName = sprintf(strrep(paths.(field).file,'\','/'), sigType, name);
+      fName = fullfile(fName);
+   end
 
 end

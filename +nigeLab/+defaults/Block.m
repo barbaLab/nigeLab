@@ -29,8 +29,7 @@ TAG.Events = ... % Events: asynchronous events with associated values
    [pars.Delimiter '%s', ...
    pars.Delimiter 'Events.mat'];
 TAG.Meta = ... % Meta: generic recording metadata (notes, probe configs)
-   [pars.Delimiter '%s', ...
-   pars.Delimiter 'Meta.mat'];
+   [pars.Delimiter '%s'];
 TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    [pars.Delimiter '%s', ...
    pars.Delimiter '%s', ...
@@ -77,88 +76,113 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 %
 % ~/path/R18-68_0_180724_141203
 
-% pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time';
-pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID';
+% pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
+pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time'; % KUMC
 pars.IncludeChar='$';
 pars.DiscardChar='&';
-pars.NamingConvention={'Animal_ID','Rec_ID'};
+% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT
+pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'}; % KUMC
 
 %%
-Fields =  ...
-   {'Raw';
-   'Filt';
-   'CAR';
-   'LFP';
-   'Spikes';
-   'SpikeFeatures';
-   'Clusters';
-   'Sorted';
-   'DigIO';
-   'AnalogIO';
-   'DigEvents';
-   'Video';
-   'Stim';
-   'DC';
-   'Time';
-   'Probes';
-   'Notes'};
+Fields =  { ...
+   'Raw';            % 1  - hard-coded for extraction
+   'Filt';           % 2
+   'CAR';            % 3
+   'LFP';            % 4
+   'Spikes';         % 5 - hard-coded to match terms from defaults.SD
+   'SpikeFeatures';  % 6 - hard-coded to match terms from defaults.SD
+   'Clusters';       % 7 - hard-coded to match terms from defaults.SD
+   'Sorted';         % 8 - hard-coded to match terms from defaults.SD
+   'DigIO';          % 9  - hard-coded for extraction
+   'AnalogIO';       % 10 - hard-coded for extraction
+   'DigEvents';      % 11
+   'Video';          % 12
+   'Stim';           % 13
+   'DC';             % 14
+   'Time';           % 15
+   'Notes'           % 16
+   'Probes';         % 17
+   };
 
 FieldType = { ...
-   'Channels';
-   'Channels';
-   'Channels';
-   'Channels';
-   'Channels';
-   'Channels';
-   'Channels';
-   'Channels';
-   'Streams';
-   'Streams';
-   'Events';
-   'Streams';
-   'Events';
-   'Channels';
-   'Streams';
-   'Meta';
-   'Meta'};
-   
+   'Channels'; % 1
+   'Channels'; % 2
+   'Channels'; % 3
+   'Channels'; % 4
+   'Channels'; % 5
+   'Channels'; % 6
+   'Channels'; % 7
+   'Channels'; % 8
+   'Streams';  % 9
+   'Streams';  % 10
+   'Events';   % 11
+   'Streams';  % 12
+   'Events';   % 13
+   'Channels'; % 14
+   'Meta';     % 15
+   'Meta';     % 16
+   'Meta'      % 17
+   };
 
-OldNames       =   ...
-   {{'*Raw*'};
-   {'*Filt*'};
-   {'*FiltCAR*'};
-   {'*LFP*'};
-   {'*ptrain*'};
-   {'*SpikeFeatures*'};
-   {'*clus*'};
-   {'*sort*'};
-   {'*DIG*'};
-   {'*ANA*'};
-   {'*Scoring.mat'};
-   {'*Paw.mat';'*Kinematics.mat'};
-   {'*STIM*'};
-   {'*DC*'};
-   {'*Time*'};
-   {'*probes.xlsx'};
-   {'*experiment.txt'}};
+OldNames       =  { ...
+   {'*Raw*'};                       % 1
+   {'*Filt*'};                      % 2
+   {'*FiltCAR*'};                   % 3
+   {'*LFP*'};                       % 4
+   {'*ptrain*'};                    % 5
+   {'*SpikeFeatures*'};             % 6
+   {'*clus*'};                      % 7
+   {'*sort*'};                      % 8
+   {'*DIG*'};                       % 9
+   {'*ANA*'};                       % 10
+   {'*Scoring.mat'};                % 11
+   {'*Paw.mat';'*Kinematics.mat'};  % 12
+   {'*STIM*'};                      % 13
+   {'*DC*'};                        % 14
+   {'*Time*'};                      % 15
+   {'*probes.xlsx'};                % 16
+   {'*experiment.txt'}              % 17
+   };
 
-FolderNames     =   ...
-   {'RawData';
-   'Filtered';
-   'FilteredCAR';
-   'LFPData';
-   '%s_Spikes';
-   '%s_SpikeFeatures';
-   '%s_Clusters';
-   '%s_Sorted';
-   'Digital';
-   'Digital';
-   'Video';
-   'StimData';
-   'StimData';
-   'Digital';
-   'Metadata';
-   'Metadata'};
+FolderNames     = {  ...
+   'RawData';           % 1
+   'Filtered';          % 2
+   'FilteredCAR';       % 3
+   'LFPData';           % 4
+   '%s_Spikes';         % 5
+   '%s_SpikeFeatures';  % 6
+   '%s_Clusters';       % 7
+   '%s_Sorted';         % 8
+   'Digital';           % 9
+   'Digital';           % 10
+   'Digital';           % 11
+   'Video';             % 12
+   'StimData';          % 13
+   'StimData';          % 14
+   'Digital';           % 15
+   'Metadata';          % 16
+   'Metadata'           % 17
+   };
+
+FileType = { ...
+   'Hybrid';   % 1
+   'Hybrid';   % 2
+   'Hybrid';   % 3
+   'Hybrid';   % 4
+   'MatFile';  % 5
+   'MatFile';  % 6
+   'MatFile';  % 7
+   'MatFile';  % 8
+   'Hybrid';   % 9
+   'Hybrid';   % 10
+   'MatFile';  % 11
+   'Hybrid';   % 12
+   'MatFile';  % 13
+   'Hybrid';   % 14
+   'Hybrid';   % 15
+   'Other';    % 16
+   'Other';    % 17
+   };
 
 %% DO ERROR PARSING
 % Check that all have correct number of elements
@@ -172,7 +196,12 @@ elseif numel(OldNames)~=N
 elseif numel(FolderNames)~=N
    error('FolderNames (%d) must have same # elements as Fields (%d).',...
       numel(FolderNames),N);
+elseif numel(FileType)~=N
+   error('FileType (%d) must have same # elements as Fields (%d).',...
+      numel(FileType),N);
 end
+pars.FileType = FileType;
+pars.FieldType = FieldType;
 
 % Check that FieldType is viable
 VIABLE_FIELDS = fieldnames(TAG);

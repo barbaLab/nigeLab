@@ -21,6 +21,9 @@ end
 N = numel(blockObj.Fields);
 warningRef = false(1,N);
 for fieldIndex = 1:N
+   if exist(blockObj.Paths.(blockObj.Fields{fieldIndex}).dir,'dir')==0
+      mkdir(blockObj.Paths.(blockObj.Fields{fieldIndex}).dir);
+   end
    warningRef(fieldIndex) = blockObj.linkField(fieldIndex);
 end
 

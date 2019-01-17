@@ -107,7 +107,13 @@ classdef NotesUI < matlab.apps.AppBase
          app.NotesTextAreaLabel.Position = [left*.02 bottom*.92 width*.5 height*.1];
          
          [~,name,~] = fileparts(app.Notes.File);
-         name = strrep(name,'_',' ');
+         name = strsplit(name,'_');
+         if numel(name) > 5
+            name = strjoin(name(1:5),' ');
+         else
+            name = strjoin(name,' ');
+         end
+         
          app.NotesTextAreaLabel.Text = sprintf('Notes: %s',name);
          
          

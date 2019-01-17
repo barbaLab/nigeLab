@@ -4,7 +4,7 @@ classdef Animal < handle
 %% PUBLIC PROPERTIES
    properties (Access = public)
       Name         % Animal identification code
-      ElecConfig   %Electrode configuration structure
+      ElecConfig   % Electrode configuration structure
       RecType      % Intan TDT or other
      
    end

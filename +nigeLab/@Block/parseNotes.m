@@ -9,13 +9,21 @@ function parseNotes(blockObj,str)
 %% PARSE EXPERIMENTAL METADATA
 probes = struct;
 for ii = 1:size(str,1)
+   % Catch whitespace errors
+   if isempty(str{ii})
+      continue;
+   elseif strcmpi(str{ii},'')
+      continue;
+   end
+   
+   % Split based on Experiment Parameters
    info = strsplit(str{ii},blockObj.ExperimentPars.Delimiter);
-   blockObj.ExperimentPars.(strtrim(info{1})) = strtrim(info{2});
+   blockObj.Notes.(strtrim(info{1})) = strtrim(info{2});
    probes = parseProbeName(probes,info{1},info{2},...
                            blockObj.ProbePars.ProbeIndexParseFcn);
    
 end
-blockObj.ExperimentPars.Probes = probes;
+blockObj.Notes.Probes = probes;
 
    function probes = parseProbeName(probes,varName,varValue,idxParseFcn)
       strParts = strsplit(varName,'_');

@@ -21,16 +21,18 @@ end
    
 switch blockObj.RecType
    case 'Intan'
-      % Two types of Intan binary files: rhd and rhs
-      switch blockObj.FileExt
-         case '.rhs'
-            flag = rhs2Block(blockObj);
-         case '.rhd'
-            flag = rhd2Block(blockObj);
-         otherwise
-            warning('Invalid file type (%s).',blockObj.FileExt);
-            return;
-      end
+      flag = blockObj.intan2Block;
+      
+%       % Two types of Intan binary files: rhd and rhs
+%       switch blockObj.FileExt
+%          case '.rhs'
+%             flag = rhs2Block(blockObj);
+%          case '.rhd'
+%             flag = rhd2Block(blockObj);
+%          otherwise
+%             warning('Invalid file type (%s).',blockObj.FileExt);
+%             return;
+%       end
       
    case 'TDT'
       % TDT raw data already has a sort of "BLOCK" structure that should be

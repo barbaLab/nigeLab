@@ -13,10 +13,13 @@ function flag = linkNotes(blockObj)
 flag = false;
 notes = nigeLab.defaults.Experiment();
 blockObj.updateParams('Experiment');
+blockObj.Paths.Notes.name = fullfile(sprintf(strrep(...
+   blockObj.Paths.Notes.file,'\','/'),'Experiment.txt'));
+
 fprintf(1,'\nLinking NOTES...000%%\n');
-if exist(blockObj.paths.MW_N.experiment,'file')==0
+if exist(blockObj.Paths.Notes.name,'file')==0
    copyfile(fullfile(notes.Folder,notes.File),...
-      blockObj.paths.MW_N.experiment,'f');
+      blockObj.Paths.Notes.name,'f');
    flag = true;
 end
 h = blockObj.takeNotes;

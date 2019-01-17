@@ -45,13 +45,13 @@ end
 s = dir(NAME);
 filesize = s.bytes;
 
+% Create structure arrays for each type of data channel.
+raw_channels=channel_struct;
+analogIO_channels = channel_struct;
+digIO_channels = channel_struct;
 
-amplifier_channels=channel_struct;
 spike_triggers=spike_trigger_struct;
-board_adc_channels=channel_struct;
-board_dac_channels=channel_struct;
-board_dig_in_channels=channel_struct;
-board_dig_out_channels=channel_struct;
+
 
 
 magic_number = fread(FID, 1, 'uint32');
@@ -113,7 +113,7 @@ notes = struct( ...
    'note3', fread_QString(FID) );
 
 % See if dc amplifier data was saved
-dc_amp_data_saved = fread(FID, 1, 'int16');
+DC_amp_data_saved = fread(FID, 1, 'int16');
 
 % Load eval board mode.
 eval_board_mode = fread(FID, 1, 'int16');
@@ -145,7 +145,10 @@ stim_parameters = struct( ...
 
 reference_channel = fread_QString(FID);
 
-amplifier_index = 1;
+raw_index = 1;
+analogIO_index = 1;
+digIO_index = 1;
+
 board_adc_index = 1;
 board_dac_index = 1;
 board_dig_in_index = 1;
@@ -163,10 +166,15 @@ for signal_group = 1:number_of_signal_groups
    signal_group_num_amp_channels = fread(FID, 1, 'int16');
    
    if (signal_group_num_channels > 0 && signal_group_enabled > 0)
-      new_channel(1).port_name = signal_group_name;
-      new_channel(1).port_prefix = signal_group_prefix;
-      new_channel(1).port_number = signal_group;
+      
       for signal_channel = 1:signal_group_num_channels
+         % channel_struct is defined below in its function
+         new_channel = channel_struct;
+         
+         % fill out fields of channel_struct
+         new_channel(1).port_name = signal_group_name;
+         new_channel(1).port_prefix = signal_group_prefix;
+         new_channel(1).port_number = signal_group;
          new_channel(1).native_channel_name = fread_QString(FID);
          new_channel(1).custom_channel_name = fread_QString(FID);
          new_channel(1).native_order = fread(FID, 1, 'int16');
@@ -186,24 +194,33 @@ for signal_group = 1:number_of_signal_groups
          if (channel_enabled)
             switch (signal_type)
                case 0
-                  amplifier_channels(amplifier_index) = new_channel;
-                  spike_triggers(amplifier_index) = new_trigger_channel;
-                  amplifier_index = amplifier_index + 1;
+                  new_channel(1).signal_type = 'Raw';
+                  raw_channels(raw_index) = new_channel;
+                  spike_triggers(raw_index) = new_trigger_channel;
+                  raw_index = raw_index + 1;
                case 1
                   % aux inputs; not used in RHS2000 system
                case 2
                   % supply voltage; not used in RHS2000 system
                case 3
-                  board_adc_channels(board_adc_index) = new_channel;
+                  new_channel(1).signal_type = 'Adc';
+                  analogIO_channels(analogIO_index) = new_channel;
+                  analogIO_index = analogIO_index + 1;
                   board_adc_index = board_adc_index + 1;
                case 4
-                  board_dac_channels(board_dac_index) = new_channel;
+                  new_channel(1).signal_type = 'Dac';
+                  analogIO_channels(analogIO_index) = new_channel;
+                  analogIO_index = analogIO_index + 1;
                   board_dac_index = board_dac_index + 1;
                case 5
-                  board_dig_in_channels(board_dig_in_index) = new_channel;
+                  new_channel(1).signal_type = 'DigIn';
+                  digIO_channels(digIO_index) = new_channel;
+                  digIO_index = digIO_index + 1;
                   board_dig_in_index = board_dig_in_index + 1;
                case 6
-                  board_dig_out_channels(board_dig_out_index) = new_channel;
+                  new_channel(1).signal_type = 'DigOut';
+                  digIO_channels(digIO_index) = new_channel;
+                  digIO_index = digIO_index + 1;
                   board_dig_out_index = board_dig_out_index + 1;
                otherwise
                   error('Unknown channel type');
@@ -215,11 +232,15 @@ for signal_group = 1:number_of_signal_groups
 end
 
 % Summarize contents of data file.
-num_amplifier_channels = amplifier_index - 1;
-num_board_adc_channels = board_adc_index - 1;
-num_board_dac_channels = board_dac_index - 1;
-num_board_dig_in_channels = board_dig_in_index - 1;
-num_board_dig_out_channels = board_dig_out_index - 1;
+num_raw_channels = raw_index - 1;
+num_analogIO_channels = analogIO_index - 1;
+num_digIO_channels = digIO_index - 1;
+
+num_amplifier_channels = raw_index - 1;
+num_adc_channels = board_adc_index - 1;
+num_dac_channels = board_dac_index - 1;
+num_dig_in_channels = board_dig_in_index - 1;
+num_dig_out_channels = board_dig_out_index - 1;
 
 if VERBOSE
    fprintf(1, 'Found %d amplifier channel%s.\n', ...
@@ -229,13 +250,13 @@ if VERBOSE
          num_amplifier_channels, (num_amplifier_channels));
    end
    fprintf(1, 'Found %d board ADC channel%s.\n', ...
-      num_board_adc_channels, (num_board_adc_channels));
+      num_adc_channels, (num_adc_channels));
    fprintf(1, 'Found %d board DAC channel%s.\n', ...
-      num_board_dac_channels, (num_board_dac_channels));
+      num_dac_channels, (num_dac_channels));
    fprintf(1, 'Found %d board digital input channel%s.\n', ...
-      num_board_dig_in_channels, (num_board_dig_in_channels));
+      num_dig_in_channels, (num_dig_in_channels));
    fprintf(1, 'Found %d board digital output channel%s.\n', ...
-      num_board_dig_out_channels, (num_board_dig_out_channels));
+      num_dig_out_channels, (num_dig_out_channels));
    fprintf(1, '\n');
 end
 % Determine how many samples the data file contains.
@@ -248,15 +269,15 @@ else
    bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2) * num_amplifier_channels;
 end
 % Board analog inputs are sampled at same rate as amplifiers
-bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_board_adc_channels;
+bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_adc_channels;
 % Board analog outputs are sampled at same rate as amplifiers
-bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_board_dac_channels;
+bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_dac_channels;
 % Board digital inputs are sampled at same rate as amplifiers
-if (num_board_dig_in_channels > 0)
+if (num_dig_in_channels > 0)
    bytes_per_block = bytes_per_block + num_samples_per_data_block * 2;
 end
 % Board digital outputs are sampled at same rate as amplifiers
-if (num_board_dig_out_channels > 0)
+if (num_dig_out_channels > 0)
    bytes_per_block = bytes_per_block + num_samples_per_data_block * 2;
 end
 
@@ -269,18 +290,36 @@ end
 
 num_data_blocks = floor(bytes_remaining / bytes_per_block);
 
-num_amplifier_samples = num_samples_per_data_block * num_data_blocks;
-num_board_adc_samples = num_samples_per_data_block * num_data_blocks;
-num_board_dac_samples = num_samples_per_data_block * num_data_blocks;
-num_board_dig_in_samples = num_samples_per_data_block * num_data_blocks;
-num_board_dig_out_samples = num_samples_per_data_block * num_data_blocks;
+num_raw_samples = num_samples_per_data_block * num_data_blocks;
+num_adc_samples = num_samples_per_data_block * num_data_blocks;
+num_dac_samples = num_samples_per_data_block * num_data_blocks;
+num_dig_in_samples = num_samples_per_data_block * num_data_blocks;
+num_dig_out_samples = num_samples_per_data_block * num_data_blocks;
 
-record_time = num_amplifier_samples / sample_rate;
+num_aux_samples = 0;
+num_supply_samples = 0;
+num_sensor_samples = 0;
+num_aux_channels = 0;
+num_supply_channels = 0;
+num_sensor_channels = 0;
+
+if (DC_amp_data_saved ~= 0)
+   num_DC_channels = num_raw_channels;
+   num_DC_samples = num_raw_samples;
+else
+   num_DC_channels = 0;
+   num_DC_samples = 0;
+end
+
+num_stim_channels = num_raw_channels;
+num_stim_samples = num_raw_samples;
+
+record_time = num_raw_samples / sample_rate;
 
 if VERBOSE
    if (data_present)
       fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n', ...
-         record_time, sample_rate / 1000, num_amplifier_samples);
+         record_time, sample_rate / 1000, num_raw_samples);
       fprintf(1, '\n');
    else
       fprintf(1, 'Header file contains no data.  Amplifiers were sampled at %0.2f kS/s.\n', ...
@@ -322,39 +361,79 @@ end
 end
 
 function DesiredOutputs=DesiredOutputs()
+% DesiredOutputs = {
+%    'data_present';
+%    'dc_amp_data_saved';
+%    'sample_rate';
+%    'frequency_parameters';
+%    'stim_parameters'
+%    'amplifier_channels';
+%    'board_adc_channels';
+%    'board_dac_channels';
+%    'board_dig_in_channels';
+%    'board_dig_out_channels';
+%    'spike_triggers';
+%    'stim_step_size';
+%    'num_amplifier_channels';
+%    'num_board_adc_channels';
+%    'num_board_dac_channels';
+%    'num_board_dig_in_channels';
+%    'num_board_dig_out_channels';
+%    'probes';
+%    'num_probes';
+%    'num_data_blocks';
+%    'num_samples_per_data_block';
+%    'num_amplifier_samples';
+%    'num_board_adc_samples';
+%    'num_board_dac_samples';
+%    'num_board_dig_in_samples';
+%    'num_board_dig_out_samples';
+%    'header_size';
+%    'filesize';
+%    'bytes_per_block';
+%    };
 DesiredOutputs = {
-   
-'data_present';
-'dc_amp_data_saved';
-'sample_rate';
-'frequency_parameters';
-'stim_parameters'
-'amplifier_channels';
-'board_adc_channels';
-'board_dac_channels';
-'board_dig_in_channels';
-'board_dig_out_channels';
-'spike_triggers';
-'stim_step_size';
-'num_amplifier_channels';
-'num_board_adc_channels';
-'num_board_dac_channels';
-'num_board_dig_in_channels';
-'num_board_dig_out_channels';
-'probes';
-'num_probes';
-'num_data_blocks';
-'num_samples_per_data_block';
-'num_amplifier_samples';
-'num_board_adc_samples';
-'num_board_dac_samples';
-'num_board_dig_in_samples';
-'num_board_dig_out_samples';
-'header_size';
-'filesize';
-'bytes_per_block';
-
-};
+   'data_present';
+   'DC_amp_data_saved';
+   'sample_rate';
+   'frequency_parameters';
+   'stim_parameters'
+   'raw_channels';
+   'analogIO_channels';
+   'digIO_channels';
+   'spike_triggers';
+   'stim_step_size';
+   'num_raw_channels';
+   'num_DC_channels';
+   'num_stim_channels';
+   'num_digIO_channels';
+   'num_analogIO_channels';
+   'num_amplifier_channels';
+   'num_aux_channels';
+   'num_supply_channels';
+   'num_sensor_channels';
+   'num_adc_channels';
+   'num_dac_channels';
+   'num_dig_in_channels';
+   'num_dig_out_channels';
+   'probes';
+   'num_probes';
+   'num_data_blocks';
+   'num_samples_per_data_block';
+   'num_raw_samples';
+   'num_DC_samples';
+   'num_stim_samples';
+   'num_aux_samples';
+   'num_supply_samples';
+   'num_sensor_samples';
+   'num_adc_samples';
+   'num_dac_samples';
+   'num_dig_in_samples';
+   'num_dig_out_samples';
+   'header_size';
+   'filesize';
+   'bytes_per_block';
+   };
 end
 
 function spike_trigger_struct_=spike_trigger_struct()
@@ -378,6 +457,7 @@ channel_struct_ = struct( ...
    'port_prefix', {}, ...
    'port_number', {}, ...
    'electrode_impedance_magnitude', {}, ...
-   'electrode_impedance_phase', {} );
+   'electrode_impedance_phase', {}, ...
+   'signal_type', {});
 return
 end

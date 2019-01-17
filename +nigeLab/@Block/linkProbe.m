@@ -12,22 +12,21 @@ function flag = linkProbe(blockObj)
 %% PARSE PROBE INFORMATION
 % Get probe ane notes info structs
 probe = nigeLab.defaults.Probe();
-notes = nigeLab.defaults.Experiment();
 blockObj.updateParams('Probe');
 
 % Initialize the update flags
 flag = false;
 updateFlag = false(1,blockObj.NumChannels);
 
-if isfield(notes,'Probes')
+if isfield(blockObj.Notes,'Probes')
    fprintf(1,'\nLinking PROBES...000%%\n');
-   probePorts = fieldnames(notes.Probes);
+   probePorts = fieldnames(blockObj.Notes.Probes);
    % Get the correct file associated with this recording in terms of
    % experimental probes. 
    for ii = 1:numel(probePorts)
-      probeName = notes.Probes.(probePorts{ii}).name;
+      probeName = blockObj.Notes.Probes.(probePorts{ii}).name;
       probeFile = sprintf(probe.Str,probeName);
-      fName = fullfile(blockObj.paths.MW,[blockObj.Name ...
+      fName = fullfile(blockObj.Paths.Probes.dir,[blockObj.Name ...
                         probe.Delimiter probeFile]);
       if exist(fName,'file')==0
          % If the electrode file doesn't exist from default location
@@ -40,13 +39,17 @@ if isfield(notes,'Probes')
             copyfile(eName,fName,'f');
          end
       end
-      notes.Probes.(probePorts{ii}).Ch = readtable(fName);
+      
+      % Assign to ".Ch" field because later, can add things like ".Imp"
+      % etc. for impedance values and other things associated with the
+      % probes.
+      blockObj.Probes.(probePorts{ii}).Ch = readtable(fName);
    end
    
    % For each channel, update metadata from probe config file
    for iCh = blockObj.Mask
 
-      if ~exist(fullfile(fname),'file')
+      if isempty(blockObj.Probes)
          flag = true;
       else
          updateFlag(iCh) = true;
@@ -55,9 +58,9 @@ if isfield(notes,'Probes')
          % Go through all ports (or boards, really)
          for ii = 1:numel(probePorts)
             % If this is the correct one
-            if notes.Probes.(probePorts{ii}).stream==streamIdx
+            if blockObj.Notes.Probes.(probePorts{ii}).stream==streamIdx
                % Get the metadata for the correct channel
-               ch = notes.Probes.(probePorts{ii}).Ch;
+               ch = blockObj.Probes.(probePorts{ii}).Ch;
                v = ch.Properties.VariableNames;
                if strcmp(blockObj.FileExt,'.rhs')
                   probeInfo = ch(RHD2RHS(ch.RHD_Channel)==curCh,:);

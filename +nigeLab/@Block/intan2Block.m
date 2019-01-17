@@ -65,13 +65,31 @@ filesize = s.bytes;
 switch blockObj.FileExt
    case '.rhd'
       header = ReadRHDHeader('FID',fid);
+      nBuffers = 13;
+      
+      switch blockObj.Meta.Header.EvalBoardMode
+         case 1
+            adc_scale = 152.59e-6;
+            adc_offset = 32768;
+         case 13
+            adc_scale = 312.5e-6;
+            adc_offset = 32768;
+         otherwise
+            adc_scale =  50.354e-6;
+            adc_offset = 0;
+      end
+      
    case '.rhs'
       header = ReadRHSHeader('FID',fid);
+      nBuffers = 10;
+      
+      adc_scale = 312.5e-6;
+      adc_offset = 32768;
 end
 
 blockObj.Meta.Header = fixNamingConvention(header);
 
-if ~blockObj.Meta.DataPresent
+if ~blockObj.Meta.Header.DataPresent
    warning('No data found in %s.',recFile);
    return;
 end
@@ -80,10 +98,9 @@ end
 % preallocates matfiles for varible that otherwise would require
 % nChannles*nSamples matrices
 
-
-
 fprintf(1, 'Allocating memory for data...\n');
 Files = struct;
+nCh = struct;
 for f = fields
    idx = find(strcmpi(blockObj.Fields,f),1,'first');
    if isempty(idx)
@@ -96,38 +113,80 @@ for f = fields
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
-         notifyUser(blockObj,myJob,this);
-         infoField = [this 'Channels'];
-         info = blockObj.Meta.Header;
-         infoname = fullfile(paths.Raw.info);
+         notifyUser(blockObj,myJob,this,'info');
+         info = blockObj.Meta.Header.RawChannels;
+         infoname = fullfile(paths.(this).info);
          save(fullfile(infoname),'info','-v7.3');
          % One file per probe and channel
-         Files.Raw = cell(num_amplifier_channels,1);
+         Files.(this) = cell(blockObj.NumChannels,1);
+         nCh.(this) = blockObj.NumChannels;
          diskPars.class = 'single';
-         for iCh = 1:num_amplifier_channels
-            pNum  = num2str(amplifier_channels(iCh).port_number);
-            chNum = amplifier_channels(iCh).custom_channel_name(...
-               regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-            fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
-            diskPars.name = fName;
-            Files.Raw{iCh} = makeDiskFile(diskPars);
-            notifyUser(blockObj,myJob,this,iCh,N)
-            
-            
+         for iCh = 1:nCh.(this)
+            pNum  = num2str(info(iCh).port_number);
+            chNum = info(iCh).custom_channel_name(...
+               regexp(info(iCh).custom_channel_name, '\d'));
+            fName = sprintf(strrep(paths.(this).file,'\','/'), pNum, chNum);
+            diskPars = struct('format',blockObj.FileType{idx},...
+               'name',fullfile(fName),...
+               'size',[1 blockObj.Meta.Header.NumRawSamples],...
+               'access','w',...
+               'class','single');
+            Files.(this){iCh} = makeDiskFile(diskPars);
+            notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
          end
-      case 'Events' % {{{ To be added: Automate event extraction HERE }}}
-         
+      case 'Events'
+         % {{{ To be added: Automate event extraction HERE }}}
          
       case 'Meta' % Each "Meta" file should only have one "channel"
-         diskPars = struct('format',blockObj.SaveFormat,...
-            'name',fullfile(paths.(this).info),...
-            'size',[1 num_amplifier_samples],...
+         fName = sprintf(strrep(paths.(this).file,'\','/'),[this '.mat']);
+         diskPars = struct('format',blockObj.FileType{idx},...
+            'name',fullfile(fName),...
+            'size',[1 blockObj.Meta.Header.NumRawSamples],...
             'access','w',...
             'class','int32');
          Files.(this) = makeDiskFile(diskPars);
          
       case 'Streams'
+         notifyUser(blockObj,myJob,this,'info');
+         infofield = [this 'Channels'];
+         info = blockObj.Meta.Header.(infofield);
+         infoname = fullfile(paths.(this).info);
+         save(fullfile(infoname),'info','-v7.3');
          
+         % Get unique subtypes of streams
+         [U,~,iU] = unique({info.signal_type});
+         
+         for ii = 1:numel(U)
+            % Each "signal group" has its own file struct
+            chIdx = find(iU==ii);
+            if isempty(chIdx)
+               continue;
+            else
+               chIdx = reshape(chIdx,1,numel(chIdx));
+            end
+            nCh.(U{ii}) = numel(chIdx);
+            Files.(U{ii}) = cell(nCh.(U{ii}),1);
+            
+            chCount = 0;
+            for iCh = chIdx
+               chCount = chCount + 1;
+               sampleField = ['Num' info(iCh).signal_type 'Samples'];
+               nSamples = blockObj.Meta.Header.(sampleField);
+               chName = info(iCh).custom_channel_name;
+               fName = sprintf(strrep(paths.(this).file,'\','/'), ...
+                  info(iCh).signal_type,chName);
+               diskPars = struct('format',blockObj.FileType{idx},...
+                  'name',fullfile(fName),...
+                  'size',[1 nSamples],...
+                  'access','w',...
+                  'class','single');
+               if strncmpi(U{ii},'dig',3) % DIG files are int8
+                  diskPars.class = 'int8';
+               end
+               Files.(U{ii}){chCount} = makeDiskFile(diskPars);
+               notifyUser(blockObj,myJob,this,'info',chCount,nCh.(U{ii}))
+            end
+         end
          
       otherwise
          warning('No extraction handling for FieldType: %s.',...
@@ -137,254 +196,128 @@ for f = fields
    
 end
 
+%% INITIALIZE INDEXING VECTORS FOR READING CHUNKS OF DATA FROM FILE
 
+% We need buffer variables to read data from file and save it into a
+% Matlab-friendly format using matfiles. Those varibles needs to be as
+% big as possible to speed up the process. In order to do that we will
+% allocate 4/5 of the available memory to those variables.
+nDataPoints = blockObj.Meta.Header.BytesPerBlock/2;
 
+end_ = 0; % End of indexing vector (within a block)
 
+availableMemory = getMemory(0.8); % Allocate 80% of available memory
+nPerBlock = blockObj.Meta.Header.NumSamplesPerDataBlock;
 
-% Save single-channel adc data
-if (num_board_adc_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting ADC info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting ADC info...%.3d%%\n',0);
-   ADC_info = board_adc_channels;
-   infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_ADC_Info.mat']);
-   save(fullfile(infoname),'ADC_info','-v7.3');
-   if (data_present)
-      board_adc_dataFile = cell(num_board_adc_channels,1);
-      for iCh = 1:num_board_adc_channels
-         chNum = board_adc_channels(iCh).custom_channel_name;
-         fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
-         if exist(fName,'file'),delete(fName);end
-         board_adc_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-            'class','single','size',[1 num_board_adc_samples],'access','w');
-         fraction_done = 100 * (iCh / num_board_adc_channels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-      end
-   end
-end
+% Need to account for all buffers to get correct # blocks
+memDivisor = nDataPoints * (8 + nBuffers);
+nBlocks = min(blockObj.Meta.Header.NumDataBlocks,...
+   floor(availableMemory/memDivisor));
 
-% Save single-channel supply_voltage data
-if (num_supply_voltage_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting VOLTAGE info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting VOLTAGE info...%.3d%%\n',0);
-   supply_voltage_info = supply_voltage_channels;
-   infoname = fullfile(strrep(paths.DW,'\','/'),[blockObj.Name '_supply_voltage_info.mat']);
-   save(fullfile(infoname),'supply_voltage_info','-v7.3');
-   supply_voltage_dataFile = cell(num_supply_voltage_channels,1);
-   for iCh = 1:num_supply_voltage_channels
-      chNum = supply_voltage_channels(iCh).custom_channel_name;
-      fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
-      if exist(fName,'file'),delete(fName);end
-      supply_voltage_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_supply_voltage_samples],'access','w');
-      fraction_done = 100 * (iCh / num_supply_voltage_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-end
+info = blockObj.Meta.Header;
 
-% Save single-channel temperature data
-if (num_temp_sensor_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting TEMPERATURE info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting TEMP info...%.3d%%\n',0);
-   temp_sensor_info = temp_sensor_channels;
-   infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_temp_sensor_info.mat']);
-   save(fullfile(infoname),'temp_sensor_info','-v7.3');
-   temp_sensor_dataFile = cell(num_temp_sensor_channels,1);
-   for iCh = 1:num_temp_sensor_channels
-      paths.DW_N = strrep(paths.DW_N, '\', '/');
-      chNum = temp_sensor_channels(iCh).custom_channel_name;
-      fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
-      if exist(fName,'file'),delete(fName);end
-      temp_sensor_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_temp_sensor_samples],'access','w');
-      fraction_done = 100 * (iCh / num_temp_sensor_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-end
+%% EXTRACT INDEXING VECTORS
+buffer = struct;
+scaleFactor = struct;
+dataOffset = struct;
 
-% Save single-channel aux-in data
-if (num_aux_input_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting AUX info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting AUX info...%.3d%%\n',0);
-   AUX_info = aux_input_channels;
-   infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_AUX_Info.mat']);
-   save(fullfile(infoname),'AUX_info','-v7.3');
-   aux_input_dataFile = cell(num_aux_input_channels,1);
-   for iCh = 1:num_aux_input_channels
-      chNum = aux_input_channels(iCh).custom_channel_name;
-      fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
-      if exist(fName,'file'),delete(fName);end
-      aux_input_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_aux_input_samples],'access','w');
-      fraction_done = 100 * (iCh / num_aux_input_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-end
-
-% Save single-channel digital input data
-if (num_board_dig_in_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting DIG-IN info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting DIG-IN info...%.3d%%\n',0);
-   DigI_info = board_dig_in_channels;
-   infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Input_Info.mat']);
-   save(fullfile(infoname),'DigI_info','-v7.3');
-   if (data_present)
-      board_dig_in_dataFile = cell(num_board_dig_in_channels,1);
-      for iCh = 1:num_board_dig_in_channels
-         paths.DW_N = strrep(paths.DW_N, '\', '/');
-         chNum = board_dig_in_channels(iCh).custom_channel_name;
-         fName = sprintf(strrep(paths.DW_N,'\','/'), chNum);
-         if exist(fName,'file'),delete(fName);end
-         board_dig_in_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-            'class','int8','size',[1 num_board_dig_in_samples],'access','w');
-         fraction_done = 100 * (iCh / num_board_dig_in_channels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-      end
-   end
-end
-
-% Save single-channel digital output data
-if (num_board_dig_out_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting DIG-O info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting DIG-OUT info...%.3d%%\n',0);
-   DigO_info = board_dig_out_channels;
-   infoname = fullfile(strrep(paths.DW, '\', '/'),[blockObj.Name '_Digital_Output_Info.mat']);
-   save(fullfile(infoname),'DigO_info','-v7.3');
-   if (data_present)
-      board_dig_out_dataFile = cell(num_board_dig_out_channels,1);
-      for iCh = 1:num_board_dig_out_channels
-         chNum = board_dig_out_channels(iCh).custom_channel_name;
-         fName = sprintf(strrep(paths.DW_N,'\','/'),chNum);
-         if exist(fName,'file'),delete(fName);end
-         board_dig_out_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-            'class','int8','size',[1 num_board_dig_out_samples],'access','w');
-         fraction_done = 100 * (iCh / num_board_dig_out_channels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-      end
-   end
-end
-fprintf(1,'Matfiles created succesfully.\n');
-fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
-
-% We need buffer viarables to read data from file and save it into a
-% matlab friendly format using matfiles. Those varibles needs to be as
-% big as possible to speed up the process. in order to do that we will
-% alocate 4/5 of the available memory to those variables.
-nDataPoints=bytes_per_block/2; % reading uint16
 time_buffer_index = false(1,nDataPoints);
-amplifier_buffer_index = zeros(1,nDataPoints,'uint16');
-supply_voltage_buffer_index = zeros(1,nDataPoints,'uint16');
-temp_buffer_index = zeros(1,nDataPoints,'uint16');
-aux_in_buffer_index = zeros(1,nDataPoints,'uint16');
-adc_buffer_index = zeros(1,nDataPoints,'uint16');
-dig_in_buffer_index = false(1,nDataPoints);
-dig_out_buffer_index = false(1,nDataPoints);
+[time_buffer_index,end_] = getDigBuffer(time_buffer_index,end_,...
+   2,nPerBlock,nBlocks);
 
-if ~isunix % For Windows machines:
-   [~,MEM]=memory;
-   AvailableMemory=MEM.PhysicalMemory.Available*0.8;
-else % For Mac machines:
-   [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
-   if status == 0
-      fprintf(1,'\nMac OSX detected. Available memory: %s\n',cmdout);
-      AvailableMemory=round(str2double(cmdout)*0.8);
-   else
-      AvailableMemory=2147483648; % (2^31)
-   end
-end
-nBlocks=min(num_data_blocks,floor(AvailableMemory/nDataPoints/(8+13))); %13 accounts for all the indexings
-%     t = zeros(1, num_samples_per_data_block);
 
-time_buffer_index(1:num_samples_per_data_block*2)=true;
-end_=num_samples_per_data_block*2;
-time_buffer_index=repmat(time_buffer_index,1,nBlocks);
-
-if (num_amplifier_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block * num_amplifier_channels;
-   end_=index(end);
-   amplifier_buffer_index(index)=uint16(reshape(repmat(1:num_amplifier_channels,num_samples_per_data_block,1),1,[]));
-   amplifier_buffer_index=repmat(amplifier_buffer_index,1,nBlocks);
+if (info.NumRawChannels > 0)
+   buffer.Raw = zeros(1,nDataPoints,'uint16');
+   [buffer.Raw,end_] = getBufferIndex(buffer.Raw,end_,...
+      info.NumRawChannels,nPerBlock,nBlocks);
+   scaleFactor.Raw = 0.195;
+   dataOffset.Raw = 32768;
 end
 
-if (num_aux_input_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block/4 * num_aux_input_channels;
-   end_=index(end);
-   aux_in_buffer_index(index)=uint16(reshape(repmat(1:num_aux_input_channels,num_samples_per_data_block/4,1),1,[]));
-   aux_in_buffer_index=repmat(aux_in_buffer_index,1,nBlocks);
+if (info.NumDCChannels > 0)
+   buffer.DC = zeros(1,nDataPoints,'uint16');
+   [buffer.DC,end_] = getBufferIndex(buffer.DC,end_,...
+      info.NumRawChannels,nPerBlock,nBlocks);
+   scaleFactor.DC = -0.01923;
+   dataOffset.DC = 512;
 end
 
-if (num_supply_voltage_channels > 0)
-   index=end_+1:end_+ 1 * num_supply_voltage_channels;
-   end_=index(end);
-   supply_voltage_buffer_index(index)=uint16(reshape(repmat(1:num_supply_voltage_channels,1,1),1,[]));
-   supply_voltage_buffer_index=repmat(supply_voltage_buffer_index,1,nBlocks);
-end
-
-if (num_temp_sensor_channels > 0)
-   index=end_+1:end_+ 1 * num_temp_sensor_channels;
-   end_=index(end);
-   temp_buffer_index(index)=uint16(reshape(repmat(1:num_temp_sensor_channels,1,1),1,[]));
-   temp_buffer_index=repmat(temp_buffer_index,1,nBlocks);
-end
-
-
-if (num_board_adc_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block * num_board_adc_channels;
-   end_=index(end);
-   adc_buffer_index(index)=uint16(reshape(repmat(1:num_board_adc_channels,num_samples_per_data_block,1),1,[]));
-   adc_buffer_index=repmat(adc_buffer_index,1,nBlocks);
+if (info.NumStimChannels > 0)
+   buffer.Stim = zeros(1,nDataPoints,'uint16');
+   [buffer.Stim,end_] = getBufferIndex(buffer.Stim,end_,...
+      info.NumRawChannels,nPerBlock,nBlocks);
    
 end
 
-if (num_board_dig_in_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block * 1;
-   end_=index(end);
-   dig_in_buffer_index(index)=true;
-   dig_in_buffer_index=repmat(dig_in_buffer_index,1,nBlocks);
+if (info.NumAuxChannels > 0)
+   buffer.Aux = zeros(1,nDataPoints,'uint16');
+   [buffer.Aux,end_] = getBufferIndex(buffer.Aux,end_,...
+      info.NumAuxChannels,nPerBlock/4,nBlocks);
+   scaleFactor.Aux = 37.4e-6;
+   dataOffset.Aux = 0;
+end
+
+if (info.NumSupplyChannels > 0)
+   buffer.Supply = zeros(1,nDataPoints,'uint16');
+   [buffer.Supply,end_] = getBufferIndex(buffer.Supply,end_,...
+      info.NumSupplyChannels,1,nBlocks);
+   scaleFactor.Supply = 0.195;
+   dataOffset.Supply = 32768;
+end
+
+if (info.NumSensorChannels > 0)
+   buffer.Sensor = zeros(1,nDataPoints,'uint16');
+   [buffer.Sensor,end_] = getBufferIndex(buffer.Sensor,end_,...
+      info.NumSensorChannels,1,nBlocks);
+   scaleFactor.Sensor = 0.01;
+   dataOffset.Sensor = 0;
+end
+
+
+if (info.NumAdcChannels > 0)
+   buffer.Adc = zeros(1,nDataPoints,'uint16');
+   [buffer.Adc,end_] = getBufferIndex(buffer.Adc,end_,...
+      info.NumAdcChannels,nPerBlock,nBlocks);
+   scaleFactor.Adc = adc_scale;
+   dataOffset.Adc = adc_offset;
+end
+
+if (info.NumDacChannels > 0)
+   buffer.Dac = zeros(1,nDataPoints,'uint16');
+   [buffer.Dac,end_] = getBufferIndex(buffer.Dac,end_,...
+      info.NumDacChannels,nPerBlock,nBlocks);
+   scaleFactor.Dac = 312.5e-6;
+   dataOffset.Dac = 32768;
+end
+
+% Get TTL streams as well
+digBuffer = struct;
+if (info.NumDigInChannels > 0)
+   digBuffer.DigIn = false(1,nDataPoints);
+   [digBuffer.DigIn,end_] = getDigBuffer(digBuffer.DigIn,end_,...
+      1,nPerBlock,nBlocks);
+end
+
+if (info.NumDigOutChannels > 0)
+   digBuffer.DigOut = false(1,nDataPoints);
+   [digBuffer.DigOut,~] = getDigBuffer(digBuffer.DigOut,end_,...
+      1,nPerBlock,nBlocks);
    
 end
 
-if (num_board_dig_out_channels > 0)
-   index=end_+1:end_+num_samples_per_data_block * 1;
-   end_=index(end);
-   dig_out_buffer_index(index)=true;
-   dig_out_buffer_index=repmat(dig_out_buffer_index,1,nBlocks);
-   
-end
-
-switch eval_board_mode
-   case 1
-      adc_scale = 152.59e-6;
-      adc_offset = 32768;
-   case 13
-      adc_scale = 312.5e-6;
-      adc_offset = 32768;
-   otherwise
-      adc_scale =  50.354e-6;
-      adc_offset = 0;
-end
-
-
+%% READ BINARY DATA
 progress=0;
 num_gaps = 0;
 index = 0;
 
-deBounce = false;
-for i=1:ceil(num_data_blocks/nBlocks)
-   pct = round(i/nBlocks*100);
+deBounce = false; % This just for the update job Tag part
+F = fieldnames(buffer);
+D = fieldnames(digBuffer);
+
+for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
+   pct = round(iBlock/nBlocks*100);
    if rem(pct,5)==0 && ~deBounce
-      if exist('myJob','var')~=0
+      if ~isnan(myJob(1))
          set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
       end
       deBounce = true;
@@ -394,89 +327,45 @@ for i=1:ceil(num_data_blocks/nBlocks)
    
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    %%% Read binary data.
-   blocksToread = min(nBlocks,num_data_blocks-nBlocks*(i-1));
-   dataToRead = blocksToread*nDataPoints;
-   Buffer=uint16(fread(fid, dataToRead, 'uint16=>uint16'))';
+   blocksToread = min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
+   dataPointsToRead = blocksToread*nDataPoints;
+   dataBuffer = uint16(fread(fid, dataPointsToRead, 'uint16=>uint16'))';
    
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    %%% Update the files
-   index =uint32( index(end) + 1 : index(end)+num_samples_per_data_block*blocksToread);
+   index =uint32( index(end) + 1 : index(end)+nPerBlock*blocksToread);
    
-   t=typecast(Buffer(time_buffer_index(1:dataToRead)),'int32');t = reshape(t,1,numel(t)); % ensure correct orientation
-   Files.Time.append(t);
+   t=typecast(dataBuffer(time_buffer_index(1:dataPointsToRead)),'int32');
    t = reshape(t,1,numel(t)); % ensure correct orientation
    Files.Time.append(t);
    num_gaps = num_gaps + sum(diff(t) ~= 1);
    
-   % Scale time steps (units = seconds)
-   clear('t');
    % Write data to file
-   fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-   for jj=1:num_amplifier_channels % units = microvolts
-      amplifier_dataFile{jj}.append( 0.195 * (single(Buffer(amplifier_buffer_index(1:dataToRead)==jj)) - 32768));
-      fraction_done = 100 * (iCh / num_amplifier_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+   for iF = 1:numel(F)
+      writeData(dataBuffer,...
+         Files,buffer,scaleFactor,dataOffset,F{iF},dataPointsToRead);
    end
    
-   fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
-   for jj=1:num_aux_input_channels % units = volts
-      aux_input_dataFile{jj}.append( 37.4e-6 * single(Buffer(aux_in_buffer_index(1:dataToRead)==jj)));
-      fraction_done = 100 * (iCh / num_aux_input_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-   
-   fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
-   for jj=1:num_supply_voltage_channels  % units = volts
-      supply_voltage_dataFile{jj}.append( 74.8e-6 * single(Buffer(supply_voltage_buffer_index(1:dataToRead)==jj)));
-      fraction_done = 100 * (iCh / num_supply_voltage_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-   
-   fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
-   for jj=1:num_temp_sensor_channels % units = deg C
-      temp_sensor_dataFile{jj}.append(single(Buffer(temp_buffer_index(1:dataToRead)==jj)) ./100 );
-      fraction_done = 100 * (iCh / num_temp_sensor_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-   
-   fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
-   for jj=1:num_board_adc_channels % units = volts
-      board_adc_dataFile{jj}.append( adc_scale * (single(Buffer(adc_buffer_index(1:dataToRead)==jj))  - adc_offset ));
-      fraction_done = 100 * (iCh / num_board_adc_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-   end
-   
-   fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
-   if num_board_dig_in_channels
-      dig_in_raw=Buffer(dig_in_buffer_index(1:dataToRead));
-      for jj=1:num_board_dig_in_channels
-         mask = uint16(2^(board_dig_in_channels(jj).native_order) * ones(size(dig_in_raw)));
-         board_dig_in_dataFile{jj}.append(int8(bitand(dig_in_raw, mask) > 0));
-         fraction_done = 100 * (iCh / num_board_dig_in_channels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-      end
-   end
-   
-   fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
-   if num_board_dig_out_channels
-      dig_out_raw=Buffer(dig_out_buffer_index(1:dataToRead));
-      for jj=1:num_board_dig_out_channels
-         mask =uint16( 2^(board_dig_out_channels(jj).native_order) * ones(size(dig_out_raw)));
-         board_dig_out_dataFile{jj}.append(int8(bitand(dig_out_raw, mask) > 0));
-         fraction_done = 100 * (iCh / num_dig_out_channels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
-      end
+   for iD = 1:numel(D)
+      writeDigData(dataBuffer,...
+         Files,digBuffer,info,D{iD},dataPointsToRead);
    end
    
    clc;
-   progress=progress+min(nBlocks,num_data_blocks-nBlocks*(i-1));
-   fraction_done = 100 * (progress / num_data_blocks);
-   if ~floor(mod(fraction_done,5)) % only increment counter by 5%
-      fprintf(1,'Writing data to Matfiles...%.3d%%\n',floor(fraction_done));
+   progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
+   pct = 100 * (progress / info.NumDataBlocks);
+   if ~floor(mod(pct,5)) % only increment counter by 5%
+      fprintf(1,'Writing data to Matfiles...%.3d%%\n',floor(pct));
    end
 end
 fprintf(1,newline);
-
+% Check for gaps in timestamps.
+if (num_gaps == 0)
+   fprintf(1, 'No missing timestamps in data.\n');
+else
+   fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
+      num_gaps);
+end
 % Make sure we have read exactly the right amount of data.
 bytes_remaining = filesize - ftell(fid);
 if (bytes_remaining ~= 0)
@@ -487,26 +376,25 @@ T1=toc;
 % Close data file.
 fclose(fid);
 
-if (data_present)
-   
-   %% Linking data to blockObj
-   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-   % DiskData makes it easy to access data stored in matfies.
-   % Assigning each file to the right channel
-   for iCh=1:num_amplifier_channels
-      blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
-   end
-   blockObj.Time = Files.Time;
+
+
+%% Linking data to blockObj
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DiskData makes it easy to access data stored in matfies.
+% Assigning each file to the right channel
+
+for iCh = 1:blockObj.NumChannels
+   blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
 end
+blockObj.linkToData;
 
 % % % % % % % % % % % % % % % % % % % % % %
-if exist('myJob','var')~=0
+if ~isnan(myJob(1))
    set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
 end
 
 flag = true;
-
-updateStatus(blockObj,'Raw',true);
+updateStatus(blockObj,'Raw',true(1,blockObj.NumChannels));
 
 end
 
@@ -540,10 +428,11 @@ diskFile = nigeLab.libs.DiskData(...
    'access',diskPars.access);
 end
 
-function notifyUser(blockObj,myJob,curField,curIdx,totIdx)
+function notifyUser(blockObj,myJob,curField,stage,curIdx,totIdx)
 %% NOTIFYUSER  Update user of job processing status
+
 % Compute overall completion percentage
-if nargin < 5
+if nargin < 6
    pctComplete = 0;
 else
    pctComplete = floor(100 * (curIdx / totIdx));
@@ -552,47 +441,91 @@ end
 % If parallel job, update the job status tag so you can track progress
 % using the Parallel Job Monitor
 if isa(myJob,'parallel.job.CJSCommunicatingJob')
-   set(myJob,'Tag',sprintf('%s: Extracting %s info...%.3d%%',...
-      blockObj.Name,curField,pctComplete));
+   set(myJob,'Tag',sprintf('%s: Extracting %s %s...%.3d%%',...
+      blockObj.Name,curField,stage,pctComplete));
    
 else % Otherwise, print to Command Window
    if pctComplete==0
-      fprintf(1, '\t->Extracting %s info...%.3d%%\n',...
-         curField,jobPct);
+      fprintf(1, '\t->Extracting %s %s...%.3d%%\n',...
+         curField,stage,pctComplete);
    else
       fprintf(1,'\b\b\b\b\b%.3d%%\n',pctComplete);
    end
 end
 end
 
-% function progress(varargin)
-% if nargin ==0
-%    fprintf(1,'Writing data to Matfiles...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
-% else
-%    prog = varargin{1};
-%    l(1)= 32;
-%    l(2) = 23;
-%    l(3) = 23;
-%    l(4) = 36;
-%    l(5) = 33;
-%    l(6) = 23;
-%    l(7) = 27;
-%    l(8) = 28;
-%
-%    fprintf(1,'%sWriting data to Matfiles...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving RAW data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving AUX data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving SUPPLY VOLTAGE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving TEMPERATURE data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving ADC data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-IN data...%.3d%%\n',0);
-%    fprintf(1, '\t->Saving DIG-OUT data...%.3d%%\n',0);
-% end
-% end
+function availableMemory = getMemory(pctToAllocate)
+%% GETMEMORY   Get available memory based on OS
+
+if ~isunix % For Windows machines:
+   [~,MEM]=memory;
+   availableMemory=MEM.PhysicalMemory.Available*pctToAllocate;
+   
+else % For Mac machines:
+   [status, cmdout]=system('sysctl hw.memsize | awk ''{print $2}''');
+   if status == 0
+      fprintf(1,'\nMac OSX detected. Available memory: %s\n',cmdout);
+      availableMemory=round(str2double(cmdout)*pctToAllocate);
+   else
+      availableMemory=2147483648; % (2^31)
+   end
+end
+end
+
+function [idx,end_] = getBufferIndex(idx,end_,nChannels,nPerBlock,nBlocks)
+%% GETBUFFERINDEX    Get buffer index
+
+index=(end_+1):(end_+ (nChannels * nPerBlock));
+end_ = index(end);
+idx(index)=uint16(reshape(repmat(1:nChannels,nPerBlock,1),1,[]));
+idx=repmat(idx,1,nBlocks);
+end
+
+function [idx,end_] = getDigBuffer(idx,end_,nChannels,nPerBlock,nBlocks)
+%% GETDIGBUFFER   Get buffer index for digital "streams"
+
+index = (end_+1):(end_ + (nChannels * nPerBlock));
+end_ = index(end);
+idx(index)=true;
+idx=repmat(idx,1,nBlocks);
+end
+
+function writeData(dataBuffer,Files,buffer,scaleFactor,offset,field,dataPointsToRead)
+%% WRITEDATA   Write data from buffer to DiskData file
+fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
+
+nChan = numel(Files.(field));
+for iCh=1:nChan % units = microvolts
+   Files.(field){iCh}.append( ...
+      single(scaleFactor.(field)) * ...
+         (single(dataBuffer(buffer.(field)(1:dataPointsToRead)==iCh)) - ...
+            single(offset.(field))));
+   
+   pct = 100 * (iCh /nChan);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
+end
+end
+
+function writeDigData(dataBuffer,Files,buffer,info,field,dataPointsToRead)
+fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
+
+data = dataBuffer(buffer.(field)(1:dataPointsToRead));
+dataIdx = ismember({info.DigIOChannels.signal_type},field);
+dataIdx = find(dataIdx);
+if isempty(dataIdx)
+   return;
+else
+   dataIdx = reshape(dataIdx,1,numel(dataIdx));
+end
+
+dataCount = 0;
+for iCh = dataIdx
+   dataCount = dataCount + 1;
+   mask = uint16(2^(info.DigIOChannels(iCh).native_order) * ones(size(data)));
+   Files.(field){dataCount}.append(int8(bitand(data, mask) > 0));
+   
+   pct = 100 * (dataCount / numel(dataIdx));
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
+end
+
+end

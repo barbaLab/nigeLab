@@ -8,18 +8,36 @@ function pars = Event()
 %%
 pars = struct;
 % Just some ideas for now:
-pars.Events = {'Stim'; ...          % Stimulation times and data
-               'Sync'; ...          % Sync LED times
-               'User'; ...          % User digital marker onsets
-               'LPellet'; ...       % Left pellet beam break onsets
-               'LButtonDown'; ...   % Left-button press onset
-               'LButtonUp'; ...     % Left-button press offset
-               'RPellet'; ...       % Right pellet beam break onsets
-               'RButtonDown'; ...   % Right-button press onset
-               'RButtonUp'; ...     % Right-button press offset
-               'Beam'; ...          % Reach beam break
-               'Nose'; ...          % Nose-poke beam break
-               'Epoch'};            % Onsets mid-trial epochs
+pars.Events = {...
+   'Stim';           % 1)  Stimulation times and data
+   'Sync';           % 2)  Sync LED times
+   'User';           % 3)  User digital marker onsets
+   'LPellet';        % 4)  Left pellet beam break onsets
+   'LButtonDown';    % 5)  Left-button press onset
+   'LButtonUp';      % 6)  Left-button press offset
+   'RPellet';        % 7)  Right pellet beam break onsets
+   'RButtonDown';    % 8)  Right-button press onset
+   'RButtonUp';      % 9)  Right-button press offset
+   'Beam';           % 10) Reach beam break
+   'Nose';           % 11) Nose-poke beam break
+   'Epoch';          % 12) Onsets mid-trial epochs
+   };            
+   
+% This should match number of elements of Events:
+pars.Fields = {...
+   'Stim';        % 1) 
+   'Video';       % 2)
+   'DigIO';       % 3)
+   'DigIO';       % 4)
+   'DigIO';       % 5)
+   'DigIO';       % 6)
+   'DigIO';       % 7)
+   'DigIO';       % 8)
+   'DigIO';       % 9)
+   'DigIO';       % 10) All beam breaks (Pellets, Beam, Nose) could be 
+   'DigIO';       % 11) 'AnalogIO' as well?
+   'DigIO';       % 12) Could be 'Notes' ?
+   };
  
 pars.Type = [4, 5, 3, 5, 5, 5, 5, 5, 5, 5, 5, 3];
             
@@ -28,10 +46,14 @@ pars.TypeID = {{'value'}; ...                         % Type 1
                {'value', 'tag', 'ts'}; ...            % Type 3
                {'value', 'tag', 'ts', 'snippet'}; ... % Type 4
                {'value', 'ts'}};                      % Type 5
-               
+        
+%% DO ERROR PARSING
 if numel(pars.Events) ~= numel(pars.Type)
    error('Dimension mismatch for pars.Events (%d) and pars.Type (%d).',...
       numel(pars.Events), numel(pars.Type));
+elseif numel(pars.Events) ~= numel(pars.Fields)
+   error('Dimension mismatch for pars.Events (%d) and pars.Type (%d).',...
+      numel(pars.Events), numel(pars.Fields));
 end
                
                               

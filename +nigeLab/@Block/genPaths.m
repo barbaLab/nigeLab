@@ -1,4 +1,4 @@
-function flag = genPaths(blockObj,animalPath)
+function flag = genPaths(blockObj,animalLoc)
 %% GENPATHS    Set some useful path variables to file locations
 %
 %  flag = GENPATHS(blockObj);
@@ -11,13 +11,13 @@ function flag = genPaths(blockObj,animalPath)
 
 %% 
 if (nargin > 1)
-   paths.Animal = animalPath;
-   if isempty(blockObj.paths)
-      paths.Animal_ext = [blockObj.paths.AnimalLoc; {animalPath}];
-      paths.Animal_idx = 2;
+   paths.Animal = animalLoc;
+   if isempty(blockObj.Paths)
+      paths.Animal_ext = {animalLoc};
+      paths.Animal_idx = 1;
    else
-      paths.Animal_ext = [blockObj.paths.Animal_ext; {animalPath}];
-      paths.Animal_idx = numel(blockObj.paths.Animal_ext);
+      paths.Animal_ext = [blockObj.Paths.Animal_ext; {animalLoc}];
+      paths.Animal_idx = numel(blockObj.Paths.Animal_ext);
    end
 else
    paths.Animal     = fullfile(blockObj.AnimalLoc);
@@ -25,7 +25,8 @@ else
    paths.Animal_idx = 1;
 end
 
-blockObj.paths = paths;
+paths.Block = fullfile(paths.Animal,blockObj.Name);
+blockObj.Paths = paths;
 flag = findCorrectPath(blockObj,paths);
 
 end

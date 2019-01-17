@@ -10,30 +10,13 @@ flag = false;
 switch blockObj.FileExt
    case '.rhd'
       blockObj.RecType='Intan';
-      blockObj.
       header=ReadRHDHeader('NAME',blockObj.RecFile,...
                            'VERBOSE',blockObj.Verbose);
-      blockObj.NumADCchannels = header.num_board_adc_channels;
-      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
-      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
-      blockObj.ADCChannels = header.board_adc_channels;
-      blockObj.DigInChannels = header.board_dig_in_channels;
-      blockObj.DigOutChannels = header.board_dig_out_channels;
       
    case '.rhs'
       blockObj.RecType='Intan';
       header=ReadRHSHeader('NAME',blockObj.RecFile,...
-                           'VERBOSE',blockObj.Verbose);
-                        
-      blockObj.DCAmpDataSaved = header.dc_amp_data_saved;
-      blockObj.NumDACChannels = header.num_board_dac_channels;
-      blockObj.NumADCchannels = header.num_board_adc_channels;
-      blockObj.NumDigInChannels = header.num_board_dig_in_channels;
-      blockObj.NumDigOutChannels = header.num_board_dig_out_channels;
-      blockObj.DACChannels = header.board_dac_channels;
-      blockObj.ADCChannels = header.board_adc_channels;
-      blockObj.DigInChannels = header.board_dig_in_channels;
-      blockObj.DigOutChannels = header.board_dig_out_channels;
+                           'VERBOSE',blockObj.Verbose);                   
       
    case {'', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
       files = dir(fullfile(dName,'*.t*'));
@@ -55,16 +38,19 @@ switch blockObj.FileExt
 end
 
 %% ASSIGN DATA FIELDS USING HEADER INFO
-blockObj.Channels = header.amplifier_channels;
+blockObj.Channels = header.raw_channels;
+blockObj.Meta.Header = fixNamingConvention(header);
 
 if ~blockObj.parseProbeNumbers % Depends on recording system
    warning('Could not properly parse probe identifiers.');
    return;
 end
-blockObj.NumChannels = header.num_amplifier_channels;
+blockObj.NumChannels = header.num_raw_channels;
+blockObj.NumAnalogIO = header.num_analogIO_channels;
+blockObj.NumDigIO = header.num_digIO_channels;
 blockObj.NumProbes = header.num_probes;
 blockObj.SampleRate = header.sample_rate;
-blockObj.Samples = header.num_amplifier_samples;
+blockObj.Samples = header.num_raw_samples;
 
 %% SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
 parseChannelID(blockObj);
@@ -77,5 +63,20 @@ else
 end
 
 flag = true;
+
+function header_out = fixNamingConvention(header_in)
+%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+
+header_out = struct;
+f = fieldnames(header_in);
+for iF = 1:numel(f)
+   str = strsplit(f{iF},'_');
+   for iS = 1:numel(str)
+      str{iS}(1) = upper(str{iS}(1));
+   end
+   str = strjoin(str,'');
+   header_out.(str) = header_in.(f{iF});
+end
+end
 
 end

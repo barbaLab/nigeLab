@@ -24,7 +24,7 @@ if tmp == 0
 else
    % Make sure it's a valid directory, as it could be provided through
    % second input argument:
-   flag = blockObj.genPaths(animalPath);
+   flag = blockObj.genPaths(animalLoc);
 end
 
 end
