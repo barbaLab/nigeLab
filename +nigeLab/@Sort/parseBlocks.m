@@ -28,34 +28,20 @@ for ii = 1:numel(blockObj)
    if ~blockObj(ii).updateParams('Sort')
       warning('Parameters unset for %s. Skipping...',blockObj(ii).Name);
       continue;
-   end   
+   end
    
    % If previous sorting is available:
    if getStatus(blockObj(ii),'Sorted')
       fprintf(1,'\nChecking SORTED for %s...000%%\n',...
          blockObj(ii).Name);
+      fType = getFileType(blockObj(ii),'Sorted');
       for iCh = blockObj(ii).Mask
-         % For backwards compatibility, make sure "tags" is not a cell
-         tag = blockObj(ii).Channels(iCh).Sorted.tag(:);
-         
-         if iscell(tag) % Re-make the file
-            value = getSort(blockObj,iCh);
-            tag = parseSpikeTagIdx(blockObj,tag);
-            fName = getPath(blockObj(ii).Channels(iCh).Sorted);
-            sorted = struct('value',value,'tag',tag);
-            
-            blockObj(ii).Channels(iCh).Sorted = ...
-               nigeLab.libs.DiskData('MatFile',fullfile(fName),...
-               sorted,'access','w');
-            
-         else % Otherwise, just make sure the sorted data is writable
-            blockObj(ii).Channels(iCh).Sorted = unlockData(...
-               blockObj(ii).Channels(iCh).Sorted);
-         end
          
          
-         fraction_done = 100 * (iCh / blockObj(ii).NumChannels);
-         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+         blockObj(ii).Channels(iCh).Sorted = unlockData(...
+            blockObj(ii).Channels(iCh).Sorted);
+         pct = 100 * (iCh / blockObj(ii).NumChannels);
+         fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
       end
    else % If no sorted files, but clusters file exists:
       if getStatus(blockObj(ii),'Clusters',blockObj(ii).Mask)
@@ -81,8 +67,8 @@ for ii = 1:numel(blockObj)
                nigeLab.libs.DiskData('MatFile',fullfile(fName),...
                sorted,'access','w');
             
-            fraction_done = 100 * (iCh / blockObj(ii).NumChannels);
-            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+            pct = 100 * (iCh / blockObj(ii).NumChannels);
+            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
          end
       else % If no clustering or sorting has apparently been done:
          fprintf(1,'\nChecking CLUSTERS for %s...000%%\n',...
@@ -124,8 +110,8 @@ for ii = 1:numel(blockObj)
                nigeLab.libs.DiskData('MatFile',fullfile(fName),...
                sorted,'access','w');
             
-            fraction_done = 100 * (iCh / blockObj(ii).NumChannels);
-            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+            pct = 100 * (iCh / blockObj(ii).NumChannels);
+            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
          end
       end
       % Update the status of this blockObj:

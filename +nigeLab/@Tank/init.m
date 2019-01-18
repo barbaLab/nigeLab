@@ -1,17 +1,18 @@
-function init(tankObj)
+function flag = init(tankObj)
 %% INIT Initialize TANK object
 %
-%  tankObj.INIT;
+%  flag = tankObj.init;
 %
 %  By: Max Murphy v1.0  06/14/2018 Original version (R2017b)
  
 %% PARSE NAME AND SAVE LOCATION
+flag = false;
 tankObj.Name = strsplit(tankObj.RecDir,filesep);
 tankObj.Name = tankObj.Name{end};
-tankObj.setSaveLocation(tankObj.SaveLoc);
+tankObj.setSaveLocation(tankObj.Path);
 
-if exist(tankObj.SaveLoc,'dir')==0
-    mkdir(tankObj.SaveLoc);
+if exist(tankObj.Path,'dir')==0
+    mkdir(tankObj.Path);
     tankObj.ExtractFlag = true;
 else
     tankObj.ExtractFlag = false;
@@ -39,4 +40,5 @@ end
 % end
 
 tankObj.save;
+flag = true;
 end

@@ -56,18 +56,22 @@ end
 if getStatus(blockObj,'Clusters',ch)
    clusterIndex = blockObj.Channels(ch).Sorted.value;
 else % If it doesn't exist
-   if isfield(blockObj.Channels,'Spikes') % but spikes do
+   if getStatus(blockObj,'Spikes',ch) % but spikes do
       ts = getSpikeTimes(blockObj,ch);
       n = numel(ts);
-      clusterIndex = [zeros(n,3) ts zeros(n,1)];
+      clusterIdx = zeros(n,1);
+      data = [zeros(n,2) clusterIdx ts zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
       fType = blockObj.getFileType('Clusters');
       fName = fullfile(sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
          num2str(blockObj.Channels(ch).probe),...
          blockObj.Channels(ch).chStr));
+      if exist(blockObj.Paths.Clusters.dir,'dir')==0
+         mkdir(blockObj.Paths.Clusters.dir);
+      end
       blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
-         fName,'access','w');
+         fName,data,'access','w');
       if ~suppressText
          fprintf(1,'Initialized Clusters file for P%d: Ch-%s\n',...
             blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);

@@ -764,6 +764,11 @@ classdef DiskData < handle
          
       end
       
+      function info = getInfo(obj)
+         %% GETINFO  Get info about the diskfile
+         info = whos(obj.diskfile_);
+      end
+      
       function cl=class(obj)
          %% CLASS  Overloaded function for getting DiskData array class
          % Note: I changed this to reflect the Matlab class naming

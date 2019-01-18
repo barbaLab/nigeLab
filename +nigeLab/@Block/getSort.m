@@ -48,26 +48,56 @@ if (numel(blockObj) > 1)
    clusterIndex = [];
    for ii = 1:numel(blockObj)
       clusterIndex = [clusterIndex; getSort(blockObj(ii),ch)]; %#ok<AGROW>
-   end 
+   end
    return;
 end
 
 %% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
+fType = blockObj.getFileType('Sorted');
 if getStatus(blockObj,'Sorted',ch)
+   % For backwards compatibility, make sure "tags" is not a cell
+   info = getInfo(blockObj.Channels(ch).Sorted);
+   names = {info.name};
+   tagIdx = find(strcmpi(names,'tag'),1,'first');
+   
+   if strcmp(info(tagIdx).class,'cell') 
+      tag = blockObj.Channels(ch).Sorted.tag(:);
+      tag = parseSpikeTagIdx(blockObj,tag);
+      fName = getPath(blockObj.Channels(ch).Sorted);
+      
+      sorted = zeros(numel(tag),5);
+      sorted(:,2) = blockObj.Channels(ch).Sorted.class(:);
+      sorted(:,3) = tag;
+      sorted(:,4) = getSpikeTimes(blockObj,ch);
+      
+      blockObj.Channels(ch).Sorted = ...
+         nigeLab.libs.DiskData(fType,fullfile(fName),...
+         sorted,'access','w');
+      
+   else
+      
+      
+   end
+   
+   % And return the cluster index
    clusterIndex = blockObj.Channels(ch).Sorted.value;
+   
 else % If it doesn't exist
-   if isfield(blockObj.Channels,'Spikes') % but spikes do
+   if getStatus(blockObj,'Spikes',ch) % but spikes do
       ts = getSpikeTimes(blockObj,ch);
       n = numel(ts);
-      clusterIndex = [zeros(n,3) ts zeros(n,1)];
+      clusterIdx = zeros(n,1);
+      data = [zeros(n,2) clusterIdx ts zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
-      fType = blockObj.getFileType('Sorted');
       fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
          num2str(blockObj.Channels(ch).probe),...
          blockObj.Channels(ch).chStr));
+      if exist(blockObj.Paths.Sorted.dir,'dir')==0
+         mkdir(blockObj.Paths.Sorted.dir);
+      end
       blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
-         fName,'access','w');
+         fName,data,'access','w');
       if ~suppressText
          fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
             blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);

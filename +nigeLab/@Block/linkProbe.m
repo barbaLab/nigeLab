@@ -44,6 +44,7 @@ if isfield(blockObj.Notes,'Probes')
       % etc. for impedance values and other things associated with the
       % probes.
       blockObj.Probes.(probePorts{ii}).Ch = readtable(fName);
+      blockObj.updateStatus('Probes',true,ii);
    end
    
    % For each channel, update metadata from probe config file
@@ -52,7 +53,6 @@ if isfield(blockObj.Notes,'Probes')
       if isempty(blockObj.Probes)
          flag = true;
       else
-         updateFlag(iCh) = true;
          curCh = blockObj.Channels(iCh).chip_channel;
          streamIdx = blockObj.Channels(iCh).board_stream;
          % Go through all ports (or boards, really)
@@ -83,6 +83,5 @@ if isfield(blockObj.Notes,'Probes')
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
    end
 end
-blockObj.updateStatus('Meta',updateFlag);
 
 end

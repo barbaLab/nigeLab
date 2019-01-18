@@ -7,18 +7,19 @@ function  setSaveLocation(animalObj,saveloc)
 
 %% Prompt for location using previously set location
 if nargin<2 || isempty(saveloc)
-   tmp = uigetdir(animalObj.DEF,...
-      'Set Processed Animal Location');
+   tmp = uigetdir(animalObj.Pars.DefaultSaveLoc,...
+      animalObj.Pars.SaveLocPrompt);
 elseif nargin==2
    tmp = saveloc;
 end
+
 %% Abort if cancel was clicked, otherwise set it
 if tmp == 0
    error('Process canceled.');
 else
-   animalObj.SaveLoc = fullfile(tmp,animalObj.Name);
-   for bb=animalObj.Blocks
-      bb.setSaveLocation(animalObj.AnimalLoc);
+   animalObj.Path = fullfile(tmp,animalObj.Name);
+   for block = animalObj.Blocks
+      block.getSaveLocation(animalObj.Path);
    end
 end
 

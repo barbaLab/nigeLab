@@ -34,8 +34,9 @@ classdef Tank < handle
    end
    %% PRIVATE PROPERTIES
    properties (GetAccess = public, SetAccess = private, Hidden = true) %debugging purposes, is private
-      RecDir                     % Directory of the TANK
+      RecDir                  % Directory of the TANK
       Pars                    % Parameters struct
+      SaveLoc                 % Directory of BLOCK hierarchy parent folder
       
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
@@ -43,14 +44,14 @@ classdef Tank < handle
       DefaultSaveLoc          % Default for save location
       DefaultTankLoc          % Default for UI TANK selection
       Delimiter               % Filename metadata delimiter
-      ExtractFlag             % Flag to indicate if extraction is needed
       RecType                 % Acquisition system used for this Tank
                               % Currently supported formats
                               % ---------------------------
                               % Intan  ('Intan')
-                              % TDT    ('TDT')                              
-      SaveLoc                % Directory of BLOCK hierarchy parent folder
-      ParallelFlag
+                              % TDT    ('TDT')         
+                              
+      ExtractFlag             % Flag to indicate if extraction is needed
+      ParallelFlag            % Flag to run things via parallel architecture
    end
    
    %% PUBLIC METHODS
@@ -104,11 +105,14 @@ classdef Tank < handle
          end
          
          %% INITIALIZE TANK OBJECT
-         tankObj.init;
+         if ~tankObj.init
+            error('Could not initialize TANK object.');
+         end
          
       end
       
       function addAnimal(tankObj,AnimalFolder)
+         %% ADDANIMAL   Method to add animal to nigeLab.Tank Animals property
           if nargin<2
               AnimalFolder=[];
           end
@@ -130,19 +134,19 @@ classdef Tank < handle
       end
       
       function save(tankObj)
+         %% SAVE  Method to save a nigeLab.Tank class object
           A=tankObj.Animals;
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(fullfile([tankObj.SaveLoc '_Tank.mat']),'tankObj','-v7.3') 
+         save(fullfile([tankObj.Path '_Tank.mat']),'tankObj','-v7.3') 
       end
       
       % Extraction methods
-      flag = doRawExtraction(tankObj)    % Convert raw data to Matlab BLOCK
-      flag = doReReference(tankObj)
-      flag = doLFPExtraction(tankObj)
-      flag = doSD(tankObj)
-      flag = clearSpace(tankObj,ask)
+      flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
+      flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
+      flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
+      flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
       
       % Utility
       linkToData(tankObj)
@@ -152,13 +156,12 @@ classdef Tank < handle
       
    end
    %% PRIVATE METHODS
-   methods (Access = public)
-      init(tankObj)                 % Initializes the TANK object.
-      intan2Block(tankObj,varargin) % Does the actual data conversion
-      setSaveLocation(tankObj,saveloc)      % Set save location for processed TANK.
-      ClusterConvert(tankObj)
-      LocalConvert(tankObj)
-      SlowConvert(tankObj)
-      
+   methods (Access = public, Hidden = true)
+      flag = init(tankObj)                 % Initializes the TANK object.
+      flag = setSaveLocation(tankObj,saveloc)      % Set save location for processed TANK.
+%       ClusterConvert(tankObj)
+%       LocalConvert(tankObj)
+%       SlowConvert(tankObj)
+      flag = clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
    end
 end

@@ -6,11 +6,11 @@ classdef Animal < handle
       Name         % Animal identification code
       Blocks       % Children (nigeLab.Block objects)
       Probes       % Electrode configuration structure
+      Path         % Path to Animal folder
    end
    
    properties (GetAccess = public, SetAccess = private, Hidden = true)
       Pars              % parameters struct for templates from nigeLab.defaults
-      Paths             % paths struct
       
       TankLoc           % directory for saving Animal
       RecDir            % directory with raw binary data in intan format
@@ -57,7 +57,7 @@ classdef Animal < handle
       end
       
       function addBlock(animalObj,BlockPath)
-         
+      %% ADDBLOCK  Add Block to Blocks property   
          newBlock= nigeLab.Block('RecFile',BlockPath,...
             'AnimalLoc',animalObj.Loc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
@@ -68,7 +68,7 @@ classdef Animal < handle
          for ii=1:numel(B)
             B(ii).save;
          end
-         save(fullfile([animalObj.TankLoc '_Animal.mat']),'animalObj','-v7.3');
+         save(fullfile([animalObj.Path '_Animal.mat']),'animalObj','-v7.3');
       end
       
       %       updateID(blockObj,name,type,value)    % Update the file or folder identifier

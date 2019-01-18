@@ -30,22 +30,6 @@ function out = tankGet(tankObj,prop)
 % By: Max Murphy  v1.0  06/14/2018  Original version (R2017b)
 
 %% PARSE INPUT
-% if nargin < 2
-%    prop = {'DIR'; ...
-%            
-% 
-% 
-% for iV = 1:2:numel(varargin) % Can specify properties on construct
-%             if ~ischar(varargin{iV})
-%                continue
-%             end
-%             p = findprop(tankObj,varargin{iV});
-%             if isempty(p)
-%                continue
-%             end
-%             tankObj.(varargin{iV}) = varargin{iV+1};
-%          end
-
 
 out = tankObj.(prop);
 

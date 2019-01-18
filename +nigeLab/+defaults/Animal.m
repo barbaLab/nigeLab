@@ -7,8 +7,10 @@ function pars = Animal()
 
 %%
 pars = struct;
-pars.DefaultRecLoc = 'P:/';
-pars.SupportedFormats = {'rhs','rhd','tdt'};
+pars.DefaultRecLoc = 'R:/';
+pars.DefaultSaveLoc = 'P:/';
+pars.SaveLocPrompt = 'Set Processed Animal Location';
+pars.SupportedFormats = {'.rhs','.rhd','tdt'};
 
 end
 

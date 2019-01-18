@@ -36,7 +36,7 @@ function status = getStatus(blockObj,operation,channel)
 % By: FB & MM 2018 MAECI collaboration
 
 %% DEFAULTS
-N_CHAR_TO_MATCH = 3;
+N_CHAR_TO_MATCH = 7;
 
 %%
 switch nargin

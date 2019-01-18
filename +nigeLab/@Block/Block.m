@@ -304,7 +304,7 @@ classdef Block < handle
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
       
-      % Methods for parsing spike info (to be deprecated):
+      % Methods for parsing spike info:
       tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
@@ -312,6 +312,8 @@ classdef Block < handle
       sortIdx = getSort(blockObj,ch,suppress);  % Get spike sorted classes
       clusIdx = getClus(blockObj,ch,suppress);  % Get spike cluster classes
       [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
+      flag = saveChannelSpikingEvents(blockObj,ch,spk,feat,art); % Save spikes for a channel
+      flag = checkSpikeFile(blockObj,ch); % Check a spike file for compatibility
       
       % Method for getting event info:
       [data,blockIdx] = getEventData(blockObj,type,field,ch,matchValue,matchField) % Retrieve event data

@@ -24,8 +24,13 @@ end
 pars = blockObj.SDPars;
 pars.FS = blockObj.SampleRate;
 
+%% UPDATE STATUS FOR THESE STAGES
+blockObj.updateStatus('Spikes',false,blockObj.Mask);
+blockObj.updateStatus('SpikeFeatures',false,blockObj.Mask);
+blockObj.updateStatus('Clusters',false,blockObj.Mask);
+blockObj.updateStatus('Sorted',false,blockObj.Mask);
+
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-nCh = blockObj.NumChannels;
 
 fprintf(1,'\n000%%\n');
 for iCh = blockObj.Mask
@@ -33,12 +38,6 @@ for iCh = blockObj.Mask
    % Parse file-name information
    pNum  = num2str(blockObj.Channels(iCh).probe);
    chNum = blockObj.Channels(iCh).chStr;
-   fNameSpikes = sprintf(strrep(blockObj.Paths.Spikes.file,'\','/'),...
-      pNum,chNum);
-   fNameFeats = sprintf(strrep(blockObj.Paths.SpikeFeatures.file,'\','/'),...
-      pNum,chNum);
-   fNameArt = sprintf(strrep(blockObj.Paths.Artifact.file,'\','/'),...
-      pNum,chNum);
    
    fNameClus = sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
       pNum,chNum);
@@ -62,45 +61,14 @@ for iCh = blockObj.Mask
    
    % Do the detection:
    if (iCh == 1)
-      [spk,feats,art,blockObj.SDPars] = PerChannelDetection(data,pars);
+      [spk,feat,art,blockObj.SDPars] = PerChannelDetection(data,pars);
    else
-      [spk,feats,art] = PerChannelDetection(data,pars);
+      [spk,feat,art] = PerChannelDetection(data,pars);
    end
    
-   % Save Spikes using DiskData pointer to the file:
-   fType = blockObj.FileType{strcmpi(blockObj.Fields,'Spikes')};
-   if exist(fullfile(fNameSpikes),'file')~=0
-      delete(fullfile(fNameSpikes));
+   if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
+      error('Could not save spiking events for channel %d.',iCh);
    end
-   blockObj.Channels(iCh).Spikes = ...
-      nigeLab.libs.DiskData(fType,fullfile(fNameSpikes),...
-      spk,'access','w');
-   blockObj.Channels(iCh).Spikes = lockData(...
-      blockObj.Channels(iCh).Spikes);
-   
-   % Save Features using DiskData pointer to the file:
-   fType = blockObj.FileType{strcmpi(blockObj.Fields,'SpikeFeatures')};
-   if exist(fullfile(fNameFeats),'file')~=0
-      delete(fullfile(fNameFeats));
-   end
-   blockObj.Channels(iCh).SpikeFeatures = ...
-      nigeLab.libs.DiskData(fType,fullfile(fNameFeats),...
-      feats,'access','w');
-   blockObj.Channels(iCh).SpikeFeatures = lockData(...
-      blockObj.Channels(iCh).SpikeFeatures);
-   
-   % Save Artifact using DiskData pointer to the file:
-   fType = blockObj.FileType{strcmpi(blockObj.Fields,'Artifact')};
-   if exist(fullfile(fNameArt),'file')~=0
-      delete(fullfile(fNameArt));
-   end
-   blockObj.Channels(iCh).Artifact = ...
-      nigeLab.libs.DiskData(fType,fullfile(fNameArt),...
-      art,'access','w');
-   blockObj.Channels(iCh).Artifact = lockData(...
-      blockObj.Channels(iCh).Artifact);
-   
-   blockObj.updateStatus('Spikes',true,iCh);
    
    % Initialize Clusters files (could be modified later):
    if exist(fullfile(fNameClus),'file')==0
@@ -114,7 +82,7 @@ for iCh = blockObj.Mask
    
    
    % And update the status indicator in Command Window:
-   pct = 100 * (iCh / nCh);
+   pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
    
 end
@@ -124,13 +92,13 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spk,feats,art,pars] = PerChannelDetection(data, pars)
+   function [spk,feat,art,pars] = PerChannelDetection(data, pars)
       %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
       %
       %   spk = PERCHANNELDETECTION(data,pars);
-      %   [spk,feats] = PERCHANNELDETECTION(data,pars);
-      %   [spk,feats,art] = PERCHANNELDETECTION(data,pars);
-      %   [spk,feats,art,pars] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feat] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feat,art] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feat,art,pars] = PERCHANNELDETECTION(data,pars);
       %
       %   --------
       %    INPUTS
@@ -151,7 +119,7 @@ flag = true;
       %                       corresponding to each positive entry of peak_train
       %                       (spikes).
       %
-      %     feats    :        Contains the features corresponding to
+      %     feat     :        Contains the features corresponding to
       %                       detected spikes.
       %
       %      art     :        Contains artifact times.
@@ -319,14 +287,13 @@ flag = true;
       tIdx = reshape(tIdx,numel(tIdx),1);
       
       type = zeros(size(tIdx));
-      tag = zeros(size(tIdx));
-      ts = tIdx./pars.FS; % Get values in seconds
       value = tIdx; % Store in value for now
-      
+      tag = zeros(size(tIdx));
+      ts = tIdx./pars.FS; % Get values in seconds      
       
       %% CONCATENATE OUTPUT MATRICES
       spk = [type,value,tag,ts,spikes];
-      feats = [type,value,tag,ts,features];
+      feat = [type,value,tag,ts,features];
       
       %% ASSIGN "ARTIFACT" OUTPUT
       artifact = reshape(artifact,numel(artifact),1);
