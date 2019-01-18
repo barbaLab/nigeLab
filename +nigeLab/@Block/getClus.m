@@ -1,7 +1,7 @@
-function clusterIndex = getSort(blockObj,ch,suppressText)
-%% GETSORT     Retrieve list of spike Sorted class indices for each spike
+function clusterIndex = getClus(blockObj,ch,suppressText)
+%% GETCLUS     Retrieve list of spike Clusters class indices for each spike
 %
-%  clusterIndex = GETSORT(blockObj,ch);
+%  clusterIndex = GETCLUS(blockObj,ch);
 %
 %  --------
 %   INPUTS
@@ -38,7 +38,7 @@ end
 if (numel(ch) > 1)
    clusterIndex = cell(size(ch));
    for ii = 1:numel(ch)
-      clusterIndex{ii} = getSort(blockObj,ch(ii));
+      clusterIndex{ii} = getClus(blockObj,ch(ii));
    end
    return;
 end
@@ -47,13 +47,13 @@ end
 if (numel(blockObj) > 1)
    clusterIndex = [];
    for ii = 1:numel(blockObj)
-      clusterIndex = [clusterIndex; getSort(blockObj(ii),ch)]; %#ok<AGROW>
+      clusterIndex = [clusterIndex; getClus(blockObj(ii),ch)]; %#ok<AGROW>
    end 
    return;
 end
 
 %% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
-if getStatus(blockObj,'Sorted',ch)
+if getStatus(blockObj,'Clusters',ch)
    clusterIndex = blockObj.Channels(ch).Sorted.value;
 else % If it doesn't exist
    if isfield(blockObj.Channels,'Spikes') % but spikes do
@@ -62,14 +62,14 @@ else % If it doesn't exist
       clusterIndex = [zeros(n,3) ts zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
-      fType = blockObj.FileType{ismember(blockObj.Fields,'Sorted')};
-      fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+      fType = blockObj.FileType{ismember(blockObj.Fields,'Clusters')};
+      fName = fullfile(sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
          num2str(blockObj.Channels(ch).probe),...
          blockObj.Channels(ch).chStr));
-      blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+      blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
          fName,'access','w');
       if ~suppressText
-         fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+         fprintf(1,'Initialized Clusters file for P%d: Ch-%s\n',...
             blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
       end
    else

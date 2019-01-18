@@ -40,6 +40,12 @@ for iCh = blockObj.Mask
    fNameArt = sprintf(strrep(blockObj.Paths.Artifact.file,'\','/'),...
       pNum,chNum);
    
+   fNameClus = sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
+      pNum,chNum);
+   fNameSort = sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+      pNum,chNum);
+   
+   
    % Get pointer to the correct data:
    if getStatus(blockObj,'CAR',iCh)
       data=blockObj.Channels(iCh).CAR(:);  % Load CAR-filtered data
@@ -93,6 +99,19 @@ for iCh = blockObj.Mask
       art,'access','w');
    blockObj.Channels(iCh).Artifact = lockData(...
       blockObj.Channels(iCh).Artifact);
+   
+   blockObj.updateStatus('Spikes',true,iCh);
+   
+   % Initialize Clusters files (could be modified later):
+   if exist(fullfile(fNameClus),'file')==0
+      blockObj.getClus(iCh,true);
+   end
+   
+   % Initialize Clusters files (could be modified later):
+   if exist(fullfile(fNameSort),'file')==0
+      blockObj.getSort(iCh,true);
+   end
+   
    
    % And update the status indicator in Command Window:
    pct = 100 * (iCh / nCh);
@@ -296,7 +315,7 @@ flag = true;
       end
       
       %% GENERATE OUTPUT VECTORS
-      tIdx = find(peak_train); 
+      tIdx = find(peak_train);
       tIdx = reshape(tIdx,numel(tIdx),1);
       
       type = zeros(size(tIdx));
@@ -304,7 +323,7 @@ flag = true;
       ts = tIdx./pars.FS; % Get values in seconds
       value = tIdx; % Store in value for now
       
-
+      
       %% CONCATENATE OUTPUT MATRICES
       spk = [type,value,tag,ts,spikes];
       feats = [type,value,tag,ts,features];

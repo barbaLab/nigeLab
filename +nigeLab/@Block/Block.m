@@ -309,7 +309,8 @@ classdef Block < handle
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
       spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms
-      class = getSort(blockObj,ch);             % Get spike sorted classes
+      sortIdx = getSort(blockObj,ch,suppress);  % Get spike sorted classes
+      clusIdx = getClus(blockObj,ch,suppress);  % Get spike cluster classes
       [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
       
       % Method for getting event info:
