@@ -1,8 +1,15 @@
 function init(animalObj)
-[~,NAME] = fileparts(animalObj.RecDir);
-animalObj.Name = NAME;
+%% INIT  Initialize nigeLab.Animal class object
+%
+%  animalObj.init;
+%
+% By: Federico Barban & Max Murphy MAECI 2018 Collaboration
 
-animalObj.setSaveLocation(animalObj.SaveLoc);
+%%
+[~,animalName] = fileparts(animalObj.RecDir);
+animalObj.Name = animalName;
+
+animalObj.setSaveLocation(animalObj.AnimalLoc);
 
 if exist(animalObj.SaveLoc,'dir')==0
     mkdir(animalObj.SaveLoc);
@@ -11,14 +18,14 @@ else
     animalObj.ExtractFlag = false;
 end
 
+supportedFormats = animalObj.Pars.Animal.SupportedFormats;
 
-supportedFormats={'rhs','rhd','tdt'};
 
 Recordings = dir(fullfile(animalObj.RecDir));
 Recordings=Recordings(~ismember({Recordings.name},{'.','..'}));
 
 for bb=1:numel(Recordings)
-   [PATHSTR,NAME,ext] = fileparts(Recordings(bb).name);
+   [~,~,ext] = fileparts(Recordings(bb).name);
    addBlock=false;
    if Recordings(bb).isdir
       tmp=dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));

@@ -28,11 +28,16 @@ while blockObj.Paths.Animal_idx < N
    if animalExists
       blockObj.Paths.Animal = blockObj.Paths.Animal_ext{idx};
       blockObj.Paths.Block = fullfile(blockObj.Paths.Animal,blockObj.Name);
+      if exist(blockObj.Paths.Block,'dir')==0
+         mkdir(blockObj.Paths.Block);
+      end
       break;
    end
 end
 
 if ~animalExists
+   blockObj.Paths.Animal = blockObj.Paths.Animal_ext{idx};
+   blockObj.Paths.Block = fullfile(blockObj.Paths.Animal,blockObj.Name);
    warning('Could not find ANIMAL path.');
    return;
 end

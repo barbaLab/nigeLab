@@ -10,6 +10,7 @@ function [pars,Fields] = Block()
 % structure:
 pars             = struct;
 
+pars.SupportedFormats = {'rhs','rhd','tdt'};
 pars.RecLocDefault  = 'R:/Rat';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format

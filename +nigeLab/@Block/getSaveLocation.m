@@ -24,7 +24,17 @@ if tmp == 0
 else
    % Make sure it's a valid directory, as it could be provided through
    % second input argument:
-   flag = blockObj.genPaths(animalLoc);
+   if ~blockObj.genPaths(tmp)
+      mkdir(blockObj.Paths.Animal);
+      mkdir(blockObj.Paths.Block);
+      if ~blockObj.genPaths(tmp)
+         warning('Still no valid Animal/Block location.');
+      else
+         flag = true;
+      end
+   else
+      flag = true;
+   end
 end
 
 end

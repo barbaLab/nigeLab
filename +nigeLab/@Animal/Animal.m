@@ -1,29 +1,30 @@
 classdef Animal < handle
-%% ANIMAL   Class for handling each nigeLab.Block for one animal
-
-%% PUBLIC PROPERTIES
-   properties (Access = public)
+   %% ANIMAL   Class for handling each nigeLab.Block for one animal
+   
+   %% PUBLIC PROPERTIES
+   properties (GetAccess = public, SetAccess = public)
       Name         % Animal identification code
-      ElecConfig   % Electrode configuration structure
-      RecType      % Intan TDT or other
-     
+      Blocks       % Children (nigeLab.Block objects)
+      Probes       % Electrode configuration structure
    end
    
-   properties (Access = public) %debugging purpose, is private
-      RecDir         % directory with raw binary data in intan format
-      Blocks       % Children (BLOCK)
-      SaveLoc
-      ExtractFlag
-      DEF = 'P:/Rat'
+   properties (GetAccess = public, SetAccess = private, Hidden = true)
+      Pars              % parameters struct for templates from nigeLab.defaults
+      Paths             % paths struct
+      
+      TankLoc           % directory for saving Animal
+      RecDir            % directory with raw binary data in intan format
+      ExtractFlag       % flag status of extraction for each block
    end
-%% PUBLIC METHODS
+   %% PUBLIC METHODS
    methods (Access = public)
       function animalObj = Animal(varargin)
          %% Creates an animal object with the related Blocks
-
          
-         %% LOAD DEFAULT ID SETTINGS
-         animalObj = def_params(animalObj);
+%          animalObj = def_params(animalObj);
+         animalObj.updateParams('Animal');
+         animalObj.updateParams('all');
+         
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -39,7 +40,8 @@ classdef Animal < handle
          
          %% LOOK FOR ANIMAL DIRECTORY
          if isempty(animalObj.RecDir)
-            animalObj.RecDir = uigetdir(animalObj.DEF,'Select directory with the the recordings');
+            animalObj.RecDir = uigetdir(animalObj.Pars.DefaultRecLoc,...
+               'Select directory with the the recordings');
             if animalObj.RecDir == 0
                error('No animal selected. Object not created.');
             end
@@ -55,47 +57,47 @@ classdef Animal < handle
       end
       
       function addBlock(animalObj,BlockPath)
-
+         
          newBlock= nigeLab.Block('RecFile',BlockPath,...
-             'SaveLoc',animalObj.SaveLoc);
+            'AnimalLoc',animalObj.Loc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
       end
       
       function save(animalObj)
-          B=animalObj.Blocks;
-          for ii=1:numel(B)
-              B(ii).save;
-          end
-          save(fullfile([animalObj.SaveLoc '_Animal.mat']),'animalObj','-v7.3');
+         B=animalObj.Blocks;
+         for ii=1:numel(B)
+            B(ii).save;
+         end
+         save(fullfile([animalObj.TankLoc '_Animal.mat']),'animalObj','-v7.3');
       end
       
-%       updateID(blockObj,name,type,value)    % Update the file or folder identifier
-      table = list(animalObj)         % List of recordings currently associated with the animal
+      %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
+      table = list(animalObj)                % List of recordings currently associated with the animal
       updateContents(blockObj,fieldname)    % Update files for specific field
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
-                  % Convert raw data to Matlab BLOCK
       
-      mergeBlocks(animalObj,ind,varargin)
-      removeBlocks(animalObj,ind)
+      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
+      removeBlocks(animalObj,ind)         % Disassociate a Block from Animal
       
       % Extraction methods
-      flag = doUnitFilter(animalObj)
-      flag = doReReference(animalObj)
-      flag = doRawExtraction(animalObj)    
-      flag = doLFPExtraction(animalObj)
-      flag = doSD(animalObj)
+      flag = doUnitFilter(animalObj)      % Apply Unit Bandpass filter to all raw data in Blocks of Animal
+      flag = doReReference(animalObj)     % Re-reference all filtered data in Blocks of Animal
+      flag = doRawExtraction(animalObj)   % Extract Raw Data for all Blocks in Animal
+      flag = doLFPExtraction(animalObj)   % Extract LFP for all Blocks in Animal
+      flag = doSD(animalObj)              % Extract spikes for all Blocks in Animal
       
       % Utility
-      flag = clearSpace(animalObj,ask)
-      linkToData(animalObj)
+      flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
+      linkToData(animalObj)                    % Link disk data of all Blocks in Animal
    end
    
    methods (Access = public, Hidden = true)
+      flag = clearSpace(animalObj,ask)
       updateNotes(blockObj,str) % Update notes for a recording
    end
-
-%% PRIVATE METHODS
+   
+   %% PRIVATE METHODS
    methods (Access = 'private')
       init(animalObj) % Initializes the ANIMAL object
       def_params(animalObj)

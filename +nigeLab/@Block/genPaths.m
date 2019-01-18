@@ -10,6 +10,7 @@ function flag = genPaths(blockObj,animalLoc)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% 
+flag = false;
 if (nargin > 1)
    paths.Animal = animalLoc;
    if isempty(blockObj.Paths)
@@ -20,8 +21,8 @@ if (nargin > 1)
       paths.Animal_idx = numel(blockObj.Paths.Animal_ext);
    end
 else
-   paths.Animal     = fullfile(blockObj.AnimalLoc);
-   paths.Animal_ext = {fullfile(blockObj.AnimalLoc)};
+   paths.Animal     = fullfile(blockObj.Animal);
+   paths.Animal_ext = {fullfile(blockObj.Animal)};
    paths.Animal_idx = 1;
 end
 

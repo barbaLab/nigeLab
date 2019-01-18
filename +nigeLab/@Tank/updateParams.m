@@ -1,13 +1,13 @@
-function flag = updateParams(blockObj,paramType)
-%% UPDATEPARAMS   Update the parameters struct property for paramType
+function flag = updateParams(tankObj,paramType)
+%% UPDATEPARAMS   Update the nigeLab.Tank class default parameters for paramType
 %
-%  flag = updateParams(blockObj);
-%  flag = updateParams(blockObj,paramType);
+%  flag = updateParams(tankObj);
+%  flag = updateParams(tankObj,paramType);
 %
 %  --------
 %   INPUTS
 %  --------
-%  blockObj    :     nigeLab.Block class object.
+%  tankObj     :     nigeLab.Tank class object.
 %
 %  paramType   :     (optional; char array) Name of parameter type to
 %                       update
@@ -41,13 +41,13 @@ else
    if iscell(paramType)
       flag = false(size(paramType));
       for i = 1:numel(paramType)
-         flag(i) = blockObj.updateParams(paramType{i});
+         flag(i) = tankObj.updateParams(paramType{i});
       end
       return;      
    else % otherwise, if 'all' option is invoked:
       if strcmpi(paramType,'all')
          paramType = tmp;
-         flag = blockObj.updateParams(paramType);
+         flag = tankObj.updateParams(paramType);
          return;
       end
    end
@@ -63,8 +63,11 @@ else
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-propString = [paramType 'Pars'];
-blockObj.(propString) = nigeLab.defaults.(paramType)();
+tankObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
+
+for i = 1:numel(tankObj.Blocks)
+   tankObj.Animals(i).updateParams(paramType);
+end
 
 flag = true;
 
@@ -77,4 +80,3 @@ flag = true;
    end
 
 end
-

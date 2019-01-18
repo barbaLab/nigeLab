@@ -28,14 +28,15 @@ classdef Tank < handle
 % By: Max Murphy  v1.0  06/14/2018
 
    %% PUBLIC PROPERTIES
-   properties (Access = public)
+   properties (GetAccess = public, SetAccess = public)
       Name	% Name of experiment (TANK)
       Animals                 % Children (ANIMAL)
    end
    %% PRIVATE PROPERTIES
-   properties (Access = public) %debugging purposes, is private
+   properties (GetAccess = public, SetAccess = private, Hidden = true) %debugging purposes, is private
       RecDir                     % Directory of the TANK
-
+      Pars                    % Parameters struct
+      
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
       CheckBeforeConversion   % Flag to ask for confirmation before convert
@@ -73,7 +74,9 @@ classdef Tank < handle
          % By: Max Murphy  v1.0  06/14/2018
          
          %% LOAD OTHER PRIVATE DEFAULT SETTINGS
-         tankObj = def_params(tankObj);
+%          tankObj = def_params(tankObj);
+         tankObj.updateParams('Tank');
+         tankObj.updateParams('all');
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -89,7 +92,7 @@ classdef Tank < handle
          
          %% LOOK FOR BLOCK DIRECTORY
          if isempty(tankObj.RecDir)
-            tankObj.RecDir = uigetdir(tankObj.DefaultTankLoc,...
+            tankObj.RecDir = uigetdir(tankObj.Pars.DefaultTankLoc,...
                                    'Select TANK folder');
             if tankObj.RecDir == 0
                error('No block selected. Object not created.');
