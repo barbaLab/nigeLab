@@ -1,4 +1,4 @@
-function spikes = getSpikes(blockObj,ch,class,type)
+function spikes = getSpikes(blockObj,ch,clusterIndex,type)
 %% GETSPIKES  Retrieve list of spike peak sample indices
 %
 %  spikes = GETSPIKES(blockObj,ch);
@@ -17,7 +17,7 @@ function spikes = getSpikes(blockObj,ch,class,type)
 %    ch        :     Channel index for retrieving spikes. Must be given as
 %                       a SCALAR positive integer.
 %
-%   class      :     (Optional) Specify the class of spikes to retrieve,
+% clusterIndex :     (Optional) Specify the class of spikes to retrieve,
 %                       based on sorting or clustering. If not specified,
 %                       gets all spikes on channel. Otherwise, it will
 %                       check to make sure that there are actually classes
@@ -61,36 +61,38 @@ if nargin < 4
 end
 
 if nargin < 3
-   class = nan;   
+   clusterIndex = nan;   
 end
 
 % If multiple blocks, use recursion
 spikes = [];
 if (numel(blockObj) > 1) 
    for ii = 1:numel(blockObj)
-      spikes = [spikes; getSpikes(blockObj(ii),ch,class,type)]; %#ok<AGROW>
+      spikes = [spikes; getSpikes(blockObj(ii),ch,clusterIndex,type)]; %#ok<AGROW>
    end   
    return;
 end
 
 if ~isfield(blockObj.Channels,'Sorted')
-   class = nan;
+   clusterIndex = nan;
 end
    
 %% RETRIEVE SPIKES OR FEATURES
 switch type % Could add expansion for things like 'pw' and 'pp' etc.
-   case 'feat'
+   case {'feat','spikefeat','features','spikefeatures'}
       % Variable is still called "spikes"
-      spikes = blockObj.Channels(ch).Spikes.features;
-      if ~isnan(class(1))
-         idx = ismember(blockObj.Channels(ch).Sorted.class,class);
-         spikes = spikes(idx,:);
+      if isnan(clusterIndex(1))
+         spikes = getEventData(blockObj,'SpikeFeatures','snippet',ch);
+      else
+         spikes = getEventData(blockObj,'SpikeFeatures','snippet',ch,...
+            'tag',clusterIndex);
       end
    otherwise % Default is 'spikes'
-      spikes = blockObj.Channels(ch).Spikes.spikes;
-      if ~isnan(class(1))
-         idx = ismember(blockObj.Channels(ch).Sorted.class,class);
-         spikes = spikes(idx,:);
+      if isnan(clusterIndex(1))
+         spikes = getEventData(blockObj,'Spikes','snippet',ch);
+      else
+         spikes = getEventData(blockObj,'Spikes','snippet',ch,...
+            'tag',clusterIndex);
       end
 end
 end

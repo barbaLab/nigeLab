@@ -1,4 +1,4 @@
-function idx = getSpikeTrain(blockObj,ch,class)
+function idx = getSpikeTrain(blockObj,ch,clusterIndex)
 %% GETSPIKETRAIN  Retrieve list of spike peak sample indices
 %
 %  idx = GETSPIKETRAIN(blockObj,ch);
@@ -14,7 +14,7 @@ function idx = getSpikeTrain(blockObj,ch,class)
 %                          indices for each channel.
 %                    -> Can be given as a vector.
 %
-%   class      :     (Optional) Specify the class of spikes to retrieve,
+% clusterIndex :     (Optional) Specify the cluster of spikes to retrieve,
 %                       based on sorting or clustering. If not specified,
 %                       gets all spikes on channel. Otherwise, it will
 %                       check to make sure that there are actually classes
@@ -43,15 +43,20 @@ if nargin < 2
 end
 
 if nargin < 3 % If only 2 arguments or less, class wasn't given
-   class = nan;
+   clusterIndex = nan;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
 idx = [];
 if (numel(ch) > 1) 
    idx = cell(size(ch));
+   if numel(clusterIndex)==1
+      clusterIndex = repmat(clusterIndex,1,numel(ch));
+   elseif numel(clusterIndex) ~= numel(ch)
+      error('Clusters (%d) must match number of channels (%d).');
+   end
    for ii = 1:numel(ch)
-      idx{ii} = getSpikeTrain(blockObj,ch(ii),class); 
+      idx{ii} = getSpikeTrain(blockObj,ch(ii),clusterIndex(ii)); 
    end   
    return;
 end
@@ -60,23 +65,18 @@ end
 if numel(blockObj) > 1 
    idx = [];
    for ii = 1:numel(blockObj) % Concatenate all block contents together
-      idx = [idx; getSpikeTrain(blockObj(ii),ch,class)]; %#ok<AGROW>
+      idx = [idx; getSpikeTrain(blockObj(ii),ch,clusterIndex)]; %#ok<AGROW>
    end
    return;
 end
 
 %% CHECK THAT THIS BLOCK WAS SORTED AND RETURN SPIKE INDICES
-if ~isfield(blockObj.Channels,'Sorted')% If sorting wasn't done, set to NaN
-   class = nan;
-end
-
 % Find peak occurrence indices and narrow by spike class if desired
-idx = find(blockObj.Channels(ch).Spikes.peak_train); % Return vector
-if ~isnan(class(1))
-   idx = idx(ismember(blockObj.Channels(ch).Sorted.class,class));
+if isnan(clusterIndex(1))
+   idx = getEventData(blockObj,'Spikes','value',ch);
+else
+   idx = getEventData(blockObj,'Spikes','value',ch,'tag',clusterIndex);
 end
 
-% Make sure it is shaped in a consistent output dimension
-idx = reshape(idx,numel(idx),1);
 
 end

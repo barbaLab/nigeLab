@@ -1,4 +1,4 @@
-function ts = getSpikeTimes(blockObj,ch,class)
+function ts = getSpikeTimes(blockObj,ch,clusterIndex)
 %% GETSPIKETIMES  Retrieve list of spike times (seconds)
 %
 %  ts = GETSPIKETIMES(blockObj,ch);
@@ -14,7 +14,7 @@ function ts = getSpikeTimes(blockObj,ch,class)
 %                          indices for each channel.
 %                    -> Can be given as a vector.
 %
-%   class      :     (Optional) Specify the class of spikes to retrieve,
+% clusterIndex :     (Optional) Specify the class of spikes to retrieve,
 %                       based on sorting or clustering. If not specified,
 %                       depends on if sorting has been done. 
 %                       Otherwise it gets all spikes. 
@@ -40,14 +40,19 @@ if nargin < 2
 end
 
 if nargin < 3
-   class = nan;
+   clusterIndex = nan;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
 if (numel(ch) > 1)
    ts = cell(size(ch));
+   if numel(clusterIndex)==1
+      clusterIndex = repmat(clusterIndex,1,numel(ch));
+   elseif numel(clusterIndex) ~= numel(ch)
+      error('Clusters (%d) must match number of channels (%d).');
+   end
    for ii = 1:numel(ch)
-      ts{ii} = getSpikeTimes(blockObj,ch(ii),class); 
+      ts{ii} = getSpikeTimes(blockObj,ch(ii),clusterIndex(ii)); 
    end   
    return;
 end
@@ -56,15 +61,15 @@ end
 if numel(blockObj) > 1
    ts = [];
    for ii = 1:numel(blockObj)
-      ts = [ts; getSpikeTimes(blockObj(ii),ch,class)]; %#ok<AGROW>
+      ts = [ts; getSpikeTimes(blockObj(ii),ch,clusterIndex)]; %#ok<AGROW>
    end 
    return;
 end
 
 %% GET SPIKE PEAK SAMPLES AND CONVERT TO TIMES
-idx = getSpikeTrain(blockObj,ch,class);
-ts = idx ./ blockObj.SampleRate;
-
-
-
+if isnan(clusterIndex(1))
+   ts = getEventData(blockObj,'Spikes','ts',ch);
+else
+   ts = getEventData(blockObj,'Spikes','ts',ch,'tag',clusterIndex);
+end
 end

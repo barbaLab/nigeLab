@@ -1,7 +1,7 @@
-function class = getSort(blockObj,ch)
+function clusterIndex = getSort(blockObj,ch,suppressText)
 %% GETSORT     Retrieve list of spike class indices for each spike
 %
-%  class = GETSORT(blockObj,ch);
+%  clusterIndex = GETSORT(blockObj,ch);
 %
 %  --------
 %   INPUTS
@@ -13,10 +13,13 @@ function class = getSort(blockObj,ch)
 %                          indices for each channel.
 %                    -> Can be given as a vector.
 %
+%  suppressText:     Default: false; set to true to turn off print to
+%                       command window when a channel is initialized.
+%
 %  --------
 %   OUTPUT
 %  --------
-%    class     :     Vector of spike classes (integers)
+% clusterIndex :     Vector of spike classes (integers)
 %                    -> If ch is a vector, returns a cell array of
 %                       corresponding spike classes.
 %
@@ -27,29 +30,51 @@ if nargin < 2
    ch = 1:blockObj(1).NumChannels;
 end
 
+if nargin < 3
+   suppressText = false;
+end
+
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
 if (numel(ch) > 1)
-   class = cell(size(ch));
+   clusterIndex = cell(size(ch));
    for ii = 1:numel(ch)
-      class{ii} = getSort(blockObj,ch(ii));
+      clusterIndex{ii} = getSort(blockObj,ch(ii));
    end
    return;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
 if (numel(blockObj) > 1)
-   class = [];
+   clusterIndex = [];
    for ii = 1:numel(blockObj)
-      class = [class; getSort(blockObj,ch(ii))]; %#ok<AGROW>
+      clusterIndex = [clusterIndex; getSort(blockObj(ii),ch)]; %#ok<AGROW>
    end 
    return;
 end
 
 %% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
-if isfield(blockObj.Channels,'Sorted')
-   class = blockObj.Channels(ch).Sorted.class;
-else
-   class = [];
+if getStatus(blockObj,'Sorted',ch)
+   clusterIndex = blockObj.Channels(ch).Sorted.value;
+else % If it doesn't exist
+   if isfield(blockObj.Channels,'Spikes') % but spikes do
+      ts = getSpikeTimes(blockObj,ch);
+      n = numel(ts);
+      clusterIndex = [zeros(n,3) ts zeros(n,1)];
+      
+      % initialize the 'Sorted' DiskData file
+      fType = blockObj.FileType{ismember(blockObj.Fields,'Spikes')};
+      fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+         num2str(blockObj.Channels(ch).probe),...
+         blockObj.Channels(ch).chStr));
+      blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+         fName,'access','w');
+      if ~suppressText
+         fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+            blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+      end
+   else
+      clusterIndex = [];
+   end
 end
 
 end
