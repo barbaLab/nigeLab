@@ -62,7 +62,7 @@ else % If it doesn't exist
       clusterIndex = [zeros(n,3) ts zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
-      fType = blockObj.FileType{ismember(blockObj.Fields,'Clusters')};
+      fType = blockObj.getFileType('Clusters');
       fName = fullfile(sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
          num2str(blockObj.Channels(ch).probe),...
          blockObj.Channels(ch).chStr));

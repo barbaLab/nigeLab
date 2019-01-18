@@ -107,7 +107,7 @@ for iCh = blockObj.Mask
       blockObj.getClus(iCh,true);
    end
    
-   % Initialize Clusters files (could be modified later):
+   % Initialize Sorted files:
    if exist(fullfile(fNameSort),'file')==0
       blockObj.getSort(iCh,true);
    end

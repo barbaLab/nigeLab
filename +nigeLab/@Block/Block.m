@@ -353,6 +353,9 @@ classdef Block < handle
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
+      
+      % Methods for parsing Fields info:
+      fType = getFieldType(blockObj,field); % Get file type corresponding to field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
    
