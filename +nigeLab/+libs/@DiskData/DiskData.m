@@ -409,6 +409,15 @@ classdef DiskData < handle
                         indx = [1 inf];
                         
                      else
+                        if islogical(S(1).subs{1})
+                           S(1).subs{1} = find(S(1).subs{1});
+                           S(1).subs{1} = reshape(S(1).subs{1},...
+                              1,numel(S(1).subs{1}));
+                        end
+                        if isempty(S(1).subs{1})
+                           varargout = {[]};
+                           return;
+                        end
                         interindx=find(diff(S(1).subs{1})-1);
                         indx=0;
                         for nn=1:numel(interindx)
@@ -417,7 +426,7 @@ classdef DiskData < handle
                         indx=reshape([indx numel(S(1).subs{1})],2,[])'+[1 0];
                         indx=S(1).subs{1}(indx);
                      end
-                     indx=[indx(:,1) diff(indx,[],2)+1];
+                     indx=horzcat(indx(:,1), diff(indx,[],2)+1);
                      N = sum(indx(:,2));
                      if isinf(N)
                         N = obj.size_(1);
@@ -443,6 +452,15 @@ classdef DiskData < handle
                      
                   case '.'
                      if numel(S) > 1
+                        if islogical(S(2).subs{1})
+                           S(2).subs{1} = find(S(2).subs{1});
+                           S(2).subs{1} = reshape(S(2).subs{1},...
+                              1,numel(S(2).subs{1}));
+                        end
+                        if isempty(S(2).subs{1})
+                           varargout = {[]};
+                           return;
+                        end
                         interindx=find(diff(S(2).subs{1})-1);
                         indx=0;
                         for nn=1:numel(interindx)
@@ -454,7 +472,7 @@ classdef DiskData < handle
                         indx = [1 inf];
                      end
                      
-                     indx=[indx(:,1) diff(indx,[],2)+1];
+                     indx=horzcat(indx(:,1),diff(indx,[],2)+1);
                      N = sum(indx(:,2));
                      if isinf(N)
                         N = obj.size_(1);
@@ -509,6 +527,16 @@ classdef DiskData < handle
                            if any(strcmp(S(ii).subs,':'))
                               indx = [1 inf];
                            else
+                              % Add handling for logical indexing
+                              if islogical(S(ii).subs{2})
+                                 S(ii).subs{2} = find(S(ii).subs{2});
+                                 S(ii).subs{2} = reshape(S(ii).subs{2},...
+                                    1,numel(S(ii).subs{2}));
+                              end
+                              if isempty(S(ii).subs{2})
+                                 varargout = {[]};
+                                 return;
+                              end
                               interindx=find(diff(S(ii).subs{2})-1);
                               indx=0;
                               for nn=1:numel(interindx)
@@ -517,7 +545,7 @@ classdef DiskData < handle
                               indx=reshape([indx numel(S(ii).subs{2})],2,[])'+[1 0];
                               indx=S(ii).subs{2}(indx);
                            end
-                           indx=[indx(:,1) diff(indx,[],2)+1];
+                           indx=horzcat(indx(:,1), diff(indx,[],2)+1);
                            Out = [];
                            varname=['/' obj.name_];
                            for kk=1:size(indx,1)
