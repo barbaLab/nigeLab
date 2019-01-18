@@ -372,7 +372,6 @@ if (bytes_remaining ~= 0)
    warning('Error: End of file not reached.');
 end
 
-T1=toc;
 % Close data file.
 fclose(fid);
 

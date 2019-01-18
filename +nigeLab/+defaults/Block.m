@@ -89,19 +89,20 @@ Fields =  { ...
    'Filt';           % 2
    'CAR';            % 3
    'LFP';            % 4
-   'Spikes';         % 5 - hard-coded to match terms from defaults.SD
-   'SpikeFeatures';  % 6 - hard-coded to match terms from defaults.SD
-   'Clusters';       % 7 - hard-coded to match terms from defaults.SD
-   'Sorted';         % 8 - hard-coded to match terms from defaults.SD
-   'DigIO';          % 9  - hard-coded for extraction
-   'AnalogIO';       % 10 - hard-coded for extraction
-   'DigEvents';      % 11
-   'Video';          % 12
-   'Stim';           % 13
-   'DC';             % 14
-   'Time';           % 15
-   'Notes'           % 16
-   'Probes';         % 17
+   'Artifact';       % 5 - hard-coded to match terms from defaults.SD
+   'Spikes';         % 6 - hard-coded to match terms from defaults.SD
+   'SpikeFeatures';  % 7 - hard-coded to match terms from defaults.SD
+   'Clusters';       % 8 - hard-coded to match terms from defaults.SD
+   'Sorted';         % 9 - hard-coded to match terms from defaults.SD
+   'DigIO';          % 10 - hard-coded for extraction
+   'AnalogIO';       % 11 - hard-coded for extraction
+   'DigEvents';      % 12
+   'Video';          % 13
+   'Stim';           % 14 - hard-coded for extraction in RHS
+   'DC';             % 15 - hard-coded for extraction in RHS
+   'Time';           % 16
+   'Notes'           % 17
+   'Probes';         % 18
    };
 
 FieldType = { ...
@@ -113,15 +114,16 @@ FieldType = { ...
    'Channels'; % 6
    'Channels'; % 7
    'Channels'; % 8
-   'Streams';  % 9
+   'Channels'; % 9
    'Streams';  % 10
-   'Events';   % 11
-   'Streams';  % 12
-   'Events';   % 13
-   'Channels'; % 14
-   'Meta';     % 15
+   'Streams';  % 11
+   'Events';   % 12
+   'Streams';  % 13
+   'Events';   % 14
+   'Channels'; % 15
    'Meta';     % 16
-   'Meta'      % 17
+   'Meta';     % 17
+   'Meta'      % 18
    };
 
 OldNames       =  { ...
@@ -129,19 +131,20 @@ OldNames       =  { ...
    {'*Filt*'};                      % 2
    {'*FiltCAR*'};                   % 3
    {'*LFP*'};                       % 4
-   {'*ptrain*'};                    % 5
-   {'*SpikeFeatures*'};             % 6
-   {'*clus*'};                      % 7
-   {'*sort*'};                      % 8
-   {'*DIG*'};                       % 9
-   {'*ANA*'};                       % 10
-   {'*Scoring.mat'};                % 11
-   {'*Paw.mat';'*Kinematics.mat'};  % 12
-   {'*STIM*'};                      % 13
-   {'*DC*'};                        % 14
-   {'*Time*'};                      % 15
-   {'*probes.xlsx'};                % 16
-   {'*experiment.txt'}              % 17
+   {'*art*'};                       % 5
+   {'*ptrain*'};                    % 6
+   {'*SpikeFeatures*'};             % 7
+   {'*clus*'};                      % 8
+   {'*sort*'};                      % 9
+   {'*DIG*'};                       % 10
+   {'*ANA*'};                       % 11
+   {'*Scoring.mat'};                % 12
+   {'*Paw.mat';'*Kinematics.mat'};  % 13
+   {'*STIM*'};                      % 14
+   {'*DC*'};                        % 15
+   {'*Time*'};                      % 16
+   {'*probes.xlsx'};                % 17
+   {'*experiment.txt'}              % 18
    };
 
 FolderNames     = {  ...
@@ -149,19 +152,20 @@ FolderNames     = {  ...
    'Filtered';          % 2
    'FilteredCAR';       % 3
    'LFPData';           % 4
-   '%s_Spikes';         % 5
-   '%s_SpikeFeatures';  % 6
-   '%s_Clusters';       % 7
-   '%s_Sorted';         % 8
-   'Digital';           % 9
+   '%s_Artifact';       % 5
+   '%s_Spikes';         % 6
+   '%s_SpikeFeatures';  % 7
+   '%s_Clusters';       % 8
+   '%s_Sorted';         % 9
    'Digital';           % 10
    'Digital';           % 11
-   'Video';             % 12
-   'StimData';          % 13
+   'Digital';           % 12
+   'Video';             % 13
    'StimData';          % 14
-   'Digital';           % 15
-   'Metadata';          % 16
-   'Metadata'           % 17
+   'StimData';          % 15
+   'Digital';           % 16
+   'Metadata';          % 17
+   'Metadata'           % 18
    };
 
 FileType = { ...
@@ -173,15 +177,16 @@ FileType = { ...
    'Event';    % 6
    'Event';    % 7
    'Event';    % 8
-   'Hybrid';   % 9
+   'Event';    % 9
    'Hybrid';   % 10
-   'Event';    % 11
-   'Hybrid';   % 12
-   'Event';    % 13
-   'Hybrid';   % 14
+   'Hybrid';   % 11
+   'Event';    % 12
+   'Hybrid';   % 13
+   'Event';    % 14
    'Hybrid';   % 15
-   'Other';    % 16
+   'Hybrid';   % 16
    'Other';    % 17
+   'Other';    % 18
    };
 
 %% DO ERROR PARSING

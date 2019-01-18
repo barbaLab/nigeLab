@@ -8,7 +8,7 @@ function flag = doLFPExtraction(blockObj)
 
 
 %% INITIALIZE PARAMETERS
-flag = false; 
+flag = false;
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
@@ -18,7 +18,7 @@ if ~blockObj.updateParams('LFP')
    warning('Something went wrong setting the LFP parameters.');
    return;
 end
-   
+
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
 DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
 DecimationFactor =   blockObj.LFPPars.DecimationFactor;
@@ -26,7 +26,7 @@ blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
 fprintf(1,'Decimating raw data... %.3d%%\n',0);
-for iCh=1:blockObj.NumChannels
+for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
    for jj=1:numel(DecimateCascadeM)
@@ -37,24 +37,25 @@ for iCh=1:blockObj.NumChannels
    fName = parseFileName(blockObj,iCh);
    
    % Assign to diskData and protect it:
-   blockObj.Channels(iCh).LFP=nigeLab.libs.DiskData(blockObj.SaveFormat,...
+   fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
+   blockObj.Channels(iCh).LFP=nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
    
-   fraction_done = 100 * (iCh / blockObj.NumChannels);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   pct = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
    
 end
 blockObj.updateStatus('LFP',true);
 blockObj.save;
-flag = true; 
+flag = true;
 end
 
 function fName = parseFileName(blockObj,channel)
+%% PARSEFILENAME  Get file name from a given channel
 pNum  = num2str(blockObj.Channels(channel).port_number);
-chIdx = regexp(blockObj.Channels(channel).custom_channel_name, '\d');
-chNum = blockObj.Channels(channel).custom_channel_name(chIdx);
-fName = sprintf(strrep(blockObj.paths.LW_N,'\','/'), pNum, chNum);
+chNum = blockObj.Channels(channel).chStr;
+fName = sprintf(strrep(blockObj.Paths.LFP.file,'\','/'), pNum, chNum);
 end
 
 

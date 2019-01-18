@@ -18,7 +18,6 @@ end
 blockObj.Events = buildEventStruct(nEventTypes);
 for ii = 1:nEventTypes
    blockObj.Events(ii).name = blockObj.EventPars.Events{ii};
-   blockObj.Events(ii).type = blockObj.EventPars.Type(ii);
    blockObj.Events(ii).status = false;
 end
 flag = true;

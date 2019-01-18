@@ -16,15 +16,15 @@ blockObj.RMS = [];
 %% COMPUTE RMS FOR EVERY CHANNEL ON WAVEFORMS OF INTEREST
 tic;
 fprintf(1,'\nComputing channel-wise RMS...000%%\n');
-for iCh = 1:blockObj.NumChannels
+for iCh = blockObj.Mask
    x = struct;
    for iT = 1:numel(type)
       data = blockObj.Channels(iCh).(type{iT})(:);
       x.(type{iT}) = rms(data);
    end
    blockObj.RMS = [blockObj.RMS; struct2table(x)];
-   fraction_done = 100 * (iCh / blockObj.NumChannels);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   pct = 100 * (iCh / blockObj.NumChannels);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
 toc;
 

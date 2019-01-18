@@ -105,11 +105,13 @@ switch pars.PKDETECT
 end
 
 if pars.USE_CAR
+   pars.ID.Artifact = [pars.SD_VER '_CAR'];
    pars.ID.Spikes = [pars.SD_VER '_CAR'];
    pars.ID.SpikeFeatures = [pars.SD_VER '_CAR'];
    pars.ID.Clusters = [pars.SD_VER '_' pars.SC_VER '_CAR'];
    pars.ID.Sorted = [pars.SD_VER '_' pars.SC_VER '_CAR'];
 else
+   pars.ID.Artifact = pars.SD_VER;
    pars.ID.Spikes = pars.SD_VER;
    pars.ID.SpikeFeatures = pars.SD_VER;
    pars.ID.Clusters = [pars.SD_VER '_' pars.SC_VER];

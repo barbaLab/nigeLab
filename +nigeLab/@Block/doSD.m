@@ -37,6 +37,8 @@ for iCh = blockObj.Mask
       pNum,chNum);
    fNameFeats = sprintf(strrep(blockObj.Paths.SpikeFeatures.file,'\','/'),...
       pNum,chNum);
+   fNameArt = sprintf(strrep(blockObj.Paths.Artifact.file,'\','/'),...
+      pNum,chNum);
    
    % Get pointer to the correct data:
    if getStatus(blockObj,'CAR',iCh)
@@ -54,21 +56,47 @@ for iCh = blockObj.Mask
    
    % Do the detection:
    if (iCh == 1)
-      [spk,feats,blockObj.SDPars] = PerChannelDetection(data,pars);
+      [spk,feats,art,blockObj.SDPars] = PerChannelDetection(data,pars);
    else
-      [spk,feats] = PerChannelDetection(data,pars);
+      [spk,feats,art] = PerChannelDetection(data,pars);
    end
    
-   % Save using DiskData pointer to the file:
+   % Save Spikes using DiskData pointer to the file:
+   fType = blockObj.FileType{strcmpi(blockObj.Fields,'Spikes')};
+   if exist(fullfile(fNameSpikes),'file')~=0
+      delete(fullfile(fNameSpikes));
+   end
    blockObj.Channels(iCh).Spikes = ...
-      nigeLab.libs.DiskData('MatFile',fullfile(fNameSpikes),...
+      nigeLab.libs.DiskData(fType,fullfile(fNameSpikes),...
       spk,'access','w');
    blockObj.Channels(iCh).Spikes = lockData(...
       blockObj.Channels(iCh).Spikes);
    
+   % Save Features using DiskData pointer to the file:
+   fType = blockObj.FileType{strcmpi(blockObj.Fields,'SpikeFeatures')};
+   if exist(fullfile(fNameFeats),'file')~=0
+      delete(fullfile(fNameFeats));
+   end
+   blockObj.Channels(iCh).SpikeFeatures = ...
+      nigeLab.libs.DiskData(fType,fullfile(fNameFeats),...
+      feats,'access','w');
+   blockObj.Channels(iCh).SpikeFeatures = lockData(...
+      blockObj.Channels(iCh).SpikeFeatures);
+   
+   % Save Artifact using DiskData pointer to the file:
+   fType = blockObj.FileType{strcmpi(blockObj.Fields,'Artifact')};
+   if exist(fullfile(fNameArt),'file')~=0
+      delete(fullfile(fNameArt));
+   end
+   blockObj.Channels(iCh).Artifact = ...
+      nigeLab.libs.DiskData(fType,fullfile(fNameArt),...
+      art,'access','w');
+   blockObj.Channels(iCh).Artifact = lockData(...
+      blockObj.Channels(iCh).Artifact);
+   
    % And update the status indicator in Command Window:
-   fraction_done = 100 * (iCh / nCh);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   pct = 100 * (iCh / nCh);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
    
 end
 
@@ -77,12 +105,13 @@ blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 
-   function [spk,feats,pars] = PerChannelDetection(data, pars)
+   function [spk,feats,art,pars] = PerChannelDetection(data, pars)
       %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
       %
       %   spk = PERCHANNELDETECTION(data,pars);
       %   [spk,feats] = PERCHANNELDETECTION(data,pars);
-      %   [spk,feats,pars] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feats,art] = PERCHANNELDETECTION(data,pars);
+      %   [spk,feats,art,pars] = PERCHANNELDETECTION(data,pars);
       %
       %   --------
       %    INPUTS
@@ -97,7 +126,7 @@ flag = true;
       %   --------
       %    OUTPUT
       %   --------
-      %     spk       :       Structure containing detected spikes as a sparse
+      %     spk      :        Structure containing detected spikes as a sparse
       %                       array (peak_train); artifact occurrences as a
       %                       sparse array (artifact); and spike waveforms
       %                       corresponding to each positive entry of peak_train
@@ -106,7 +135,9 @@ flag = true;
       %     feats    :        Contains the features corresponding to
       %                       detected spikes.
       %
-      %     pars      :       Updated parameters with new spike-related
+      %      art     :        Contains artifact times.
+      %
+      %     pars     :        Updated parameters with new spike-related
       %                       variables.
       %
       % Adapted by: MAECI 2018 Collaboration (Federico Barban & Max Murphy)
@@ -190,7 +221,7 @@ flag = true;
       end
       %% ENSURE NO SPIKES REMAIN FROM ARTIFACT PERIODS
       if any(artifact)
-         [ts,ia]=setdiff(ts,artifact);
+         [ts,ia]=setdiff(ts,(artifact./pars.FS));
          p2pamp=p2pamp(ia);
          pw = pw(ia);
          pp = pp(ia);
@@ -264,15 +295,29 @@ flag = true;
          features = [];
       end
       
-      %% ASSIGN OUTPUT
-      spk = struct;  % Event struct for spikes
-      spk.peak_train = peak_train;      % Spike (neg.) peak times
-      spk.artifact = artifact;          % Artifact times
-      spk.spikes = spikes;              % Spike snippets
+      %% GENERATE OUTPUT VECTORS
+      tIdx = find(peak_train); 
+      tIdx = reshape(tIdx,numel(tIdx),1);
       
-      feats = struct; % Event struct for 
-      spk.features = features;          % Wavelet features
+      type = zeros(size(tIdx));
+      tag = zeros(size(tIdx));
+      ts = tIdx./pars.FS; % Get values in seconds
+      value = tIdx; % Store in value for now
       
+
+      %% CONCATENATE OUTPUT MATRICES
+      spk = [type,value,tag,ts,spikes];
+      feats = [type,value,tag,ts,features];
+      
+      %% ASSIGN "ARTIFACT" OUTPUT
+      artifact = reshape(artifact,numel(artifact),1);
+      
+      type = zeros(size(artifact));
+      value = artifact;
+      tag = zeros(size(artifact));
+      ts = artifact./pars.FS;
+      
+      art = [type,value,tag,ts,zeros(size(artifact))];
       
    end
 
