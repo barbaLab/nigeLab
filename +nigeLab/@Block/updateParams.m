@@ -25,33 +25,38 @@ function flag = updateParams(blockObj,paramType)
 
 %% PARSE INPUT
 flag = false;
+ConstructProps = {'Block','Shortcuts','Animal','Tank'};
+PropsToSkip ={''};
 
 % Make sure a valid parameter type is selected:
 tmp = what('+nigeLab/+defaults');
 tmp = cellfun(@(x)x(1:(end-2)),tmp(1).m,'UniformOutput',false);
 
 % The following properties do not apply or should be set in constructor:
-tmp = setdiff(tmp,{'Block','Shortcuts','Animal','Tank'}); 
+tmp = setdiff(tmp,[PropsToSkip,ConstructProps]); 
 
 if nargin < 2 % if not supplied, select from list...
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
+elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
+    paramType = tmp;
+    flag = blockObj.updateParams(paramType);
+    return;
+elseif iscell(paramType) % Use recursion to run if cell array is given
+%       flag = false(size(paramType));
+%       for i = 1:numel(paramType)
+%          flag(i) = blockObj.updateParams(paramType{i});
+%       end
+%       return;      
+% ;) Max do you like it?
+        N = numel(paramType);
+        if N==0, flag = true; return; end % ends recursion
+        paramType = paramType(:); % just in case it wasn't a vector for some reason;
+        flag = blockObj.updateParams(paramType{1}) && blockObj.updateParams(paramType(2:N));
+        return;
+elseif any(ismember(paramType,ConstructProps))
+    ... Right now no action is required here
 else
-   % Use recursion to run if cell array is given
-   if iscell(paramType)
-      flag = false(size(paramType));
-      for i = 1:numel(paramType)
-         flag(i) = blockObj.updateParams(paramType{i});
-      end
-      return;      
-   else % otherwise, if 'all' option is invoked:
-      if strcmpi(paramType,'all')
-         paramType = tmp;
-         flag = blockObj.updateParams(paramType);
-         return;
-      end
-   end
-   
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(tmp,paramType,3),1,'first');
    if isempty(idx)

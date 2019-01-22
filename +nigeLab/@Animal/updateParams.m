@@ -25,33 +25,38 @@ function flag = updateParams(animalObj,paramType)
 
 %% PARSE INPUT
 flag = false;
+ConstructProps = {'Block','Shortcuts','Animal','Tank'};
+PropsToSkip ={''};
 
 % Make sure a valid parameter type is selected:
 tmp = what('+nigeLab/+defaults');
 tmp = cellfun(@(x)x(1:(end-2)),tmp(1).m,'UniformOutput',false);
 
 % The following properties do not apply or should be set in constructor:
-tmp = setdiff(tmp,{'Block','Shortcuts','Animal','Tank'}); 
+tmp = setdiff(tmp,[PropsToSkip,ConstructProps]); 
 
 if nargin < 2 % if not supplied, select from list...
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
+elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
+    paramType = tmp;
+    flag = animalObj.updateParams(paramType);
+    return;
+elseif iscell(paramType) % Use recursion to run if cell array is given
+%       flag = false(size(paramType));
+%       for i = 1:numel(paramType)
+%          flag(i) = animalObj.updateParams(paramType{i});
+%       end
+%       return;      
+% ;) Max do you like it?
+        N = numel(paramType);
+        if N==0, flag = true; return; end % ends recursion
+        paramType = paramType(:); % just in case it wasn't a vector for some reason;
+        flag = animalObj.updateParams(paramType{1}) && animalObj.updateParams(paramType(2:N));
+        return;
+elseif any(ismember(paramType,ConstructProps))
+    ... Right now no action is required here
 else
-   % Use recursion to run if cell array is given
-   if iscell(paramType)
-      flag = false(size(paramType));
-      for i = 1:numel(paramType)
-         flag(i) = animalObj.updateParams(paramType{i});
-      end
-      return;      
-   else % otherwise, if 'all' option is invoked:
-      if strcmpi(paramType,'all')
-         paramType = tmp;
-         flag = animalObj.updateParams(paramType);
-         return;
-      end
-   end
-   
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(tmp,paramType,3),1,'first');
    if isempty(idx)
@@ -62,19 +67,19 @@ else
    end
 end
 
+
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-
-animalObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
-
-
-paramString = [paramType 'Pars'];
-for i = 1:numel(animalObj.Blocks)
-   if isprop(animalObj.Blocks,paramString)
-      animalObj.Blocks(i).updateParams(paramType);
-   end
+% at this point paramType should be a simple string
+Pars = nigeLab.defaults.(paramType)();
+F = fields(Pars);
+for ii=1:numel(F)   % populate Pars struct preserving values
+    animalObj.Pars.(F{ii}) =  Pars.(F{ii});
 end
 
-   
+for i = 1:numel(animalObj.Blocks)
+   animalObj.Animals(i).updateParams(paramType);
+end
+
 flag = true;
 
 %% SUB-FUNCTIONS
