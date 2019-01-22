@@ -59,7 +59,7 @@ classdef Animal < handle
       function addBlock(animalObj,BlockPath)
       %% ADDBLOCK  Add Block to Blocks property   
          newBlock= nigeLab.Block('RecFile',BlockPath,...
-            'AnimalLoc',animalObj.Loc);
+             'AnimalLoc',animalObj.SaveLoc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
       end
       

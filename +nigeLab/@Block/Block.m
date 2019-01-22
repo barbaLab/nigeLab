@@ -209,12 +209,12 @@ classdef Block < handle
          %% SAVE  Overload save of BLOCK
          save(fullfile([blockObj.Paths.Block '_Block.mat']),'blockObj','-v7.3');
       end
-      function disp(blockObj)
-         %% DISP  Overload display of BLOCK contents
-         if blockObj.Verbose
-            builtin('disp',blockObj);
-         end
-      end    
+%       function disp(blockObj)
+%          %% DISP  Overload display of BLOCK contents
+%          if any([blockObj.Verbose])
+%             builtin('disp',blockObj);
+%          end
+%       end    
       function varargout = subsref(blockObj,s)
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type

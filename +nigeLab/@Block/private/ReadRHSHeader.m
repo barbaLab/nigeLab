@@ -245,7 +245,7 @@ num_dig_out_channels = board_dig_out_index - 1;
 if VERBOSE
    fprintf(1, 'Found %d amplifier channel%s.\n', ...
       num_amplifier_channels, num_amplifier_channels);
-   if (dc_amp_data_saved ~= 0)
+   if (DC_amp_data_saved ~= 0)
       fprintf(1, 'Found %d DC amplifier channel%s.\n', ...
          num_amplifier_channels, (num_amplifier_channels));
    end
@@ -263,7 +263,7 @@ end
 
 % Each data block contains num_samples_per_data_block amplifier samples.
 bytes_per_block = num_samples_per_data_block * 4;  % timestamp data
-if (dc_amp_data_saved ~= 0)
+if (DC_amp_data_saved ~= 0)
    bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2 + 2) * num_amplifier_channels;
 else
    bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2) * num_amplifier_channels;
@@ -329,7 +329,7 @@ if VERBOSE
 end
 
 header_size=ftell(FID);
-probes = unique([amplifier_channels.port_number]);
+probes = unique([raw_channels.port_number]);
 num_probes = numel(probes);
 
 for ii=DesiredOutputs' %  DesiredOutputs defined below
@@ -363,11 +363,11 @@ end
 function DesiredOutputs=DesiredOutputs()
 % DesiredOutputs = {
 %    'data_present';
-%    'dc_amp_data_saved';
+%    'DC_amp_data_saved';
 %    'sample_rate';
 %    'frequency_parameters';
 %    'stim_parameters'
-%    'amplifier_channels';
+%    'raw_channels';
 %    'board_adc_channels';
 %    'board_dac_channels';
 %    'board_dig_in_channels';

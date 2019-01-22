@@ -93,22 +93,22 @@ end
 
 num_probes = length(wav_data);
 probes = char((1:num_probes) -1 + double('A')); % nice
-amplifier_channels = channel_struct;
+raw_channels = channel_struct;
 for pb = 1:num_probes
    Chans = unique(heads.stores.(wav_data{pb}).chan);
    for iCh = 1:numel(Chans)
-   ind = numel(amplifier_channels)+1;
-   amplifier_channels(ind).custom_channel_name = sprintf('%c%.3d',probes(pb),iCh);
-   amplifier_channels(ind).native_channel_name = sprintf('%c-%.3d',probes(pb),Chans(iCh));
-   amplifier_channels(ind).native_order = iCh;
-   amplifier_channels(ind).custom_order = iCh;
-   amplifier_channels(ind).board_stream = nan;
-   amplifier_channels(ind).chip_channel = nan;
-   amplifier_channels(ind).port_name = ['Port ' probes(pb)];
-   amplifier_channels(ind).port_prefix = probes(pb);
-   amplifier_channels(ind).port_number = pb;
-   amplifier_channels(ind).electrode_impedance_magnitude = nan;
-   amplifier_channels(ind).electrode_impedance_phase = nan;
+   ind = numel(raw_channels)+1;
+   raw_channels(ind).custom_channel_name = sprintf('%c%.3d',probes(pb),iCh);
+   raw_channels(ind).native_channel_name = sprintf('%c-%.3d',probes(pb),Chans(iCh));
+   raw_channels(ind).native_order = iCh;
+   raw_channels(ind).custom_order = iCh;
+   raw_channels(ind).board_stream = nan;
+   raw_channels(ind).chip_channel = nan;
+   raw_channels(ind).port_name = ['Port ' probes(pb)];
+   raw_channels(ind).port_prefix = probes(pb);
+   raw_channels(ind).port_number = pb;
+   raw_channels(ind).electrode_impedance_magnitude = nan;
+   raw_channels(ind).electrode_impedance_phase = nan;
    end
 end
 
@@ -138,16 +138,17 @@ switch heads.stores.((wav_data{1})).dform
       fmt = 'int64';
       sz = 8;
 end
-num_amplifier_channels = numel(amplifier_channels);
+num_raw_channels = numel(raw_channels);
 npts = (heads.stores.((wav_data{1})).size-10) * 4/sz;
-num_amplifier_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_amplifier_channels;
+num_raw_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_raw_channels;
 
 % board_adc_channels = channel_struct;
 % board_dig_in_channels = channel_struct;
 % board_dig_out_channels = channel_struct;
 % 
-% num_board_adc_channels
-% num_board_dig_in_channels
+%% For now, still in development
+num_analogIO_channels = 0;
+num_digIO_channels = 0;
 % num_board_dig_out_channels
 % num_data_blocks
 % bytes_per_block
@@ -165,20 +166,23 @@ end
 function DesiredOutputs=DesiredOutputs()
 DesiredOutputs = {
    'data_present';
+%    'DC_amp_data_saved';
    'sample_rate';
-   'amplifier_channels';
+%    'frequency_parameters';
+%    'stim_parameters'
+   'raw_channels';
 %    'board_adc_channels';
 %    'board_dig_in_channels';
 %    'board_dig_out_channels';
-   'num_amplifier_channels';
-%    'num_board_adc_channels';
-%    'num_board_dig_in_channels';
+   'num_raw_channels';
+   'num_analogIO_channels';
+   'num_digIO_channels';
 %    'num_board_dig_out_channels';
    'num_probes';
 %    'num_data_blocks';
 %    'bytes_per_block';
 %    'num_samples_per_data_block';
-   'num_amplifier_samples';
+   'num_raw_samples';
 %    'num_board_adc_samples';
 %    'num_board_dig_in_samples';
 %    'num_board_dig_out_samples';

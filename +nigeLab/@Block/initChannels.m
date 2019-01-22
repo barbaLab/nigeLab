@@ -19,6 +19,7 @@ switch blockObj.FileExt
                            'VERBOSE',blockObj.Verbose);                   
       
    case {'', '.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+      dName = fileparts(blockObj.RecFile);
       files = dir(fullfile(dName,'*.t*'));
       if ~isempty(files)
          blockObj.RecType='TDT';
