@@ -8,16 +8,16 @@ function init(animalObj)
 %%
 [~,animalName] = fileparts(animalObj.RecDir);
 animalObj.Name = animalName;
-animalObj.setSaveLocation(animalObj.AnimalLoc);
+animalObj.setSaveLocation(animalObj.TankLoc);
 
-if exist(animalObj.AnimalLoc,'dir')==0
-    mkdir(animalObj.AnimalLoc);
+if exist(animalObj.TankLoc,'dir')==0
+    mkdir(animalObj.TankLoc);
     animalObj.ExtractFlag = true;
 else
     animalObj.ExtractFlag = false;
 end
 
-supportedFormats = animalObj.Pars.Animal.SupportedFormats;
+supportedFormats = animalObj.Pars.SupportedFormats;
 
 %% GET BLOCKS
 Recordings = dir(fullfile(animalObj.RecDir));

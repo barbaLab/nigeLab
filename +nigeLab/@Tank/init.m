@@ -9,10 +9,10 @@ function flag = init(tankObj)
 flag = false;
 tankObj.Name = strsplit(tankObj.RecDir,filesep);
 tankObj.Name = tankObj.Name{end};
-tankObj.setSaveLocation(tankObj.Path);
+tankObj.setSaveLocation(tankObj.SaveLoc);
 
-if exist(tankObj.Path,'dir')==0
-    mkdir(tankObj.Path);
+if exist(tankObj.SaveLoc,'dir')==0
+    mkdir(tankObj.SaveLoc);
     tankObj.ExtractFlag = true;
 else
     tankObj.ExtractFlag = false;
