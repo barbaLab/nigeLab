@@ -35,9 +35,6 @@ function status = getStatus(blockObj,operation,channel)
 %
 % By: FB & MM 2018 MAECI collaboration
 
-%% DEFAULTS
-N_CHAR_TO_MATCH = 7;
-
 %%
 switch nargin
    case 0
@@ -58,34 +55,37 @@ switch nargin
       end
       
    case 2 % If one input given
-      status = parseStatus(blockObj,operation,N_CHAR_TO_MATCH);
+      status = parseStatus(blockObj,operation);
       
    case 3 % If optional 'all' argument is given
-      status = parseStatus(blockObj,operation,N_CHAR_TO_MATCH);
+      status = parseStatus(blockObj,operation);
       status = ~any(~status(channel));
       
    otherwise
       error('Too many input arguments (%d; max: 3).',nargin);
 end
 
-   function status = parseStatus(blockObj,stage,nMatch)
+   function status = parseStatus(blockObj,stage)
       %% PARSESTATUS  Check that it is a valid stage and return the output
-      opInd=strncmpi(blockObj.Fields,stage,nMatch);
+      if ~iscell(stage)
+         stage = {stage};
+      end
+      opInd=ismember(blockObj.Fields,stage);
       
-      if sum(opInd)==0
-         warning('No computation stage with that name (%s).',stage);
+      if sum(opInd) < numel(stage)
+         warning('No computation stage with that name (%s).',stage{:});
          status = false;
-      elseif sum(opInd) > 1
-         warning('Stage name is ambiguous (%s).',stage(1:nMatch));
+      elseif (sum(opInd) > numel(stage))
+         warning('Stage name is ambiguous (%s).',stage{:});
          status = false;
       else
-         opName = blockObj.Fields{opInd};
-
-         if ismember(opName,fieldnames(blockObj.Status))
-            status = blockObj.Status.(opName);
+         status = false(size(stage));
+         if numel(stage) == 1 % If only one stage, return all channel status
+            status = blockObj.Status.(stage{1});
          else
-            warning('No computation stage with that name (%s).',opName);
-            status = false;
+            for ii = 1:numel(stage) % Otherwise, just get whether stages are complete
+               status(ii) = any(blockObj.Status.(stage{ii}));
+            end
          end
       end
    end

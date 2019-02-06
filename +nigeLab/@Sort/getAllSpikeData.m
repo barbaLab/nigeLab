@@ -49,7 +49,7 @@ for ii = vec
    spikes = [spikes; tmp]; %#ok<*AGROW>
    
    % Retrieve associated features
-   tmp = getSpikes(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii),'feat');
+   tmp = getSpikes(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii),nan,'feat');
    feat = [feat; tmp];
    
    % Retrieve associated class

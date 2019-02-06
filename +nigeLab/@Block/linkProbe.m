@@ -63,7 +63,7 @@ if isfield(blockObj.Notes,'Probes')
                ch = blockObj.Probes.(probePorts{ii}).Ch;
                v = ch.Properties.VariableNames;
                if strcmp(blockObj.FileExt,'.rhs')
-                  probeInfo = ch(RHD2RHS(ch.RHD_Channel)==curCh,:);
+                  probeInfo = ch(RHD2RHS(ch.RHD_Channel,size(ch,1))==curCh,:);
                else
                   probeInfo = ch(ch.RHD_Channel==curCh,:);
                end
