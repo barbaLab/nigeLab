@@ -236,7 +236,7 @@ num_raw_channels = raw_index - 1;
 num_analogIO_channels = analogIO_index - 1;
 num_digIO_channels = digIO_index - 1;
 
-num_amplifier_channels = raw_index - 1;
+num_raw_channels = raw_index - 1;
 num_adc_channels = board_adc_index - 1;
 num_dac_channels = board_dac_index - 1;
 num_dig_in_channels = board_dig_in_index - 1;
@@ -244,10 +244,10 @@ num_dig_out_channels = board_dig_out_index - 1;
 
 if VERBOSE
    fprintf(1, 'Found %d amplifier channel%s.\n', ...
-      num_amplifier_channels, num_amplifier_channels);
+      num_raw_channels, num_raw_channels);
    if (DC_amp_data_saved ~= 0)
       fprintf(1, 'Found %d DC amplifier channel%s.\n', ...
-         num_amplifier_channels, (num_amplifier_channels));
+         num_raw_channels, (num_raw_channels));
    end
    fprintf(1, 'Found %d board ADC channel%s.\n', ...
       num_adc_channels, (num_adc_channels));
@@ -264,9 +264,9 @@ end
 % Each data block contains num_samples_per_data_block amplifier samples.
 bytes_per_block = num_samples_per_data_block * 4;  % timestamp data
 if (DC_amp_data_saved ~= 0)
-   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2 + 2) * num_amplifier_channels;
+   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2 + 2) * num_raw_channels;
 else
-   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2) * num_amplifier_channels;
+   bytes_per_block = bytes_per_block + num_samples_per_data_block * (2 + 2) * num_raw_channels;
 end
 % Board analog inputs are sampled at same rate as amplifiers
 bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_adc_channels;
@@ -408,7 +408,7 @@ DesiredOutputs = {
    'num_stim_channels';
    'num_digIO_channels';
    'num_analogIO_channels';
-   'num_amplifier_channels';
+   'num_raw_channels';
    'num_aux_channels';
    'num_supply_channels';
    'num_sensor_channels';

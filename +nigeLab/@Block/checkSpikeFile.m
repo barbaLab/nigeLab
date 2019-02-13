@@ -19,6 +19,15 @@ function flag = checkSpikeFile(blockObj,ch)
 %
 % By: Max Murphy & Federico Barban MAECI 2019 Collaboration
 
+%% PARSE MULTIPLE ELEMENTS OF CHANNEL
+if numel(ch) > 1
+   flag = false(size(ch));
+   for ii = 1:numel(ch)
+      flag(ii) = checkSpikeFile(blockObj,ch(ii));
+   end   
+   return;
+end
+
 %% CHECK FOR OLD VERSIONS
 % If old version, will have 7 fields from whos
 info = getInfo(blockObj.Channels(ch).Spikes);

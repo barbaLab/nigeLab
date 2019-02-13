@@ -308,7 +308,7 @@ classdef Block < handle
       tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
       ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
-      spikes = getSpikes(blockObj,ch,class);    % Get spike waveforms
+      spikes = getSpikes(blockObj,ch,class,type);    % Get spike waveforms
       sortIdx = getSort(blockObj,ch,suppress);  % Get spike sorted classes
       clusIdx = getClus(blockObj,ch,suppress);  % Get spike cluster classes
       [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
@@ -321,7 +321,7 @@ classdef Block < handle
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)  % LFP synchronization index
-      analyzeRMS(blockObj,type)  % Compute RMS for channels
+      rms_out = analyzeRMS(blockObj,type,sampleIndices)  % Compute RMS for channels
       
       % Methods for producing graphics:
       flag = plotWaves(blockObj)          % Plot stream snippets
