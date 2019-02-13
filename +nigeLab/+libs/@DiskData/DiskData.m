@@ -220,9 +220,9 @@ classdef DiskData < handle
                      
                   case 'Hybrid' % Deals with both MatFile and HDF5-ish ?
                      % The default name is 'data'
-                     data=zeros(1,1,class_); % start with a small vector
+                     eval(sprintf('%s=zeros(1,1,class_);',name_)); % start with a small vector
                      if ~exist(fName,'file')
-                        data=ones(1,1,class_);
+                        eval(sprintf('%s=ones(1,1,class_);',name_));
                         save(fName,name_,'-v7.3');
                         obj.name_ = name_;
                         obj.size_ = [0 0];

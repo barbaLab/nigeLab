@@ -68,7 +68,7 @@ if sum(ismember(f,{'RecDate'})) < 1
       meta.RecDate = [YY MM DD];
    else
       meta.RecDate = 'YYMMDD';
-      warning('Unable to parse date from BLOCK name (%s).',fName);
+      nigeLab.utils.cprintf('UnterminatedStrings','Unable to parse date from BLOCK name (%s).\n',fName);
    end
 end
 

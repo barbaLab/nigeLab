@@ -65,7 +65,7 @@ blockObj.updateStatus('init');
 % Link to data and save
 flag = blockObj.linkToData(true);
 if ~flag
-   warning('Could not successfully link %s to data.',blockObj.Name);
+   nigeLab.utils.cprintf('UnterminatedStrings','Could not successfully link %s to data.',blockObj.Name);
 end
    
 
