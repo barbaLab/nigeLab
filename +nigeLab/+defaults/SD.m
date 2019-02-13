@@ -73,6 +73,7 @@ pars.TSCALE   = 3.5;      % Scaling for timestamps of spikes as a feature
 pars.USE_TS_FEATURE = false; % Add timestamp as an additional feature for SPC?
 pars.FEAT     = 'wav';    % 'wav' or 'pca' or 'ica' for spike features
 pars.WAVELET  = 'bior1.3';% 'haar' 'bior1.3' 'db4' 'sym8' all examples
+[pars.LoD,pars.HiD] = wfilters(pars.WAVELET); % get wavelet decomposition parameters
 pars.NINPUT   = 12;       % Number of feature inputs for clustering
 pars.NSCALES  = 3;        % Number of scales for wavelet decomposition
 

@@ -41,7 +41,9 @@ Y = data - mean(data);
 Yb = Y(1:(end-2));
 Yf = Y(3:end);
 Z = [0, Y(2:(end-1)).^2 - Yb .* Yf, 0]; % Discrete nonlinear energy operator
-Zs = fastsmooth(Z,pars.SNEO_N);
+% Zs = fastsmooth(Z,pars.SNEO_N);
+kern = ones(1,pars.SNEO_N)./pars.SNEO_N;
+Zs = fliplr( conv( fliplr(conv(Z,kern,'same')) ,kern,'same')); % the same as the above tri option,(default one here used) but 10x faster
 clear('Z','Y','Yb','Yf');
 %% CREATE THRESHOLD FILTER
 tmpdata = data;
@@ -72,8 +74,7 @@ pkloc(pkloc > numel(data)) = numel(data);
 pkloc = unique(pkloc(:));
 
 z(pkloc) = data(pkloc);
-[pmin,ts] = findpeaks(-z,... % Align to negative peak
-               'MinPeakHeight',data_th);
+[ts,pmin] = nigeLab.libs.peakseek(-z,0,data_th);
 E = Zs(ts);            
 
 
