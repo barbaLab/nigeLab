@@ -43,10 +43,10 @@ end
     fprintf(1,'%.3d%%',0)
     progr=0;
     totProgr = numel(ind(2:end))*numel(BlockFieldsToMerge)*...
-        TargetBlock.numChannels*numel(ChannelsFieldsToMerge);
+        TargetBlock.NumChannels*numel(ChannelsFieldsToMerge);
     for ii=ind(2:end)
         for kk=1:numel(BlockFieldsToMerge)
-            for jj=1:TargetBlock.(['num' BlockFieldsToMerge{kk}])
+            for jj=1:TargetBlock.(['Num' BlockFieldsToMerge{kk}])
                 for ll=1:numel(ChannelsFieldsToMerge)
                 TargetBlock.(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}) = append(...
                 TargetBlock.(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}),...

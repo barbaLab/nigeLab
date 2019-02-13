@@ -34,8 +34,8 @@ info.Recording_date=DateTime;
 info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 
 %% PARSE ANIMAL AND RECORDING ID
-infoFields={'Animal_ID'
-            'Rec_ID'
+infoFields={'AnimalID'
+            'RecID'
             };
 for jj=1:numel(infoFields)
    info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};

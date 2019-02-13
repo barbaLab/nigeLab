@@ -12,22 +12,28 @@ function flag = genPaths(blockObj,animalLoc)
 %% 
 flag = false;
 if (nargin > 1)
-   paths.Animal = animalLoc;
-   if isempty(blockObj.Paths)
-      paths.Animal_ext = {animalLoc};
-      paths.Animal_idx = 1;
-   else
-      paths.Animal_ext = [blockObj.Paths.Animal_ext; {animalLoc}];
-      paths.Animal_idx = numel(blockObj.Paths.Animal_ext);
-   end
-else
-   paths.Animal     = fullfile(blockObj.Animal);
-   paths.Animal_ext = {fullfile(blockObj.Animal)};
-   paths.Animal_idx = 1;
+   blockObj.AnimalLoc = animalLoc;
+%    if isempty(blockObj.Paths)
+%       paths.Animal_ext = {animalLoc};
+%       paths.Animal_idx = 1;
+%    else
+%       paths.Animal_ext = [blockObj.Paths.Animal_ext; {animalLoc}];
+%       paths.Animal_idx = numel(blockObj.Paths.Animal_ext);
+%    end
+% else
+%    paths.Animal     = fullfile(blockObj.AnimalLoc);
+%    paths.Animal_ext = {fullfile(blockObj.AnimalLoc)};
+%    paths.Animal_idx = 1;
 end
 
-paths.Block = fullfile(paths.Animal,blockObj.Name);
+% paths.Animal.dir = blockObj.AnimalLoc;
+paths.SaveLoc.dir = fullfile(blockObj.AnimalLoc,blockObj.Name);
+paths = blockObj.getFolderTree(paths);
+F=fields(paths);
+for ff=1:numel(F)
+   if ~exist(paths.(F{ff}).dir,'dir'),mkdir(paths.(F{ff}).dir);end 
+end
 blockObj.Paths = paths;
-flag = findCorrectPath(blockObj,paths);
+flag = true;
 
 end

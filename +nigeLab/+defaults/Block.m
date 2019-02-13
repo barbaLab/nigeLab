@@ -78,11 +78,13 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 % ~/path/R18-68_0_180724_141203
 
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time'; % KUMC
+% pars.DynamicVarExp='$Animal_ID $Year $Month $Day $Rec_ID $Rec_date $Rec_time'; % KUMC
+pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 pars.IncludeChar='$';
 pars.DiscardChar='&';
-% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT
-pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'}; % KUMC
+% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
+% pars.NamingConvention={'Animal_ID','Year','Month','Day','Rec_ID'}; % KUMC
+pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 %%
 Fields =  { ...
@@ -102,7 +104,7 @@ Fields =  { ...
    'Stim';           % 14 - hard-coded for extraction in RHS
    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
-   'Notes'           % 17
+%    'Notes'           % 17
    'Probes';         % 18
    };
 
@@ -123,7 +125,7 @@ FieldType = { ...
    'Events';   % 14
    'Channels'; % 15
    'Meta';     % 16
-   'Meta';     % 17
+%    'Meta';     % 17
    'Meta'      % 18
    };
 
@@ -144,8 +146,8 @@ OldNames       =  { ...
    {'*STIM*'};                      % 14
    {'*DC*'};                        % 15
    {'*Time*'};                      % 16
-   {'*probes.xlsx'};                % 17
-   {'*experiment.txt'}              % 18
+%    {'*experiment.txt'};             % 17
+   {'*probes.xlsx'};                % 18
    };
 
 FolderNames     = {  ...
@@ -165,7 +167,7 @@ FolderNames     = {  ...
    'StimData';          % 14
    'StimData';          % 15
    'Digital';           % 16
-   'Metadata';          % 17
+%    'Metadata';          % 17
    'Metadata'           % 18
    };
 
@@ -186,7 +188,7 @@ FileType = { ...
    'Event';    % 14
    'Hybrid';   % 15
    'Hybrid';   % 16
-   'Other';    % 17
+%    'Other';    % 17
    'Other';    % 18
    };
 

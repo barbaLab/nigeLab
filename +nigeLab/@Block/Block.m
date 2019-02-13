@@ -207,7 +207,7 @@ classdef Block < handle
       end
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.Block '_Block.mat']),'blockObj','-v7.3');
+         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7.3');
       end
 %       function disp(blockObj)
 %          %% DISP  Overload display of BLOCK contents
@@ -373,6 +373,7 @@ classdef Block < handle
       flag = genPaths(blockObj,tankPath) % Generate paths property struct
       flag = findCorrectPath(blockObj,paths)   % Find correct Animal path
       flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
+      paths = getFolderTree(blockObj,paths)     % returns a populated path struct
       
       flag = clearSpace(blockObj,ask)     % Clear space on disk      
 

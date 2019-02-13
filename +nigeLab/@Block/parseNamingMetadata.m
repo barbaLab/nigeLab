@@ -58,7 +58,7 @@ end
 % will be helpful for handling file names for TDT recording blocks, which
 % don't automatically append the Rec_date and Rec_time strings:
 f = fieldnames(meta);
-if sum(ismember(f,{'Rec_date'})) < 1
+if sum(ismember(f,{'RecDate'})) < 1
    if isfield(meta,'Year') && ...
       isfield(meta,'Month') && ...
       isfield(meta,'Day')
@@ -74,7 +74,7 @@ end
 
 % Similarly, if recording_time is empty, still keep it as a field in
 % metadata associated with the BLOCK.
-if sum(ismember(f,{'Rec_time'})) < 1
+if sum(ismember(f,{'RecTime'})) < 1
    meta.RecTime = 'hhmmss';
 end
 

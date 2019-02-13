@@ -2,7 +2,7 @@ function flag = tdt2Block(blockObj)
 
 %% PARSE INPUT
 if nargin < 3
-   paths = blockObj.paths;
+   paths = blockObj.Paths;
 else % Otherwise, it was run via a "q" command
    myJob = getCurrentJob;
 end
@@ -11,9 +11,15 @@ if nargin < 2
    recFile = blockObj.RecFile;
 end
 tic;
+TDTNaming =  nigeLab.defaults.TDT();
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Read the file header
 
 header = ReadTDTHeader('NAME',recFile);
-TDTNaming =  nigeLab.defaults.TDT();
+blockObj.Meta.Header = fixNamingConvention(header);
+
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
 % but I'm to lazy to do that
@@ -22,33 +28,51 @@ FIELDS=fields(header);
 for ii=1:numel(FIELDS)
    eval([FIELDS{ii} '=header.(FIELDS{ii});']);
 end
+if ~data_present
+   warning('No data found in %s.',recFile);
+   return;
+end
+
+   
+
+%% PRE-ALLOCATE MEMORY FOR WRITING RECORDED VARIABLES TO DISK FILES
+% preallocates matfiles for varible that otherwise would require
+% nChannles*nSamples matrices
+
+diskPars = struct('format',blockObj.SaveFormat,...
+   'name',[],...
+   'size',[1 num_raw_samples],...
+   'access','w',...
+   'class','int32');
+Files = struct;
 
 fprintf(1, 'Allocating memory for data...\n');
-   paths.RW=strrep(paths.RW,'\','/');
-   infoname = fullfile(paths.RW,[blockObj.Name '_RawWave_Info.mat']);
-   
+diskPars.name = fullfile(paths.Time.info);
+Files.Time = makeDiskFile(diskPars);
+
+if (num_raw_channels > 0)
    if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Initializing DiskData arrays...',blockObj.Name));
+      set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
    end
-   
+   fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);
+   info = raw_channels;
+   infoname = fullfile(paths.Raw.info);
+   save(fullfile(infoname),'info','-v7.3');
    % One file per probe and channel
-   amplifier_dataFile = cell(num_amplifier_channels,1);
-   stim_dataFile = cell(num_amplifier_channels,1);
-   for iCh = 1:num_amplifier_channels
-      pNum  = num2str(amplifier_channels(iCh).port_number);
-      chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
-      fName = sprintf(strrep(paths.RW_N,'\','/'), pNum, chNum);
+   amplifier_dataFile = cell(num_raw_channels,1);
+   for iCh = 1:num_raw_channels
+      pNum  = num2str(raw_channels(iCh).port_number);
+      chNum = raw_channels(iCh).custom_channel_name(regexp(raw_channels(iCh).custom_channel_name, '\d'));
+      fName = sprintf(strrep(paths.Raw.file,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
       amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_amplifier_samples],'access','w');
-     
-      stim_data_fName = strrep(fullfile(paths.DW,'STIM_DATA',[blockObj.Name '_STIM_P%s_Ch_%s.mat']),'\','/');
-      fName = sprintf(strrep(stim_data_fName,'\','/'), pNum, chNum);
-      if exist(fName,'file'),delete(fName);end
-      stim_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_amplifier_samples],'access','w');
+         'class','single','size',[1 num_raw_samples],'access','w');
+      fraction_done = 100 * (iCh / num_raw_channels);
+      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
    end
-   
+end
+
+
    fprintf(1,'Matfiles created succesfully\n');
    fprintf(1,'Exporting files...\n');
    
@@ -56,37 +80,37 @@ fprintf(1, 'Allocating memory for data...\n');
    
    %%%%%%%%%%%%%% Raw waveform
    if any(contains(header.fn,TDTNaming.WaveformName))
-       for iCh=1:num_amplifier_channels
-           ch = amplifier_channels(iCh).native_order;
-           pb = amplifier_channels(iCh).port_number;
+       for iCh=1:num_raw_channels
+           ch = raw_channels(iCh).native_order;
+           pb = raw_channels(iCh).port_number;
            block = TDTbin2mat(recFile,'TYPE',{'STREAMS'},'CHANNEL',ch,'VERBOSE',false);
            data = single(block.streams.(TDTNaming.WaveformName{pb}).data * 10^6);  %#ok<*NASGU>
            amplifier_dataFile{iCh}.append(data);
            blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
-           fraction_done = 100 * (iCh / num_amplifier_channels);
+           fraction_done = 100 * (iCh / num_raw_channels);
            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
        end
    end
    
    %%%%%%%%%%%% Other nonstandard streams
    if any(contains(header.fn,TDTNaming.streamsName))
-       for iCh=1:num_amplifier_channels
-           pNum  = num2str(amplifier_channels(iCh).port_number);
-           chNum = amplifier_channels(iCh).custom_channel_name(regexp(amplifier_channels(iCh).custom_channel_name, '\d'));
+       for iCh=1:num_raw_channels
+           pNum  = num2str(raw_channels(iCh).port_number);
+           chNum = raw_channels(iCh).custom_channel_name(regexp(raw_channels(iCh).custom_channel_name, '\d'));
            gen_data_fName = TDTNaming.streamsTargetFileName;
            fName = sprintf(strrep(gen_data_fName,'\','/'), pNum, chNum);
            if exist(fName,'file'),delete(fName);end
            generic_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
                'class','single','size',[1 num_amplifier_samples],'access','w');
            
-           ch = amplifier_channels(iCh).native_order;
+           ch = raw_channels(iCh).native_order;
            block = TDTbin2mat(recFile,'TYPE',{'STREAMS'},'CHANNEL',ch,'VERBOSE',false);
            for kk=1:numel(TDTNaming.streamsSource)
                data = single(block.streams.(TDTNaming.streamsSource{kk}).data);  %#ok<*NASGU>
                generic_dataFile{iCh}.append(data);
                blockObj.(TDTNaming.streamsTarget{kk}) = lockData(generic_dataFile{iCh});
            end
-           fraction_done = 100 * (iCh / num_amplifier_channels);
+           fraction_done = 100 * (iCh / num_raw_channels);
            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
        end
    end
@@ -95,6 +119,7 @@ fprintf(1, 'Allocating memory for data...\n');
    if any(contains(header.fn,TDTNaming.evsVar))    % usually used to store events and different experimental conditions
        block = TDTbin2mat(recFile,'TYPE',{'epocs'},'VERBOSE',false);
        for jj=1:numel(TDTNaming.evsVar)
+           try
            nEvs = numel(block.epocs.(TDTNaming.evsVar{jj}).onset);      % number of events occurring
            events = cell2struct(cell(nEvs,numel(TDTNaming.evsTarget{jj}))',TDTNaming.evsTarget{jj},1); % init events structure
            for ii = 1:nEvs
@@ -107,6 +132,9 @@ fprintf(1, 'Allocating memory for data...\n');
            end % ii, events
            fraction_done = 100 * (jj / numel(TDTNaming.evsVar));
            fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+           catch er
+               nigeLab.utils.cprintf('UnterminatedStrings','Block %s: epoch field %s not found!',blockObj.Name,TDTNaming.evsVar{jj});
+           end % try
        end % jj, evsVar
    end  % if
    
@@ -116,4 +144,34 @@ fprintf(1, 'Allocating memory for data...\n');
 %    end
    
    flag = true;
+end
+
+function header_out = fixNamingConvention(header_in)
+%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
+
+header_out = struct;
+f = fieldnames(header_in);
+for iF = 1:numel(f)
+   str = strsplit(f{iF},'_');
+   for iS = 1:numel(str)
+      str{iS}(1) = upper(str{iS}(1));
+   end
+   str = strjoin(str,'');
+   header_out.(str) = header_in.(f{iF});
+end
+end
+
+function diskFile = makeDiskFile(diskPars)
+%% MAKEDISKFILE   Short-hand function to create file on disk
+% Check if file exists; if it does, remove it
+if exist(diskPars.name,'file')
+   delete(diskPars.name)
+end
+% Then create new pre-allocated diskFile
+diskFile = nigeLab.libs.DiskData(...
+   diskPars.format,...
+   diskPars.name,...
+   'class',diskPars.class,...
+   'size',diskPars.size,...
+   'access',diskPars.access);
 end

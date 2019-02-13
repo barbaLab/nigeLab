@@ -8,13 +8,14 @@ function init(animalObj)
 %%
 [~,animalName] = fileparts(animalObj.RecDir);
 animalObj.Name = animalName;
-animalObj.setSaveLocation(animalObj.TankLoc);
 
-if exist(animalObj.TankLoc,'dir')==0
-    mkdir(animalObj.TankLoc);
-    animalObj.ExtractFlag = true;
-else
-    animalObj.ExtractFlag = false;
+%% GET/CREATE SAVE LOCATION FOR BLOCK
+% animalObj.TankLoc is probably empty [] at this point, which will prompt 
+% a UI to point to the block save directory:
+if ~animalObj.getSaveLocation(animalObj.TankLoc)
+   flag = false;
+   warning('Save location not set successfully.');
+   return;
 end
 
 supportedFormats = animalObj.Pars.SupportedFormats;

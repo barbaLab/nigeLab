@@ -6,8 +6,13 @@ classdef Animal < handle
       Name         % Animal identification code
       Blocks       % Children (nigeLab.Block objects)
       Probes       % Electrode configuration structure
-      Path         % Path to Animal folder
    end
+   
+   properties (SetAccess = private, GetAccess = public)
+       Paths         % Path to Animal folder
+   
+   end
+   
    
    properties (GetAccess = public, SetAccess = private, Hidden = true)
       Pars              % parameters struct for templates from nigeLab.defaults
@@ -15,6 +20,11 @@ classdef Animal < handle
       TankLoc           % directory for saving Animal
       RecDir            % directory with raw binary data in intan format
       ExtractFlag       % flag status of extraction for each block
+   end
+   
+   properties  (SetAccess = private, GetAccess = private) 
+       RecLocDefault     % Default location of raw binary recording
+       TankLocDefault  % Default location of BLOCK
    end
    %% PUBLIC METHODS
    methods (Access = public)
@@ -59,7 +69,7 @@ classdef Animal < handle
       function addBlock(animalObj,BlockPath)
       %% ADDBLOCK  Add Block to Blocks property   
          newBlock= nigeLab.Block('RecFile',BlockPath,...
-             'AnimalLoc',animalObj.TankLoc);
+             'AnimalLoc',animalObj.Paths.SaveLoc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
       end
       
@@ -68,12 +78,11 @@ classdef Animal < handle
          for ii=1:numel(B)
             B(ii).save;
          end
-         save(fullfile([animalObj.Path '_Animal.mat']),'animalObj','-v7.3');
+         save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),'animalObj','-v7.3');
       end
       
       %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
       table = list(animalObj)                % List of recordings currently associated with the animal
-      updateContents(blockObj,fieldname)    % Update files for specific field
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       
@@ -95,6 +104,11 @@ classdef Animal < handle
    methods (Access = public, Hidden = true)
       flag = clearSpace(animalObj,ask)
       updateNotes(blockObj,str) % Update notes for a recording
+      
+      flag = genPaths(animalObj,tankPath) % Generate paths property struct
+      flag = findCorrectPath(animalObj,paths)   % Find correct Animal path
+      flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
+
    end
    
    %% PRIVATE METHODS

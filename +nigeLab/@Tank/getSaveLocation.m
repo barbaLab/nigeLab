@@ -1,4 +1,4 @@
-function flag = getSaveLocation(blockObj,animalLoc)
+function flag = getSaveLocation(tankObj,tankLoc)
 %% GETSAVELOCATION   Set the save location for processed TANK
 %
 %  flag = blockObj.GETSAVELOCATION;
@@ -11,11 +11,11 @@ flag = false;
 
 %% Prompt for location using previously set location
 if nargin < 2 
-   tmp = uigetdir(blockObj.AnimalLocDefault,'Select ANIMAL location');
-elseif isempty(animalLoc) % if nargin is < 2, will throw error if above
-   tmp = uigetdir(blockObj.AnimalLocDefault,'Select ANIMAL location');
+   tmp = uigetdir(tankObj.DefaultSaveLoc,'Select TANK location');
+elseif isempty(tankLoc) % if nargin is < 2, will throw error if above
+   tmp = uigetdir(tankObj.DefaultSaveLoc,'Select TANK location');
 else
-   tmp = animalLoc;
+   tmp = tankLoc;
 end
 
 %% Abort if cancel was clicked, otherwise set it
@@ -24,16 +24,14 @@ if tmp == 0
 else
    % Make sure it's a valid directory, as it could be provided through
    % second input argument:
-   if ~blockObj.genPaths(tmp)
-%       mkdir(blockObj.Paths.Animal); no need here i think
-      mkdir(blockObj.Paths.Block);
-      if ~blockObj.genPaths(tmp)
-         warning('Still no valid Animal/Block location.');
+   if ~tankObj.genPaths(tmp)
+      mkdir(tankObj.Paths.SaveLoc);
+      if ~tankObj.genPaths(tmp)
+         warning('Still no valid Animal location.');
       else
          flag = true;
       end
    else
-      blockObj.AnimalLoc = tmp;
       flag = true;
    end
 end

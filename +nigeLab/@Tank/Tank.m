@@ -32,11 +32,16 @@ classdef Tank < handle
       Name	% Name of experiment (TANK)
       Animals                 % Children (ANIMAL)
    end
+   
+   properties (SetAccess = private, GetAccess = public)
+       Paths         % Detailed paths specifications for all the saved files
+   end
+   
    %% PRIVATE PROPERTIES
    properties (GetAccess = public, SetAccess = private, Hidden = true) %debugging purposes, is private
       RecDir                  % Directory of the TANK
+      SaveLoc                 % Top folder
       Pars                    % Parameters struct
-      SaveLoc                 % Directory of BLOCK hierarchy parent folder
       
       BlockNameVars           % Metadata variables from BLOCK names
       BlockStatusFlag         % Flag to indicate if blocks are at same step
@@ -129,7 +134,7 @@ classdef Tank < handle
          end
           
          newAnimal= nigeLab.Animal('RecDir',AnimalFolder,...
-             'TankLoc',tankObj.SaveLoc);
+             'TankLoc',tankObj.Paths.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
       end
       
@@ -139,7 +144,7 @@ classdef Tank < handle
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(fullfile([tankObj.Path '_Tank.mat']),'tankObj','-v7.3') 
+         save(fullfile([tankObj.Paths.SaveLoc '_Tank.mat']),'tankObj','-v7.3') 
       end
       
       % Extraction methods
@@ -158,7 +163,10 @@ classdef Tank < handle
    %% PRIVATE METHODS
    methods (Access = public, Hidden = true)
       flag = init(tankObj)                 % Initializes the TANK object.
-      flag = setSaveLocation(tankObj,saveloc)      % Set save location for processed TANK.
+      flag = genPaths(animalObj,tankPath) % Generate paths property struct
+      flag = findCorrectPath(animalObj,paths)   % Find correct Animal path
+      flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
+
 %       ClusterConvert(tankObj)
 %       LocalConvert(tankObj)
 %       SlowConvert(tankObj)

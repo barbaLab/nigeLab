@@ -20,20 +20,36 @@ end
 %% ITERATE ON EACH FIELD AND LINK THE CORRECT DATA TYPE
 N = numel(blockObj.Fields);
 warningRef = false(1,N);
+warningFold = false(1,N);
 for fieldIndex = 1:N
    if exist(blockObj.Paths.(blockObj.Fields{fieldIndex}).dir,'dir')==0
-      mkdir(blockObj.Paths.(blockObj.Fields{fieldIndex}).dir);
+      warningFold(fieldIndex) = true;
+      warningRef(fieldIndex) = true;
+   else
+       warningRef(fieldIndex) = blockObj.linkField(fieldIndex);
    end
-   warningRef(fieldIndex) = blockObj.linkField(fieldIndex);
 end
 
 %% GIVE USER WARNINGS
+
+if any(warningFold)
+   warningIdx = find(warningFold);
+   nigeLab.utils.cprintf('UnterminatedStrings',['Some folders are missing. \n']); 
+   nigeLab.utils.cprintf('text','\t-> Rebuilding folder tree ... %.3d%%',0)
+   for ii = 1:numel(warningIdx)
+       [~,~,~]=mkdir(blockObj.Paths.(blockObj.Fields{warningIdx(ii)}).dir);
+       fprintf(1,'\b\b\b\b%.3d%%',...
+           round(100*ii/sum(warningFold)));
+   end
+   fprintf(1,'\n');
+end
+
 if any(warningRef) && ~suppressWarning
    warningIdx = find(warningRef);
-   warning(sprintf(['Double-check that data files are present. \n' ...
-                    'Consider re-running doExtraction.\n'])); %#ok<SPWRN>
+   nigeLab.utils.cprintf('UnterminatedStrings',['Double-check that data files are present. \n' ...
+                    'Consider re-running doExtraction.\n']);
    for ii = 1:numel(warningIdx)
-      fprintf(1,'\t-> Could not find all %s data files.\n',...
+      nigeLab.utils.cprintf('text','\t-> Could not find all %s data files.\n',...
          blockObj.Fields{warningIdx(ii)});
    end
 end
