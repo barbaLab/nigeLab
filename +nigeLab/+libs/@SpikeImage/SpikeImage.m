@@ -57,11 +57,15 @@ classdef SpikeImage < handle
       T = 1.2;          % Approx. time (milliseconds) of waveform
       Defaults_File = 'SpikeImageDefaults.mat'; % Name of file with default
       PlotNames = cell(9,1);
+      
+      UnconfirmedChanges
+      UnsavedChanges
    end
    
    events
       MainWindowClosed
       ClassAssigned
+      ChannelConfirmed
    end
 
    methods (Access = public)
@@ -139,6 +143,9 @@ classdef SpikeImage < handle
       function UpdateChannel(obj,~,~)
          %% UPDATECHANNEL  Update the spike data structure to new channel
          
+         % Check if it's okay to lose changes if there are any
+         
+         
          % Interpolate spikes
          obj.Interpolate(obj.Parent.spk.spikes{obj.Parent.UI.ch});
 
@@ -150,6 +157,9 @@ classdef SpikeImage < handle
          
          % Construct figure
          obj.Build;
+         
+         % New channel; no changes exist here yet
+         obj.UnconfirmedChanges = false; 
       end
       
       function Refresh(obj)
@@ -231,6 +241,12 @@ classdef SpikeImage < handle
    methods (Access = private)    
       
       function Init(obj,fs)
+         %% INIT  Initialize parameters
+         
+         % No changes have been made yet
+         obj.UnconfirmedChanges = false;
+         obj.UnsavedChanges = false;
+         
          % Add sampling frequency
          obj.Spikes.fs = fs;
          
@@ -269,7 +285,8 @@ classdef SpikeImage < handle
       end
       
       function Interpolate(obj,spikes)
-         % Get interpolation points
+         %% INTERPOLATE    Interpolate spikes to make waveforms smoother
+         
          x = [1, size(spikes,2)];
          xv = linspace(x(1),x(2),obj.XPoints);
          
@@ -300,9 +317,13 @@ classdef SpikeImage < handle
                       'NumberTitle','off',...
                       'Position',[0.2 0.2 0.6 0.6],...
                       'Color','k',...
+                      'WindowKeyPressFcn',@obj.WindowKeyPress,...
+                      'WindowScrollWheelFcn',@obj.WindowMouseWheel,...
                       'CloseRequestFcn',@obj.CloseSpikeImageFigure);
          else
             set(obj.Figure,'CloseRequestFcn',@obj.CloseSpikeImageFigure);
+            set(obj.Figure,'WindowScrollWheelFcn',@obj.WindowMouseWheel);
+            set(obj.Figure,'WindowKeyPressFcn',@obj.WindowKeyPress);
          end
          % Set figure focus
          figure(obj.Figure);
@@ -455,9 +476,17 @@ classdef SpikeImage < handle
       
       function CloseSpikeImageFigure(obj,src,~)
          %% CLOSESPIKEIMAGEFIGURE  Trigger event when figure window closed
-         notify(obj,'MainWindowClosed');
-         delete(src);
-         delete(obj);
+         if obj.UnsavedChanges
+            str = questdlg('Unsaved changes on this channel. Exit anyways?',...
+               'Exit?','Yes','No','Yes');
+         else
+            str = 'Yes';
+         end
+         if strcmpi(str,'Yes')
+            notify(obj,'MainWindowClosed');
+            delete(src);
+            delete(obj);
+         end
       end
       
       function ButtonDownFcnSelect(obj,src,~)
@@ -541,15 +570,92 @@ classdef SpikeImage < handle
          obj.SetPlotNames(plotsToUpdate);
          obj.Flatten(plotsToUpdate);
          obj.Draw(plotsToUpdate);
-
+         
+         % Indicate that there have been some changes in class ID
+         obj.UnconfirmedChanges = true;
+         obj.UnsavedChanges = true;
+         
          set(obj.Figure,'Pointer','arrow');
 
+      end
+      
+      function WindowKeyPress(obj,~,evt)
+         %% WINDOWKEYPRESS    Issue different events on keyboard presses
+         switch evt.Key
+            case 'space'
+               obj.ConfirmChanges;
+            case 'z'
+               if strcmpi(evt.Modifier,'control')
+                  obj.UndoChanges;
+               end
+            case 's'
+               if strcmpi(evt.Modifier,'control')
+                  if obj.UnconfirmedChanges
+                     str = questdlg('Confirm current changes before save?',...
+                        'Use Most Recent Scoring?','Yes','No','Yes');
+                  else
+                     str = 'No';
+                  end
+                  
+                  if strcmp(str,'Yes')
+                     obj.ConfirmChanges;
+                  end
+                  obj.SaveChanges;
+                  
+               end
+            case 'escape'
+               close(obj.Figure);
+            case {'x','c'}
+               if strcmpi(evt.Modifier,'control')
+                  close(obj.Figure);
+               end
+            otherwise
+               
+         end
+      end
+      
+      function SaveChanges(obj)
+         %% SAVECHANGES    Save the scoring that has been done
+         notify(obj,'SaveData');
+         obj.UnsavedChanges = false;
+      end
+      
+      function UndoChanges(obj)
+         %% UNDOCHANGES    Undo sorting to class ID
+         if isa(obj.Parent,'nigeLab.Sort')
+            obj.Spikes.Class = obj.Parent.spk.class{get(obj.Parent,'channel')};
+         else
+            obj.Spikes.Class = obj.Parent.spk.class{1};
+         end
+         obj.UnconfirmedChanges = false;
+         obj.Flatten;
+         obj.Draw;
+      end
+      
+      function ConfirmChanges(obj)
+         %% CONFIRMCHANGES    Confirm that changes to class ID are made
+         if isa(obj.Parent,'nigeLab.Sort')
+            obj.Parent.spk.class{get(obj.Parent,'channel')} = obj.Spikes.Class;
+         else
+            obj.Parent.spk.class{1} = obj.Spikes.Class;
+         end
+         obj.UnconfirmedChanges = false;
+         notify(obj,'ChannelConfirmed');
+      end
+      
+      function WindowMouseWheel(obj,~,evt)
+         %% WINDOWMOUSEWHEEL     Zoom in or out on all plots
+         obj.YLim(1) = min(obj.YLim(1) - 10*evt.VerticalScrollCount,10);
+         obj.YLim(2) = max(obj.YLim(2) + 20*evt.VerticalScrollCount,20);
+         obj.Flatten;
+         obj.Draw;
       end
    
    end
    
    methods (Static = true, Access = private)
       function SetAxesHighlight(ax,col,fontSize)
+         %% SETAXESHIGHLIGHT     Set highlight on an axes handle
          set(ax,'XColor',col);
          set(ax,'YColor',col);
          set(ax,'Color',col);
