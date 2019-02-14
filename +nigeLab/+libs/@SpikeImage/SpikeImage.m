@@ -629,6 +629,7 @@ classdef SpikeImage < handle
          end
          obj.UnconfirmedChanges = false;
          obj.Flatten;
+         obj.SetPlotNames;
          obj.Draw;
       end
       
