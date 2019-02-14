@@ -96,7 +96,9 @@ end
       names = {info.name};
       tagIdx = find(strcmpi(names,'tag'),1,'first');
       
-      if strcmp(info(tagIdx).class,'cell')
+      if isempty(tagIdx) % Everything is fine, return it the normal way
+         clusterIndex = blockObj.Channels(ch).Sorted.value;
+      elseif strcmp(info(tagIdx).class,'cell')
          tag = blockObj.Channels(ch).Sorted.tag(:);
          tag = parseSpikeTagIdx(blockObj,tag);
          fname = getPath(blockObj.Channels(ch).Sorted);

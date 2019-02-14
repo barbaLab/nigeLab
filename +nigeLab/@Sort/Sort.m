@@ -93,6 +93,10 @@ classdef Sort < handle
          if ~initUI(sortObj)
             error('Error constructing graphical interface for sorting.');
          end
+         
+         if nargout == 0
+            clear sortObj
+         end
 
       end
       
@@ -136,6 +140,7 @@ classdef Sort < handle
                
          
       end
+      
       function value = get(sortObj,name)
          %% GET   Overloaded get method for the nigeLab.Sort class object
          switch lower(name)
@@ -156,6 +161,26 @@ classdef Sort < handle
    end
    
    methods (Access = private)
+      
+      function exitScoring(sortObj)
+         %% EXITSCORING    Exit the scoring interface
+         
+         % Remove the channel selector UI, if it exists
+         if isvalid(sortObj.UI.ChannelSelector.Figure)
+            close(sortObj.UI.ChannelSelector.Figure);
+            clear sortObj.UI.ChannelSelector
+         end
+         
+         % Remove the spike interface, if it exists
+         if isvalid(sortObj.UI.SpikeImage.Figure)
+            close(sortObj.UI.SpikeImage.Figure);
+            clear sortObj.UI.SpikeImage
+         end
+         
+         % Delete the Sort object
+         delete(sortObj);
+         clear sortObj
+      end
       
       flag = initParams(sortObj); % Initialize general parameters
       flag = initData(sortObj,nigelObj); % Initialize data structures

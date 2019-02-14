@@ -346,7 +346,7 @@ classdef DiskData < handle
                      
                      obj.type_='Hybrid';
                      obj.name_ = name_;
-                     obj.size_ = size(varargin{3});
+                     obj.size_ = size_;
                      obj.class_ = class_;
                      fid = H5F.open(fName,'H5F_ACC_RDWR','H5P_DEFAULT');
                      H5L.delete(fid,'data','H5P_DEFAULT');
@@ -373,7 +373,6 @@ classdef DiskData < handle
                      
                      obj.type_='Event';
                      obj.name_ = name_;
-                     obj.size_ = size(varargin{3});
                      obj.class_ = class_;
                      fid = H5F.open(fName,'H5F_ACC_RDWR','H5P_DEFAULT');
                      H5L.delete(fid,'data','H5P_DEFAULT');
@@ -387,6 +386,10 @@ classdef DiskData < handle
                      info = whos(obj.diskfile_);
                      obj.bytes_ = info.bytes;
                      
+                     % For some reason need to get size information this
+                     % way, seems redundant not sure why?
+                     data = obj.diskfile_.(obj.name_);
+                     obj.size_ = size(data);
                   otherwise
                      error('Unknown data format');
                end
@@ -475,9 +478,13 @@ classdef DiskData < handle
                      indx=horzcat(indx(:,1),diff(indx,[],2)+1);
                      N = sum(indx(:,2));
                      if isinf(N)
+                        if obj.size_(1) == 0
+                           obj.checkSize;
+                        end
                         N = obj.size_(1);
                         indx(end,2) = N;
                      end
+
                      data = nan(N,obj.size_(2));
                      ii = 1;
                      for kk=1:size(indx,1)
@@ -498,7 +505,8 @@ classdef DiskData < handle
                         case 'snippet'
                            varargout = {data(:,5:end)};
                         otherwise
-                           error('%s is not supported for Events type.');
+                           error('%s is not supported for Events type.',...
+                              lower(S(1).subs));
                      end
                      return;
                end
@@ -727,13 +735,31 @@ classdef DiskData < handle
                end
                varname=[ '/' obj.name_];
                a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+               disp(a);
             case 'MatFile'
                if nargout>0
                   Out=[];
                end
                a = obj.diskfile_.(obj.name_);
+               disp(a);
+            case 'Event'
+               a = obj.diskfile_.(obj.name_);
+               fprintf(1,'%g events\n',obj.size_(1));
+               str = {'type','value','tag','ts','snippet'};
+               for ii = 1:numel(str)
+                  if any(a(:,ii)~=0)
+                     fprintf(1,'->\t %s contains data.\n',str{ii});
+                  else
+                     fprintf(1,'--->\t %s contains only zeros.\n',str{ii});
+                  end
+               end   
+               if nargout > 0
+                  Out = [];    
+               end
+            otherwise
+               error('Unknown type: %s',obj.type_);
          end
-         disp(a);
+         
       end
       
       function x=abs(obj)
@@ -774,6 +800,20 @@ classdef DiskData < handle
          % Note: I changed this to reflect the Matlab class naming
          %       convention that uses the '.' notation. -MM
          cl = sprintf('DiskData.%s', obj.class_);
+      end
+      
+      function checkSize(obj)
+         %% CHECKSIZE   Check the size of object if it is a weird value
+         a = obj.diskfile_.(obj.name_);
+         sz = size(a);
+         for ii = 1:numel(obj.size_)
+            if obj.size_(ii) ~= sz(ii)
+%                warning('Incorrect dimension (%d): %g --> %g (fixed)',...
+%                   ii,obj.size_(ii),sz(ii));
+               obj.size_(ii) = sz(ii);
+            end
+         end
+         obj.size_ = size(a);
       end
    end
 end

@@ -58,6 +58,9 @@ if isempty(blockObj.SortPars)
    return;
 end
 tag = blockObj.Channels(ch).Sorted.tag;
+if min(tag) < 1
+   tag = tag - min(tag) + 1;
+end
 
 % If it's old format, convert it properly:
 if ~isnumeric(tag)

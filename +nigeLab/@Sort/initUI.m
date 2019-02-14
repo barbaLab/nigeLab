@@ -38,14 +38,14 @@ sortObj.UI.feat.label = parseFeatLabels(sortObj);
 sortObj.UI.ChannelSelector = nigeLab.libs.ChannelUI(sortObj);
 sortObj.UI.SpikeImage = nigeLab.libs.SpikeImage(sortObj);
 addlistener(sortObj.UI.ChannelSelector,'NewChannel',@sortObj.setChannel);
-
+addlistener(sortObj.UI.SpikeImage,'MainWindowClosed',@(~,~)sortObj.exitScoring);
 
 flag = true;
 
    function featName = parseFeatNames(sortObj)
       % Get feature names from parameters struct or generate them if they
       % do not already exist (from an old version of SD code)
-      pars = sortObj.Blocks(1).Channels(1).Spikes.pars;
+      pars = sortObj.Blocks(1).SDPars;
       n = size(sortObj.spk.feat{1},2);
       
       if isfield(pars,'FEAT_NAMES')

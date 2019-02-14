@@ -58,6 +58,10 @@ classdef SpikeImage < handle
       Defaults_File = 'SpikeImageDefaults.mat'; % Name of file with default
       PlotNames = cell(9,1);
    end
+   
+   events
+      MainWindowClosed
+   end
 
    methods (Access = public)
       function obj = SpikeImage(spikes,fs,class,varargin)
@@ -251,7 +255,10 @@ classdef SpikeImage < handle
                       'ToolBar','none',...
                       'NumberTitle','off',...
                       'Position',[0.2 0.2 0.6 0.6],...
-                      'Color','k');
+                      'Color','k',...
+                      'CloseRequestFcn',@obj.CloseSpikeImageFigure);
+         else
+            set(obj.Figure,'CloseRequestFcn',@obj.CloseSpikeImageFigure);
          end
          % Set figure focus
          figure(obj.Figure);
@@ -308,6 +315,12 @@ classdef SpikeImage < handle
             obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
                max(max(obj.Spikes.C{iC})); 
          end
+      end
+      
+      function CloseSpikeImageFigure(obj,src,~)
+         notify(obj,'MainWindowClosed');
+         delete(src);
+         delete(obj);
       end
    
    end
