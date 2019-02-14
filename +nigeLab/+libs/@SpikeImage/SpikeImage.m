@@ -66,6 +66,7 @@ classdef SpikeImage < handle
       MainWindowClosed
       ClassAssigned
       ChannelConfirmed
+      SaveData
    end
 
    methods (Access = public)
@@ -144,7 +145,16 @@ classdef SpikeImage < handle
          %% UPDATECHANNEL  Update the spike data structure to new channel
          
          % Check if it's okay to lose changes if there are any
+         if obj.UnconfirmedChanges
+            str = questdlg('Unconfirmed changes will be lost. Change channel anyways?',...
+               'Discard Sorting on this Channel?','Yes','No','Yes');
+         else
+            str = 'Yes';
+         end
          
+         if strcmp(str,'No')
+            return;
+         end
          
          % Interpolate spikes
          obj.Interpolate(obj.Parent.spk.spikes{obj.Parent.UI.ch});
@@ -604,10 +614,10 @@ classdef SpikeImage < handle
                   
                end
             case 'escape'
-               close(obj.Figure);
+               notify(obj,'MainWindowClosed');
             case {'x','c'}
                if strcmpi(evt.Modifier,'control')
-                  close(obj.Figure);
+                  notify(obj,'MainWindowClosed');
                end
             otherwise
                
@@ -636,7 +646,7 @@ classdef SpikeImage < handle
       function ConfirmChanges(obj)
          %% CONFIRMCHANGES    Confirm that changes to class ID are made
          if isa(obj.Parent,'nigeLab.Sort')
-            obj.Parent.spk.class{get(obj.Parent,'channel')} = obj.Spikes.Class;
+            obj.Parent.setClass(obj.Spikes.Class);
          else
             obj.Parent.spk.class{1} = obj.Spikes.Class;
          end

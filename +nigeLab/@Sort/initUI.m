@@ -39,6 +39,7 @@ sortObj.UI.ChannelSelector = nigeLab.libs.ChannelUI(sortObj);
 sortObj.UI.SpikeImage = nigeLab.libs.SpikeImage(sortObj);
 addlistener(sortObj.UI.ChannelSelector,'NewChannel',@sortObj.setChannel);
 addlistener(sortObj.UI.SpikeImage,'MainWindowClosed',@(~,~)sortObj.exitScoring);
+addlistener(sortObj.UI.SpikeImage,'SaveData',@(~,~)sortObj.saveData);
 
 flag = true;
 

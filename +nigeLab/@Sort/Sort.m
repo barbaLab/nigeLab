@@ -158,6 +158,8 @@ classdef Sort < handle
       end
       
       setChannel(sortObj,~,~) % Set the current channel in the UI
+      setClass(sortObj,class) % Set the current sort class
+      saveData(sortObj)       % Save the sorting
    end
    
    methods (Access = private)
