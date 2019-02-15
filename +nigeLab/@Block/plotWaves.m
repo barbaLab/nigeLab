@@ -22,7 +22,7 @@ flag = false;
 blockObj.PlotPars = nigeLab.defaults.Plot();
 
 %% FIGURE OUT WHAT TO PLOT
-str_in = blockObj.Fields(blockObj.Status);
+str_in = blockObj.getStatus;
 [~,idx] = nigeLab.utils.uidropdownbox('Choose Wave Type',...
    'Select type of waveform to plot:',...
    str_in);
