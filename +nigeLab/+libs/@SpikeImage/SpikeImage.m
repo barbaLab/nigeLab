@@ -57,6 +57,16 @@ classdef SpikeImage < handle
       T = 1.2;          % Approx. time (milliseconds) of waveform
       Defaults_File = 'SpikeImageDefaults.mat'; % Name of file with default
       PlotNames = cell(9,1);
+      
+      UnconfirmedChanges
+      UnsavedChanges
+   end
+   
+   events
+      MainWindowClosed
+      ClassAssigned
+      ChannelConfirmed
+      SaveData
    end
 
    methods (Access = public)
@@ -132,7 +142,20 @@ classdef SpikeImage < handle
       end
       
       function UpdateChannel(obj,~,~)
-
+         %% UPDATECHANNEL  Update the spike data structure to new channel
+         
+         % Check if it's okay to lose changes if there are any
+         if obj.UnconfirmedChanges
+            str = questdlg('Unconfirmed changes will be lost. Change channel anyways?',...
+               'Discard Sorting on this Channel?','Yes','No','Yes');
+         else
+            str = 'Yes';
+         end
+         
+         if strcmp(str,'No')
+            return;
+         end
+         
          % Interpolate spikes
          obj.Interpolate(obj.Parent.spk.spikes{obj.Parent.UI.ch});
 
@@ -144,9 +167,14 @@ classdef SpikeImage < handle
          
          % Construct figure
          obj.Build;
+         
+         % New channel; no changes exist here yet
+         obj.UnconfirmedChanges = false; 
       end
       
       function Refresh(obj)
+         %% REFRESH  Re-display all the spikes
+         
          if isa(obj.Parent,'nigeLab.Sort')
             % Set spike classes
             obj.Assign(obj.Parent.spk.class{obj.Parent.UI.ch});
@@ -160,6 +188,8 @@ classdef SpikeImage < handle
       end
       
       function set(obj,NAME,value)
+         %% SET   Overloaded class method
+         
          % Set 'numclus_max', 'ylim', or 'plotnames' properties and update.
          switch lower(NAME)
             case 'numclus_max'
@@ -187,32 +217,71 @@ classdef SpikeImage < handle
          end
       end
       
-      function Assign(obj,class)   
-         % Update spikes to a given class label (numeric)
-         obj.Spikes.Class = class;
-         obj.Spikes.Class(class > obj.NumClus_Max) = 1;
-         obj.SetPlotNames;
+      function Assign(obj,class,subsetIndex)
+         %% ASSIGN   Assign spikes to a given class
+         
+         if nargin < 3
+            if numel(class) == 1 % If only 1 value given assign all to that
+               obj.Spikes.Class = ones(size(obj.Spikes.Waves,1),1) * class;
+            elseif numel(class) ~= size(obj.Spikes.Waves,1)
+               warning(sprintf(['Invalid class size (%d; should be %d).\n' ...
+                  'Assigning all classes to class(1) (%d).'], ...
+                  numel(class),size(obj.Spikes.Waves,1),class(1))); %#ok<SPWRN>
+               
+               obj.Spikes.Class=ones(size(obj.Spikes.Waves,1),1)*class(1);
+            else
+               % Otherwise just assign the given value
+               obj.Spikes.Class = class;
+            end
+            obj.Spikes.Class(class > obj.NumClus_Max) = 1;
+            subs = 1:size(obj.Spikes.Waves,1);
+
+         else % Update spikes to a given class label (numeric)
+            obj.Spikes.Class(subsetIndex) = class;
+            subs = subsetIndex;
+
+         end
+         evtData = nigeLab.libs.assignmentEventData(subs,class);
+         notify(obj,'ClassAssigned',evtData);
+         
       end
       
    end
    
    methods (Access = private)    
+      
       function Init(obj,fs)
+         %% INIT  Initialize parameters
+         
+         % No changes have been made yet
+         obj.UnconfirmedChanges = false;
+         obj.UnsavedChanges = false;
+         
          % Add sampling frequency
          obj.Spikes.fs = fs;
          
          % Set Colormap for this image
          cm = load(obj.Defaults_File,'ColorMap');
          obj.CMap = cm.ColorMap;
-         obj.NumClus_Max = min(numel(obj.CMap),obj.NumClus_Max);         
+         obj.NumClus_Max = min(numel(obj.CMap),obj.NumClus_Max);   
          
          % Get X and Y vectors for image
          obj.Spikes.X = linspace(0,obj.T,obj.XPoints);      % Milliseconds
          obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
+         
+         obj.Spikes.CurClass = 1;
       end
       
-      function SetPlotNames(obj)
-         for iPlot = 1:obj.NumClus_Max
+      function SetPlotNames(obj,plotNum)
+         %% SETPLOTNAMES   Set names (titles) of each plot
+         
+         if nargin < 2
+            plotNum = 1:obj.NumClus_Max;
+         else
+            plotNum = reshape(plotNum,1,numel(plotNum));
+         end
+         
+         for iPlot = plotNum
             if iPlot > 1
                obj.PlotNames{iPlot} = ...
                   sprintf('Cluster %d        N = %d',...
@@ -226,7 +295,8 @@ classdef SpikeImage < handle
       end
       
       function Interpolate(obj,spikes)
-         % Get interpolation points
+         %% INTERPOLATE    Interpolate spikes to make waveforms smoother
+         
          x = [1, size(spikes,2)];
          xv = linspace(x(1),x(2),obj.XPoints);
          
@@ -243,6 +313,11 @@ classdef SpikeImage < handle
       end
       
       function Build(obj)
+         %% BUILD    Build the figure (if needed) and axes/images
+         
+         % Get plot names
+         obj.SetPlotNames;
+         
          % Make figure or update current figure with fast spike plots.
          if ~isvalid(obj.Figure)
             obj.Figure = figure('Name','SpikeImage',...
@@ -251,64 +326,360 @@ classdef SpikeImage < handle
                       'ToolBar','none',...
                       'NumberTitle','off',...
                       'Position',[0.2 0.2 0.6 0.6],...
-                      'Color','k');
+                      'Color','k',...
+                      'WindowKeyPressFcn',@obj.WindowKeyPress,...
+                      'WindowScrollWheelFcn',@obj.WindowMouseWheel,...
+                      'CloseRequestFcn',@obj.CloseSpikeImageFigure);
+         else
+            set(obj.Figure,'CloseRequestFcn',@obj.CloseSpikeImageFigure);
+            set(obj.Figure,'WindowScrollWheelFcn',@obj.WindowMouseWheel);
+            set(obj.Figure,'WindowKeyPressFcn',@obj.WindowKeyPress);
          end
          % Set figure focus
          figure(obj.Figure);
          nrows = ceil(sqrt(obj.NumClus_Max));
          ncols = ceil(obj.NumClus_Max/nrows);
-         obj.Axes = cell(obj.NumClus_Max,1);
-         obj.Images = cell(obj.NumClus_Max,1);
+         
+         % Initialize axes and images if necessary
+         if isempty(obj.Axes)
+            obj.Axes = cell(obj.NumClus_Max,1);
+            obj.Images = cell(obj.NumClus_Max,1);
+            for iC = 1:obj.NumClus_Max
+               obj.Axes{iC} = subplot(nrows,ncols,iC);
+               obj.initAxes(iC);
+               obj.initImages(iC);
+            end
+         elseif ~isvalid(obj.Axes{1})
+            obj.Axes = cell(obj.NumClus_Max,1);
+            obj.Images = cell(obj.NumClus_Max,1);
+            for iC = 1:obj.NumClus_Max
+               obj.Axes{iC} = subplot(nrows,ncols,iC);
+               obj.initAxes(iC);
+               obj.initImages(iC);
+            end
+         end
+         
+         % Superimpose the image on everything
          fprintf(1,'->\tPlotting spikes');
          for iC = 1:obj.NumClus_Max
             fprintf(1,'. ');
-            obj.Axes{iC} = subplot(nrows,ncols,iC);
-            obj.Draw(iC,iC);
+            obj.Draw(iC);
          end
          fprintf(1,'complete.\n\n');
       end
       
-      function Draw(obj,PlotNum,CluNum)
-         % Re-draw specified axis
-         obj.Images{PlotNum} = imagesc(obj.Axes{PlotNum},...
-            obj.Spikes.X,obj.Spikes.Y,obj.Spikes.C{PlotNum});
-         colormap(obj.Axes{PlotNum},obj.CMap{CluNum})
-         set(obj.Axes{PlotNum}.Title,'String',obj.PlotNames{PlotNum});
-         set(obj.Axes{PlotNum}.Title,'FontName','Arial');
-         set(obj.Axes{PlotNum}.Title,'FontSize',16);
-         set(obj.Axes{PlotNum}.Title,'FontWeight','bold');
-         set(obj.Axes{PlotNum}.Title,'Color','w');
-         set(obj.Axes{PlotNum},'YDir','normal');
-         set(obj.Axes{PlotNum},'XColor','w');
-         set(obj.Axes{PlotNum},'YColor','w');
-         if ~isempty(obj.PlotCB)
-            set(obj.Axes{PlotNum},'ButtonDownFcn',obj.PlotCB);
-            set(obj.Images{PlotNum},'ButtonDownFcn',obj.PlotCB);
+      function Draw(obj,plotNum)
+         %% DRAW  Re-draw specified axis
+         if nargin < 2
+            plotNum = 1:obj.NumClus_Max;
+         else
+            plotNum = reshape(plotNum,1,numel(plotNum));
+         end
+            
+         for iPlot = plotNum
+            set(obj.Images{iPlot},'CData',obj.Spikes.C{iPlot});
+            set(obj.Axes{iPlot}.Title,'String',obj.PlotNames{iPlot});
+            if obj.Spikes.CurClass == iPlot
+               obj.SetAxesHighlight(obj.Axes{iPlot},'m',20);
+            else
+               obj.SetAxesHighlight(obj.Axes{iPlot},'w',16);
+            end
+            drawnow;
          end
          
-         drawnow;
       end
       
-      function Flatten(obj)
-         % Condense all spikes into one matrix of values scaled from 0 to 1
-         obj.Spikes.C = cell(obj.NumClus_Max,1);
-         for iC = 1:obj.NumClus_Max
-            % Get bin edges
-            y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints); 
+      function initAxes(obj,plotNum)
+         %% INITAXES    Initialize axes properties
+         
+         if nargin < 2
+            plotNum = 1:obj.NumClus_Max;
+         else
+            plotNum = reshape(plotNum,1,numel(plotNum));
+         end
+         
+         for iPlot = plotNum
+            set(obj.Axes{iPlot}.Title,'String',obj.PlotNames{iPlot});
+            set(obj.Axes{iPlot}.Title,'FontName','Arial');
+            set(obj.Axes{iPlot},'YDir','normal');
+            set(obj.Axes{iPlot},'Box','on');            
 
-            % Pre-allocate
-            clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
-            im_out = zeros(obj.YPoints-1,obj.XPoints);
-            assign_out = nan(size(clus,1),obj.XPoints);
-            for ii = 1:obj.XPoints
-               obj.Spikes.C{iC}(:,ii) = histcounts(clus(:,ii),y_edge);
-            end
+            set(obj.Axes{iPlot}.XAxis,'LineWidth',4);
+            set(obj.Axes{iPlot}.YAxis,'LineWidth',4);
+            set(obj.Axes{iPlot},'NextPlot','replacechildren');
+            
+            set(obj.Axes{iPlot},'XLimMode','manual');
+            set(obj.Axes{iPlot},'YLimMode','manual');
+            set(obj.Axes{iPlot},'XLim',obj.Spikes.X([1,end]));
+            set(obj.Axes{iPlot},'YLim',obj.Spikes.Y([1,end]));
 
-            % Normalize
-            obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
-               max(max(obj.Spikes.C{iC})); 
+            set(obj.Axes{iPlot},'UserData',iPlot);
+            set(obj.Axes{iPlot},'ButtonDownFcn',@obj.ButtonDownFcnSelect);
+
+            colormap(obj.Axes{iPlot},obj.CMap{iPlot})
          end
       end
+      
+      function initImages(obj,plotNum)
+         %% INITIMAGES  Init spike plot images
+         
+         if nargin < 2
+            plotNum = 1:obj.NumClus_Max;
+         else
+            plotNum = reshape(plotNum,1,numel(plotNum));
+         end
+         
+         for iPlot = plotNum
+            % Factor 0.98 to make edges of graph more prominent
+            obj.Images{iPlot} = imagesc(obj.Axes{iPlot},...
+               obj.Spikes.X*0.98,obj.Spikes.Y*0.98,obj.Spikes.C{iPlot});
+            set(obj.Images{iPlot},'UserData',iPlot);
+            set(obj.Images{iPlot},'ButtonDownFcn',@obj.ButtonDownFcnSelect);
+         end
+      end
+      
+      function Flatten(obj,plotNum)
+         %% FLATTEN   Condense spikes into matrix scaled from 0 to 1
+         
+         if nargin < 2
+            
+            obj.Spikes.C = cell(obj.NumClus_Max,1); % Colors (spike image)
+            obj.Spikes.A = cell(obj.NumClus_Max,1); % Assignments
+            for iC = 1:obj.NumClus_Max
+               % Get bin edges
+               y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints); 
+
+               % Pre-allocate
+               clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
+               obj.Spikes.C{iC} = zeros(obj.YPoints-1,obj.XPoints);
+               obj.Spikes.A{iC} = nan(size(clus));
+               for ii = 1:obj.XPoints
+                  [obj.Spikes.C{iC}(:,ii),~,obj.Spikes.A{iC}(:,ii)] = ...
+                     histcounts(clus(:,ii),y_edge);
+               end
+
+               % Normalize
+               obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
+                  max(max(obj.Spikes.C{iC})); 
+            end
+         else
+            plotNum = reshape(plotNum,1,numel(plotNum));
+            for iC = plotNum
+               % Get bin edges
+               y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints); 
+
+               % Pre-allocate
+               clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
+               obj.Spikes.C{iC} = zeros(obj.YPoints-1,obj.XPoints);
+               obj.Spikes.A{iC} = nan(size(clus));
+               for ii = 1:obj.XPoints
+                  [obj.Spikes.C{iC}(:,ii),~,obj.Spikes.A{iC}(:,ii)] = ...
+                     histcounts(clus(:,ii),y_edge);
+               end
+
+               % Normalize
+               obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
+                  max(max(obj.Spikes.C{iC})); 
+            end
+         end
+      end
+      
+      function CloseSpikeImageFigure(obj,src,~)
+         %% CLOSESPIKEIMAGEFIGURE  Trigger event when figure window closed
+         if obj.UnsavedChanges
+            str = questdlg('Unsaved changes on this channel. Exit anyways?',...
+               'Exit?','Yes','No','Yes');
+         else
+            str = 'Yes';
+         end
+         if strcmpi(str,'Yes')
+            notify(obj,'MainWindowClosed');
+            delete(src);
+            delete(obj);
+         end
+      end
+      
+      function ButtonDownFcnSelect(obj,src,~)
+         %% BUTTONDOWNFCNSELECT  Determine which callback to use for click
+         
+         % Make sure we're referring to the axes
+         if isa(gco,'matlab.graphics.primitive.Image')
+            ax = src.Parent;
+         else
+            ax = src;
+         end
+         
+         % Don't do anything if it is the same axes as currently selected
+         if ax.UserData == obj.Spikes.CurClass
+            return;
+         end
+         
+         switch get(gcf,'SelectionType')
+            case 'normal' % Highlight clicked axes (L-Click)
+               obj.SetAxesWhereSpikesGo(ax);
+            case 'alt'    % Do "cluster cutting" (R-Click)
+               obj.SetAxesHighlight(ax,'r');
+               obj.GetSpikesToMove(ax);
+               obj.SetAxesHighlight(ax,'w');
+            otherwise
+               return;
+         end
+         
+      end
+      
+      function SetAxesWhereSpikesGo(obj,curAxes)
+         %% SETAXESWHERESPIKESGO    Set current cluster to this axes
+         
+         plotNum = curAxes.UserData;
+         pastNum = obj.Spikes.CurClass;
+         obj.Spikes.CurClass = plotNum;
+         
+         % Change the border on both plots
+         obj.Draw([plotNum,pastNum]);
+         
+                  
+      end
+      
+      function GetSpikesToMove(obj,curAxes)
+         %% GETSPIKESTOMOVE  Draw polygon, move spikes 
+
+         % Track cluster assignment changes
+         thisClass = curAxes.UserData;
+         subsetIndex = find(obj.Spikes.Class == thisClass);
+         set(obj.Figure,'Pointer','circle');
+         
+         snipped_region = imfreehand(curAxes);
+         pos = getPosition(snipped_region);
+         delete(snipped_region);
+
+         [px,py] = meshgrid(obj.Spikes.X,obj.Spikes.Y);
+         cx = pos(:,1);
+         cy = pos(:,2);
+
+         % Excellent mex version of InPolygon from Guillaume Jacquenot:
+         [IN,ON] = InPolygon(px,py,cx,cy);
+         pts = IN | ON;
+         set(obj.Figure,'Pointer','watch');
+         drawnow;
+         
+
+         % Match from SpikeImage Assignments        
+         start = find(sum(pts,1),1,'first'); % Skip "empty" start
+         last = find(sum(pts,1),1,'last'); % Skip "empty" end
+         iMove = [];
+         for ii = start:last
+            addressVec = obj.Spikes.A{thisClass}(:,ii);
+            inPolyVec = find(pts(:,ii));
+            inPolyVec = repmat(inPolyVec.',numel(addressVec),1);
+            iMove = [iMove; find(any(addressVec == inPolyVec,2))]; %#ok<AGROW>
+         end
+         iMove = unique(iMove);
+
+         obj.Assign(obj.Spikes.CurClass,subsetIndex(iMove));
+         plotsToUpdate = [obj.Spikes.CurClass,thisClass];
+         obj.SetPlotNames(plotsToUpdate);
+         obj.Flatten(plotsToUpdate);
+         obj.Draw(plotsToUpdate);
+         
+         % Indicate that there have been some changes in class ID
+         obj.UnconfirmedChanges = true;
+         obj.UnsavedChanges = true;
+         
+         set(obj.Figure,'Pointer','arrow');
+
+      end
+      
+      function WindowKeyPress(obj,~,evt)
+         %% WINDOWKEYPRESS    Issue different events on keyboard presses
+         switch evt.Key
+            case 'space'
+               obj.ConfirmChanges;
+            case 'z'
+               if strcmpi(evt.Modifier,'control')
+                  obj.UndoChanges;
+               end
+            case 's'
+               if strcmpi(evt.Modifier,'control')
+                  if obj.UnconfirmedChanges
+                     str = questdlg('Confirm current changes before save?',...
+                        'Use Most Recent Scoring?','Yes','No','Yes');
+                  else
+                     str = 'No';
+                  end
+                  
+                  if strcmp(str,'Yes')
+                     obj.ConfirmChanges;
+                  end
+                  obj.SaveChanges;
+                  
+               end
+            case 'escape'
+               notify(obj,'MainWindowClosed');
+            case {'x','c'}
+               if strcmpi(evt.Modifier,'control')
+                  notify(obj,'MainWindowClosed');
+               end
+            otherwise
+               
+         end
+      end
+      
+      function SaveChanges(obj)
+         %% SAVECHANGES    Save the scoring that has been done
+         notify(obj,'SaveData');
+         obj.UnsavedChanges = false;
+      end
+      
+      function UndoChanges(obj)
+         %% UNDOCHANGES    Undo sorting to class ID
+         if isa(obj.Parent,'nigeLab.Sort')
+            obj.Spikes.Class = obj.Parent.spk.class{get(obj.Parent,'channel')};
+         else
+            obj.Spikes.Class = obj.Parent.spk.class{1};
+         end
+         obj.UnconfirmedChanges = false;
+         obj.Flatten;
+         obj.SetPlotNames;
+         obj.Draw;
+      end
+      
+      function ConfirmChanges(obj)
+         %% CONFIRMCHANGES    Confirm that changes to class ID are made
+         if isa(obj.Parent,'nigeLab.Sort')
+            obj.Parent.setClass(obj.Spikes.Class);
+         else
+            obj.Parent.spk.class{1} = obj.Spikes.Class;
+         end
+         obj.UnconfirmedChanges = false;
+         notify(obj,'ChannelConfirmed');
+      end
+      
+      function WindowMouseWheel(obj,~,evt)
+         %% WINDOWMOUSEWHEEL     Zoom in or out on all plots
+         obj.YLim(1) = min(obj.YLim(1) - 10*evt.VerticalScrollCount,10);
+         obj.YLim(2) = max(obj.YLim(2) + 20*evt.VerticalScrollCount,20);
+         obj.Flatten;
+         obj.Draw;
+      end
    
+   end
+   
+   methods (Static = true, Access = private)
+      function SetAxesHighlight(ax,col,fontSize)
+         %% SETAXESHIGHLIGHT     Set highlight on an axes handle
+         set(ax,'XColor',col);
+         set(ax,'YColor',col);
+         set(ax,'Color',col);
+         set(ax.Title,'Color',col);
+         
+         if nargin > 2
+            set(ax.Title,'FontSize',fontSize);
+            if fontSize > 18
+               set(ax.Title,'FontWeight','bold');
+            else
+               set(ax.Title,'FontWeight','normal');
+            end
+         end
+      end
    end
 end

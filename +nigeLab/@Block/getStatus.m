@@ -57,7 +57,7 @@ switch nargin
    case 2 % If one input given
       status = parseStatus(blockObj,operation);
       
-   case 3 % If optional 'all' argument is given
+   case 3 % If channel is given
       status = parseStatus(blockObj,operation);
       status = ~any(~status(channel));
       
