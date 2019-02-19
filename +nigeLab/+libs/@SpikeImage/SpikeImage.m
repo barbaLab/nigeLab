@@ -43,11 +43,12 @@ classdef SpikeImage < handle
                       'Color','k'); 
       Labels   % Labels above the subplots
       Images   % Figure subplots that contain flattened spike image
+      VisibleToggle % checkbox for selecting visiblity in the feature panel
       Axes     % Axes containers for images
       Parent   % Only set if called by nigeLab.Sort class object
    end
    
-   properties (Access = private)
+   properties (Access = public)
       PlotCB;
       NumClus_Max = 9;
       CMap;
@@ -348,6 +349,7 @@ classdef SpikeImage < handle
             for iC = 1:obj.NumClus_Max
                obj.Axes{iC} = subplot(nrows,ncols,iC);
                obj.initAxes(iC);
+               obj.InitCheckBoxes(iC)
                obj.initImages(iC);
             end
          elseif ~isvalid(obj.Axes{1})
@@ -356,6 +358,7 @@ classdef SpikeImage < handle
             for iC = 1:obj.NumClus_Max
                obj.Axes{iC} = subplot(nrows,ncols,iC);
                obj.initAxes(iC);
+               obj.InitCheckBoxes(iC)
                obj.initImages(iC);
             end
          end
@@ -367,6 +370,29 @@ classdef SpikeImage < handle
             obj.Draw(iC);
          end
          fprintf(1,'complete.\n\n');
+      end
+      
+      function InitCheckBoxes(obj,iC)
+          pos = obj.Axes{iC}.Position;
+          pos(3:4) = 0.015;
+          obj.VisibleToggle{iC} = uicontrol('Style','checkbox',...
+              'Units','normalized',...
+              'Position',pos,...
+              'BackgroundColor','none',...
+              'ForegroundColor','none',...
+              'Value',true,...
+              'CallBack',@obj.CheckCallBack,...
+              'UserData',iC);
+      end
+      
+      function CheckCallBack(obj,this,evs)
+         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
+             this.UserData);
+         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
+             this.UserData);
+         obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = this.Value;
+         obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = this.Value;
+
       end
       
       function Draw(obj,plotNum)
