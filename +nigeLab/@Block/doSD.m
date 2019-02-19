@@ -79,7 +79,8 @@ for iCh = blockObj.Mask
    if exist(fullfile(fNameSort),'file')==0
       blockObj.getSort(iCh,true);
    end
-   
+   blockObj.updateStatus('Spikes',true,iCh);
+
    
    % And update the status indicator in Command Window:
    pct = 100 * (iCh / blockObj.NumChannels);
@@ -88,7 +89,6 @@ for iCh = blockObj.Mask
 end
 
 % Indicate that it is finished at the end
-blockObj.updateStatus('Spikes',true);
 blockObj.save;
 flag = true;
 

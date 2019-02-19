@@ -261,7 +261,8 @@ classdef SpikeImage < handle
          obj.Spikes.fs = fs;
          
          % Set Colormap for this image
-         cm = load(obj.Defaults_File,'ColorMap');
+         fname = fullfile(fileparts(mfilename('fullpath')),obj.Defaults_File);
+         cm = load(fname,'ColorMap');
          obj.CMap = cm.ColorMap;
          obj.NumClus_Max = min(numel(obj.CMap),obj.NumClus_Max);   
          
