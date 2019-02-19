@@ -88,6 +88,7 @@ sortObj.spk.fs = sortObj.Blocks(1).SampleRate; % Sample rate for all blocks
 
 fprintf(1,'\nImporting spike info for %d Blocks...000%%\n',...
    numel(sortObj.Blocks));
+sortObj.spk.tMax = -inf;
 for iCh = sortObj.Channels.Mask % get # clusters per channel   
    % Get all associated spike data for that channel, from all blocks
    [sortObj.spk.spikes{iCh},...
@@ -96,6 +97,8 @@ for iCh = sortObj.Channels.Mask % get # clusters per channel
     sortObj.spk.tag{iCh},...
     sortObj.spk.ts{iCh},...
     sortObj.spk.block{iCh}] = getAllSpikeData(sortObj,iCh);  
+ 
+   sortObj.spk.tMax = max(sortObj.spk.tMax,max(sortObj.spk.ts{iCh}));
  
    fraction_done = 100 * (iCh / sortObj.Channels.N);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))

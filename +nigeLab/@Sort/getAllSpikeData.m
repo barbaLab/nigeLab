@@ -71,5 +71,7 @@ for ii = vec
    blockIdx = [blockIdx; ones(size(tmp)).*ii];
 end
 
+% Normalize to standard deviation:
+feat = (feat - mean(feat,1))./std(feat,[],1);
 
 end

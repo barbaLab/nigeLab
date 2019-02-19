@@ -1,5 +1,10 @@
 function FeatPopCallback(obj,this,~)
-%% CRC_FEATPOPCALLBACK  Callback function from FEATURES popup box
+%% FEATPOPCALLBACK  Callback function from FEATURES popup box
+%
+%  set(gco,'Callback',@obj.FeatPopCallback);
+%
+%
+
 switch this.Tag
     case 'Dim1'
         other = obj.FeatY;

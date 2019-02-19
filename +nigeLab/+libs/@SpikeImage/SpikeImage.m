@@ -679,6 +679,8 @@ classdef SpikeImage < handle
          end
          obj.UnconfirmedChanges = false;
          notify(obj,'ChannelConfirmed');
+         fprintf(1,'Scoring for channel %d confirmed.\n',...
+            obj.Parent.UI.ChannelSelector.Channel);
       end
       
       function WindowMouseWheel(obj,~,evt)

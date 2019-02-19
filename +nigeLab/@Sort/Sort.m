@@ -62,6 +62,11 @@ classdef Sort < handle
       prev     % Previous assignments
    end
    
+   events
+      channelUpdated
+      
+   end
+   
    %% METHODS
    methods (Access = public)
       function sortObj = Sort(nigelObj)
