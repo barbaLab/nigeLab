@@ -247,6 +247,28 @@ classdef SpikeImage < handle
          
       end
       
+      function SetVisibleFeatures(obj,clus,val)
+         if ~isvalid(obj.Parent.UI.FeaturesUI.Features2D)
+            return;
+         end
+         
+         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
+             clus);
+         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
+            clus);
+          
+         if (val > 0)
+            state = 'on';
+         else
+            state = 'off';
+         end
+          
+         obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = state;
+         obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = state;
+         obj.Parent.UI.FeaturesUI.VisibleClusters(clus) = val;
+         
+      end
+      
    end
    
    methods (Access = private)    
@@ -385,13 +407,12 @@ classdef SpikeImage < handle
               'UserData',iC);
       end
       
-      function CheckCallBack(obj,this,evs)
-         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
-             this.UserData);
-         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
-             this.UserData);
-         obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = this.Value;
-         obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = this.Value;
+      function CheckCallBack(obj,this,~)
+         if ~isvalid(obj.Parent.UI.FeaturesUI.Features2D)
+            return;
+         end
+         
+         obj.SetVisibleFeatures(this.UserData,this.Value);
 
       end
       

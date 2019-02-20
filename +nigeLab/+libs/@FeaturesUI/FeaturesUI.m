@@ -1,19 +1,19 @@
 classdef FeaturesUI < handle
-%%  FEATURESUI    Class for displaying features of a set of spikes
-%
-%  obj = FeaturesUI()
-%
-%  --------
-%   INPUTS
-%  --------
-%  --------
-%   OUTPUT
-%  --------
-%    obj       :     FeaturesUI object. Displays clusters in some features
-%                    space and other usefull elementsd as cluster quality
-%
-
-%%
+   %%  FEATURESUI    Class for displaying features of a set of spikes
+   %
+   %  obj = FeaturesUI()
+   %
+   %  --------
+   %   INPUTS
+   %  --------
+   %  --------
+   %   OUTPUT
+   %  --------
+   %    obj       :     FeaturesUI object. Displays clusters in some features
+   %                    space and other usefull elementsd as cluster quality
+   %
+   
+   %%
    properties (Access = public)
       ChannelSelector
       SpikeImage
@@ -23,7 +23,7 @@ classdef FeaturesUI < handle
       FeatX
       FeatY
       Features2D
-
+      
       Data
       Parent
       featInd = [1 2];
@@ -32,7 +32,7 @@ classdef FeaturesUI < handle
       Confirm
       SpikePanel
       SpikePlot
-
+      
       ClusterLabel
       Exclusions
       FeatureCombos
@@ -58,7 +58,7 @@ classdef FeaturesUI < handle
       FEAT_VIEW = [30 30];
       MINSPIKES = 30;
       NFEAT_PLOT_POINTS = 2000;
-      NCLUS_MAX = 9; 
+      NCLUS_MAX = 9;
       COLS = {[0,0,0]; ...
          [0.200000000000000,0.200000000000000,0.900000000000000];...
          [0.800000000000000,0.200000000000000,0.200000000000000];...
@@ -72,8 +72,8 @@ classdef FeaturesUI < handle
    
    methods (Access = public)
       function obj = FeaturesUI(sortObj,varargin)
-          %% 
-          for iV = 1:2:numel(varargin) % Can specify properties on construct
+         %%
+         for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue
             end
@@ -85,19 +85,19 @@ classdef FeaturesUI < handle
          end
          
          %% PARSE FIRST INPUT
-
+         
          if isa(sortObj,'nigeLab.Sort')
             obj.Parent = sortObj;
             obj.ChannelSelector = sortObj.UI.ChannelSelector;
             obj.SpikeImage = sortObj.UI.SpikeImage;
             addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.ExitFeatures);
             addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
-            addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);            
+            addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);
             obj.Data = obj.Parent.spk;
          elseif isa(sortObj,'nigeLab.libs.ChannelUI')
             obj.Parent = [];
             obj.ChannelSelector = sortObj;
-            % Needs 'SpikeImage' 
+            % Needs 'SpikeImage'
             % Needs 'Data' and data struct name,value pair
          else
             obj.Parent = [];
@@ -105,7 +105,7 @@ classdef FeaturesUI < handle
             % Needs 'SpikeImage'
             % Needs 'Data' and data struct name,value pair
          end
-
+         
          obj.Init(sortObj);
          obj.PlotFeatures;
       end
@@ -117,23 +117,23 @@ classdef FeaturesUI < handle
    end
    
    methods (Access = private)
-       
+      
       CountExclusions(obj,ch);
       FeatPopCallback(obj,src,~);
       ExitFeatures(obj);
-       
+      
       function Init(obj,sortObj)
-          
-          %% init graphical objects
-          
+         
+         %% init graphical objects
+         
          obj.Figure = figure('Name','Features', ... 'Units','Normalized',...
-             'MenuBar','none',...
-             'Units','Normalized',...
-             'ToolBar','none',...
-             'NumberTitle','off',...
-             'Position',[0.050,0.075,0.4,0.450],...
-             'Color','k');
-
+            'MenuBar','none',...
+            'Units','Normalized',...
+            'ToolBar','none',...
+            'NumberTitle','off',...
+            'Position',[0.050,0.075,0.4,0.450],...
+            'Color','k');
+         
          
          obj.VisibleClusters = cellfun(@(x) x.Value, sortObj.UI.SpikeImage.VisibleToggle);
          
@@ -145,8 +145,8 @@ classdef FeaturesUI < handle
             'FontName','Arial',...
             'BorderType','none',...
             'Position',[0.01 0.17 0.98 0.82]);
-        
-        selectpanel = uipanel(obj.Figure, ...
+         
+         selectpanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...
             'BackgroundColor','k',...
             'ForegroundColor','k', ...
@@ -163,9 +163,9 @@ classdef FeaturesUI < handle
             obj.zticklab{iZ,1} = sprintf('%3.1fm',...
                obj.ztickloc(iZ));
          end
-
+         
          obj.nfeat = cellfun(@(x) size(x,2),obj.Data.feat);
-
+         
          obj.Features3D = axes(featpanel,'Color','k', ...
             'XColor','w',...
             'YColor','w',...
@@ -176,32 +176,32 @@ classdef FeaturesUI < handle
             'Position',[0.6 0.125 0.4 0.8],...
             'View',[30 30]);
          
-vals=unique(sortObj.UI.feat.combo(:,1));
-str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(:,1)));
-obj.FeatX = uicontrol(selectpanel,...
-    'Style','popupmenu',...
-    'Units','Normalized',...
-    'Position',[0.1  0.6  0.8 0.2],...
-    'Tag','Dim1',...
-    'UserData',vals,...
-    'String',str,...
-    'Value',find(vals==obj.featInd(1)));
-    obj.FeatX.Callback = {@obj.FeatPopCallback};
-
-ind = sortObj.UI.feat.combo(:,1)==1;
-str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(ind,2)));
-vals=unique(sortObj.UI.feat.combo(ind,2));
-
-obj.FeatY = uicontrol(selectpanel,...
-        'Style','popupmenu',...
-    'Units','Normalized',...
-    'Position',[0.1  0.2  0.8 0.2],...
-    'Tag','Dim2',...
-    'UserData',vals,...
-    'String',str,...
-    'Value',find(vals==obj.featInd(2)));
-    obj.FeatY.Callback = {@obj.FeatPopCallback};
-
+         vals=unique(sortObj.UI.feat.combo(:,1));
+         str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(:,1)));
+         obj.FeatX = uicontrol(selectpanel,...
+            'Style','popupmenu',...
+            'Units','Normalized',...
+            'Position',[0.1  0.6  0.8 0.2],...
+            'Tag','Dim1',...
+            'UserData',vals,...
+            'String',str,...
+            'Value',find(vals==obj.featInd(1)));
+         obj.FeatX.Callback = {@obj.FeatPopCallback};
+         
+         ind = sortObj.UI.feat.combo(:,1)==1;
+         str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(ind,2)));
+         vals=unique(sortObj.UI.feat.combo(ind,2));
+         
+         obj.FeatY = uicontrol(selectpanel,...
+            'Style','popupmenu',...
+            'Units','Normalized',...
+            'Position',[0.1  0.2  0.8 0.2],...
+            'Tag','Dim2',...
+            'UserData',vals,...
+            'String',str,...
+            'Value',find(vals==obj.featInd(2)));
+         obj.FeatY.Callback = {@obj.FeatPopCallback};
+         
          obj.Features2D = axes(featpanel,'Color','k', ...
             'FontSmoothing','off',...
             'zlimmode','manual',...
@@ -220,7 +220,7 @@ obj.FeatY = uicontrol(selectpanel,...
             'YLimMode','manual',...
             'YLim',[-obj.SD_MAX obj.SD_MAX],...
             'Position',[0.1 0.125 0.4 0.8]);
-
+         
          obj.Exclusions = annotation(featpanel,'textbox','EdgeColor','none',... % Features label
             'Color','w',...
             'FontWeight','bold',...
@@ -232,7 +232,7 @@ obj.FeatY = uicontrol(selectpanel,...
             'Units','Normalized',...
             'Position',[0.1,0.9,0.8,0.1]);
          
-
+         
       end
       
       
