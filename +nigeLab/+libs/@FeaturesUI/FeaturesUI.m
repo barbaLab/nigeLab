@@ -135,7 +135,8 @@ classdef FeaturesUI < handle
             'Color','k');
          
          
-         obj.VisibleClusters = cellfun(@(x) x.Value, sortObj.UI.SpikeImage.VisibleToggle);
+%          obj.VisibleClusters = cellfun(@(x) x.Value, sortObj.UI.SpikeImage.VisibleToggle);
+         obj.VisibleClusters = true(obj.NCLUS_MAX,1);
          
          featpanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...

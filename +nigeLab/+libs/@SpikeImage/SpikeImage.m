@@ -263,8 +263,10 @@ classdef SpikeImage < handle
             state = 'off';
          end
           
-         obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = state;
-         obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = state;
+         if sum(ind2D>0)
+            obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = state;
+            obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = state;
+         end
          obj.Parent.UI.FeaturesUI.VisibleClusters(clus) = val;
          
       end
