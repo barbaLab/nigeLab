@@ -42,7 +42,6 @@ sortObj.UI.FeaturesUI = nigeLab.libs.FeaturesUI(sortObj);
 addlistener(sortObj.UI.ChannelSelector,'NewChannel',@sortObj.setChannel);
 addlistener(sortObj.UI.SpikeImage,'MainWindowClosed',@(~,~)sortObj.exitScoring);
 addlistener(sortObj.UI.SpikeImage,'SaveData',@(~,~)sortObj.saveData);
-
 flag = true;
 
    function featName = parseFeatNames(sortObj)

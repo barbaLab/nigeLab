@@ -66,8 +66,10 @@ classdef SpikeImage < handle
    events
       MainWindowClosed
       ClassAssigned
+      SpikeAxesSelected
       ChannelConfirmed
       SaveData
+      VisionToggled
    end
 
    methods (Access = public)
@@ -188,6 +190,14 @@ classdef SpikeImage < handle
          obj.Build;
       end
       
+      function NewAssignmentListener(obj,src,evt)
+         %% NEWASSIGNMENTLISTENER   Add a listener for cluster assignments
+         if nargin < 3
+            evt = 'ClassAssigned';
+         end
+         addlistener(src,evt,@obj.UpdateClusterAssignments);
+      end
+      
       function set(obj,NAME,value)
          %% SET   Overloaded class method
          
@@ -218,62 +228,53 @@ classdef SpikeImage < handle
          end
       end
       
-      function Assign(obj,class,subsetIndex)
-         %% ASSIGN   Assign spikes to a given class
-         
-         if nargin < 3
-            if numel(class) == 1 % If only 1 value given assign all to that
-               obj.Spikes.Class = ones(size(obj.Spikes.Waves,1),1) * class;
-            elseif numel(class) ~= size(obj.Spikes.Waves,1)
-               warning(sprintf(['Invalid class size (%d; should be %d).\n' ...
-                  'Assigning all classes to class(1) (%d).'], ...
-                  numel(class),size(obj.Spikes.Waves,1),class(1))); %#ok<SPWRN>
-               
-               obj.Spikes.Class=ones(size(obj.Spikes.Waves,1),1)*class(1);
-            else
-               % Otherwise just assign the given value
-               obj.Spikes.Class = class;
-            end
-            obj.Spikes.Class(class > obj.NumClus_Max) = 1;
-            subs = 1:size(obj.Spikes.Waves,1);
-
-         else % Update spikes to a given class label (numeric)
-            obj.Spikes.Class(subsetIndex) = class;
-            subs = subsetIndex;
-
-         end
-         evtData = nigeLab.libs.assignmentEventData(subs,class);
-         notify(obj,'ClassAssigned',evtData);
-         
-      end
+      
       
       function SetVisibleFeatures(obj,clus,val)
-         if ~isvalid(obj.Parent.UI.FeaturesUI.Features2D)
+         if ~obj.checkFeaturesUI
             return;
          end
-         
-         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
-             clus);
-         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
-            clus);
           
          if (val > 0)
             state = 'on';
          else
             state = 'off';
          end
-          
-         if sum(ind2D>0)
-            obj.Parent.UI.FeaturesUI.Features2D.Children(ind2D).Visible = state;
-            obj.Parent.UI.FeaturesUI.Features3D.Children(ind3D).Visible = state;
-         end
-         obj.Parent.UI.FeaturesUI.VisibleClusters(clus) = val;
+
+         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
+             clus);
+         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
+            clus);
          
+         % Update any potential listeners
+         evtData = nigeLab.evt.visionToggleEventData(...
+            ind2D,ind3D,state,clus,val);
+         notify(obj,'VisionToggled',evtData);
       end
       
    end
    
    methods (Access = private)    
+      
+      function flag = checkFeaturesUI(obj)
+         flag = false;
+         if ~isvalid(obj.Parent)
+            return;
+         end
+         
+         if (~isfield(obj.Parent,'UI')) && (~isprop(obj.Parent,'UI'))
+            return;
+         end
+         
+         if ~isfield(obj.Parent.UI,'FeaturesUI')
+            return;
+         end
+         
+         if ~isvalid(obj.Parent.UI.FeaturesUI.Features2D)
+            return;
+         end
+         flag = true;
+      end
       
       function Init(obj,fs)
          %% INIT  Initialize parameters
@@ -434,6 +435,8 @@ classdef SpikeImage < handle
             else
                obj.SetAxesHighlight(obj.Axes{iPlot},'w',16);
             end
+            set(obj.Axes{iPlot},'YLim',obj.YLim);
+            set(obj.Images{iPlot},'YData',obj.YLim);
             drawnow;
          end
          
@@ -461,7 +464,6 @@ classdef SpikeImage < handle
             set(obj.Axes{iPlot},'XLimMode','manual');
             set(obj.Axes{iPlot},'YLimMode','manual');
             set(obj.Axes{iPlot},'XLim',obj.Spikes.X([1,end]));
-            set(obj.Axes{iPlot},'YLim',obj.Spikes.Y([1,end]));
 
             set(obj.Axes{iPlot},'UserData',iPlot);
             set(obj.Axes{iPlot},'ButtonDownFcn',@obj.ButtonDownFcnSelect);
@@ -587,6 +589,9 @@ classdef SpikeImage < handle
          % Change the border on both plots
          obj.Draw([plotNum,pastNum]);
          
+         visible = obj.VisibleToggle{plotNum}.Value;
+         evtData = nigeLab.evt.spikeAxesEventData(plotNum,visible);
+         notify(obj,'SpikeAxesSelected',evtData);
                   
       end
       
@@ -624,19 +629,12 @@ classdef SpikeImage < handle
             iMove = [iMove; find(any(addressVec == inPolyVec,2))]; %#ok<AGROW>
          end
          iMove = unique(iMove);
-
-         obj.Assign(obj.Spikes.CurClass,subsetIndex(iMove));
-         plotsToUpdate = [obj.Spikes.CurClass,thisClass];
-         obj.SetPlotNames(plotsToUpdate);
-         obj.Flatten(plotsToUpdate);
-         obj.Draw(plotsToUpdate);
-         
-         % Indicate that there have been some changes in class ID
-         obj.UnconfirmedChanges = true;
-         obj.UnsavedChanges = true;
-         
          set(obj.Figure,'Pointer','arrow');
-
+         
+         
+         evtData = nigeLab.evt.assignmentEventData(subsetIndex(iMove),...
+            obj.Spikes.CurClass,thisClass);
+         obj.UpdateClusterAssignments(nan,evtData);
       end
       
       function WindowKeyPress(obj,~,evt)
@@ -678,6 +676,7 @@ classdef SpikeImage < handle
          %% SAVECHANGES    Save the scoring that has been done
          notify(obj,'SaveData');
          obj.UnsavedChanges = false;
+         disp('Scoring saved.');
       end
       
       function UndoChanges(obj)
@@ -691,6 +690,12 @@ classdef SpikeImage < handle
          obj.Flatten;
          obj.SetPlotNames;
          obj.Draw;
+         
+         subs = 1:numel(obj.Spikes.Class);
+         class = obj.Spikes.Class;
+         evtData = nigeLab.evt.assignmentEventData(subs,class);
+         
+         notify(obj,'ClassAssigned',evtData);
       end
       
       function ConfirmChanges(obj)
@@ -708,10 +713,59 @@ classdef SpikeImage < handle
       
       function WindowMouseWheel(obj,~,evt)
          %% WINDOWMOUSEWHEEL     Zoom in or out on all plots
-         obj.YLim(1) = min(obj.YLim(1) - 10*evt.VerticalScrollCount,10);
-         obj.YLim(2) = max(obj.YLim(2) + 20*evt.VerticalScrollCount,20);
+         obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
+         obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
+         obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
          obj.Flatten;
          obj.Draw;
+      end
+      
+      function UpdateClusterAssignments(obj,~,evt)
+         %% UPDATECLUSTERASSIGNMENTS   Update cluster assigns and notify  
+         
+         % Identify plots to update
+         plotsToUpdate = unique(obj.Spikes.Class(evt.subs));
+         plotsToUpdate = reshape(plotsToUpdate,1,numel(plotsToUpdate));
+         plotsToUpdate = unique([plotsToUpdate, obj.Spikes.CurClass]); % in case
+         if ~isnan(evt.otherClassToUpdate)
+            plotsToUpdate = unique([plotsToUpdate, evt.otherClassToUpdate]);
+         end
+         % Assign and redo graphics
+         obj.Assign(obj.Spikes.CurClass,evt.subs);
+         obj.SetPlotNames(plotsToUpdate);
+         obj.Flatten(plotsToUpdate);
+         obj.Draw(plotsToUpdate);
+         
+         % Indicate that there have been some changes in class ID
+         obj.UnconfirmedChanges = true;
+         obj.UnsavedChanges = true;
+         
+         notify(obj,'ClassAssigned',evt);
+      end
+      
+      function Assign(obj,class,subsetIndex)
+         %% ASSIGN   Assign spikes to a given class
+         
+         if nargin < 3
+            if numel(class) == 1 % If only 1 value given assign all to that
+               obj.Spikes.Class = ones(size(obj.Spikes.Waves,1),1) * class;
+            elseif numel(class) ~= size(obj.Spikes.Waves,1)
+               warning(sprintf(['Invalid class size (%d; should be %d).\n' ...
+                  'Assigning all classes to class(1) (%d).'], ...
+                  numel(class),size(obj.Spikes.Waves,1),class(1))); %#ok<SPWRN>
+               
+               obj.Spikes.Class=ones(size(obj.Spikes.Waves,1),1)*class(1);
+            else
+               % Otherwise just assign the given value
+               obj.Spikes.Class = class;
+            end
+            obj.Spikes.Class(class > obj.NumClus_Max) = 1;
+
+         else % Update spikes to a given class label (numeric)
+            obj.Spikes.Class(subsetIndex) = class;
+
+         end
+         
       end
    
    end
