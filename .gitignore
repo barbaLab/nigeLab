@@ -9,6 +9,7 @@ dev/*
 \+orgExp/prova\.mat
 \+orgExp/@Block/RHS2Block\.m\.old
 
+*.svg
 *.asv
 *.orig
 

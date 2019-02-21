@@ -330,11 +330,13 @@ classdef SpikeImage < handle
          LoopFunction = @(xin) (interp1(x(1):x(2),spikes(xin,:),xv));
          
          % Make ProgressCircle object
-         pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
+%          pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
+         pCat = nigeLab.libs.ProgressCat(LoopFunction);
          
          % Run ProgressCircle Loop
          fprintf(1,'->\tInterpolating spikes...');
-         obj.Spikes.Waves = pcirc.RunLoop(size(spikes,1),obj.XPoints);
+%          obj.Spikes.Waves = pcirc.RunLoop(size(spikes,1),obj.XPoints);
+         obj.Spikes.Waves = pCat.RunLoop(size(spikes,1),obj.XPoints);
          fprintf(1,'complete.\n');
 
       end
