@@ -504,6 +504,8 @@ classdef DiskData < handle
                            varargout = {data(:,4)};
                         case 'snippet'
                            varargout = {data(:,5:end)};
+                        case 'data'
+                           varargout = {data};
                         otherwise
                            error('%s is not supported for Events type.',...
                               lower(S(1).subs));
@@ -617,7 +619,54 @@ classdef DiskData < handle
                   end
                   
                case '.'
-                  tmp.(S.subs{:}) = b;
+                  switch obj.type_
+                     case 'Event'
+                        n = size(tmp,1); % Number of rows must match
+                        if size(b,1) ~= n
+                           error('Input data number of rows (%d) does not match existing file (%d).',...
+                              size(b,1),n);
+                        end
+                        switch lower(S.subs)
+                           case 'data'
+                              tmp = b;
+                           case 'type'
+                              m = size(b,2);
+                              if m ~= 1
+                                 error('Input data number of columns (%d) does not match for TYPE (1).',m);
+                              end
+                              tmp(:,1) = b;
+                           case 'value'
+                              m = size(b,2);
+                              if m ~= 1
+                                 error('Input data number of columns (%d) does not match for VALUE (1).',m);
+                              end
+                              tmp(:,2) = b;
+                           case 'tag'
+                              m = size(b,2);
+                              if m ~= 1
+                                 error('Input data number of columns (%d) does not match for TAG (1).',m);
+                              end
+                              tmp(:,3) = b;
+                           case 'ts'
+                              m = size(b,2);
+                              if m ~= 1
+                                 error('Input data number of columns (%d) does not match for TS (1).',m);
+                              end
+                              tmp(:,4) = b;
+                           case 'snippet'
+                              m = size(b,2);
+                              M = size(tmp,2)-4;
+                              if m ~= M
+                                 error('Input data number of columns (%d) does not match for TYPE (%d).',m,M);
+                              end
+                              tmp(:,5:end) = b;
+                           otherwise
+                              error('%s not supported by Events type.',S.subs);
+                        end
+                     otherwise
+                        tmp.(S.subs{:}) = b;
+                  end
+                  
                   
                case '{}'
             end

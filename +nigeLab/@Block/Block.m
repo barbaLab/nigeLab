@@ -207,7 +207,7 @@ classdef Block < handle
       end
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7.3');
+         save(fullfile([blockObj.Paths.Block '_Block.mat']),'blockObj','-v7.3');
       end
 %       function disp(blockObj)
 %          %% DISP  Overload display of BLOCK contents
@@ -219,7 +219,9 @@ classdef Block < handle
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
             case '.'
+
                [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+
                
             case '()'
                if isscalar(blockObj) && ~isnumeric(s(1).subs{1})
