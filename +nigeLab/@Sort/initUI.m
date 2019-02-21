@@ -36,7 +36,8 @@ sortObj.UI.feat.label = parseFeatLabels(sortObj);
 
 %% USE EXISTING CLASSES TO BUILD INTERFACE WINDOWS
 sortObj.UI.ChannelSelector = nigeLab.libs.ChannelUI(sortObj);
-sortObj.UI.SpikeImage = nigeLab.libs.SpikeImage(sortObj);
+sortObj.UI.SpikeImage = nigeLab.libs.SpikeImage(sortObj,...
+   [],[],'ProgCatPars',sortObj.progCatPars);
 sortObj.UI.FeaturesUI = nigeLab.libs.FeaturesUI(sortObj);
 
 addlistener(sortObj.UI.ChannelSelector,'NewChannel',@sortObj.setChannel);

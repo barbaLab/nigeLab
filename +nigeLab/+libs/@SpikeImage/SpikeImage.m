@@ -59,6 +59,11 @@ classdef SpikeImage < handle
       Defaults_File = 'SpikeImageDefaults.mat'; % Name of file with default
       PlotNames = cell(9,1);
       
+      ProgCatPars = struct(...
+         'pawsInterval',0.100,...
+         'progPctThresh',2,...
+         'nImg',11);
+      
       UnconfirmedChanges
       UnsavedChanges
    end
@@ -331,7 +336,12 @@ classdef SpikeImage < handle
          
          % Make ProgressCircle object
 %          pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
-         pCat = nigeLab.libs.ProgressCat(LoopFunction);
+         pCat = nigeLab.libs.ProgressCat(LoopFunction,obj.ProgCatPars);
+         obj.ProgCatPars.pawsInterval = ...
+            max(obj.ProgCatPars.pawsInterval*0.9,1e-6);
+         obj.ProgCatPars.progPctThresh = ...
+            min(obj.ProgCatPars.progPctThresh + 1, ...
+            floor(100/obj.ProgCatPars.nImg));
          
          % Run ProgressCircle Loop
          fprintf(1,'->\tInterpolating spikes...');
