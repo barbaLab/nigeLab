@@ -28,7 +28,12 @@ if ~strcmp(blockObj.Meta.RecTime,'hhmmss')
     Format = [Format 'HHmmss' ];
     str = [str blockObj.Meta.RecTime];
 end
+
+try
 DateTime=datetime(str,'InputFormat',Format);
+catch
+   DateTime=NaT;
+end
                 
 info.Recording_date=DateTime;
 info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));

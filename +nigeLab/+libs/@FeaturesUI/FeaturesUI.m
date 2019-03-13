@@ -18,7 +18,7 @@ classdef FeaturesUI < handle
       ChannelSelector
       SpikeImage
       
-      CurClass
+      CurClass = 1;
       
       Figure
       Features3D
@@ -281,7 +281,6 @@ classdef FeaturesUI < handle
          
       end
       
-      
       function ButtonDownFcnSelect(obj,src,~)
          %% BUTTONDOWNFCNSELECT  Determine which callback to use for click
          
@@ -319,15 +318,15 @@ classdef FeaturesUI < handle
          % Draw polygon
          set(obj.Figure,'Pointer','circle');
          
-         snipped_region = imfreehand(ax);
-         pos = getPosition(snipped_region);
+         snipped_region = drawfreehand(ax,'Smoothing',5);
+         pos = snipped_region.Position;
          delete(snipped_region);
-
+         if isempty(pos), return; end
          cx = pos(:,1);
          cy = pos(:,2);
 
          % Excellent mex version of InPolygon from Guillaume Jacquenot:
-         [IN,ON] = InPolygon(obj.sdMesh.X,obj.sdMesh.Y,cx,cy);
+         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(obj.sdMesh.X,obj.sdMesh.Y,cx,cy);
          pts = IN | ON;
          set(obj.Figure,'Pointer','watch');
          drawnow;    

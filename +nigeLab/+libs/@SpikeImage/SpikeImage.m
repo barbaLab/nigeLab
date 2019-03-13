@@ -624,7 +624,7 @@ classdef SpikeImage < handle
          cy = pos(:,2);
 
          % Excellent mex version of InPolygon from Guillaume Jacquenot:
-         [IN,ON] = InPolygon(px,py,cx,cy);
+         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(px,py,cx,cy);
          pts = IN | ON;
          set(obj.Figure,'Pointer','watch');
          drawnow;

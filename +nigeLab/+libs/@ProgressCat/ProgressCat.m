@@ -20,6 +20,7 @@ classdef ProgressCat < handle
    methods (Access = public)
       function obj = ProgressCat(func,varargin)
          % Parse input
+         isEven = @(x) not(mod(x,2));
          if isEven(numel(varargin)) && (numel(varargin)>0)
             for iV = 1:2:numel(varargin)
                if isprop(obj,varargin{iV})

@@ -186,7 +186,7 @@ classdef Sort < handle
          
          % Remove the spike interface, if it exists
          if isvalid(sortObj.UI.SpikeImage.Figure)
-            close(sortObj.UI.SpikeImage.Figure);
+            delete(sortObj.UI.SpikeImage.Figure);
             clear sortObj.UI.SpikeImage
          end
          
