@@ -7,4 +7,7 @@ function UpdateClasses(obj,~,evt)
 obj.Data.class{obj.ChannelSelector.Channel}(evt.subs) = evt.class;
 obj.PlotFeatures;
 
+% update quality indxes
+obj.SilScores =  zeros(numel(obj.SilDist),obj.NCLUS_MAX);
+obj.PlotQuality;
 end
