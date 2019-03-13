@@ -59,6 +59,9 @@ classdef FeaturesUI < handle
    end
    
    properties (Access = private)
+      rotateImg
+      rotateButton
+      
       isVisible
       
       nFeat;
@@ -179,7 +182,8 @@ classdef FeaturesUI < handle
             'ToolBar','none',...
             'NumberTitle','off',...
             'Position',[0.050,0.075,0.4,0.450],...
-            'Color','k'); 
+            'Color','k',...
+            'SizeChangedFcn',@obj.ChangeSize);          
          
          featureComboSelectorPanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...
@@ -228,6 +232,18 @@ classdef FeaturesUI < handle
             'Position',[0.6 0.125 0.4 0.8],...
             'View',[30 30]);
          
+%          obj.rotateImg = sprintf('<html><img style=''height: 100%%; width: 100%%; object-fit: contain'' src="file:/%s">',fullfile(fileparts(mfilename('fullpath')),'private','rotate.png'));        
+         obj.rotateImg = imread(fullfile(fileparts(mfilename('fullpath')),'private','rotate.png'));
+        
+         obj.rotateButton = uicontrol(featureDisplayPanel,...
+            'Style','pushbutton',...
+            'Units','Normalized',...
+            'Position',[0.6 0 0.04 0.07],...
+            'Callback',@obj.RotateBtnPress,...
+            'BackgroundColor',[1 1 1]);
+         sz = getpixelposition(obj.rotateButton);
+         img = imresize(obj.rotateImg,sz(4:-1:3)-5);
+         set(obj.rotateButton,'CData',img);
          
          vals=unique(sortObj.UI.feat.combo(:,1));
          str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(:,1)));
@@ -380,6 +396,11 @@ classdef FeaturesUI < handle
          
       end
       
+      function RotateBtnPress(~,src,~)         
+            ax = src.Parent.Children(3);         
+            rotate3d(ax);
+         
+      end
       
       function ListClick(obj,src,~)
          f=src.Parent.Parent;
@@ -405,6 +426,12 @@ classdef FeaturesUI < handle
          obj.PlotQuality();
       end
       
+      function ChangeSize(obj,src,~)
+         if ~isempty(obj.rotateButton)
+            sz = getpixelposition(obj.rotateButton);
+            img = imresize(obj.rotateImg,sz(4:-1:3)-5);
+            set(obj.rotateButton,'CData',img);
+         end
       end
       
       function GetSpikesToMove(obj,ax)

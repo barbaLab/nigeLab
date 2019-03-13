@@ -679,6 +679,8 @@ classdef SpikeImage < handle
                if strcmpi(evt.Modifier,'control')
                   notify(obj,'MainWindowClosed');
                end
+            case 'q'
+               obj.Parent.UI.FeaturesUI.ReopenWindow;
             otherwise
                
          end
