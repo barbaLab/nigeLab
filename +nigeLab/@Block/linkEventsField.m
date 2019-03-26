@@ -22,27 +22,26 @@ updateFlag = false(1,blockObj.NumChannels);
 
 fprintf(1,'\nLinking Events field: %s ...000%%\n',field);
 counter = 0;
-for iCh = blockObj.Mask
    
    % Get file name
-   pNum  = num2str(blockObj.ChannelID(iCh,1));
-   chNum = num2str(blockObj.ChannelID(iCh,2),'%03g');
+
    fName = sprintf(strrep(blockObj.Paths.(field).file,'\','/'), ...
-      pNum,chNum);
+      field);
    fName = fullfile(fName);
    
    % If file is not detected
    if ~exist(fullfile(fName),'file')
       flag = true;
    else
-      updateFlag(iCh) = true;
-      blockObj.Events(iCh).(field)=nigeLab.libs.DiskData('MatFile',fName);
+%       updateFlag(iCh) = true;
+      indx = strcmp({blockObj.Events.name},field);
+      blockObj.Events(indx).data=nigeLab.libs.DiskData('MatFile',fName);
    end
    
-   counter = counter + 1;
-   pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-end
-blockObj.updateStatus(field,updateFlag);
+%    counter = counter + 1;
+%    pct = 100 * (counter / numel(blockObj.Mask));
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100))
+
+blockObj.updateStatus(field,true);
 
 end

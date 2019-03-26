@@ -196,7 +196,7 @@ classdef DiskData < handle
                         info = whos(obj.diskfile_);
                         if isscalar(info)
                            data=load(fName);
-                           info = whos(data);
+                           info = whos('data');
                         end
                         % And parse information about the file itself
                         obj.bytes_ = info.bytes;
@@ -262,11 +262,8 @@ classdef DiskData < handle
                   case 'Event' % Deal with Spikes and other Events
                      % The default name is 'data'
                      obj.class_ = 'double';
-                     data = zeros(1,5,obj.class_);
                      if ~exist(fName,'file')
-                        data=ones(1,5,obj.class_);
-                        
-                        save(fName,name_,'-v7.3');
+                      
                         obj.name_ = name_;
                         obj.size_ = [0 0];
                         obj.bytes_ = 0;
@@ -293,14 +290,6 @@ classdef DiskData < handle
                         obj.class_ = info(I).class;
                      end
                      obj.type_='Event';
-                     
-                     if data % If data has been found, do some H5 handling
-                        fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
-                        H5L.delete(fid,'data','H5P_DEFAULT');
-                        H5F.close(fid);
-                        varname_ = ['/' obj.name_];
-                        h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
-                     end
                      
                   otherwise
                      error('Unknown data format');
@@ -454,65 +443,72 @@ classdef DiskData < handle
                      return;
                      
                   case '.'
-                     if numel(S) > 1
-                        if islogical(S(2).subs{1})
-                           S(2).subs{1} = find(S(2).subs{1});
-                           S(2).subs{1} = reshape(S(2).subs{1},...
-                              1,numel(S(2).subs{1}));
-                        end
-                        if isempty(S(2).subs{1})
-                           varargout = {[]};
-                           return;
-                        end
-                        interindx=find(diff(S(2).subs{1})-1);
-                        indx=0;
-                        for nn=1:numel(interindx)
-                           indx=[indx (interindx(nn)) (interindx(nn))]; %#ok<AGROW>
-                        end
-                        indx=reshape([indx numel(S(2).subs{1})],2,[])'+[1 0];
-                        indx=S(2).subs{1}(indx);
+                     s=methods(obj);
+                     if any(strcmp(s,S(1).subs)) && ~strcmp('class',S(1).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
+                        Out = builtin('subsref',obj,S);
+                        varargout(1) = {Out};
+                        return;
+                        %                             Out = sprintf('obj.%s',S(ii).subs);
                      else
-                        indx = [1 inf];
-                     end
-                     
-                     indx=horzcat(indx(:,1),diff(indx,[],2)+1);
-                     N = sum(indx(:,2));
-                     if isinf(N)
-                        if obj.size_(1) == 0
-                           obj.checkSize;
+                        if numel(S) > 1
+                           if islogical(S(2).subs{1})
+                              S(2).subs{1} = find(S(2).subs{1});
+                              S(2).subs{1} = reshape(S(2).subs{1},...
+                                 1,numel(S(2).subs{1}));
+                           end
+                           if isempty(S(2).subs{1})
+                              varargout = {[]};
+                              return;
+                           end
+                           interindx=find(diff(S(2).subs{1})-1);
+                           indx=0;
+                           for nn=1:numel(interindx)
+                              indx=[indx (interindx(nn)) (interindx(nn))]; %#ok<AGROW>
+                           end
+                           indx=reshape([indx numel(S(2).subs{1})],2,[])'+[1 0];
+                           indx=S(2).subs{1}(indx);
+                        else
+                           indx = [1 inf];
                         end
-                        N = obj.size_(1);
-                        indx(end,2) = N;
+                        
+                        indx=horzcat(indx(:,1),diff(indx,[],2)+1);
+                        N = sum(indx(:,2));
+                        if isinf(N)
+                           if obj.size_(1) == 0
+                              obj.checkSize;
+                           end
+                           N = obj.size_(1);
+                           indx(end,2) = N;
+                        end
+                        
+                        data = nan(N,obj.size_(2));
+                        ii = 1;
+                        for kk=1:size(indx,1)
+                           vec = ii:(ii+indx(kk,2)-1);
+                           data(vec,:) = h5read(obj.getPath,'/data',...
+                              [indx(kk,1),1],[indx(kk,2),obj.size_(2)]);
+                           ii = ii + indx(kk,2);
+                        end
+                        switch lower(S(1).subs)
+                           case 'type'
+                              varargout = {data(:,1)};
+                           case 'value'
+                              varargout = {data(:,2)};
+                           case 'tag'
+                              varargout = {data(:,3)};
+                           case 'ts'
+                              varargout = {data(:,4)};
+                           case 'snippet'
+                              varargout = {data(:,5:end)};
+                           case 'data'
+                              varargout = {data};
+                           otherwise
+                              error('%s is not supported for Events type.',...
+                                 lower(S(1).subs));
+                        end
+                        return;
                      end
-
-                     data = nan(N,obj.size_(2));
-                     ii = 1;
-                     for kk=1:size(indx,1)
-                        vec = ii:(ii+indx(kk,2)-1);
-                        data(vec,:) = h5read(obj.getPath,'/data',...
-                           [indx(kk,1),1],[indx(kk,2),obj.size_(2)]);
-                        ii = ii + indx(kk,2);
-                     end
-                     switch lower(S(1).subs)
-                        case 'type'
-                           varargout = {data(:,1)};
-                        case 'value'
-                           varargout = {data(:,2)};
-                        case 'tag'
-                           varargout = {data(:,3)};
-                        case 'ts'
-                           varargout = {data(:,4)};
-                        case 'snippet'
-                           varargout = {data(:,5:end)};
-                        case 'data'
-                           varargout = {data};
-                        otherwise
-                           error('%s is not supported for Events type.',...
-                              lower(S(1).subs));
-                     end
-                     return;
                end
-               
                
             otherwise
                
@@ -771,7 +767,15 @@ classdef DiskData < handle
          if not(strcmp(obj.class_,class(b)) | isa(b,'nigeLab.libs.DiskData'))
             error('Cannot concatenate objects of different classes');
          end
-         h5write(obj.getPath, varname_, b(1,:),[1,(obj.size(2)+1)],size(b));
+         if isempty(b)
+            return;
+         end
+         strt = double( obj.size + size(b)~= obj.size);  % finds the dimension where to append the data
+         if strcmp(obj.type_,'Event')
+            obj.diskfile_.(obj.name_)(strt(1):strt(1)+size(b,1)-1,strt(2):strt(2)+size(b,2)-1) = b;
+         elseif strcmp(obj.type_,'Hybrid')
+            h5write(obj.getPath, varname_, b(:,:),strt,size(b));
+         end
          Out.size_= size(obj)+size(b);
       end
       

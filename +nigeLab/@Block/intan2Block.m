@@ -135,6 +135,22 @@ for f = fields
             notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
          end
       case 'Events'
+         fName = sprintf(strrep(paths.(this).file,'\','/'), this);
+         diskPars = struct('format',blockObj.getFileType(this),...
+            'name',fullfile(fName),...
+            'size',[inf inf],...
+            'access','w',...
+            'class','single');
+         
+         if strcmp(this,'Stim')
+            info = blockObj.Meta.Header.RawChannels;
+            Files.(this)(1:32)= {(makeDiskFile(diskPars))};
+            nCh.(this) = blockObj.NumChannels;
+         else
+           Files.(this)(1)= {(makeDiskFile(diskPars))};
+            nCh.(this) = 1;
+         end
+
          % {{{ To be added: Automate event extraction HERE }}}
          
       case 'Meta' % Each "Meta" file should only have one "channel"
@@ -218,8 +234,8 @@ info = blockObj.Meta.Header;
 
 %% EXTRACT INDEXING VECTORS
 buffer = struct;
-scaleFactor = struct;
-dataOffset = struct;
+formatDataFun = struct;
+% dataOffset = struct;
 
 time_buffer_index = false(1,nDataPoints);
 [time_buffer_index,end_] = getDigBuffer(time_buffer_index,end_,...
@@ -230,47 +246,47 @@ if (info.NumRawChannels > 0)
    buffer.Raw = zeros(1,nDataPoints,'uint16');
    [buffer.Raw,end_] = getBufferIndex(buffer.Raw,end_,...
       info.NumRawChannels,nPerBlock,nBlocks);
-   scaleFactor.Raw = 0.195;
-   dataOffset.Raw = 32768;
+   formatDataFun.Raw = @(x,iCh)  (x-32768)*0.195;
+%    dataOffset.Raw = 32768;
 end
 
 if (info.NumDCChannels > 0)
    buffer.DC = zeros(1,nDataPoints,'uint16');
    [buffer.DC,end_] = getBufferIndex(buffer.DC,end_,...
       info.NumRawChannels,nPerBlock,nBlocks);
-   scaleFactor.DC = -0.01923;
-   dataOffset.DC = 512;
+   formatDataFun.DC =  @(x,iCh)  (x - 512)* -0.01923;
+%    dataOffset.DC = 512;
 end
 
 if (info.NumStimChannels > 0)
    buffer.Stim = zeros(1,nDataPoints,'uint16');
    [buffer.Stim,end_] = getBufferIndex(buffer.Stim,end_,...
       info.NumRawChannels,nPerBlock,nBlocks);
-   
+   formatDataFun.Stim = @(x,iCh) scaleStimData(x,blockObj.Meta.Header.StimParameters.stim_step_size,blockObj.SampleRate,iCh);
 end
 
 if (info.NumAuxChannels > 0)
    buffer.Aux = zeros(1,nDataPoints,'uint16');
    [buffer.Aux,end_] = getBufferIndex(buffer.Aux,end_,...
       info.NumAuxChannels,nPerBlock/4,nBlocks);
-   scaleFactor.Aux = 37.4e-6;
-   dataOffset.Aux = 0;
+   formatDataFun.Aux = @(x,iCh)  x * 37.4e-6;
+%    dataOffset.Aux = 0;
 end
 
 if (info.NumSupplyChannels > 0)
    buffer.Supply = zeros(1,nDataPoints,'uint16');
    [buffer.Supply,end_] = getBufferIndex(buffer.Supply,end_,...
       info.NumSupplyChannels,1,nBlocks);
-   scaleFactor.Supply = 0.195;
-   dataOffset.Supply = 32768;
+   formatDataFun.Supply = @(x,iCh)  (x - 32768) * 0.195;
+%    dataOffset.Supply = 32768;
 end
 
 if (info.NumSensorChannels > 0)
    buffer.Sensor = zeros(1,nDataPoints,'uint16');
    [buffer.Sensor,end_] = getBufferIndex(buffer.Sensor,end_,...
       info.NumSensorChannels,1,nBlocks);
-   scaleFactor.Sensor = 0.01;
-   dataOffset.Sensor = 0;
+   formatDataFun.Sensor = @(x,iCh)  x * 0.01;
+%    dataOffset.Sensor = 0;
 end
 
 
@@ -278,16 +294,16 @@ if (info.NumAdcChannels > 0)
    buffer.Adc = zeros(1,nDataPoints,'uint16');
    [buffer.Adc,end_] = getBufferIndex(buffer.Adc,end_,...
       info.NumAdcChannels,nPerBlock,nBlocks);
-   scaleFactor.Adc = adc_scale;
-   dataOffset.Adc = adc_offset;
+   formatDataFun.Adc = @(x,iCh)  (x - adc_offset) * adc_scale;
+%    dataOffset.Adc = adc_offset;
 end
 
 if (info.NumDacChannels > 0)
    buffer.Dac = zeros(1,nDataPoints,'uint16');
    [buffer.Dac,end_] = getBufferIndex(buffer.Dac,end_,...
       info.NumDacChannels,nPerBlock,nBlocks);
-   scaleFactor.Dac = 312.5e-6;
-   dataOffset.Dac = 32768;
+   formatDataFun.Dac = @(x,iCh)  (x - 32768)* 312.5e-6;
+%    dataOffset.Dac = 32768;
 end
 
 % Get TTL streams as well
@@ -343,7 +359,7 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    % Write data to file
    for iF = 1:numel(F)
       writeData(dataBuffer,...
-         Files,buffer,scaleFactor,dataOffset,F{iF},dataPointsToRead);
+         Files,buffer,formatDataFun,F{iF},dataPointsToRead);
    end
    
    for iD = 1:numel(D)
@@ -351,7 +367,7 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
          Files,digBuffer,info,D{iD},dataPointsToRead);
    end
    
-   clc;
+%    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
    pct = 100 * (progress / info.NumDataBlocks);
    if ~floor(mod(pct,5)) % only increment counter by 5%
@@ -489,16 +505,16 @@ idx(index)=true;
 idx=repmat(idx,1,nBlocks);
 end
 
-function writeData(dataBuffer,Files,buffer,scaleFactor,offset,field,dataPointsToRead)
+function writeData(dataBuffer,Files,buffer,scaleFun,field,dataPointsToRead)
 %% WRITEDATA   Write data from buffer to DiskData file
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
 
 nChan = numel(Files.(field));
 for iCh=1:nChan % units = microvolts
    Files.(field){iCh}.append( ...
-      single(scaleFactor.(field)) * ...
-         (single(dataBuffer(buffer.(field)(1:dataPointsToRead)==iCh)) - ...
-            single(offset.(field))));
+      single(scaleFun.(field)(...
+          single(dataBuffer(...
+                 buffer.(field)(1:dataPointsToRead)==iCh)),iCh)));
    
    pct = 100 * (iCh /nChan);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
@@ -527,4 +543,38 @@ for iCh = dataIdx
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
 end
 
+end
+
+function formatteData = scaleStimData(stim_data,stim_step_size,fs,iCh)
+%% function do retrieve correct stimulation data from buffer. 
+% compliance_limit_data, charge_recovery_data, amp_settle_data are not
+% returned yet (if usefull might be in the future)
+   compliance_limit_data = stim_data >= 2^15;
+   stim_data = stim_data - (compliance_limit_data * 2^15);
+   charge_recovery_data = stim_data >= 2^14;
+   stim_data = stim_data - (charge_recovery_data * 2^14);
+   amp_settle_data = stim_data >= 2^13;
+   stim_data = stim_data - (amp_settle_data * 2^13);
+   stim_polarity = stim_data >= 2^8;
+   stim_data = stim_data - (stim_polarity * 2^8);
+   stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
+   stim_data = stim_data .* stim_polarity;
+   ScaleData =   stim_step_size * stim_data / 1.0e-6; % units = microamps
+   Step = find ((ScaleData~=0) -([0 ScaleData(1:end-1)]~=0));
+   Onset = Step(1:2:end);
+   Offset = Step(2:2:end);
+   nStim = numel(Onset);
+   if  nStim~=0
+      if numel(unique(Offset-Onset))==1
+         formatteData = zeros(nStim,4+unique(Offset-Onset));
+         formatteData(:,2) = iCh;    % value
+         formatteData(:,4) = Onset./fs;           % ts
+      else
+         formatteData = zeros(nStim,6);
+         formatteData(:,2) = ScaleData(Onset);    % value
+         formatteData(:,4) = Onset./fs;           % ts
+      end
+   else
+      formatteData = [];
+   end
 end
