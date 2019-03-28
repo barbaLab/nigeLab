@@ -32,6 +32,10 @@ switch blockObj.FileExt
             end
          end
       end
+      
+   case '.mat'
+      blockObj.RecType='Matfile';
+       header = blockObj.ReadMatInfoFile(blockObj.RecFile); 
    otherwise
       blockObj.RecType='other';
       warning('Not a recognized file extension: %s',blockObj.FileExt);

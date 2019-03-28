@@ -10,7 +10,8 @@ function [pars,Fields] = Block()
 % structure:
 pars             = struct;
 
-pars.SupportedFormats = {'rhs','rhd','tdt'};
+pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
+pars.ReadMatInfoFile = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them!
 pars.RecLocDefault  = 'R:/Rat';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format

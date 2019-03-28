@@ -149,6 +149,8 @@ classdef Block < handle
       DiscardChar      % Character indicating discarded name elements
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+      
+      ReadMatInfoFile  % function handle to external matfile header loading function
    end
    
    %% METHODS
