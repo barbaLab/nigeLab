@@ -35,8 +35,8 @@ for bb=1:numel(Recordings)
          RecFile = fullfile(tmp.folder,tmp.name);
          
       % handling already extracted to matfile case
-      elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*_RawData','*Info.mat')))
-         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*_RawData','*Info.mat'));
+      elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
+         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
          RecFile = fullfile(tmp.folder,tmp.name);
          addBlock = true;
       end
