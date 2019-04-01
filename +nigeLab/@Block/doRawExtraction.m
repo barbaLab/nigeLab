@@ -41,13 +41,23 @@ switch blockObj.RecType
          blockObj.RecType);
       flag = tdt2Block(blockObj);
       
-   case 'mat'
+   case 'Matfile'
       % Federico did you add this? I don't think there are plans to add
       % support for acquisition that streams to Matlab files...? -MM
-      warning('%s is not yet supported, but will be added.',...
-         blockObj.RecType);
-      return;
-      
+%       Yup, I thought this could be a good way to ensure backwards
+%       compatibility for already acquired and extracted files. Also for
+%       other possible future users     -FB
+      paths.SaveLoc.dir = fullfile(fileparts(fileparts(blockObj.RecFile)));
+      paths = blockObj.getFolderTree(paths);
+%       blockObj.Paths.Raw = paths.Raw;
+      for iCh = 1:blockObj.NumChannels
+         chName = blockObj.Channels(iCh).chStr;
+         pName = num2str(blockObj.Channels(iCh).probe);
+         diskFile = (sprintf(strrep(paths.Raw.file,'\','/'),pName,chName));
+         blockObj.Channels(iCh).Raw = nigeLab.libs.DiskData('Hybrid',diskFile,'name','data');
+      end
+      blockObj.linkToData;
+      flag = true;
    otherwise
       % Currently only working with TDT and Intan, the two types of
       % acquisition hardware that are in place at Nudo Lab at KUMC, and at
