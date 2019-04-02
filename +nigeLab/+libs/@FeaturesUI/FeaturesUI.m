@@ -153,7 +153,7 @@ classdef FeaturesUI < handle
          if ~isvalid(obj.Figure)
             obj.Init(obj.Parent);
             obj.PlotFeatures();
-            obj.plotQuality();
+            obj.PlotQuality();
          end
       end
    end
@@ -427,7 +427,7 @@ classdef FeaturesUI < handle
       end
       
       function ChangeSize(obj,src,~)
-         if ~isempty(obj.rotateButton)
+         if ~isempty(obj.rotateButton) && isvalid(obj.rotateButton)
             sz = getpixelposition(obj.rotateButton);
             img = imresize(obj.rotateImg,sz(4:-1:3)-5);
             set(obj.rotateButton,'CData',img);

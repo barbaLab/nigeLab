@@ -335,18 +335,18 @@ classdef SpikeImage < handle
          LoopFunction = @(xin) (interp1(x(1):x(2),spikes(xin,:),xv));
          
          % Make ProgressCircle object
-%          pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
-         pCat = nigeLab.libs.ProgressCat(LoopFunction,obj.ProgCatPars);
-         obj.ProgCatPars.pawsInterval = ...
-            max(obj.ProgCatPars.pawsInterval*0.9,1e-6);
-         obj.ProgCatPars.progPctThresh = ...
-            min(obj.ProgCatPars.progPctThresh + 1, ...
-            floor(100/obj.ProgCatPars.nImg));
+         pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
+%          pCat = nigeLab.libs.ProgressCat(LoopFunction,obj.ProgCatPars);
+%          obj.ProgCatPars.pawsInterval = ...
+%             max(obj.ProgCatPars.pawsInterval*0.9,1e-6);
+%          obj.ProgCatPars.progPctThresh = ...
+%             min(obj.ProgCatPars.progPctThresh + 1, ...
+%             floor(100/obj.ProgCatPars.nImg));
          
          % Run ProgressCircle Loop
          fprintf(1,'->\tInterpolating spikes...');
-%          obj.Spikes.Waves = pcirc.RunLoop(size(spikes,1),obj.XPoints);
-         obj.Spikes.Waves = pCat.RunLoop(size(spikes,1),obj.XPoints);
+         obj.Spikes.Waves = pcirc.RunLoop(size(spikes,1),obj.XPoints);
+%          obj.Spikes.Waves = pCat.RunLoop(size(spikes,1),obj.XPoints);
          fprintf(1,'complete.\n');
 
       end
@@ -679,8 +679,22 @@ classdef SpikeImage < handle
                if strcmpi(evt.Modifier,'control')
                   notify(obj,'MainWindowClosed');
                end
+            case 'r'
+               if strcmpi(evt.Modifier,'control')
+                  obj.Recluster;
+               else
+                  obj.Refresh;
+               end
             case 'q'
                obj.Parent.UI.FeaturesUI.ReopenWindow;
+            case 'uparrow'
+%                obj.SetAxesWhereSpikesGo(ax);
+            case 'downarrow'
+%                obj.SetAxesWhereSpikesGo(ax);
+            case 'rightarrow'
+%                obj.SetAxesWhereSpikesGo(ax);
+            case 'leftarrow'
+%                obj.SetAxesWhereSpikesGo(ax);
             otherwise
                
          end
@@ -782,6 +796,8 @@ classdef SpikeImage < handle
          
       end
    
+      function Recluster(obj,class)
+      end
    end
    
    methods (Static = true, Access = private)

@@ -53,10 +53,10 @@ dt = mode(diff(t));
 load(blockObj.PlotPars.ColorMapFile,'cm');
 if isempty(blockObj.RMS)
    analyzeRMS(blockObj);
-elseif ~ismember('CAR',blockObj.RMS.Properties.VariableNames)
+elseif ~ismember(str,blockObj.RMS.Properties.VariableNames)
    analyzeRMS(blockObj);
 end
-r = blockObj.RMS.CAR;
+r = blockObj.RMS.(str);
 ic = assignColors(r); 
 
 %% MAKE FIGURE AND PLOT

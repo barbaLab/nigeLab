@@ -50,11 +50,15 @@ flag = true;
       % do not already exist (from an old version of SD code)
       pars = sortObj.Blocks(1).SDPars;
       n = size(sortObj.spk.feat{1},2);
+      featName = cell(1,n);
       
-      if isfield(pars,'FEAT_NAMES')
+      if isfield(pars,'FEAT_NAMES') && numel( pars.FEAT_NAMES)==n
          featName = pars.FEAT_NAMES;
+      elseif isfield(pars,'FEAT_NAMES')
+         for ii = numel(pars.FEAT_NAMES):n
+            featName{ii} = sprintf('feat-%02g',ii);
+         end
       else
-         featName = cell(1,n);
          for i = 1:n
             featName{i} = sprintf('feat-%02g',i);
          end

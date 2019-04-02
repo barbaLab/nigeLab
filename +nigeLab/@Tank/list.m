@@ -58,10 +58,14 @@ for ii=1:numel(tankObj.Animals)
 %     L_(jj,:)=[tmp(1,I),tmp(1,~I)];
 end
 
+Lstruc=struct2table(Lstruc);
+Lstruc.Properties.RowNames=cellstr(num2str((1:numel(tankObj.Animals))'));
+
+
 if nargout==0
-    disp(struct2table(Lstruc));
+    disp(Lstruc);
 else
-    L=struct2table(Lstruc);
+    L=(Lstruc);
 end
 
 end
