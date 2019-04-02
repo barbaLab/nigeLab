@@ -301,6 +301,7 @@ classdef Block < handle
       flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
+      flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
       
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
