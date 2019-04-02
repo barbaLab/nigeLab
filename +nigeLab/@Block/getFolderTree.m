@@ -2,6 +2,7 @@ function paths = getFolderTree(blockObj,paths)
 if nargin < 2
    paths = struct(); 
 end
+blockObj.updateParams('Block');
 F = fieldnames(blockObj.BlockPars);
 for iF = 1:numel(F) % For each field, update field type
    p = blockObj.BlockPars.(F{iF});
