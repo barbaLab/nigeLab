@@ -56,6 +56,17 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
         return;
 elseif any(ismember(paramType,ConstructProps))
     ... Right now no action is required here
+        [pars,~] = nigeLab.defaults.(paramType)();
+         allNames = fieldnames(pars);
+         allNames = reshape(allNames,1,numel(allNames));
+         for name_ = allNames
+            % Check to see if it matches any of the listed properties
+            if isprop(blockObj,name_{:})
+               blockObj.(name_{:}) = pars.(name_{:});
+            end
+         end
+         flag = true;
+         return;
 else
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(tmp,paramType,3),1,'first');

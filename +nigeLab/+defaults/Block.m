@@ -171,6 +171,27 @@ FolderNames     = {  ...
    'Metadata'           % 18
    };
 
+FileNames =  { ...
+   'Raw';            % 1  - hard-coded for extraction
+   'Filt';           % 2
+   'CAR';            % 3
+   'LFP';            % 4
+   'Artifact';       % 5 - hard-coded to match terms from defaults.SD
+   'ptrain';         % 6 - hard-coded to match terms from defaults.SD
+   'SpikeFeatures';  % 7 - hard-coded to match terms from defaults.SD
+   'Clusters';       % 8 - hard-coded to match terms from defaults.SD
+   'Sorted';         % 9 - hard-coded to match terms from defaults.SD
+   'DigIO';          % 10 - hard-coded for extraction
+   'AnalogIO';       % 11 - hard-coded for extraction
+   'DigEvents';      % 12
+   'Video';          % 13
+   'Stim';           % 14 - hard-coded for extraction in RHS
+   'DC';             % 15 - hard-coded for extraction in RHS
+   'Time';           % 16
+%    'Notes'           % 17
+   'Probes';         % 18
+   };
+
 FileType = { ...
    'Hybrid';   % 1
    'Hybrid';   % 2
@@ -229,8 +250,8 @@ pars.BlockPars = struct;
 for ii=1:numel(Fields)
    pars.BlockPars.(Fields{ii}).Folder     = FolderNames{ii};
    pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
-   pars.BlockPars.(Fields{ii}).File = [Del Fields{ii} TAG.(FieldType{ii})];
-   pars.BlockPars.(Fields{ii}).Info = [Del Fields{ii} '-Info.mat'];
+   pars.BlockPars.(Fields{ii}).File = [Del FileNames{ii} TAG.(FieldType{ii})];
+   pars.BlockPars.(Fields{ii}).Info = [Del FileNames{ii} '-Info.mat'];
 end
 
 end
