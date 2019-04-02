@@ -17,7 +17,7 @@ fprintf(1,'\nLinking SPIKES channels...000%%\n');
 for iCh = blockObj.Mask
    pnum  = num2str(blockObj.ChannelID(iCh,1));
    chnum = num2str(blockObj.ChannelID(iCh,2),'%03g');
-   fname = sprintf(strrep(blockObj.paths.SDW_N,'\','/'), pnum, chnum);
+   fname = sprintf(strrep(blockObj.Paths.SDW_N,'\','/'), pnum, chnum);
    fname = fullfile(fname);
    if ~exist(fullfile(fname),'file')
       flag = true;

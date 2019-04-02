@@ -98,6 +98,7 @@ classdef Animal < handle
       
       % Utility
       flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
+      flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
       linkToData(animalObj)                    % Link disk data of all Blocks in Animal
    end
    
