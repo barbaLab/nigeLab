@@ -688,13 +688,29 @@ classdef SpikeImage < handle
             case 'q'
                obj.Parent.UI.FeaturesUI.ReopenWindow;
             case 'uparrow'
-%                obj.SetAxesWhereSpikesGo(ax);
+               pastNum = obj.Spikes.CurClass;
+               newNum = pastNum-3;
+               newNum = mod(newNum,9);
+               newNum = newNum + 9*(newNum==0);
+               obj.SetAxesWhereSpikesGo(obj.Axes{newNum});
             case 'downarrow'
-%                obj.SetAxesWhereSpikesGo(ax);
+               pastNum = obj.Spikes.CurClass;
+               newNum = pastNum+3;
+               newNum = mod(newNum,9);
+               newNum = newNum + 9*(newNum==0);
+               obj.SetAxesWhereSpikesGo(obj.Axes{newNum});          
             case 'rightarrow'
-%                obj.SetAxesWhereSpikesGo(ax);
+               pastNum = obj.Spikes.CurClass;
+               newNum = pastNum+1;
+               newNum = mod(newNum,9);
+               newNum = newNum + 9*(newNum==0);
+               obj.SetAxesWhereSpikesGo(obj.Axes{newNum});
             case 'leftarrow'
-%                obj.SetAxesWhereSpikesGo(ax);
+               pastNum = obj.Spikes.CurClass;
+               newNum = pastNum-1;
+               newNum = mod(newNum,9);
+               newNum = newNum + 9*(newNum==0);
+               obj.SetAxesWhereSpikesGo(obj.Axes{newNum});  
             otherwise
                
          end
