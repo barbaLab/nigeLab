@@ -121,6 +121,7 @@ classdef FeaturesUI < handle
             obj.SpikeImage = sortObj.UI.SpikeImage;
             addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.ExitFeatures);
             addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
+            addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotQuality);
             addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);
             addlistener(obj.SpikeImage,'SpikeAxesSelected',@obj.SetCurrentCluster);
             addlistener(obj.SpikeImage,'VisionToggled',@obj.SetClusterVisibility);

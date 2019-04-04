@@ -77,7 +77,7 @@ for ii=1:numel(F)   % populate Pars struct preserving values
 end
 
 for i = 1:numel(animalObj.Blocks)
-   animalObj.Animals(i).updateParams(paramType);
+   animalObj.Blocks(i).updateParams(paramType);
 end
 
 flag = true;

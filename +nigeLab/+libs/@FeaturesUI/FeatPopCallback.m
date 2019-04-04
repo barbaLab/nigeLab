@@ -27,6 +27,7 @@ switch this.Tag
         tmp=find(vals==OldValOther);
         if isempty(tmp),tmp=1;end
         set(other,'Value',tmp)
+        obj.featInd(2) = vals(tmp);
     case 'Dim2'
         other = obj.FeatX;
         % get dropdown values
