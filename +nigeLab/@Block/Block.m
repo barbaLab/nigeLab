@@ -207,7 +207,7 @@ classdef Block < handle
       end
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7.3');
+         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
       end
 %       function disp(blockObj)
 %          %% DISP  Overload display of BLOCK contents

@@ -144,7 +144,13 @@ classdef Tank < handle
           for ii=1:numel(A)
               A(ii).save;
           end
-         save(fullfile([tankObj.Paths.SaveLoc '_Tank.mat']),'tankObj','-v7.3') 
+         save(fullfile([tankObj.Paths.SaveLoc '_Tank.mat']),'tankObj','-v7');
+         tankObj.Animals = A;
+
+      end
+      
+      function tankObj = saveobj(tankObj)
+         tankObj.Animals = [];         
       end
       
       % Extraction methods
@@ -173,4 +179,19 @@ classdef Tank < handle
 %       SlowConvert(tankObj)
       flag = clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
    end
+
+   methods (Static)
+      function tankObj = loadobj(tankObj)
+         BL = dir(fullfile(tankObj.Paths.SaveLoc,'*_Animal.mat'));
+         load(fullfile(BL(1).folder,BL(1).name),'animalObj');
+            tankObj.Animals = animalObj;
+         for ii=2:numel(BL)
+            load(fullfile(BL(ii).folder,BL(ii).name),'animalObj');
+            tankObj.Animals(ii) = animalObj;
+         end
+      end
+      
+      
+   end
+   
 end

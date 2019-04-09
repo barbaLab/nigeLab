@@ -78,7 +78,12 @@ classdef Animal < handle
          for ii=1:numel(B)
             B(ii).save;
          end
-         save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),'animalObj','-v7.3');
+         save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),'animalObj','-v7');
+         animalObj.Blocks = B;
+      end
+      
+      function animalobj = saveobj(animalobj)
+         animalobj.Blocks = [];         
       end
       
       %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
@@ -117,4 +122,19 @@ classdef Animal < handle
       init(animalObj) % Initializes the ANIMAL object
       def_params(animalObj)
    end
+   
+   methods (Static)
+      function animalObj = loadobj(animalObj)
+         BL = dir(fullfile(animalObj.Paths.SaveLoc,'*_Block.mat'));
+         load(fullfile(BL(1).folder,BL(1).name),'blockObj');
+            animalObj.Blocks = blockObj;
+         for ii=2:numel(BL)
+            load(fullfile(BL(ii).folder,BL(ii).name),'blockObj');
+            animalObj.Blocks(ii) = blockObj;
+         end
+      end
+      
+      
+   end
+   
 end
