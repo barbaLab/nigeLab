@@ -108,7 +108,7 @@ classdef Animal < handle
    end
    
    methods (Access = public, Hidden = true)
-      flag = clearSpace(animalObj,ask)
+      clearSpace(animalObj,ask,usrchoice)
       updateNotes(blockObj,str) % Update notes for a recording
       
       flag = genPaths(animalObj,tankPath) % Generate paths property struct

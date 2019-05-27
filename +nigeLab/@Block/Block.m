@@ -379,7 +379,7 @@ classdef Block < handle
       flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
       paths = getFolderTree(blockObj,paths)     % returns a populated path struct
       
-      flag = clearSpace(blockObj,ask)     % Clear space on disk      
+      clearSpace(blockObj,ask,usrchoice)     % Clear space on disk      
 
       flag = init(blockObj) % Initializes the BLOCK object
       flag = initChannels(blockObj);   % Initialize Channels property

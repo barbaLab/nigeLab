@@ -177,7 +177,7 @@ classdef Tank < handle
 %       ClusterConvert(tankObj)
 %       LocalConvert(tankObj)
 %       SlowConvert(tankObj)
-      flag = clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
+      clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
    end
 
    methods (Static)
