@@ -812,8 +812,7 @@ classdef SpikeImage < handle
          
       end
    
-      function Recluster(obj,class)
-      end
+      Recluster(obj)
    end
    
    methods (Static = true, Access = private)

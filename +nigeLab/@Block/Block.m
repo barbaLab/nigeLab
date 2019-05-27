@@ -127,6 +127,7 @@ classdef Block < handle
       QueuePars         % Parameters struct for queueing jobs to server
       SDPars            % Parameters struct for spike detection
       SortPars          % Parameters for nigeLab.Sort interface
+      SPCPars           % Parameters for super paramagnetic clustreing
       SyncPars          % Parameters struct for digital sync stream
       TDTPars           % Parameters struct for parsing TDT info
       VideoPars         % Parameters struct for associating videos
@@ -301,6 +302,7 @@ classdef Block < handle
       flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
+      flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
       
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
