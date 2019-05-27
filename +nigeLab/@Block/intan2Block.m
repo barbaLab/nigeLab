@@ -330,6 +330,7 @@ deBounce = false; % This just for the update job Tag part
 F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
+fprintf(1,'File too long to safely lolad in memory.\nSplitted in %d blocks',ceil(info.NumDataBlocks/nBlocks));
 for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    pct = round(iBlock/nBlocks*100);
    if rem(pct,5)==0 && ~deBounce
@@ -345,13 +346,14 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    %%% Read binary data.
    blocksToread = min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
    dataPointsToRead = blocksToread*nDataPoints;
-   dataBuffer = uint16(fread(fid, dataPointsToRead, 'uint16=>uint16'))';
+   dataBuffer = (fread(fid, dataPointsToRead, 'uint16=>uint16'))';
    
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    %%% Update the files
    index =uint32( index(end) + 1 : index(end)+nPerBlock*blocksToread);
    
    t=typecast(dataBuffer(time_buffer_index(1:dataPointsToRead)),'int32');
+   if any(t(2:end)==0),continue;end
    t = reshape(t,1,numel(t)); % ensure correct orientation
    Files.Time.append(t);
    num_gaps = num_gaps + sum(diff(t) ~= 1);
@@ -369,9 +371,9 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
-   pct = 100 * (progress / info.NumDataBlocks);
+   pct = round(100 * (progress / info.NumDataBlocks));
    if ~floor(mod(pct,5)) % only increment counter by 5%
-      fprintf(1,'Writing data to Matfiles...%.3d%%\n',floor(pct));
+      fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
 end
 fprintf(1,newline);
@@ -560,15 +562,19 @@ function formatteData = scaleStimData(stim_data,stim_step_size,fs,iCh)
    stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
    stim_data = stim_data .* stim_polarity;
    ScaleData =   stim_step_size * stim_data / 1.0e-6; % units = microamps
-   Step = find ((ScaleData~=0) -([0 ScaleData(1:end-1)]~=0));
+   StimDataBin = (stim_data~=0); % find pulses
+   StimDataBin = StimDataBin(1:end-1) | StimDataBin(2:end); % fill the gaps and anticipates the pulse by one sample(corrected later)
+   Step = find (conv(StimDataBin,[0,1,-1],'same')); % finds edges
    Onset = Step(1:2:end);
    Offset = Step(2:2:end);
    nStim = numel(Onset);
    if  nStim~=0
       if numel(unique(Offset-Onset))==1
-         formatteData = zeros(nStim,4+unique(Offset-Onset));
+         l = unique(Offset-Onset);
+         formatteData = zeros(nStim,4+l+1);
          formatteData(:,2) = iCh;    % value
          formatteData(:,4) = Onset./fs;           % ts
+         formatteData(:,5:end) = ScaleData((Onset)'+(0:l));           % ts
       else
          formatteData = zeros(nStim,6);
          formatteData(:,2) = ScaleData(Onset);    % value

@@ -757,7 +757,7 @@ classdef DiskData < handle
          Out=obj.diskfile_.Properties.Source;
       end
       
-      function Out = append(obj,b)
+      function Out = append(obj,b,dim)
          %% APPEND   Overloaded function for concatenating elements to DiskData array
          if ~obj.writable_
             error('Improper assignment. DiskData object constructed as read-only.');
@@ -770,13 +770,26 @@ classdef DiskData < handle
          if isempty(b)
             return;
          end
-         strt = double( obj.size + size(b)~= obj.size);  % finds the dimension where to append the data
+         if nargin < 3
+            diffS=size(b)~=obj.size;
+            Mod = [diffS(1) ~diffS(1)||diffS(2)];
+            Wflag = ~(diffS(1)&&diffS(2));
+         else
+            Mod=~obj.size;
+            Mod(dim)=1;
+         end
+         strt = (obj.size + double(Mod));
+         if Wflag
+            warning('Appending direction is ambiguous. Default dimention is 2.')
+         end
          if strcmp(obj.type_,'Event')
             obj.diskfile_.(obj.name_)(strt(1):strt(1)+size(b,1)-1,strt(2):strt(2)+size(b,2)-1) = b;
          elseif strcmp(obj.type_,'Hybrid')
             h5write(obj.getPath, varname_, b(:,:),strt,size(b));
          end
-         Out.size_= size(obj)+size(b);
+         Sb =size(b);
+         Sb(~Mod)=0;
+         Out.size_= size(obj)+Sb;
       end
       
       function Out=disp(obj)
