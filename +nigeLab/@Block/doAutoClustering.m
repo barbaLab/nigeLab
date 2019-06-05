@@ -12,9 +12,15 @@ end
 
 fprintf(1,'Performing auto clustering... %.3d%%',0);
 
+ProgressPath = fullfile(tempdir,['doAutoClustering',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,numel(blockObj.Mask),'int32');
+fclose(fid);
+
  for iCh = chan
     [inspk] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
-    classes = blockObj.getSort(iCh);
+    SuppressText = true;
+    classes = blockObj.getSort(iCh,SuppressText);
     offs = max(unique(classes));
     if ~ischar(unit)
        ind = find(ismember(classes,unit));
@@ -35,57 +41,64 @@ fprintf(1,'Performing auto clustering... %.3d%%',0);
           naux = min(par.max_spk,size(inspk,1));
           ipermut = randperm(length(inspk));
           ipermut(naux+1:end) = [];
+          
        else
           ipermut = randperm(length(inspk));
        end
        inspk_aux = inspk(ipermut,:);
+       ind = ipermut;
     else
        if par.match == 'y'
           naux = min(par.max_spk,size(inspk,1));
-          inspk_aux = inspk(1:naux,:);
+          
        else
-          inspk_aux = inspk;
+          naux  = size(inspk,1);
        end
+       inspk_aux = inspk(1:naux,:);
+       ind = 1:naux;
     end
     
 
     [temp,classes_] = SPCrun(par,inspk_aux);
-    
+    if isempty(temp),temp=0;end
 
     %     setappdata(handles.temperature_plot,'auto_sort_info',auto_sort);
     % definition of clustering_results
     
     
 %     nigeLab.utils.SPC.temperature_diag(par,tree,clustering_results,gca,classes,auto_sort);
-      classes(ind) = classes_+(classes_~=0)*offs; 
+      classes(ind) = classes_; 
       [temp,classes]=checkclasses(temp,classes);
-      saveSorted(blockObj,classes);
+      saveSorted(blockObj,classes,iCh,temp);
     
     blockObj.updateStatus('Clusters',true,iCh);
   pc = 100 * (iCh / blockObj.NumChannels);
    if ~floor(mod(pc,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
    end
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 fprintf(1,'\b\b\b\bDone.\n');
     flag = true;
 end
 
-function saveSorted(blockObj,classes)
-      
+function saveSorted(blockObj,classes,iCh,temp)
+      if not(iscolumn(classes)),classes=classes';end
       ts = getSpikeTimes(blockObj,iCh);
       n = numel(ts);
-      data = [zeros(n,1) classes' zeros(n,1) ts ];
+      data = [zeros(n,1) classes temp*ones(n,1) ts ];
       
       % initialize the 'Sorted' DiskData file
-      fType = blockObj.getFileType('Sorted');
-      fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+      fType = blockObj.getFileType('Clusters');
+      fName = fullfile(sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
          num2str(blockObj.Channels(iCh).probe),...
          blockObj.Channels(iCh).chStr));
       if exist(blockObj.Paths.Clusters.dir,'dir')==0
          mkdir(blockObj.Paths.Clusters.dir);
       end
-      blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData(fType,...
+      blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData(fType,...
          fName,data,'access','w');
 end
 
@@ -98,7 +111,7 @@ function [Temp,classes] = SPCrun(par,inspk_aux)
 
     [clu,tree] = nigeLab.utils.SPC.run_cluster(par);
         
-    [clust_num temp auto_sort] = nigeLab.utils.SPC.find_temp(tree,clu, par);
+    [clust_num,temp,auto_sort] = nigeLab.utils.SPC.find_temp(tree,clu, par);
     current_temp = max(temp);
     classes = zeros(1,size(clu,2)-2);
 %     for c =1: length(clust_num)
@@ -113,7 +126,7 @@ function [Temp,classes] = SPCrun(par,inspk_aux)
        classes = [classes zeros(1,max(size(spikes,1)-size(clu,2)-2,0))];
     end
     
-    [Temp,classes]=checkclasses(temp,classes);
+    [Temp,classes]=checkclasses(current_temp,classes);
     
 %     clustering_results = [];
 %     clustering_results(:,1) = repmat(current_temp,length(classes),1); % temperatures
@@ -135,6 +148,7 @@ function [Temp,classes]=checkclasses(temp,classes)
     Temp = temp;
     % Classes should be consecutive numbers
     classes_names = nonzeros(sort(unique(classes)));
+    if isempty(classes_names),return;end
     if sum(classes_names) ~= classes_names(end)*(classes_names(end)+1)/2
        for i= 1:length(classes_names)
           c = classes_names(i);

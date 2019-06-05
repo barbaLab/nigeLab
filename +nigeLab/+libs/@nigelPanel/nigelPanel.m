@@ -37,9 +37,9 @@ classdef nigelPanel < handle
          
          
          TitleH = 0.055;
-         Pars.Tcol = [67 129 193]./255;   % to be loaded from colorscheme in the future
-         Pars.Bcol = [218 219 219]./255;   % to be loaded from colorscheme in the future
-         Pars.TcolT = [255 186 73]./255;
+         Pars.TitleBarColor = [67 129 193]./255;   % to be loaded from colorscheme in the future
+         Pars.PanelColor = [218 219 219]./255;   % to be loaded from colorscheme in the future
+         Pars.TitleColor = [255 186 73]./255;
          Pars.Position  = [0.1 0.1 0.3 0.91];
          Pars.String = '';
          Pars.Substr = '';
@@ -47,15 +47,15 @@ classdef nigelPanel < handle
          Pars.Units = 'normalized';
          Pars = nigeLab.utils.getopt(Pars,varargin{:});
          
-         obj.pCols = Pars.Bcol;
-         obj.tCols = Pars.Tcol;
+         obj.pCols = Pars.PanelColor;
+         obj.tCols = Pars.TitleBarColor;
          obj.String = Pars.String;
          obj.Substr = Pars.Substr;
          obj.Tag = Pars.Tag;
 %          set(parent,'Units','normalized');
          
         p = uipanel(parent,...
-           'BackgroundColor', Pars.Bcol,...
+           'BackgroundColor', Pars.PanelColor,...
            'Units',Pars.Units,...
            'Position',Pars.Position,...
            'BorderType','none');
@@ -81,21 +81,21 @@ classdef nigelPanel < handle
         titleBox.r2 = rectangle(a,...
            'Position',[0 0 1 1],...
            'Curvature',[0.05 0.55],...
-           'FaceColor', Pars.Tcol,...
-           'EdgeColor', Pars.Tcol);
+           'FaceColor', Pars.TitleBarColor,...
+           'EdgeColor', Pars.TitleBarColor);
         
         titleBox.ann = text(a,0.1,0.5,...
            Pars.String,...
            'Units','normalized',...
            'VerticalAlignment','middle',...
-           'Color',Pars.TcolT,...
+           'Color',Pars.TitleColor,...
            'FontSize',13,...
            'FontWeight','bold',...
            'FontName','DroidSans');
         
         obj.Parent = parent;
         obj.Tag = Pars.Tag;
-        obj.InnerPosition = [.02 .02 .96 (.96 - a.Position(4))];
+        obj.InnerPosition = [.05 .05 .90 (.90 - a.Position(4))];
         obj.titleBox = titleBox;
         obj.panel = p;
         obj.axes = a;
@@ -114,12 +114,12 @@ classdef nigelPanel < handle
       function UnitsChanged(obj, src, Event)
          switch Event.AffectedObject.Units
             case 'normalized'
-               obj.InnerPosition =[.02 .02 .96 (.96-obj.axes.Position(4))];
+               obj.InnerPosition =[.05 .05 .90 (.90-obj.axes.Position(4))];
                obj.Position = obj.panel.Position;
             case 'pixels'
                set(obj.axes,'Units','pixels');
                set(obj.panel,'Units','pixels');
-               obj.InnerPosition = [obj.panel.Position([3 4]).*[.02 .02] obj.panel.Position(3) obj.panel.Position( 4)-obj.axes.Position(4)];
+               obj.InnerPosition = [obj.panel.Position([3 4]).*[.05 .05] obj.panel.Position(3) obj.panel.Position( 4)-obj.axes.Position(4)];
                obj.InnerPosition = round(obj.InnerPosition);
                obj.InnerPosition(3:4)= obj.InnerPosition(3:4)-obj.InnerPosition(1:2)*2;
                obj.Position = obj.panel.Position;

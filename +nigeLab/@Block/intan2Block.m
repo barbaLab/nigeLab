@@ -99,6 +99,7 @@ end
 % nChannles*nSamples matrices
 
 fprintf(1, 'Allocating memory for data...\n');
+
 Files = struct;
 nCh = struct;
 for f = fields
@@ -331,6 +332,11 @@ F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
 fprintf(1,'File too long to safely lolad in memory.\nSplitted in %d blocks',ceil(info.NumDataBlocks/nBlocks));
+ProgressPath  = fullfile(tempdir,['doRawExtraction',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,ceil(info.NumDataBlocks/nBlocks),'int32');
+fclose(fid);
+
 for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    pct = round(iBlock/nBlocks*100);
    if rem(pct,5)==0 && ~deBounce
@@ -375,6 +381,9 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.

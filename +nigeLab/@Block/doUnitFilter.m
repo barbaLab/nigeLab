@@ -32,6 +32,10 @@ fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 %% DO FILTERING AND SAVE
 fprintf(1,'\nApplying bandpass filtering... ');
 fprintf(1,'%.3d%%',0)
+ProgressPath = fullfile(tempdir,['doUnitFilter',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,numel(blockObj.Mask),'int32');
+fclose(fid);
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
@@ -70,6 +74,9 @@ for iCh = blockObj.Mask
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
    end
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('Filt',updateFlag);
