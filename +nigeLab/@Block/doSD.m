@@ -31,7 +31,10 @@ blockObj.updateStatus('Clusters',false,blockObj.Mask);
 blockObj.updateStatus('Sorted',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-
+ProgressPath = fullfile(tempdir,['doSD',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,numel(blockObj.Mask),'int32');
+fclose(fid);
 fprintf(1,'\n000%%\n');
 for iCh = blockObj.Mask
    
@@ -85,7 +88,9 @@ for iCh = blockObj.Mask
    % And update the status indicator in Command Window:
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 
 % Indicate that it is finished at the end

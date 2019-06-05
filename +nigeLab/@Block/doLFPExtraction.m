@@ -26,6 +26,10 @@ blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
 fprintf(1,'Decimating raw data... %.3d%%\n',0);
+ProgressPath = fullfile(tempdir,['doLFPExtraction',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,numel(blockObj.Mask),'int32');
+fclose(fid);
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
@@ -44,7 +48,9 @@ for iCh=blockObj.Mask
    
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 blockObj.updateStatus('LFP',true);
 blockObj.save;

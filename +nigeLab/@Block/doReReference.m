@@ -44,6 +44,12 @@ end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
 fprintf(1,'Computing common average... %.3d%%',0);
+ProgressPath  = fullfile(tempdir,['doReReference',blockObj.Name]);
+fid = fopen(ProgressPath,'wb');
+fwrite(fid,numel(blockObj.Mask),'int32');
+fclose(fid);
+
+
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -59,6 +65,9 @@ for iCh = blockObj.Mask
    if ~floor(mod(pc,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
    end
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 fprintf(1,'\b\b\b\bDone.\n');
 
