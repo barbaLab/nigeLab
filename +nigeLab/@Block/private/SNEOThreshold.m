@@ -68,13 +68,20 @@ end
 
 %% REDUCE CONSECUTIVE CROSSINGS TO SINGLE POINTS
 z = zeros(size(data));
-pkloc = repmat(find(pk),pars.NS_AROUND*2+1,1) + (-pars.NS_AROUND:pars.NS_AROUND).';
-pkloc(pkloc < 1) = 1;
-pkloc(pkloc > numel(data)) = numel(data);
-pkloc = unique(pkloc(:));
+% pkloc = repmat(find(pk),pars.NS_AROUND*2+1,1) + (-pars.NS_AROUND:pars.NS_AROUND).';
+% pkloc(pkloc < 1) = 1;
+% pkloc(pkloc > numel(data)) = numel(data);
+% pkloc = unique(pkloc(:));
+% z(pkloc) = data(pkloc);
 
+%%%%%%%%%%%%%%%% FB, 5/28/2019 optimized for speed.  The above process took 2.9s 
+%%%%%%%%%%%%%%%%  now it takes more or less 0.85s. Same result
+pkloc = conv(pk,ones(1,pars.NS_AROUND*2+1),'same')>0;
 z(pkloc) = data(pkloc);
-[ts,pmin] = nigeLab.libs.peakseek(-z,0,data_th);
+
+
+minTime = 1e-3*pars.REFRTIME; % parameter in milliseconds
+[ts,pmin] = nigeLab.libs.peakseek(-z,minTime*pars.FS,data_th);
 E = Zs(ts);            
 
 
