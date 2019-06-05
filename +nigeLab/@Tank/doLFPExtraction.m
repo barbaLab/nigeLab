@@ -11,7 +11,7 @@ function flag = doLFPExtraction(tankObj)
 A=tankObj.Animals;
 flag = false(1,numel(A));
 for ii=1:numel(A)
-   flag(ii) = extractLFP(A(ii));
+   flag(ii) = A(ii).doLFPExtraction;
 end
 fprintf(1,'LFP extraction completed for: %s \n.',tankObj.Name);
 flag = all(flag);
