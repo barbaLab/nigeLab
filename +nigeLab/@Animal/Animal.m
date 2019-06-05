@@ -86,6 +86,20 @@ classdef Animal < handle
          animalobj.Blocks = [];         
       end
       
+      function Status = getStatus(animalObj,Operation)
+         if nargin <2
+            Status(1,:) = animalObj.Blocks(1).getStatus();
+            for ii=2:numel(animalObj.Blocks)
+               Status(ii,:) = animalObj.Blocks(ii).getStatus();
+            end
+         else
+            Status(1,:) = animalObj.Blocks(1).getStatus(Operation);
+            for ii=2:numel(animalObj.Blocks)
+               Status(ii,:) = animalObj.Blocks(ii).getStatus(Operation);
+            end
+         end
+      end
+      
       %       updateID(blockObj,name,type,value)    % Update the file or folder identifier
       table = list(animalObj)                % List of recordings currently associated with the animal
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
@@ -114,7 +128,7 @@ classdef Animal < handle
       flag = genPaths(animalObj,tankPath) % Generate paths property struct
       flag = findCorrectPath(animalObj,paths)   % Find correct Animal path
       flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
-
+      flag = doAutoClustering(animalObj,chan,unit)
    end
    
    %% PRIVATE METHODS

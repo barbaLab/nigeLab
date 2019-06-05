@@ -153,6 +153,20 @@ classdef Tank < handle
          tankObj.Animals = [];         
       end
       
+      function Status = getStatus(tankObj,operation)
+         if nargin <2
+            tmp = tankObj.list;
+            Status = tmp.Status;
+         else
+            if ~iscell(operation),operation={operation};end
+            for aa =1:numel(tankObj.Animals)
+               tmp =  tankObj.Animals(aa).getStatus(operation);
+               if numel(operation)==1,tmp=all(tmp,2);end
+               Status(aa,:) = all(tmp,1);
+            end
+         end
+      end
+      
       % Extraction methods
       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
