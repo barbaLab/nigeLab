@@ -65,9 +65,9 @@ else % If it doesn't exist
          blockObj.Channels(ch).chStr));
       
       % Technically, files could exist but Status not updated...
-      if exist(fName,'file')~=0
-         clusterIndex = getCIFromExistingFile(blockObj,ch);
-      else
+%       if exist(fName,'file')~=0
+%          clusterIndex = getCIFromExistingFile(blockObj,ch);
+%       else
          ts = getSpikeTimes(blockObj,ch);
          n = numel(ts);
          clusterIndex = zeros(n,1);
@@ -81,7 +81,7 @@ else % If it doesn't exist
             fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
                blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
          end
-      end
+%       end
    else
       clusterIndex = [];
    end

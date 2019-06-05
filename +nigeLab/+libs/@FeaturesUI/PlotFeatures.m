@@ -14,10 +14,10 @@ cla(obj.Features3D);
 cla(obj.Features2D);
 
 % randomly select spikes to plot
-rsel = false(size(obj.Data.spikes{curCh},1));
+obj.rsel = false(size(obj.Data.spikes{curCh},1),1);
 
-rsel(randi(numel(rsel),1,...
-   min(obj.NFEAT_PLOT_POINTS,numel(rsel))))=true;
+obj.rsel( randi( numel(obj.rsel),1,...
+   min(obj.NFEAT_PLOT_POINTS,numel(obj.rsel)) ) ) = true;
 
 
 for iC = 1:obj.NCLUS_MAX
@@ -26,10 +26,10 @@ for iC = 1:obj.NCLUS_MAX
    end
    
 
-   if obj.NFEAT_PLOT_POINTS <= sum(rsel & ...
+   if obj.NFEAT_PLOT_POINTS <= sum(obj.rsel & ...
          cl==iC)
       fi = cl==iC & ... % fi --> features included
-         rsel;   % include property no more available
+         obj.rsel;   % include property no more available
    else
       fi = cl==iC;
    end
