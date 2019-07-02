@@ -26,7 +26,7 @@ function flag = updateParams(blockObj,paramType)
 %% PARSE INPUT
 flag = false;
 ConstructProps = {'Block','Shortcuts','Animal','Tank'};
-PropsToSkip ={'nigelColors'};
+PropsToSkip ={'nigelColors','Tempdir'};
 
 % Make sure a valid parameter type is selected:
 tmp = what('+nigeLab/+defaults');
