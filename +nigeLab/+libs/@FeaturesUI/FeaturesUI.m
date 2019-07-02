@@ -17,6 +17,8 @@ classdef FeaturesUI < handle
    properties (Access = public)
       ChannelSelector
       SpikeImage
+      HighDimUI
+      HighDim
       
       CurClass = 1;
       
@@ -24,6 +26,8 @@ classdef FeaturesUI < handle
       Features3D
       FeatX
       FeatY
+      
+      HighDimsParams
       Features2D
       ClusterQuality
       Silhouette
@@ -37,6 +41,7 @@ classdef FeaturesUI < handle
                          'Jaccard'};
       SilScores                                  % Silhuette scores; nMethods x NCLUS_MAX (9, maximum number of clusters)
       QualityScores                              % A matrix nClusters by nQuality
+      QualityBars
       Data
       Parent
       
@@ -56,6 +61,16 @@ classdef FeaturesUI < handle
       TagLabels
       ZoomSlider
       Available = nan;
+      
+      projVecs
+      COLS = {[0,0,0]; ...
+         [0.200000000000000,0.200000000000000,0.900000000000000];...
+         [0.800000000000000,0.200000000000000,0.200000000000000];...
+         [0.900000000000000,0.800000000000000,0.300000000000000];...
+         [0.100000000000000,0.700000000000000,0.100000000000000];...
+         [1,0,1];[0.930000000000000,0.690000000000000,0.130000000000000];...
+         [0.300000000000000,0.950000000000000,0.950000000000000];...
+         [0,0.450000000000000,0.750000000000000]};
    end
    
    properties (Access = private)
@@ -84,14 +99,6 @@ classdef FeaturesUI < handle
       MINSPIKES = 30;
       NFEAT_PLOT_POINTS = 2000;
       NCLUS_MAX = 9;
-      COLS = {[0,0,0]; ...
-         [0.200000000000000,0.200000000000000,0.900000000000000];...
-         [0.800000000000000,0.200000000000000,0.200000000000000];...
-         [0.900000000000000,0.800000000000000,0.300000000000000];...
-         [0.100000000000000,0.700000000000000,0.100000000000000];...
-         [1,0,1];[0.930000000000000,0.690000000000000,0.130000000000000];...
-         [0.300000000000000,0.950000000000000,0.950000000000000];...
-         [0,0.450000000000000,0.750000000000000]};
       
    end
    
@@ -119,9 +126,11 @@ classdef FeaturesUI < handle
             obj.Parent = sortObj;
             obj.ChannelSelector = sortObj.UI.ChannelSelector;
             obj.SpikeImage = sortObj.UI.SpikeImage;
+            obj.HighDimUI = nigeLab.libs.HighDimsUI(obj);
+            
             addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.ExitFeatures);
-            addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
             addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotQuality);
+            addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
             addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);
             addlistener(obj.SpikeImage,'SpikeAxesSelected',@obj.SetCurrentCluster);
             addlistener(obj.SpikeImage,'VisionToggled',@obj.SetClusterVisibility);
@@ -137,7 +146,7 @@ classdef FeaturesUI < handle
             % Needs 'SpikeImage'
             % Needs 'Data' and data struct name,value pair
          end
-         
+                  
          obj.Init(sortObj);
          obj.PlotFeatures;
          obj.PlotQuality;
@@ -174,7 +183,8 @@ classdef FeaturesUI < handle
          obj.VisibleClusters = cellfun(@(x) x.Value, ...
             sortObj.UI.SpikeImage.VisibleToggle);
          obj.nFeat = cellfun(@(x) size(x,2),obj.Data.feat);
-         
+         obj.projVecs = zeros(2,obj.nFeat(obj.ChannelSelector.Channel));
+ 
          %% init graphical objects
          
          obj.Figure = figure('Name','Features', ... 'Units','Normalized',...
@@ -193,7 +203,7 @@ classdef FeaturesUI < handle
             'FontSize', 16, ...
             'FontName','Arial',...
             'BorderType','none',...
-            'Position',[0.01 0.85 0.1 0.1]);
+            'Position',[0.01 0.65 0.1 0.3]);
          
          featureDisplayPanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...
@@ -251,12 +261,13 @@ classdef FeaturesUI < handle
          obj.FeatX = uicontrol(featureComboSelectorPanel,...
             'Style','popupmenu',...
             'Units','Normalized',...
-            'Position',[0.05  0.55  0.9 0.45],...
+            'Position',[0.05  0.7  0.9 0.25],...
             'Tag','Dim1',...
             'UserData',vals,...
             'String',str,...
             'Value',find(vals==obj.featInd(1)));
          obj.FeatX.Callback = {@obj.FeatPopCallback};
+         obj.projVecs(1,obj.featInd(1)) = 1;
          
          ind = sortObj.UI.feat.combo(:,1)==1;
          str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(ind,2)));
@@ -265,12 +276,23 @@ classdef FeaturesUI < handle
          obj.FeatY = uicontrol(featureComboSelectorPanel,...
             'Style','popupmenu',...
             'Units','Normalized',...
-            'Position',[0.05  0.05  0.9 0.45],...
+            'Position',[0.05  0.5  0.9 0.25],...
             'Tag','Dim2',...
             'UserData',vals,...
             'String',str,...
             'Value',find(vals==obj.featInd(2)));
          obj.FeatY.Callback = {@obj.FeatPopCallback};
+         obj.projVecs(2,obj.featInd(2)) = 1;
+
+         
+         obj.HighDim = uicontrol(featureComboSelectorPanel,...
+            'Style','pushbutton',...
+            'Units','Normalized',...
+            'Position',[0.05  0.05  0.9 0.25],...
+            'Tag','Dim2',...
+            'String','HighDim');
+        tmpfcn = @(a,b,x) x.PlotFig;
+        obj.HighDim.Callback = {tmpfcn,obj.HighDimUI};
          
          obj.Features2D = axes(featureDisplayPanel,...
             'Color',nigeLab.defaults.nigelColors('background'), ...
@@ -280,6 +302,7 @@ classdef FeaturesUI < handle
             'ZColor',nigeLab.defaults.nigelColors('onsurface'),...
             'Units','Normalized',...
             'nextplot','add',...
+            'UserData',1,...
             'Position',[0.1 0.125 0.4 0.8],...
             'ButtonDownFcn',@obj.ButtonDownFcnSelect2D);
          
@@ -380,7 +403,7 @@ classdef FeaturesUI < handle
          %% BUTTONDOWNFCNSELECT  Determine which callback to use for click
          
          % Make sure we're referring to the axes
-         if isa(gco,'matlab.graphics.chart.primitive.Scatter')
+         if isa(src,'matlab.graphics.primitive.Line')
             ax = src.Parent;
          else
             ax = src;
@@ -480,6 +503,7 @@ classdef FeaturesUI < handle
          set(obj.Figure,'Pointer','arrow');
       end
       
+      PlotHighDims(obj,~,~)
       
    end
 end
