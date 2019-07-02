@@ -69,7 +69,7 @@ fclose(fid);
 %     nigeLab.utils.SPC.temperature_diag(par,tree,clustering_results,gca,classes,auto_sort);
       classes(ind) = classes_; 
       [temp,classes]=checkclasses(temp,classes);
-      saveSorted(blockObj,classes,iCh,temp);
+      saveClusters(blockObj,classes,iCh,temp);
     
     blockObj.updateStatus('Clusters',true,iCh);
   pc = 100 * (iCh / blockObj.NumChannels);
@@ -84,7 +84,7 @@ fprintf(1,'\b\b\b\bDone.\n');
     flag = true;
 end
 
-function saveSorted(blockObj,classes,iCh,temp)
+function saveClusters(blockObj,classes,iCh,temp)
       if not(iscolumn(classes)),classes=classes';end
       ts = getSpikeTimes(blockObj,iCh);
       n = numel(ts);

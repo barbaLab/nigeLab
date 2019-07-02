@@ -44,7 +44,7 @@ end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
 fprintf(1,'Computing common average... %.3d%%',0);
-ProgressPath  = fullfile(tempdir,['doReReference',blockObj.Name]);
+ProgressPath  = fullfile(nigeLab.defaults.Tempdir,['doReReference',blockObj.Name]);
 fid = fopen(ProgressPath,'wb');
 fwrite(fid,numel(blockObj.Mask),'int32');
 fclose(fid);
