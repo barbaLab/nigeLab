@@ -114,7 +114,7 @@ if ask
       '\n\n \\it With great power comes great responsibility.']);
    button = questdlg(promptMessage, 'Are you sure?', ...
       'Cancel', 'Continue',opts);
-   if strcmpi(button, {'','Cancel'})
+   if any(strcmpi(button, {'','Cancel'}))
       fprintf(1,'-> No data deleted.\n');
       return;
    end
@@ -128,6 +128,7 @@ for ii=1:numel(Needed)
    NameFields = fieldnames(Paths);
    rmdir(Paths.(NameFields{ii}).dir,'s');
    blockObj.Channels = rmfield(blockObj.Channels,NameFields{ii});
+   blockObj.updateStatus(NameFields{ii},false);
    fprintf(1,'-> %s data folder and contents deleted.\n',NameFields{ii});
 end
 
