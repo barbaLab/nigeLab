@@ -3,9 +3,11 @@ function remoteMonitor(obj,Labels,Files,Fig,parent)
 if ~iscell(Files),Files = {Files};end
 obj.remoteMonitorData = progressbar(obj,parent,obj.remoteMonitorData,Files,Labels);
 %set up flags for if button is held down
-obj.remoteMonitorData.timerObject = timer('Name','RemoteMonitor','TimerFcn',{@readFiles,obj,parent},'ExecutionMode','fixedRate',...
-   'Period',1);
-% readFiles(1,1,Files,obj,parent)          %% debug!
+obj.remoteMonitorData.timerObject = timer('Name','RemoteMonitor',...
+    'TimerFcn',{@readFiles,obj,parent},...
+    'ExecutionMode','fixedRate',...
+    'Period',1);
+% readFiles(1,1,obj,parent)          %% debug!
 Fig.CloseRequestFcn = {@destroyTimerOnClose,obj.remoteMonitorData.timerObject};
 start(obj.remoteMonitorData.timerObject);
 
@@ -21,23 +23,42 @@ closereq;
 function readFiles(~, ~,obj,parent)
 Files = {obj.remoteMonitorData.progdata.progressFiles};
 Progr=cell(1,numel(Files));
-for ii=1:numel(Files)
-   fid=fopen(Files{ii},'rb');
-   obj.remoteMonitorData.progdata(ii).fid=fid;
-   if fid<0
-      fid=fopen(Files{ii},'wb');
-      fwrite(fid,0,'int8');
-      fclose(fid);
-      fid=fopen(Files{ii},'rb');
-   end
-   N = fread(fid,1,'int32');
-   if isempty(N),Progr{ii}=0;continue;end
-   fseek(fid,0,'eof');
-   Progr{ii} = (ftell(fid)-4)/N;
-   fclose(fid);
+% for ii=1:numel(Files)
+%    fid=fopen(Files{ii},'rb');
+%    if fid<0
+%       fid=fopen(Files{ii},'wb');
+%       fwrite(fid,0,'int8');
+%       fclose(fid);
+%       fid=fopen(Files{ii},'rb');
+%    end
+%    obj.remoteMonitorData.progdata(ii).fid=fid;
+%    N = fread(fid,1,'int32');
+%    if isempty(N),Progr{ii}=0;fclose(fid);continue;end
+%    fseek(fid,0,'eof');
+%    Progr{ii} = (ftell(fid)-4)/N;
+%    disp(obj.qJobs{ii}.UserData);
+%    fclose(fid);
+% end
+try
+    for ii=1:numel(obj.qJobs)
+        dName = fullfile(nigeLab.defaults.Tempdir,obj.qJobs{ii}.ID);
+        warning off;diary(obj.qJobs{ii}, dName);warning on;
+        fid=fopen(dName);
+        obj.remoteMonitorData.progdata(ii).fid=fid;
+        dString=fscanf(fid,'%s');
+        ind = strfind(dString,'%');
+        if ~isempty(ind)
+            Progr{ii} = str2double(dString(ind(end)-3:ind(end)-1))/100;
+        else
+            Progr{ii} = 0;
+        end
+        fclose(fid);
+    end
+    
+    obj.remoteMonitorData = progressbar(obj,parent,obj.remoteMonitorData,Files,Progr{:});
+    drawnow;
+catch
 end
-obj.remoteMonitorData = progressbar(obj,parent,obj.remoteMonitorData,Files,Progr{:});
-drawnow;
 
 
 function data = progressbar(obj,nigelPanel,data,Files,varargin)
@@ -50,29 +71,27 @@ nbars = nargin-4;
 % Define figure size and axes padding for the single bar case
 height = 20;
 nigelPanel.Units = 'pixels';
-width = nigelPanel.InnerPosition(3)*0.85;
-hoff = nigelPanel.InnerPosition(3)*0.1;
-voff = nigelPanel.InnerPosition(4)*0.85;
+width = nigelPanel.InnerPosition(3)*0.6;
+hoff = nigelPanel.InnerPosition(3)*0.05;
+voff = nigelPanel.InnerPosition(4)*0.88;
 
 % Create new progress bar if needed
 if isempty(data)
-   
-   
+  
    
    for ii = 1:nbars
       progdata(ii).progressFiles = Files{ii};
       % Create axes, patch, and text
       progdata(ii).progaxes = axes( ...
          'Units','pixels',...
-         'Position', [hoff voff-height*2/3*(ii-1) width height], ...
+         'Position', [0 0 width height], ...
          'XLim', [0 1], ...
          'YLim', [0 1], ...
          'Box', 'off', ...
          'ytick', [], ...
          'xtick', [],...
          'UserData',ii);
-      nigelPanel.nestObj(progdata(ii).progaxes);
-      
+     
       set(progdata(ii).progaxes,'ButtonDownFcn',@AxBtnDownCallback)
       set(progdata(ii).progaxes,'UserData',false) %Initialise data
       
@@ -99,7 +118,7 @@ if isempty(data)
          'FontName','Droid Sans');
       ax = axes( ...
          'Units','pixels',...
-         'Position', [hoff + width + 5 voff-height*4/3*(ii-1) height height]);
+         'Position', [width + 5 0 height height]);
       plot(ax,.5,.5,'x','MarkerSize',15,'LineWidth',3.5,...
          'Color',nigeLab.defaults.nigelColors(3),'ButtonDownFcn',{@DeleteBar,obj})
       set(ax, ...
@@ -112,9 +131,15 @@ if isempty(data)
          'UserData',ii,...
          'ButtonDownFcn',{@DeleteBar,obj});
       ax.XAxis.Visible=false;ax.YAxis.Visible=false;
-      nigelPanel.nestObj(ax);
       progdata(ii).X = ax;
-
+      
+      pos = [hoff voff-height*4/3*(ii-1) width + 5 + height height];
+      pp = uipanel('BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
+          'Units','pixels','Position',pos,'BorderType','none');
+      progdata(ii).progaxes.Parent=pp;
+      ax.Parent=pp;
+      nigelPanel.nestObj(pp);
+      data.pp=pp;
       
       if ischar(input{ii})
          set(progdata(ii).proglabel, 'String', input{ii});
@@ -132,14 +157,16 @@ if isempty(data)
    
 elseif ischar(input{1})
    progdata = data.progdata;
-   jj=1;
+   voff = getpixelposition(data.pp);
+   voff = voff(2);
+   jj = 1;
    for ii = numel(progdata)+1:numel(progdata)+nbars
       progdata(ii).progressFiles = Files{jj};
 
       % Create axes, patch, and text
       progdata(ii).progaxes = axes( ...
          'Units','pixels',...
-         'Position', [hoff voff-height*4/3*(ii-1) width height], ...
+         'Position', [0 0 width height], ...
          'XLim', [0 1], ...
          'YLim', [0 1], ...
          'Box', 'off', ...
@@ -148,7 +175,7 @@ elseif ischar(input{1})
          'UserData',ii);
       ax = axes( ...
          'Units','pixels',...
-         'Position', [hoff + width + 5 voff-height*4/3*(ii-1) height height]);
+         'Position', [width + 5 0 height height]);
       p=plot(ax,.5,.5,'x','MarkerSize',15,'LineWidth',3.5,...
          'Color',nigeLab.defaults.nigelColors(3),'ButtonDownFcn',{@DeleteBar,obj});
       set(ax, ...
@@ -162,8 +189,13 @@ elseif ischar(input{1})
          'ButtonDownFcn',{@DeleteBar,obj});
       ax.XAxis.Visible=false;ax.YAxis.Visible=false;
       progdata(ii).X = ax;
-      nigelPanel.nestObj(progdata(ii).progaxes);
-      nigelPanel.nestObj(ax);
+      
+      pos = [hoff voff-height*4/3*(ii-1) width + 5 + height height];
+      pp = uipanel('BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
+          'Units','pixels','Position',pos,'BorderType','none');
+      progdata(ii).progaxes.Parent=pp;
+      ax.Parent = pp;
+      nigelPanel.nestObj(pp);
       
       progdata(ii).progpatch = patch(progdata(ii).progaxes, ...
          'XData', [0.3 0.3 0.3 0.3], ...
@@ -218,9 +250,10 @@ else
    end
    
    % Update progress patch
+   offs = 0.3;
    for ii = 1:length(progdata)
       set(progdata(ii).progpatch, 'XData', ...
-         [0.3, 0.3+progdata(ii).fractiondone, 0.3+progdata(ii).fractiondone, 0.3]);
+         [offs, offs+(1-offs)*progdata(ii).fractiondone, offs+(1-offs)*progdata(ii).fractiondone, 0.3]);
       set(progdata(ii).progtext, 'String', ...
             sprintf('%.3g%%', (100*progdata(ii).fractiondone)));
    end
@@ -305,14 +338,16 @@ while sum(ax.Position([1,3]))>0
    drawnow;
    pause(0.0005)
 end
-if numel(obj.remoteMonitorData.progdata)==1
+if ind==numel(obj.remoteMonitorData.progdata)
    delete(ax)
    obj.deleteJob(ind);
    fid = obj.remoteMonitorData.progdata(ind).fid;
    if ismember(fopen('all'),fid),fclose(fid);end
    delete(obj.remoteMonitorData.progdata(ind).progressFiles)
    obj.remoteMonitorData.progdata(ind) = [];
-   stop(obj.remoteMonitorData.timerObject);
+   if numel(obj.remoteMonitorData.progdata)==1
+       stop(obj.remoteMonitorData.timerObject);
+   end
    return;
 end
 Space = obj.remoteMonitorData.progdata(1).progaxes.Position(2) -...
