@@ -1,6 +1,5 @@
 classdef DashBoard < handle
-   %DASHBOARD Summary of this class goes here
-   %   Detailed explanation goes here
+   %DASHBOARD 
    
    properties
       nigelGui
@@ -24,7 +23,7 @@ classdef DashBoard < handle
          obj.Tank = tankObj;
          
          %% Load Graphics
-         obj.nigelGui = figure('Units','pixels','Position',[500 200 1200 800],...
+         obj.nigelGui = figure('Units','pixels','Position',[500 50 1200 800],...
           'Color',bCol,'ToolBar','none','MenuBar','none');
        loadPannels(obj)
        
@@ -51,10 +50,11 @@ classdef DashBoard < handle
        % Cosmetic adjustments
        Jobjs = Tree.getJavaObjects;
        Jobjs.JScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder)
+       Jobjs.JScrollPane.setComponentOrientation(java.awt.ComponentOrientation.RIGHT_TO_LEFT);
        set(Tree,'TreePaneBackgroundColor',PBCol,'BackgroundColor',PBCol,...
           'TreeBackgroundColor',PBCol,'Units','normalized','SelectionType','discontiguous');
      
-       %% Save, new buttons
+       %% Save, New buttons
        ax = axes('Units','normalized', ...
          'Position', obj.Children{1}.InnerPosition,...
          'Color',PBCol,'XColor','none','YColor','none','FontName','Droid Sans');
@@ -75,7 +75,7 @@ classdef DashBoard < handle
          'CellEditCallback',[],...
          'CellSelectionCallback',[],...
          'Units','normalized', ...
-         'Position',[obj.Children{2}.InnerPosition(1) obj.Children{2}.InnerPosition(4)./2+0.1 obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-0.05],...
+         'Position',[obj.Children{2}.InnerPosition(1) obj.Children{2}.InnerPosition(4)./2+0.05 obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-0.1],...
          'BackgroundColor',PBCol,...
          'FontName','Droid Sans');
       obj.Children{2}.nestObj(RecapTable);
@@ -99,6 +99,22 @@ classdef DashBoard < handle
       Nodes.Nodes = Tree.Root;
       Nodes.AddedNodes = Tree.Root;
       treeSelectionFcn(obj,Tree,Nodes)
+      
+      %% Create title bar
+      Position = [.01,.93,.98,.06];
+      Btns = struct('String',  {'Home','Visualization Tools'},...
+                    'Callback',{''    ,''});
+       obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGui,'Position',Position,...
+            'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+            'StringColor',nigeLab.defaults.nigelColors('onprimary'),...
+            'Buttons',Btns);
+        
+        %% Parameters UItabGroup
+        h=uitabgroup();
+        tab1 = uitab(h,'Title','settings');
+        uit = uitable(tab1,'Units','normalized',...
+            'Position',[0 0 1 1]);
+        obj.Children{end-1}.nestObj(h);
       end
       
    end
