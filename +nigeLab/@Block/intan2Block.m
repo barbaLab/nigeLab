@@ -332,10 +332,10 @@ F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
 fprintf(1,'File too long to safely lolad in memory.\nSplitted in %d blocks',ceil(info.NumDataBlocks/nBlocks));
-ProgressPath  = fullfile(tempdir,['doRawExtraction',blockObj.Name]);
-fid = fopen(ProgressPath,'wb');
-fwrite(fid,ceil(info.NumDataBlocks/nBlocks),'int32');
-fclose(fid);
+ProgressPath  = fullfile(nigeLab.defaults.Tempdir,['doRawExtraction',blockObj.Name]);
+fidprog = fopen(ProgressPath,'wb');
+fwrite(fidprog,ceil(info.NumDataBlocks/nBlocks),'int32');
+fclose(fidprog);
 
 for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    pct = round(iBlock/nBlocks*100);
@@ -381,9 +381,9 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
+   fidprog = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fidprog,1,'uint8');
+   fclose(fidprog);
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.
