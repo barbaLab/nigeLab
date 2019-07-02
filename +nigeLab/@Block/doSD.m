@@ -31,7 +31,7 @@ blockObj.updateStatus('Clusters',false,blockObj.Mask);
 blockObj.updateStatus('Sorted',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-ProgressPath = fullfile(tempdir,['doSD',blockObj.Name]);
+ProgressPath = fullfile(nigeLab.defaults.Tempdir,['doSD',blockObj.Name]);
 fid = fopen(ProgressPath,'wb');
 fwrite(fid,numel(blockObj.Mask),'int32');
 fclose(fid);

@@ -32,7 +32,7 @@ fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 %% DO FILTERING AND SAVE
 fprintf(1,'\nApplying bandpass filtering... ');
 fprintf(1,'%.3d%%',0)
-ProgressPath = fullfile(tempdir,['doUnitFilter',blockObj.Name]);
+ProgressPath = fullfile(nigeLab.defaults.Tempdir,['doUnitFilter',blockObj.Name]);
 fid = fopen(ProgressPath,'wb');
 fwrite(fid,numel(blockObj.Mask),'int32');
 fclose(fid);

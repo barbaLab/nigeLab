@@ -26,7 +26,7 @@ blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
 fprintf(1,'Decimating raw data... %.3d%%\n',0);
-ProgressPath = fullfile(tempdir,['doLFPExtraction',blockObj.Name]);
+ProgressPath = fullfile(nigeLab.defaults.Tempdir,['doLFPExtraction',blockObj.Name]);
 fid = fopen(ProgressPath,'wb');
 fwrite(fid,numel(blockObj.Mask),'int32');
 fclose(fid);

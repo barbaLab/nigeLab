@@ -14,7 +14,7 @@ function flag = doRawExtraction(blockObj)
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
 flag = false; 
-if ~genPaths(blockObj)f
+if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
