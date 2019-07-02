@@ -89,7 +89,7 @@ if ask
       '\n\n \\it With great power comes great responsibility.']);
    button = questdlg(promptMessage, 'Are you sure?', ...
       'Cancel', 'Continue',opts);
-   if strcmpi(button, {'','Cancel'})
+   if any(strcmpi(button, {'','Cancel'}))
       fprintf(1,'-> No data deleted.\n');
       return;
    end
