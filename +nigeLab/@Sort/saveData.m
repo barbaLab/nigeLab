@@ -23,6 +23,7 @@ for iBlock = 1:numel(sortObj.Blocks)
    blockObj = sortObj.Blocks(iBlock);
    for iCh = sortObj.Channels.Mask
       idx = sortObj.spk.block{iCh} == iBlock;
+      blockObj.Channels(iCh).Sorted.unlockData;
       blockObj.Channels(iCh).Sorted.value = sortObj.spk.class{iCh}(idx);
       iCount = iCount + 1;
       fprintf(1,'\b\b\b\b\b%03g%%\n',(iCount/iTotal)*100);      

@@ -845,6 +845,7 @@ classdef DiskData < handle
          
          obj.writable_ = false;
          obj.access_ = 'r';
+         obj.diskfile_.Properties.Writable = false;
          
       end
       
@@ -853,7 +854,7 @@ classdef DiskData < handle
          
          obj.writable_ = true;
          obj.access_ = 'w';
-         
+         obj.diskfile_.Properties.Writable = true;
       end
       
       function info = getInfo(obj)
