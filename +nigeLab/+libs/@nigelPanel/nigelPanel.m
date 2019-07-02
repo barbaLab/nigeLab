@@ -1,10 +1,25 @@
 classdef nigelPanel < handle
-   %DASHBOARD Summary of this class goes here
-   %   Detailed explanation goes here
+   %% NIGELPANEL Helper object for nigeLab GUI.
+% It builds a panel with a titlebox and a subtitle. The inside panel can
+% also be made scrollable.
+% Tipacal use:
+% 
+% F = figure;
+% p = nigeLab.libs.nigelPanel(F,...
+%             'String','ThisIsATitle',...
+%             'Tag','MyFisrtNigelPanel',...
+%             'Units','normalized'
+%             'Position',[0 0 1 1],...
+%             'Scrollable','off',...
+%             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+%             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+%             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+% ax = axes(); % some graphical object
+% p.nestObj(ax);  % use function nestobj to correctly nest something inside
+%                 % a nigelpanel
    
    properties
       Parent
-      Children
       Tag
       Visible = true;
       InnerPosition;
@@ -17,9 +32,11 @@ classdef nigelPanel < handle
    
    properties(SetObservable)
       Units
+      Children
    end
    
    properties (Access = private)
+       OutPanel;
       panel;
       axes
       titleBox
@@ -45,6 +62,7 @@ classdef nigelPanel < handle
          Pars.Substr = '';
          Pars.Tag = 'nigelPanel';
          Pars.Units = 'normalized';
+         Pars.Scrollable = 'off';
          Pars = nigeLab.utils.getopt(Pars,varargin{:});
          
          obj.pCols = Pars.PanelColor;
@@ -52,15 +70,16 @@ classdef nigelPanel < handle
          obj.String = Pars.String;
          obj.Substr = Pars.Substr;
          obj.Tag = Pars.Tag;
-%          set(parent,'Units','normalized');
+         %          set(parent,'Units','normalized');
          
-        p = uipanel(parent,...
-           'BackgroundColor', Pars.PanelColor,...
-           'Units',Pars.Units,...
-           'Position',Pars.Position,...
-           'BorderType','none');
-%         set(p,'Units','pixels');
-%         set(p,'Units','normalized');
+         p = uipanel(parent,...
+             'BackgroundColor', Pars.PanelColor,...
+             'Units',Pars.Units,...
+             'Position',Pars.Position,...
+             'BorderType','none');
+         %         set(p,'Units','pixels');
+         %         set(p,'Units','normalized');
+         p.BackgroundColor = Pars.PanelColor;
 
         a = axes(p,...
            'Color','none',...
@@ -95,11 +114,40 @@ classdef nigelPanel < handle
         
         obj.Parent = parent;
         obj.Tag = Pars.Tag;
-        obj.InnerPosition = [.05 .05 .90 (.90 - a.Position(4))];
+        obj.InnerPosition = [0 0 1 1];
         obj.titleBox = titleBox;
-        obj.panel = p;
+        obj.OutPanel = p;
         obj.axes = a;
         obj.Units = Pars.Units;
+        if strcmp(Pars.Scrollable,'on')
+            p2 =  uipanel(...
+                'BackgroundColor', Pars.PanelColor,...
+                'Units',Pars.Units,...
+                'Position',[.01 .01 .98 (.98 - a.Position(4))],...
+                'BorderType','none');
+            p2.Parent = p;
+            jscrollpane=obj.attachScrollPanelTo(p2);
+            addlistener(obj,'Children','PostSet',@obj.resizeInnerPanel);
+            jscrollpane.JavaPeer.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+            jscrollpane.JavaPeer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            jscrollpane.JavaPeer.setBorder(javax.swing.BorderFactory.createEmptyBorder)
+
+            obj.panel = p2;
+            obj.InnerPosition = [0 0 1 1];
+        else
+            p2 =  uipanel(...
+                'BackgroundColor', Pars.PanelColor,...
+                'Units',Pars.Units,...
+                'Position',[.01 .01 .98 (.98 - a.Position(4))],...
+                'BorderType','none');
+            p2.Parent = p;
+%             jscrollpane=obj.attachScrollPanelTo(p2);
+%             jscrollpane.JavaPeer.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+%             jscrollpane.JavaPeer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            obj.panel = p2;
+            obj.InnerPosition = [0 0 1 1];
+        end
+        
       end
       
       function cl = class(obj)
@@ -114,21 +162,41 @@ classdef nigelPanel < handle
       function UnitsChanged(obj, src, Event)
          switch Event.AffectedObject.Units
             case 'normalized'
-               obj.InnerPosition =[.05 .05 .90 (.90-obj.axes.Position(4))];
-               obj.Position = obj.panel.Position;
+                set(obj.OutPanel,'Units','normalized');
+               obj.InnerPosition = [0 0 1 1];
+               obj.Position = obj.OutPanel.Position;
             case 'pixels'
-               set(obj.axes,'Units','pixels');
-               set(obj.panel,'Units','pixels');
-               obj.InnerPosition = [obj.panel.Position([3 4]).*[.05 .05] obj.panel.Position(3) obj.panel.Position( 4)-obj.axes.Position(4)];
-               obj.InnerPosition = round(obj.InnerPosition);
-               obj.InnerPosition(3:4)= obj.InnerPosition(3:4)-obj.InnerPosition(1:2)*2;
-               obj.Position = obj.panel.Position;
-               set(obj.axes,'Units','normalized');
-               set(obj.panel,'Units','normalized');
+               set(obj.OutPanel,'Units','pixels');
+               obj.InnerPosition = getpixelposition(obj.panel);
+               obj.Position = obj.OutPanel.Position;
+
          end
          
 
       end
       
+      function resizeInnerPanel(obj, src, Event)
+         if obj.Children{end}.Position(2)<0
+            panPos = getpixelposition(obj.panel);
+            chPos = getpixelposition(obj.Children{end});
+            panPos(4) = panPos(4) - chPos(2)+5;
+            setpixelposition(obj.panel,panPos);
+            for ii=1:(numel(obj.Children)-1)
+                objPos = getpixelposition(obj.Children{ii});
+                objPos(2) = objPos(2) - chPos(2);
+                setpixelposition(obj.Children{ii},objPos);   
+            end
+            chPos(2) = 5;
+            setpixelposition(obj.Children{end},chPos);
+            
+         end
+
+      end
+      
+   end
+   
+   methods (Access=private)
+       [hScrollPanel, hPanel] = attachScrollPanelTo(~,hObject)
    end
 end
+

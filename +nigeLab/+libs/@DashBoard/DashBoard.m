@@ -134,7 +134,7 @@ classdef DashBoard < handle
          
 
          
-         %% Qued works
+         %% Queued works
          str    = {'Queue'};
          strSub = {''};
          Tag      = 'PannelQee';
@@ -142,7 +142,8 @@ classdef DashBoard < handle
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
              'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
-            'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+            'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
+            'Scrollable','on');
 
          
          %% Options pannel
@@ -309,7 +310,7 @@ classdef DashBoard < handle
       
       function qOperations(obj,operation,target)
          Pan = obj.Children{3};
-         fileName = fullfile(tempdir,[operation,target.Name]);
+         fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
          obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
          obj.qJobs{end+1} = batch(operation,0,{target});
          drawnow;
