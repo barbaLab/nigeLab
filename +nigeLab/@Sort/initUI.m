@@ -29,7 +29,8 @@ sortObj.UI.plot.ylim = repmat(sortObj.pars.SpikePlotYLim,...
 
 % Initialize "features" info
 sortObj.UI.feat.cur = 1;
-sortObj.UI.feat.combo = combnk(1:size(sortObj.spk.feat{1},2),2);
+% sortObj.UI.feat.combo = combnk(1:size(sortObj.spk.feat{1},2),2);
+sortObj.UI.feat.combo = nchoosek(1:size(sortObj.spk.feat{1},2),2);
 sortObj.UI.feat.n = size(sortObj.UI.feat.combo,1);
 sortObj.UI.feat.name = parseFeatNames(sortObj);
 sortObj.UI.feat.label = parseFeatLabels(sortObj);

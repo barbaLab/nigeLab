@@ -474,15 +474,17 @@ classdef FeaturesUI < handle
          % Draw polygon
          set(obj.Figure,'Pointer','circle');
          
-         snipped_region = drawfreehand(ax,'Smoothing',5);
-         pos = snipped_region.Position;
-         delete(snipped_region);
-         if isempty(pos), return; end
-         cx = pos(:,1);
-         cy = pos(:,2);
+%          snipped_region = drawfreehand(ax,'Smoothing',5);
+         [h,x,y]=nigeLab.utils.freehanddraw(ax);
+%          pos = snipped_region.Position;
+%          delete(snipped_region);
+         delete(h)
+         if isempty([x,y]), return; end
+%          cx = pos(:,1);
+%          cy = pos(:,2);
 
          % Excellent mex version of InPolygon from Guillaume Jacquenot:
-         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(obj.sdMesh.X,obj.sdMesh.Y,cx,cy);
+         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(obj.sdMesh.X,obj.sdMesh.Y,x,y);
          pts = IN | ON;
          set(obj.Figure,'Pointer','watch');
          drawnow;    

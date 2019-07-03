@@ -615,16 +615,19 @@ classdef SpikeImage < handle
          subsetIndex = find(obj.Spikes.Class == thisClass);
          set(obj.Figure,'Pointer','circle');
          
-         snipped_region = imfreehand(curAxes);
-         pos = getPosition(snipped_region);
-         delete(snipped_region);
+%          snipped_region = imfreehand(curAxes);
+         [h,x,y]=nigeLab.utils.freehanddraw(curAxes);
+%          pos = getPosition(snipped_region);
+%          delete(snipped_region);
+         delete(h);
+
 
          [px,py] = meshgrid(obj.Spikes.X,obj.Spikes.Y);
-         cx = pos(:,1);
-         cy = pos(:,2);
+%          cx = pos(:,1);
+%          cy = pos(:,2);
 
          % Excellent mex version of InPolygon from Guillaume Jacquenot:
-         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(px,py,cx,cy);
+         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(px,py,x,y);
          pts = IN | ON;
          set(obj.Figure,'Pointer','watch');
          drawnow;
