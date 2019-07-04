@@ -328,7 +328,13 @@ classdef DashBoard < handle
          Pan = obj.Children{3};
          fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
          obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
-         obj.qJobs{end+1} = batch(operation,0,{target});
+         %% if parallel computing toolbox is available run through it,
+         if license('test','Distrib_Computing_Toolbox')
+             obj.qJobs{end+1} = batch(operation,0,{target});
+         else
+             % otherwise run single operation
+             feval(operation,target);
+         end
          drawnow;
 
       end
