@@ -1,7 +1,18 @@
 function par = SPC()
 
-par.fnamespc = 'SPC_log';
-par.fname_in = 'tmp_feat_SPC';
+
+par.TEMPLATE = 'center';
+par.FNAME_IN = 'tmp_data';              % Input name for cluster.exe
+par.FNAME_OUT = 'data_tmp_curr.mat';    % Read-out from cluster.exe
+par.ABS_KNN = 15;                       % Absolute (min) K-Nearest Neighbors
+par.REL_KNN = 0.0001;                   % Relative K-Nearest Neighbors
+par.TSTEP = 0.001;                 % Increments for vector of temperatures
+par.MAXTEMP = 0.300;               % Max. temperature for SPC
+par.NMINCLUS = 3;                  % Absolute minimum cluster size diff
+par.RMINCLUS = 0.005;              % Relative minimum cluster size diff
+par.TEMPSD = 2;                    % # of SD for template matching
+par.NCLUS_MAX = 9;
+
 
 % LOAD PARAMS
 par.segments_length = 5;             % length (in minutes) of segments in which the data is cutted (default 5min).
@@ -20,14 +31,14 @@ par.plot_feature_stats = false;
 
 % SPC PARAMETERS
 par.mintemp = 0.00;                  % minimum temperature for SPC
-par.maxtemp = 0.251;                 % maximum temperature for SPC
+par.maxtemp = 0.300;                 % maximum temperature for SPC
 par.tempstep = 0.01;                 % temperature steps
-par.SWCycles = 100;                  % SPC iterations for each temperature (default 100)
+par.SWCyc = 75;                  % SPC iterations for each temperature (default 100)
 par.KNearNeighb = 11;                % number of nearest neighbors for SPC
 par.min_clus = 20;                   % minimum size of a cluster (default 20)
 par.max_clus = 200;                   % maximum number of clusters allowed (default 200)
-par.randomseed = 0;                  % if 0, random seed is taken as the clock value (default 0)
-%par.randomseed = 147;               % If not 0, random seed
+% par.randomseed = 0;                  % if 0, random seed is taken as the clock value (default 0)
+par.randomseed = 147;               % If not 0, random seed
 %par.temp_plot = 'lin';              % temperature plot in linear scale
 par.temp_plot = 'log';               % temperature plot in log scale
 

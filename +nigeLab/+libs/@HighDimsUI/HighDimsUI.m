@@ -30,7 +30,7 @@ classdef HighDimsUI < handle
             obj.SpikeImage = featuresUI.SpikeImage;
             obj.FeaturesUI = featuresUI;
             
-            addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)close(obj.Figure));
+            addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.closeF);
             addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.InitUI);
             addlistener(obj.SpikeImage,'ClassAssigned',@(~,~) obj.InitUI);
             addlistener(obj.SpikeImage,'VisionToggled',@(~,~)obj.InitUI);
@@ -39,7 +39,8 @@ classdef HighDimsUI < handle
         function PlotFig(obj)
             obj.Figure = figure('Color',nigeLab.defaults.nigelColors(0),...
                 'ToolBar','none',...
-                'MenuBar','none');
+                'MenuBar','none',...
+                'CloseRequestFcn',@(~,~)obj.closeF);
             
             p1 = uipanel( obj.Figure,...
                 'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
@@ -61,6 +62,9 @@ classdef HighDimsUI < handle
             obj.panels = ax;
             InitUI(obj);
             obj.update_panels;
+            
+            obj.FeaturesUI.FeatX.Enable = 'off';
+            obj.FeaturesUI.FeatY.Enable = 'off';
 
         end
         
@@ -306,6 +310,14 @@ classdef HighDimsUI < handle
                 obj.Continuously_Rotate_BigTraj(hObject, 'forward', 'right', obj.Q2, panel_index - 15);
             end
             
+        end
+        
+        function closeF(obj)
+            if isvalid(obj.FeaturesUI)
+                obj.FeaturesUI.FeatX.Enable = 'on';
+                obj.FeaturesUI.FeatY.Enable = 'on';
+            end
+            delete(obj.Figure);
         end
         
     end

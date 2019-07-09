@@ -1,15 +1,3 @@
-dev
-dev\*.mat\*.m
-dev/*
-\dev\.mat
-\dev\.m
-\dev/*.m\*.mat
-
-\+orgExp/R18-03_Basal2_180524_155628/
-\+orgExp/prova\.mat
-\+orgExp/@Block/RHS2Block\.m\.old
-
-*.svg
 *.asv
 *.orig
 

@@ -91,8 +91,8 @@ classdef DashBoard < handle
       ax.XAxisLocation = 'top';
       set(ax,'TickLength',[0 0]);
       pause(0.1) % gives graphics time to catch up.
-      ax.YRuler.Axle.Visible = false; % removes axes line
-      ax.XRuler.Axle.Visible = false;
+      ax.YRuler.Axle.Visible = 'off'; % removes axes line
+      ax.XRuler.Axle.Visible = 'off';
       
       
       Tree.SelectedNodes = Tree.Root;

@@ -19,8 +19,6 @@ fprintf(1,'Performing reclustering...');
        nigeLab.utils.cprintf('err','Channel %.3d: Not enough Spikes!\nLess than 15 spikes detected.',1);
          return;
     end
-
-    par.inputs = size(inspk,2);                               % number of inputs to the clustering
     
     if par.permut == 'y'
        if par.match == 'y'
@@ -41,19 +39,13 @@ fprintf(1,'Performing reclustering...');
     end
     
 
-    [temp,classes_] = SPCrun(par,inspk_aux);
-    
 
-    %     setappdata(handles.temperature_plot,'auto_sort_info',auto_sort);
-    % definition of clustering_results
-    
-    
-%     nigeLab.utils.SPC.temperature_diag(par,tree,clustering_results,gca,classes,auto_sort);
-      classes = ones(size(classes_));
-      classes(classes_~=0) = classes_(classes_~=0)+offs;
-%       classes_ = 1+classes_+(classes_~=0)*offs; 
+
+    [classes,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
+
 
    uclass = unique(classes);
+   if iscolumn(uclass),uclass=uclass';end
 for ii= uclass
    iMove = classes==ii;
    obj.Spikes.CurClass = ii;
@@ -67,14 +59,7 @@ end
 
 function [Temp,classes] = SPCrun(par,inspk_aux)
        %Interaction with SPC
-    workdir = fullfile(fullfile(fileparts(fileparts(fileparts(mfilename('fullpath'))))),'+utils','+SPC');
 
-    par.fname_in = fullfile(par.fname_in);
-    save(fullfile(workdir,par.fname_in),'inspk_aux','-ascii');                      %Input file for SPC
-
-    [clu,tree] = nigeLab.utils.SPC.run_cluster(par);
-        
-    [clust_num temp auto_sort] = nigeLab.utils.SPC.find_temp(tree,clu, par);
     current_temp = max(temp);
     classes = zeros(1,size(clu,2)-2);
 %     for c =1: length(clust_num)
