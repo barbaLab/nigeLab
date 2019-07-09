@@ -52,6 +52,9 @@ switch this.Tag
 
 end
 
+obj.projVecs = zeros(size(obj.projVecs));
+obj.projVecs(1,obj.featInd(1)) = 1;
+obj.projVecs(2,obj.featInd(2)) = 1;
 obj.PlotFeatures();
 obj.ResetFeatureAxes();
 end

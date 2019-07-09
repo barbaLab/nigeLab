@@ -33,7 +33,7 @@ for ii = 1:numel(blockObj)
    % Check the format of files
    fprintf(1,'\nChecking SORTED for %s...000%%\n',blockObj(ii).Name);
    for iCh = blockObj(ii).Mask
-      blockObj.checkSpikeFile(blockObj(ii).Mask);
+      blockObj(ii).checkSpikeFile(blockObj(ii).Mask);
       pct = 100 * (iCh / blockObj(ii).NumChannels);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
    end

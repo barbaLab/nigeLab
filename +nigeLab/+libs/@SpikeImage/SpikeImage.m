@@ -40,7 +40,7 @@ classdef SpikeImage < handle
                       'ToolBar','none',...
                       'NumberTitle','off',...
                       'Position',[0.050,0.075,0.800,0.850],...
-                      'Color','k'); 
+                      'Color',nigeLab.defaults.nigelColors('background')); 
       Labels   % Labels above the subplots
       Images   % Figure subplots that contain flattened spike image
       VisibleToggle % checkbox for selecting visiblity in the feature panel
@@ -365,7 +365,7 @@ classdef SpikeImage < handle
                       'ToolBar','none',...
                       'NumberTitle','off',...
                       'Position',[0.2 0.2 0.6 0.6],...
-                      'Color','k',...
+                      'Color',nigeLab.defaults.nigelColors('background'),...
                       'WindowKeyPressFcn',@obj.WindowKeyPress,...
                       'WindowScrollWheelFcn',@obj.WindowMouseWheel,...
                       'CloseRequestFcn',@obj.CloseSpikeImageFigure);
@@ -443,9 +443,9 @@ classdef SpikeImage < handle
             set(obj.Images{iPlot},'CData',obj.Spikes.C{iPlot});
             set(obj.Axes{iPlot}.Title,'String',obj.PlotNames{iPlot});
             if obj.Spikes.CurClass == iPlot
-               obj.SetAxesHighlight(obj.Axes{iPlot},'m',20);
+               obj.SetAxesHighlight(obj.Axes{iPlot},nigeLab.defaults.nigelColors('primary'),20);
             else
-               obj.SetAxesHighlight(obj.Axes{iPlot},'w',16);
+               obj.SetAxesHighlight(obj.Axes{iPlot},nigeLab.defaults.nigelColors('onsurface'),16);
             end
             set(obj.Axes{iPlot},'YLim',obj.YLim);
             set(obj.Images{iPlot},'YData',obj.YLim);
@@ -582,9 +582,9 @@ classdef SpikeImage < handle
             case 'normal' % Highlight clicked axes (L-Click)
                obj.SetAxesWhereSpikesGo(ax);
             case 'alt'    % Do "cluster cutting" (R-Click)
-               obj.SetAxesHighlight(ax,'r');
+               obj.SetAxesHighlight(ax,nigeLab.defaults.nigelColors('quaternary'));
                obj.GetSpikesToMove(ax);
-               obj.SetAxesHighlight(ax,'w');
+               obj.SetAxesHighlight(ax,nigeLab.defaults.nigelColors('onsurface'));
             otherwise
                return;
          end
@@ -615,16 +615,19 @@ classdef SpikeImage < handle
          subsetIndex = find(obj.Spikes.Class == thisClass);
          set(obj.Figure,'Pointer','circle');
          
-         snipped_region = imfreehand(curAxes);
-         pos = getPosition(snipped_region);
-         delete(snipped_region);
+%          snipped_region = imfreehand(curAxes);
+         [h,x,y]=nigeLab.utils.freehanddraw(curAxes);
+%          pos = getPosition(snipped_region);
+%          delete(snipped_region);
+         delete(h);
+
 
          [px,py] = meshgrid(obj.Spikes.X,obj.Spikes.Y);
-         cx = pos(:,1);
-         cy = pos(:,2);
+%          cx = pos(:,1);
+%          cy = pos(:,2);
 
          % Excellent mex version of InPolygon from Guillaume Jacquenot:
-         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(px,py,cx,cy);
+         [IN,ON] = nigeLab.utils.InPolygon.InPolygon(px,py,x,y);
          pts = IN | ON;
          set(obj.Figure,'Pointer','watch');
          drawnow;
