@@ -250,8 +250,8 @@ pars.BlockPars = struct;
 for ii=1:numel(Fields)
    pars.BlockPars.(Fields{ii}).Folder     = FolderNames{ii};
    pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
-   pars.BlockPars.(Fields{ii}).File = [Del FileNames{ii} TAG.(FieldType{ii})];
-   pars.BlockPars.(Fields{ii}).Info = [Del FileNames{ii} '-Info.mat'];
+   pars.BlockPars.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
+   pars.BlockPars.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end
 
 end
