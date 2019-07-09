@@ -25,11 +25,17 @@ else
    warning('You are using a Matlab version with NO Signal Processing Toolbox, this will affect nigeLab performances')
 end
 
-%% add nigeLab to path
-
 % Determine where your m-file's folder is.
 setup_folder = fileparts(which(mfilename)); 
 cd(setup_folder)
+cd ..
+
+%% install WidgetToolbox
+cd('+utils')
+toolboxFile = 'Widgets Toolbox 1.3.330.mltbx';
+installedToolbox = matlab.addons.toolbox.installToolbox(toolboxFile);
+
+%% add nigeLab to path
 cd ..
 cd ..
 addpath(pwd)
