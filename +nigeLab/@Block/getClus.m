@@ -54,7 +54,7 @@ end
 
 %% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
 if getStatus(blockObj,'Clusters',ch)
-   clusterIndex = blockObj.Channels(ch).Sorted.value;
+   clusterIndex = blockObj.Channels(ch).Clusters.value;
 else % If it doesn't exist
    if getStatus(blockObj,'Spikes',ch) % but spikes do
       ts = getSpikeTimes(blockObj,ch);
