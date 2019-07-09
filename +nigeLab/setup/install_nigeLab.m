@@ -22,7 +22,7 @@ is_signal_proc_licence=license('test','Signal_Toolbox');
 if is_signal_proc_licence
     disp('You are using a Matlab version with the Signal Processing Toolbox')
 else
-   warning('You are using a Matlab version with NO Signal Processing Toolbox, this will affect nigeLab performances')
+   error('You are using a Matlab version with NO Signal Processing Toolbox, this is mandatory for nigeLab')
 end
 
 % Determine where your m-file's folder is.
