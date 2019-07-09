@@ -43,7 +43,7 @@ classdef DashBoard < handle
        m = m(startsWith(m,'do'));
        for ii=1:numel(m)
           mitem = uimenu(treeContextMenu,'Label',m{ii});
-          mitem.MenuSelectedFcn = {@obj.uiCMenuClick,Tree};
+          mitem.Callback = {@obj.uiCMenuClick,Tree};
        end
        set(Tree,'UIContextMenu',treeContextMenu);
        
@@ -306,20 +306,20 @@ classdef DashBoard < handle
          ax.XAxis.TickLabelRotation = 30;         
       end
       
-      function uiCMenuClick(obj,m,evt,Tree)
+      function uiCMenuClick(obj,m,~,Tree)
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
          switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
             case 0  % tank
-               obj.qOperations(m.Text,obj.Tank)
+               obj.qOperations(m.Label,obj.Tank)
             case 1  % animal
                for ii=1:size(SelectedItems,1)
                   A = obj.Tank.Animals(SelectedItems(ii));
-                  obj.qOperations(m.Text,A)
+                  obj.qOperations(m.Label,A)
                end
             case 2  % block
                for ii=1:size(SelectedItems,1)
                   B = obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2));
-                  obj.qOperations(m.Text,B)
+                  obj.qOperations(m.Label,B)
                end
          end
       end

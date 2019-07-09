@@ -130,7 +130,8 @@ if isempty(data)
          'xtick', [],...
          'UserData',ii,...
          'ButtonDownFcn',{@DeleteBar,obj});
-      ax.XAxis.Visible=false;ax.YAxis.Visible=false;
+      ax.XAxis.Visible='off';
+      ax.YAxis.Visible='off';
       progdata(ii).X = ax;
       
       pos = [hoff voff-height*4/3*(ii-1) width + 5 + height height];
