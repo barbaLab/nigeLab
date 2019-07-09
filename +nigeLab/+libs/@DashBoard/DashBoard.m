@@ -1,5 +1,5 @@
 classdef DashBoard < handle
-   %DASHBOARD 
+   %DASHBOARD
    
    properties
       nigelGui
@@ -24,97 +24,97 @@ classdef DashBoard < handle
          
          %% Load Graphics
          obj.nigelGui = figure('Units','pixels','Position',[500 50 1200 800],...
-          'Color',bCol,'ToolBar','none','MenuBar','none');
-       loadPanels(obj)
-       
-       %% Create Tank Tree
-       Tree = uiw.widget.Tree(...
-          'SelectionChangeFcn',@obj.treeSelectionFcn,...
-          'Units', 'normalized', ...
-          'Position',obj.Children{1}.InnerPosition,...
-          'FontName','Droid Sans',...
-          'FontSize',15,...
-          'ForegroundColor',onPBcol);
-       Tree = obj.getTankTree(Tree);
-       Tree.Position(3) = Tree.Position(3)./2;
-       obj.Children{1}.nestObj(Tree);
-       treeContextMenu = uicontextmenu('Parent',obj.nigelGui,'Callback',@obj.prova1);
-       m = methods(obj.Tank);
-       m = m(startsWith(m,'do'));
-       for ii=1:numel(m)
-          mitem = uimenu(treeContextMenu,'Label',m{ii});
-          mitem.Callback = {@obj.uiCMenuClick,Tree};
-       end
-       set(Tree,'UIContextMenu',treeContextMenu);
-       
-       % Cosmetic adjustments
-       Jobjs = Tree.getJavaObjects;
-       Jobjs.JScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder)
-       Jobjs.JScrollPane.setComponentOrientation(java.awt.ComponentOrientation.RIGHT_TO_LEFT);
-       set(Tree,'TreePaneBackgroundColor',PBCol,'BackgroundColor',PBCol,...
-          'TreeBackgroundColor',PBCol,'Units','normalized','SelectionType','discontiguous');
-     
-       %% Save, New buttons
-       ax = axes('Units','normalized', ...
-         'Position', obj.Children{1}.InnerPosition,...
-         'Color',PBCol,'XColor','none','YColor','none','FontName','Droid Sans');
-      ax.Position(3) = ax.Position(3)./2;
-      ax.Position(4) = ax.Position(4) .* 0.15;
-      ax.Position(1) = ax.Position(1) + ax.Position(3);
-      b1 = rectangle(ax,'Position',[1 1 2 1],'Curvature',[.1 .4],...
-                     'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
-      b2 = rectangle(ax,'Position',[1 2.3 2 1],'Curvature',[.1 .4],...
-         'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
-      t1 = text(ax,2,1.5,'Add','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
-      t2 = text(ax,2,2.8,'Save','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
-      pbaspect([1,1,1]);
-      obj.Children{1}.nestObj(ax);
-      %% Create recap Table
-
-      RecapTable = uiw.widget.Table(...
-         'CellEditCallback',[],...
-         'CellSelectionCallback',[],...
-         'Units','normalized', ...
-         'Position',[obj.Children{2}.InnerPosition(1) obj.Children{2}.InnerPosition(4)./2+0.05 obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-0.1],...
-         'BackgroundColor',PBCol,...
-         'FontName','Droid Sans');
-      obj.Children{2}.nestObj(RecapTable);
-      RecapTableMJScrollPane = RecapTable.JControl.getParent.getParent;
-      RecapTableMJScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder);
-      
-      ax = axes('Units','normalized', ...
-         'Position', [obj.Children{2}.InnerPosition(1:2) obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-.1],...
-         'Color',PBCol,'XColor',onPBcol,'YColor',onPBcol,'FontName','Droid Sans');
-
-     % axes cosmetic adjustment
-      obj.Children{2}.nestObj(ax);
-      ax.XAxisLocation = 'top';
-      set(ax,'TickLength',[0 0]);
-      pause(0.1) % gives graphics time to catch up.
-      ax.YRuler.Axle.Visible = 'off'; % removes axes line
-      ax.XRuler.Axle.Visible = 'off';
-      
-      
-      Tree.SelectedNodes = Tree.Root;
-      Nodes.Nodes = Tree.Root;
-      Nodes.AddedNodes = Tree.Root;
-      treeSelectionFcn(obj,Tree,Nodes)
-      
-      %% Create title bar
-      Position = [.01,.93,.98,.06];
-      Btns = struct('String',  {'Home','Visualization Tools'},...
-                    'Callback',{''    ,''});
-       obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGui,'Position',Position,...
+            'Color',bCol,'ToolBar','none','MenuBar','none');
+         loadPanels(obj)
+         
+         %% Create Tank Tree
+         Tree = uiw.widget.Tree(...
+            'SelectionChangeFcn',@obj.treeSelectionFcn,...
+            'Units', 'normalized', ...
+            'Position',obj.Children{1}.InnerPosition,...
+            'FontName','Droid Sans',...
+            'FontSize',15,...
+            'ForegroundColor',onPBcol);
+         Tree = obj.getTankTree(Tree);
+         Tree.Position(3) = Tree.Position(3)./2;
+         obj.Children{1}.nestObj(Tree);
+         treeContextMenu = uicontextmenu('Parent',obj.nigelGui,'Callback',@obj.prova1);
+         m = methods(obj.Tank);
+         m = m(startsWith(m,'do'));
+         for ii=1:numel(m)
+            mitem = uimenu(treeContextMenu,'Label',m{ii});
+            mitem.Callback = {@obj.uiCMenuClick,Tree};
+         end
+         set(Tree,'UIContextMenu',treeContextMenu);
+         
+         % Cosmetic adjustments
+         Jobjs = Tree.getJavaObjects;
+         Jobjs.JScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder)
+         Jobjs.JScrollPane.setComponentOrientation(java.awt.ComponentOrientation.RIGHT_TO_LEFT);
+         set(Tree,'TreePaneBackgroundColor',PBCol,'BackgroundColor',PBCol,...
+            'TreeBackgroundColor',PBCol,'Units','normalized','SelectionType','discontiguous');
+         
+         %% Save, New buttons
+         ax = axes('Units','normalized', ...
+            'Position', obj.Children{1}.InnerPosition,...
+            'Color',PBCol,'XColor','none','YColor','none','FontName','Droid Sans');
+         ax.Position(3) = ax.Position(3)./2;
+         ax.Position(4) = ax.Position(4) .* 0.15;
+         ax.Position(1) = ax.Position(1) + ax.Position(3);
+         b1 = rectangle(ax,'Position',[1 1 2 1],'Curvature',[.1 .4],...
+            'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
+         b2 = rectangle(ax,'Position',[1 2.3 2 1],'Curvature',[.1 .4],...
+            'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
+         t1 = text(ax,2,1.5,'Add','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
+         t2 = text(ax,2,2.8,'Save','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
+         pbaspect([1,1,1]);
+         obj.Children{1}.nestObj(ax);
+         %% Create recap Table
+         
+         RecapTable = uiw.widget.Table(...
+            'CellEditCallback',[],...
+            'CellSelectionCallback',[],...
+            'Units','normalized', ...
+            'Position',[obj.Children{2}.InnerPosition(1) obj.Children{2}.InnerPosition(4)./2+0.05 obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-0.1],...
+            'BackgroundColor',PBCol,...
+            'FontName','Droid Sans');
+         obj.Children{2}.nestObj(RecapTable);
+         RecapTableMJScrollPane = RecapTable.JControl.getParent.getParent;
+         RecapTableMJScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder);
+         
+         ax = axes('Units','normalized', ...
+            'Position', [obj.Children{2}.InnerPosition(1:2) obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-.1],...
+            'Color',PBCol,'XColor',onPBcol,'YColor',onPBcol,'FontName','Droid Sans');
+         
+         % axes cosmetic adjustment
+         obj.Children{2}.nestObj(ax);
+         ax.XAxisLocation = 'top';
+         set(ax,'TickLength',[0 0]);
+         pause(0.1) % gives graphics time to catch up.
+         ax.YRuler.Axle.Visible = 'off'; % removes axes line
+         ax.XRuler.Axle.Visible = 'off';
+         
+         
+         Tree.SelectedNodes = Tree.Root;
+         Nodes.Nodes = Tree.Root;
+         Nodes.AddedNodes = Tree.Root;
+         treeSelectionFcn(obj,Tree,Nodes)
+         
+         %% Create title bar
+         Position = [.01,.93,.98,.06];
+         Btns = struct('String',  {'Home','Visualization Tools'},...
+            'Callback',{''    ,''});
+         obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGui,'Position',Position,...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'StringColor',nigeLab.defaults.nigelColors('onprimary'),...
             'Buttons',Btns);
-        
-        %% Parameters UItabGroup
-        h=uitabgroup();
-        tab1 = uitab(h,'Title','settings');
-        uit = uitable(tab1,'Units','normalized',...
+         
+         %% Parameters UItabGroup
+         h=uitabgroup();
+         tab1 = uitab(h,'Title','settings');
+         uit = uitable(tab1,'Units','normalized',...
             'Position',[0 0 1 1]);
-        obj.Children{end-1}.nestObj(h);
+         obj.Children{end-1}.nestObj(h);
       end
       
    end
@@ -143,11 +143,11 @@ classdef DashBoard < handle
          Tag      = 'Stats';
          Position = [.35, .45, .43 ,.47];
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
-             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+            'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
          
-
+         
          
          %% Queued works
          str    = {'Queue'};
@@ -155,24 +155,24 @@ classdef DashBoard < handle
          Tag      = 'Queue';
          Position = [.35, .01, .43 , .43];
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
-             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+            'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
             'Scrollable','on');
-
+         
          
          %% Options pannel
          str    = {'Parameters'};
          strSub = {''};
          Tag      = 'Parameters';
-         Position = [.79 , .01, .2, 0.91]; 
+         Position = [.79 , .01, .2, 0.91];
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
-             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+            'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
          
          
-
+         
          
       end
       
@@ -200,9 +200,9 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-        [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
          
-
+         
          w = obj.Children{2}.Children{1};
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
@@ -224,9 +224,9 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-        [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
          
-
+         
          w = obj.Children{2}.Children{1};
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
@@ -247,9 +247,9 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-        [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
          
-
+         
          w = obj.Children{2}.Children{1};
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
@@ -286,7 +286,7 @@ classdef DashBoard < handle
          St = obj.Tank.Animals(1).Blocks(1).Fields;
          Nst = length(St);
          xlim(ax,[1 Nst+1]);ylim(ax,[1 NAn+1]);
-%          image(ax,'XData',1:Nst,'YData',1:NAn,'CData',C);
+         %          image(ax,'XData',1:Nst,'YData',1:NAn,'CData',C);
          for jj=1:NAn
             for ii=1:Nst
                if Status(jj,ii)
@@ -302,7 +302,7 @@ classdef DashBoard < handle
          ax.YAxis.TickLabel = cellstr( num2str((1:NAn)'));
          ax.XAxis.TickValues = 1.5:Nst+0.5;
          ax.YAxis.TickValues = 1.5:NAn+0.5;
-         ax.XAxis.TickLabelRotation = 30;         
+         ax.XAxis.TickLabelRotation = 30;
       end
       
       function uiCMenuClick(obj,m,~,Tree)
@@ -323,7 +323,7 @@ classdef DashBoard < handle
          end
       end
       
-      % Return the panel corresponding to a given tag 
+      % Return the panel corresponding to a given tag
       % (so we don't memorize panel indices)
       function Pan = getChildPanel(obj,tagString)
          idx = 0;
@@ -343,26 +343,67 @@ classdef DashBoard < handle
       end
       
       function qOperations(obj,operation,target)
-         Pan = obj.getChildPanel('Queue');
-         fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
-         obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
-         %% if parallel computing toolbox is available run through it,
-         if license('test','Distrib_Computing_Toolbox')
-             obj.qJobs{end+1} = batch(operation,0,{target});
-         else
-             % otherwise run single operation
-             feval(operation,target);
+
+         % Want to split this up based on target type so that we can
+         % manage Job/Task creation depending on the input target class
+         switch class(target)
+            case 'nigeLab.Tank'
+               for ii = 1:numel(target.Animals)
+                  qOperations(obj,operation,target.Animals(ii));
+               end
+
+            case 'nigeLab.Animal'
+               for ii = 1:numel(target.Blocks)
+                  qOperations(obj,operation,target.Blocks(ii));
+               end
+
+            case 'nigeLab.Block'
+               Pan = obj.getChildPanel('Queue');
+               fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
+               qParams = nigeLab.defaults.Queue;
+               if (license('test','Distrib_Computing_Toolbox')) && ...
+                     (qParams.UseParallel)
+                  obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
+                  if isfield(qParams,'Cluster')
+                     myCluster = nigeLab.utils.findGoodCluster(qParams.Cluster);
+                  else
+                     myCluster = nigeLab.utils.findGoodCluster();
+                  end
+                  attachedFiles = ...
+                     matlab.codetools.requiredFilesAndProducts(...
+                     sprintf('%s.m',operation));
+                  myJob = createCommunicatingJob(myCluster, ...
+                     'AttachedFiles', attachedFiles, ...
+                     'Name', [operation target.Name], ...
+                     'NumWorkersRange', qParams.nWorkerMinMax, ...
+                     'FinishedFcn', @JobFinishedAlert, ...
+                     'Type','pool', ...
+                     'Tag',sprintf('%s: %s--000%%',operation,target.Name));
+                  createTask(myJob,operation,0,{target});
+                  submit(myJob);
+                  fprintf(1,'Job running: %s - %s\n',operation,target.Name);
+               else
+                  % otherwise run single operation
+                  fprintf(1,'(Non-parallel) job running: %s - %s\n',...
+                     operation,target.Name);
+                  feval(operation,target);
+               end
+
+            otherwise
+               error('Invalid target class: %s',class(target));
          end
          drawnow;
-
+         
       end
       
-      function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
-         cancel(obj.qJobs{ind});
-         pause(0.1)
-         delete(obj.qJobs{ind});
-         obj.qJobs(ind)=[];
-      end
+      
+%       function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
+%          cancel(obj.qJobs{ind});
+%          pause(0.1)
+%          delete(obj.qJobs{ind});
+%          obj.qJobs(ind)=[];
+%       end
+      
       remoteMonitor(obj,Labels,Files,Fig,parent);
    end
 end

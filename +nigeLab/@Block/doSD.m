@@ -88,9 +88,9 @@ for iCh = blockObj.Mask
    % And update the status indicator in Command Window:
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
+%    fid = fopen(fullfile(ProgressPath),'ab');
+%    fwrite(fid,1,'uint8');
+%    fclose(fid);
 end
 
 % Indicate that it is finished at the end

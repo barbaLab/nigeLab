@@ -1,6 +1,9 @@
 function remoteMonitor(obj,Labels,Files,Fig,parent)
 %% Init files and bar
-if ~iscell(Files),Files = {Files};end
+if ~iscell(Files)
+   Files = {Files};
+end
+
 obj.remoteMonitorData = progressbar(obj,parent,obj.remoteMonitorData,Files,Labels);
 %set up flags for if button is held down
 obj.remoteMonitorData.timerObject = timer('Name','RemoteMonitor',...
@@ -39,6 +42,7 @@ Progr=cell(1,numel(Files));
 %    disp(obj.qJobs{ii}.UserData);
 %    fclose(fid);
 % end
+
 try
     for ii=1:numel(obj.qJobs)
         dName = fullfile(nigeLab.defaults.Tempdir,obj.qJobs{ii}.ID);
