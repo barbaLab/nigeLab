@@ -17,7 +17,7 @@ classdef DashBoard < handle
          
          %% Defaults Values
          bCol = nigeLab.defaults.nigelColors('background');
-         PBCol = nigeLab.defaults.nigelColors('surface'); % Pabnel background colors
+         PBCol = nigeLab.defaults.nigelColors('surface'); % Panel background colors
          onPBcol = nigeLab.defaults.nigelColors('onsurface');
          %% Init
          obj.Tank = tankObj;
@@ -25,7 +25,7 @@ classdef DashBoard < handle
          %% Load Graphics
          obj.nigelGui = figure('Units','pixels','Position',[500 50 1200 800],...
           'Color',bCol,'ToolBar','none','MenuBar','none');
-       loadPannels(obj)
+       loadPanels(obj)
        
        %% Create Tank Tree
        Tree = uiw.widget.Tree(...
@@ -121,27 +121,26 @@ classdef DashBoard < handle
    
    methods(Access = private)
       
-      function loadPannels(obj)
-         %% Create Pannels
+      function loadPanels(obj)
+         %% Create Panels
          
          %% Overview Panel
          % Panel where animals, blocks and the tank are visualized
          str    = {'Overview'};
          strSub = {''};
-         Tag      = 'PannelOvw';
+         Tag      = 'Overview';
          Position = [.01,.01,.33,.91];
          %[left bottom width height]
-         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+            'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-
-         
          
          %% Stats Pannel
          str    = {'Stats'};
          strSub = {''};
-         Tag      = 'PannelStts';
+         Tag      = 'Stats';
          Position = [.35, .45, .43 ,.47];
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
              'PanelColor',nigeLab.defaults.nigelColors('surface'),...
@@ -153,7 +152,7 @@ classdef DashBoard < handle
          %% Queued works
          str    = {'Queue'};
          strSub = {''};
-         Tag      = 'PannelQee';
+         Tag      = 'Queue';
          Position = [.35, .01, .43 , .43];
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
              'PanelColor',nigeLab.defaults.nigelColors('surface'),...
@@ -165,7 +164,7 @@ classdef DashBoard < handle
          %% Options pannel
          str    = {'Parameters'};
          strSub = {''};
-         Tag      = 'PannelStff';
+         Tag      = 'Parameters';
          Position = [.79 , .01, .2, 0.91]; 
          obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
              'PanelColor',nigeLab.defaults.nigelColors('surface'),...
@@ -324,8 +323,27 @@ classdef DashBoard < handle
          end
       end
       
+      % Return the panel corresponding to a given tag 
+      % (so we don't memorize panel indices)
+      function Pan = getChildPanel(obj,tagString)
+         idx = 0;
+         Pan = [];
+         while idx < numel(obj.Children)
+            idx = idx + 1;
+            if isprop(obj.Children{idx},'Tag')
+               if strcmpi(obj.Children{idx}.Tag,tagString)
+                  Pan = obj.Children{idx};
+                  break;
+               end
+            end
+         end
+         if isempty(Pan)
+            error('Could not match nigelPanel Tag (%s).',tagString);
+         end
+      end
+      
       function qOperations(obj,operation,target)
-         Pan = obj.Children{3};
+         Pan = obj.getChildPanel('Queue');
          fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
          obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
          %% if parallel computing toolbox is available run through it,

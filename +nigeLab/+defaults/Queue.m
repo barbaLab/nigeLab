@@ -12,7 +12,8 @@ pars = struct;
 pars.UNCPath = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
                 '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
 pars.ClusterList = {'CPLMJS'; 'CPLMJS2'; 'CPLMJS3'};
-pars.Cluster = 'CPLMJS';
+pars.Cluster = 'CPLMJS'; 
+pars.UseParallel = true; % set to false to switch to serial processing mode
 % pars.Cluster = [];
 
 end
