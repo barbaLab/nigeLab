@@ -2,8 +2,11 @@ function paths = getFolderTree(blockObj,paths)
 if nargin < 2
    paths = struct(); 
 end
+
 blockObj.updateParams('Block');
 F = fieldnames(blockObj.BlockPars);
+del = blockObj.Delimiter;
+
 for iF = 1:numel(F) % For each field, update field type
    p = blockObj.BlockPars.(F{iF});
    
@@ -14,12 +17,19 @@ for iF = 1:numel(F) % For each field, update field type
    
    % Set folder name for this particular Field
    paths.(F{iF}).dir = fullfile(paths.SaveLoc.dir,...
-      [blockObj.Name,blockObj.Delimiter,p.Folder]);
+      [p.Folder]);
    
    % Parse for both old and new versions of file naming convention
-   paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[blockObj.Name p.File]);
+   
+   %%%%%%%%%%% 07/09/19 Removed redundancy in the naming scheme. 
+   %%%%%%%%%%% FIXME,Breaks all backwards compatibility
+%    paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[blockObj.Name del p.File]);
+%    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}));
+%    paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[blockObj.Name del p.Info]);
+
+   paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[p.File]);
    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}));
-   paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[blockObj.Name p.Info]);
+   paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[p.Info]);
 end
 end
 
