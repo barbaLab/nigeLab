@@ -8,9 +8,10 @@ classdef DashBoard < handle
    end
    
    properties(Access=private)
-      remoteMonitorData = [];
-      jobListener
+%       jobCompleteListener
+%       jobUpdateListener
       jobIsRunning = false;
+      jobProgressBar
    end
    
    methods
@@ -326,19 +327,19 @@ classdef DashBoard < handle
       
       % Return the panel corresponding to a given tag
       % (so we don't memorize panel indices)
-      function Pan = getChildPanel(obj,tagString)
+      function panelHandle = getChildPanel(obj,tagString)
          idx = 0;
-         Pan = [];
+         panelHandle = [];
          while idx < numel(obj.Children)
             idx = idx + 1;
             if isprop(obj.Children{idx},'Tag')
                if strcmpi(obj.Children{idx}.Tag,tagString)
-                  Pan = obj.Children{idx};
+                  panelHandle = obj.Children{idx};
                   break;
                end
             end
          end
-         if isempty(Pan)
+         if isempty(panelHandle)
             error('Could not match nigelPanel Tag (%s).',tagString);
          end
       end
@@ -359,23 +360,53 @@ classdef DashBoard < handle
          end
 
          % Remove any previous listener handle objects, if they exist
-         if ~isempty(obj.jobListener)
-            for ii = 1:numel(obj.jobListener)
-               delete(obj.jobListener{ii});
+         if ~isempty(obj.jobUpdateListener)
+            for ii = 1:numel(obj.jobUpdateListener)
+               delete(obj.jobUpdateListener{ii});
             end
          end
+         
+%          % Remove any previous listener handle objects, if they exist
+%          if ~isempty(obj.jobCompleteListener)
+%             for ii = 1:numel(obj.jobCompleteListener)
+%                delete(obj.jobCompleteListener{ii});
+%             end
+%          end
+%          
+%          % Remove any previous progress bars, if they exist
+%          if ~isempty(obj.jobProgressBar)
+%             for ii = 1:numel(obj.jobProgressBar)
+%                delete(obj.jobProgressBar{ii});
+%             end
+%          end
                   
          obj.jobIsRunning = false(1,target.getNumBlocks);
-         obj.jobListener = cell(1,target.getNumBlocks);
+         obj.jobProgressBar = cell(1,target.getNumBlocks);
+         
+%          obj.jobCompleteListener = cell(1,target.getNumBlocks); 
+%          obj.jobUpdateListener = cell(1,target.getNumBlocks); 
+         
+         
          flag = true; % If completed successfully
       end
       
-      function qOperations(obj,operation,target,idx)
+      function qOperations(obj,operation,target,idx,D)
          % Set indexing to assign to UserData property of Jobs, so that on
          % job completion the corresponding "jobIsRunning" property array
          % element can be updated appropriately.
-         if nargin < 3
+         if nargin < 4
             idx = 1;
+         end
+         
+         % Create a parallel pool data queue object so we can send info
+         % from the workers back to the client.
+         if nargin < 5
+            if (license('test','Distrib_Computing_Toolbox')) 
+               D = parallel.pool.DataQueue;
+               afterEach(D,@obj.updateRemoteMonitor);
+            else
+               D = [];
+            end
          end
          
          % Want to split this up based on target type so that we can
@@ -387,9 +418,9 @@ classdef DashBoard < handle
                end
                
                for ii = 1:numel(target.Animals)
-                  for ik = 1:numel(target.Animals(ii).Blocks)
+                  for ik = 1:target.Animals(ii).getNumBlocks
                      qOperations(obj,operation,...
-                        target.Animals(ii).Blocks(ik),idx);
+                        target.Animals(ii).Blocks(ik),idx,D);
                      idx = idx + 1;
                   end
                end
@@ -400,7 +431,7 @@ classdef DashBoard < handle
                end               
                
                for ii = 1:numel(target.Blocks)
-                  qOperations(obj,operation,target.Blocks(ii),ii);
+                  qOperations(obj,operation,target.Blocks(ii),ii,D);
                end
 
             case 'nigeLab.Block'
@@ -409,41 +440,58 @@ classdef DashBoard < handle
                   return; 
                end
                
-               Pan = obj.getChildPanel('Queue');
-               fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
                qParams = nigeLab.defaults.Queue;
                if (license('test','Distrib_Computing_Toolbox')) && ...
                      (qParams.UseParallel)
                   
-                  obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
+                  
                   if isfield(qParams,'Cluster')
-                     myCluster = nigeLab.utils.findGoodCluster(qParams.Cluster);
+                     if qParams.UseRemote
+                        myCluster = parcluster(qParams.Cluster);
+                     else
+                        myCluster = parcluster();
+                     end
                   else
-                     myCluster = nigeLab.utils.findGoodCluster();
+                     if qParams.UseRemote
+                        myCluster = nigeLab.utils.findGoodCluster();
+                     else
+                        myCluster = parcluster();
+                     end
                   end
                   attachedFiles = ...
                      matlab.codetools.requiredFilesAndProducts(...
                      sprintf('%s.m',operation));
+                  
+                  
+                  str = target.Name(1:(min(16,numel(target.Name))));
+                  str = strrep(str,'_',' ');
                   myJob = createCommunicatingJob(myCluster, ...
                      'AttachedFiles', attachedFiles, ...
                      'Name', [operation target.Name], ...
                      'NumWorkersRange', qParams.nWorkerMinMax, ...
-                     'FinishedFcn', @obj.jobFinishedFcn, ...
-                     'UserData',idx,...
                      'Type','pool', ...
-                     'Tag',sprintf('%s: %s--000%%',operation,target.Name));
+                     'Tag',sprintf('%s: %s',operation,str));
+                  
+                  target.UserData = struct('D',D,'idx',idx);
                   
                   createTask(myJob,operation,0,{target});
                   submit(myJob);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
+                  obj.remoteMonitor(sprintf('%s - %s',str,operation),idx);
                   
                   % Update the corresponding array elements now that the
                   % job/task has been created and submitted.
                   obj.jobIsRunning(idx) = true;
-                  mco = metaclass(myJob);
-                  tagProp = mco.PropertyList(ismember({mco.PropertyList.Name}.','Tag'));
-                  obj.jobListener{idx} = event.proplistener(myJob,tagProp,...
-                     'PostSet',@obj.updateRemoteMonitor);
+%                   mco = metaclass(myJob);
+%                   tagProp = mco.PropertyList(ismember({mco.PropertyList.Name}.','Tag'));
+%                   obj.jobListener{idx} = event.proplistener(myJob,tagProp,...
+%                      'PostSet',@obj.updateRemoteMonitor);
+%                   obj.jobUpdateListener{idx} = addlistener(target,...
+%                      'channelCompleteEvent',...
+%                      @obj.updateRemoteMonitor);
+%                   obj.jobCompleteListener{idx} = addlistener(target,...
+%                      'processCompleteEvent',...
+%                      @obj.completeRemoteMonitor);
                else
                   % otherwise run single operation
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
@@ -458,23 +506,44 @@ classdef DashBoard < handle
          
       end
       
-      % Function to attach to jobs, which will execute upon completion
-      function jobFinishedFcn(obj,src,~)
-         % Read out a generic completion to the command window
-         nigeLab.utils.jobFinishedAlert(src);
-         
-         % Indicate that this job is no longer running in properties
-         obj.jobIsRunning(src.UserData) = false;
-         
-         % Update remoteMonitor corresponding to this job
-         
-      end
+%       % Function to attach to jobs, which will execute upon completion
+%       function jobFinishedFcn(obj,src,~)
+%          % Read out a generic completion to the command window
+%          nigeLab.utils.jobFinishedAlert(src);
+%          
+%          % Indicate that this job is no longer running in properties
+%          obj.jobIsRunning(src.UserData) = false;
+%          
+%          % Update remoteMonitor corresponding to this job
+%          
+%       end
       
       % Function to attach to listeners that monitor job progress, which
       % will update when the 'Tag' property of the job is updated.
-      function updateRemoteMonitor(obj,src,~)
+      function updateRemoteMonitor(obj,data)
+         pct = data.pct;
+         idx = data.idx;         
          
+         xStart = obj.jobProgressBar{idx}.XData(1);
+         xStop = xStart + (1-xStart) * (pct/100);
+         obj.jobProgressBar{idx}.progpatch.XData = ...
+            [xStart, xStop, xStop, xStart];
+         obj.jobProgressBar{idx}.progtext.String = ...
+            sprintf('%.3g%%',pct);
+         
+         drawnow;   
       end
+      
+%       function completeRemoteMonitor(obj,src,~)
+%          idx = src.UserData;
+%          delete(obj.jobProgressBar{idx}.progpatch);
+%          delete(obj.jobProgressBar{idx}.progtext);
+%          delete(obj.jobProgressBar{idx}.progaxes);
+%          delete(obj.jobProgressBar{idx}.proglabel);
+%          delete(obj.jobProgressBar{idx}.X);
+%       end
+
+   
       
 %       function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
 %          cancel(obj.qJobs{ind});

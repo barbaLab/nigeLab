@@ -58,4 +58,5 @@ switch blockObj.RecType
 end
 blockObj.updateStatus('Raw',true);
 blockObj.save;
+notify(blockObj,processCompleteEvent);
 end

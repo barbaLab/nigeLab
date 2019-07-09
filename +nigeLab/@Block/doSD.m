@@ -90,15 +90,15 @@ for iCh = blockObj.Mask
    pct = floor(100 * (iCh / blockObj.NumChannels));
    str = sprintf('%0.3d%%',pct);
    fprintf(1,'\b\b\b\b\b%s\n',str);
-   if ~isempty(j)
-      j.Tag((end-3):end) = str;
-   end
+   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+   notify(blockObj,channelCompleteEvent,evtData);
       
 end
 
 % Indicate that it is finished at the end
 blockObj.save;
 flag = true;
+notify(blockObj,processCompleteEvent);
 
    function [spk,feat,art,pars] = PerChannelDetection(data, pars)
       %% PERCHANNELDETECTION  Main sub-function for thresholding and detection

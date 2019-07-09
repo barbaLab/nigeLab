@@ -79,6 +79,10 @@ classdef Block < handle
       Graphics   % Struct for associated graphics objects      
    end
    
+   properties (SetAccess = public, Hidden = true)
+      UserData % Allow UserData property to exist
+   end
+   
    properties (SetAccess = private, GetAccess = public)
       SampleRate  % Recording sample rate
       Samples     % Total number of samples in original record
@@ -150,6 +154,11 @@ classdef Block < handle
       DiscardChar      % Character indicating discarded name elements
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+   end
+   
+   events
+      channelCompleteEvent
+      processCompleteEvent
    end
    
    %% METHODS

@@ -10,7 +10,7 @@ function myCluster = findGoodCluster(Cluster)
 %   --------
 %    INPUTS
 %   --------
-%    Cluster    :  Matlab Cluster object (optional)
+%    Cluster    :  Matlab Cluster object name (optional; char array)
 %
 %   --------
 %    OUTPUT
@@ -79,6 +79,9 @@ if nargin < 1
    end
    
 else % Otherwise just make sure there are idle workers to assign
+   Cluster = parcluster(Cluster);
+   pause(initTimeSec);
+   
    while true
       % All logic reduced to 1 line:
       if Cluster.NumIdleWorkers >= min(nWorkerMinMax)

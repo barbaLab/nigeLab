@@ -411,6 +411,9 @@ fclose(fid);
 
 for iCh = 1:blockObj.NumChannels
    blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
+   pct = floor(iCh/blockObj.NumChannels*100);
+   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+   notify(blockObj,channelCompleteEvent,evtData);
 end
 blockObj.linkToData;
 

@@ -9,8 +9,9 @@ function pars = Queue()
 pars = struct;
 
 % Only specify this field if you want to force use of a single cluster
-pars.Cluster = 'CPLMJS'; 
+pars.Cluster = 'local'; 
 pars.UseParallel = true; % set to false to switch to serial processing mode
+pars.UseRemote = false; % set false to use local machine
 
 % UNC path and cluster list for Matlab Distributed Computing Toolbox
 pars.UNCPath = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
