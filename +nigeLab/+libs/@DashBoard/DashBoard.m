@@ -9,7 +9,8 @@ classdef DashBoard < handle
    
    properties(Access=private)
       remoteMonitorData = [];
-      qJobs = {};
+      jobListener
+      jobIsRunning = false;
    end
    
    methods
@@ -342,27 +343,78 @@ classdef DashBoard < handle
          end
       end
       
-      function qOperations(obj,operation,target)
+      % Initialize the job listener array, as well as the isJobRunning
+      % property for the method. Return false if unable to initialize (for
+      % example, if job for one step is still running).
+      function flag = initJobListeners(obj,target)
+         flag = false;
+         % For example, if doRawExtraction was run, don't want to run
+         % doUnitFilter yet. NOTE: Start here with 'any' but could later be
+         % updated to only re-initialize the jobIsRunning array if it
+         % should change size. Then, you could have asymmetric job
+         % advancement by only checking on BLOCK case for job creation.
+         if any(obj.jobIsRunning) 
+            fprintf(1,'Jobs are still running. Aborted.\n');
+            return;            
+         end
 
+         % Remove any previous listener handle objects, if they exist
+         if ~isempty(obj.jobListener)
+            for ii = 1:numel(obj.jobListener)
+               delete(obj.jobListener{ii});
+            end
+         end
+                  
+         obj.jobIsRunning = false(1,target.getNumBlocks);
+         obj.jobListener = cell(1,target.getNumBlocks);
+         flag = true; % If completed successfully
+      end
+      
+      function qOperations(obj,operation,target,idx)
+         % Set indexing to assign to UserData property of Jobs, so that on
+         % job completion the corresponding "jobIsRunning" property array
+         % element can be updated appropriately.
+         if nargin < 3
+            idx = 1;
+         end
+         
          % Want to split this up based on target type so that we can
          % manage Job/Task creation depending on the input target class
          switch class(target)
             case 'nigeLab.Tank'
+               if ~obj.initJobListeners(target)
+                  return;
+               end
+               
                for ii = 1:numel(target.Animals)
-                  qOperations(obj,operation,target.Animals(ii));
+                  for ik = 1:numel(target.Animals(ii).Blocks)
+                     qOperations(obj,operation,...
+                        target.Animals(ii).Blocks(ik),idx);
+                     idx = idx + 1;
+                  end
                end
 
             case 'nigeLab.Animal'
+               if ~obj.initJobListeners(target)
+                  return;
+               end               
+               
                for ii = 1:numel(target.Blocks)
-                  qOperations(obj,operation,target.Blocks(ii));
+                  qOperations(obj,operation,target.Blocks(ii),ii);
                end
 
             case 'nigeLab.Block'
+               if obj.jobIsRunning(idx)
+                  fprintf(1,'Jobs are still running. Aborted.\n');
+                  return; 
+               end
+               
                Pan = obj.getChildPanel('Queue');
                fileName = fullfile(nigeLab.defaults.Tempdir,[operation,target.Name]);
                qParams = nigeLab.defaults.Queue;
                if (license('test','Distrib_Computing_Toolbox')) && ...
                      (qParams.UseParallel)
+                  
                   obj.remoteMonitor(operation,fileName,obj.nigelGui,Pan);
                   if isfield(qParams,'Cluster')
                      myCluster = nigeLab.utils.findGoodCluster(qParams.Cluster);
@@ -376,12 +428,22 @@ classdef DashBoard < handle
                      'AttachedFiles', attachedFiles, ...
                      'Name', [operation target.Name], ...
                      'NumWorkersRange', qParams.nWorkerMinMax, ...
-                     'FinishedFcn', @JobFinishedAlert, ...
+                     'FinishedFcn', @obj.jobFinishedFcn, ...
+                     'UserData',idx,...
                      'Type','pool', ...
                      'Tag',sprintf('%s: %s--000%%',operation,target.Name));
+                  
                   createTask(myJob,operation,0,{target});
                   submit(myJob);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
+                  
+                  % Update the corresponding array elements now that the
+                  % job/task has been created and submitted.
+                  obj.jobIsRunning(idx) = true;
+                  mco = metaclass(myJob);
+                  tagProp = mco.PropertyList(ismember({mco.PropertyList.Name}.','Tag'));
+                  obj.jobListener{idx} = event.proplistener(myJob,tagProp,...
+                     'PostSet',@obj.updateRemoteMonitor);
                else
                   % otherwise run single operation
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
@@ -396,6 +458,23 @@ classdef DashBoard < handle
          
       end
       
+      % Function to attach to jobs, which will execute upon completion
+      function jobFinishedFcn(obj,src,~)
+         % Read out a generic completion to the command window
+         nigeLab.utils.jobFinishedAlert(src);
+         
+         % Indicate that this job is no longer running in properties
+         obj.jobIsRunning(src.UserData) = false;
+         
+         % Update remoteMonitor corresponding to this job
+         
+      end
+      
+      % Function to attach to listeners that monitor job progress, which
+      % will update when the 'Tag' property of the job is updated.
+      function updateRemoteMonitor(obj,src,~)
+         
+      end
       
 %       function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
 %          cancel(obj.qJobs{ind});

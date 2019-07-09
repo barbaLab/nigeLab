@@ -364,6 +364,9 @@ classdef Block < handle
       fType = getFieldType(blockObj,field); % Get file type corresponding to field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
+      
+      % Miscellaneous utilities:
+      N = getNumBlocks(blockObj); % This is just to make it easier to count total # blocks
    
    end
    

@@ -176,9 +176,10 @@ classdef Tank < handle
       % Utility
       linkToData(tankObj)
       blockList = list(tankObj)       % List Blocks in TANK
-      out = tankGet(tankObj,prop)     % Get a specific TANK property
-      flag = tankSet(tankObj,prop)    % Set a specific TANK property      
+%       out = tankGet(tankObj,prop)     % Get a specific TANK property
+%       flag = tankSet(tankObj,prop)    % Set a specific TANK property      
       flag = updatePaths(tankObj,SaveLoc)
+      N = getNumBlocks(tankObj) % Get the total number of blocks in TANK
 
    end
    %% PRIVATE METHODS
