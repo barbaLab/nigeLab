@@ -89,7 +89,7 @@ classdef nigelPanel < handle
         a.Position([1 3])=[0 1];
         a.Position(2)=1-a.Position(4);
         Apos = a.Position;
-        a.XAxis.Visible=false;a.YAxis.Visible=false;
+        a.XAxis.Visible='off';a.YAxis.Visible='off';
         
         titleBox.r1 = rectangle(a,...
            'Position',[0 0.5 1 0.5],...
