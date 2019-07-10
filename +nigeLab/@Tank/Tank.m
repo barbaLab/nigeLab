@@ -177,7 +177,7 @@ classdef Tank < handle
       linkToData(tankObj)
       blockList = list(tankObj)       % List Blocks in TANK
       out = tankGet(tankObj,prop)     % Get a specific TANK property
-      flag = tankSet(tankObj,prop)    % Set a specific TANK property      
+      flag = tankSet(tankObj,prop,value)    % Set a specific TANK property      
       flag = updatePaths(tankObj,SaveLoc)
 
    end
