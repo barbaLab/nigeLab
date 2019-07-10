@@ -76,7 +76,9 @@ classdef Block < handle
       Events     % Struct array of asynchronous events
       Streams    % Struct array of non-electrode data streams
       
-      Graphics   % Struct for associated graphics objects      
+      Graphics   % Struct for associated graphics objects
+      
+      Pars
    end
    
    properties (SetAccess = public, Hidden = true)
