@@ -81,6 +81,7 @@ end
 %% LOAD CORRECT CORRESPONDING PARAMETERS
 propString = [paramType 'Pars'];
 blockObj.(propString) = nigeLab.defaults.(paramType)();
+blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 
 flag = true;
 

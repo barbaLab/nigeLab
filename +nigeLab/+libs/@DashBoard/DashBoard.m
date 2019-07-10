@@ -112,10 +112,8 @@ classdef DashBoard < handle
          
          %% Parameters UItabGroup
          h=uitabgroup();
-         tab1 = uitab(h,'Title','settings');
-         uit = uitable(tab1,'Units','normalized',...
-            'Position',[0 0 1 1]);
-         obj.Children{end-1}.nestObj(h);
+         Pan = getChildPanel(obj,'Parameters');
+         Pan.nestObj(h);
       end
       
    end
@@ -270,12 +268,84 @@ classdef DashBoard < handle
          switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
             case 0  % tank
                setTankTable(obj);
+               setTankTablePars(obj);
             case 1  % animal
                setAnimalTable(obj,SelectedItems);
+               setAnimalTablePars(obj,SelectedItems);
             case 2  % block
                setBlockTable(obj,SelectedItems);
+               setBlockTablePars(obj,SelectedItems);
          end
          
+      end
+       function setTankTablePars(obj)
+          T = obj.Tank;
+          Pan = getChildPanel(obj,'Parameters');
+          h =  Pan.Children{1};
+          delete(h.Children);
+              ActPars = T.Pars;
+              
+              dd=struct2cell(ActPars);
+              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+              
+              ff =fieldnames(ActPars);
+              if any(inx)
+                  tab1 = uitab(h,'Title','Pars');
+                  InnerPos = getpixelposition(tab1) .*tab1.Position;
+                  InneWidth = InnerPos(3);
+                  uit = uitable(tab1,'Units','normalized',...
+                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+              end
+          
+       end
+       
+       function setAnimalTablePars(obj,SelectedItems)
+          A = obj.Tank.Animals(SelectedItems);
+          Pan = getChildPanel(obj,'Parameters');
+          h =  Pan.Children{1};
+          delete(h.Children);
+              ActPars = A.Pars;
+              
+              dd=struct2cell(ActPars);
+              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+              
+              ff =fieldnames(ActPars);
+              if any(inx)
+                  tab1 = uitab(h,'Title','Pars');
+                  InnerPos = getpixelposition(tab1) .*tab1.Position;
+                  InneWidth = InnerPos(3);
+                  uit = uitable(tab1,'Units','normalized',...
+                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+              end
+          
+       end
+       
+      function setBlockTablePars(obj,SelectedItems)
+          
+          B = obj.Tank.Animals(SelectedItems(1,1)).Blocks(SelectedItems(1,2));
+          Fnames = fieldnames(B.Pars);
+          Pan = getChildPanel(obj,'Parameters');
+          h =  Pan.Children{1};
+          delete(h.Children);
+          for ii=1:numel(Fnames)
+              ActPars = B.Pars.(Fnames{ii});
+              
+              
+              dd=struct2cell(ActPars);
+              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+              
+              ff =fieldnames(ActPars);
+              if any(inx)
+                  tab1 = uitab(h,'Title',Fnames{ii});
+                  InnerPos = getpixelposition(tab1) .*tab1.Position;
+                  InneWidth = InnerPos(3);
+                  uit = uitable(tab1,'Units','normalized',...
+                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+              end
+          end
       end
       
       function plotRecapCircle(obj,Status)
