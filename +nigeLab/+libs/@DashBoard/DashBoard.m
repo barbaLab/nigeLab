@@ -360,11 +360,11 @@ classdef DashBoard < handle
          end
 
          % Remove any previous listener handle objects, if they exist
-         if ~isempty(obj.jobUpdateListener)
-            for ii = 1:numel(obj.jobUpdateListener)
-               delete(obj.jobUpdateListener{ii});
-            end
-         end
+%          if ~isempty(obj.jobUpdateListener)
+%             for ii = 1:numel(obj.jobUpdateListener)
+%                delete(obj.jobUpdateListener{ii});
+%             end
+%          end
          
 %          % Remove any previous listener handle objects, if they exist
 %          if ~isempty(obj.jobCompleteListener)
@@ -372,13 +372,13 @@ classdef DashBoard < handle
 %                delete(obj.jobCompleteListener{ii});
 %             end
 %          end
-%          
-%          % Remove any previous progress bars, if they exist
-%          if ~isempty(obj.jobProgressBar)
-%             for ii = 1:numel(obj.jobProgressBar)
-%                delete(obj.jobProgressBar{ii});
-%             end
-%          end
+         
+         % Remove any previous progress bars, if they exist
+         if ~isempty(obj.jobProgressBar)
+            for ii = 1:numel(obj.jobProgressBar)
+               delete(obj.jobProgressBar{ii});
+            end
+         end
                   
          obj.jobIsRunning = false(1,target.getNumBlocks);
          obj.jobProgressBar = cell(1,target.getNumBlocks);
@@ -465,23 +465,31 @@ classdef DashBoard < handle
                   
                   str = target.Name(1:(min(16,numel(target.Name))));
                   str = strrep(str,'_',' ');
-                  myJob = createCommunicatingJob(myCluster, ...
-                     'AttachedFiles', attachedFiles, ...
-                     'Name', [operation target.Name], ...
-                     'NumWorkersRange', qParams.nWorkerMinMax, ...
-                     'Type','pool', ...
-                     'Tag',sprintf('%s: %s',operation,str));
+%                   myJob = createCommunicatingJob(myCluster, ...
+%                      'AttachedFiles', attachedFiles, ...
+%                      'Name', [operation target.Name], ...
+%                      'NumWorkersRange', qParams.nWorkerMinMax, ...
+%                      'Type','pool', ...
+%                      'Tag',sprintf('%s: %s',operation,str));
                   
                   target.UserData = struct('D',D,'idx',idx);
-                  
-                  createTask(myJob,operation,0,{target});
-                  submit(myJob);
-                  fprintf(1,'Job running: %s - %s\n',operation,target.Name);
                   obj.remoteMonitor(sprintf('%s - %s',str,operation),idx);
+                  obj.jobIsRunning(idx) = true;
+                  
+%                   createTask(myJob,operation,0,{target});
+%                   submit(myJob);
+                  fprintf(1,'Job running: %s - %s\n',operation,target.Name);
+%                   op = ['@nigeLab.Block.' operation];
+%                   delete(gcp('nocreate'));
+%                   parfeval(parpool(myCluster),operation,0,target);
+                  parfeval(gcp,operation,0,target);
+
+                  
+                  
                   
                   % Update the corresponding array elements now that the
                   % job/task has been created and submitted.
-                  obj.jobIsRunning(idx) = true;
+                  
 %                   mco = metaclass(myJob);
 %                   tagProp = mco.PropertyList(ismember({mco.PropertyList.Name}.','Tag'));
 %                   obj.jobListener{idx} = event.proplistener(myJob,tagProp,...
@@ -530,7 +538,7 @@ classdef DashBoard < handle
             [xStart, xStop, xStop, xStart];
          obj.jobProgressBar{idx}.progtext.String = ...
             sprintf('%.3g%%',pct);
-         
+         disp(pct);
          drawnow;   
       end
       
