@@ -2,8 +2,12 @@ classdef Animal < handle
    %% ANIMAL   Class for handling each nigeLab.Block for one animal
    
    %% PUBLIC PROPERTIES
-   properties (GetAccess = public, SetAccess = public)
+      properties (GetAccess = public, SetAccess = public,SetObservable)
       Name         % Animal identification code
+
+      end
+   
+   properties (GetAccess = public, SetAccess = public)
       Blocks       % Children (nigeLab.Block objects)
       Probes       % Electrode configuration structure
    end
@@ -35,6 +39,7 @@ classdef Animal < handle
          animalObj.updateParams('Animal');
          animalObj.updateParams('all');
          
+        addlistener(animalObj,'Name','PostSet',@animalObj.updateAnimalNameInChlildBlocks);
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -63,8 +68,9 @@ classdef Animal < handle
          
          %% INITIALIZE ANIMAL OBJECT
          animalObj.init;
-         
+       
       end
+      
       
       function addBlock(animalObj,BlockPath)
       %% ADDBLOCK  Add Block to Blocks property   
@@ -137,6 +143,12 @@ classdef Animal < handle
    methods (Access = 'private')
       init(animalObj) % Initializes the ANIMAL object
       def_params(animalObj)
+      
+      function updateAnimalNameInChlildBlocks(animalObj,~,~)
+          for bb=1:numel(animalObj.Blocks)
+             animalObj.Blocks(bb).Meta.AnimalID = animalObj.Name;
+          end
+      end
    end
    
    methods (Static)

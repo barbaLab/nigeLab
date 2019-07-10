@@ -12,25 +12,29 @@ function flag = linkStreamsField(blockObj,field)
 %%
 flag = false;
 updateFlag = false(1,blockObj.NumChannels);
-info = blockObj.Streams.(field);
+Fields = blockObj.Fields(strcmpi(blockObj.FieldType,'Streams'));
 
 fprintf(1,'\nLinking Streams field: %s ...000%%\n',field);
 counter = 0;
-for iCh = 1:numel(info)
-   % Parse info from channel struct
-   fName = parseNameFromChannelStruct(blockObj.Paths,field,info,iCh);
-   
-   % If file is not detected
-   if ~exist(fullfile(fName),'file')
-      flag = true;
-   else
-      updateFlag(iCh) = true;
-      blockObj.Streams(iCh).(field)=nigeLab.libs.DiskData('Hybrid',fName);
-   end
-   
-   counter = counter + 1;
-   pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+for jj=1:numel(Fields)
+    path = strsplit(blockObj.Paths.(Fields{jj}).file,'%');
+    info = dir([path{1} '*']);
+    for iCh = 1:numel(info)
+        % Parse info from channel struct
+        fName = fullfile(info.folder,info.name);
+        
+        % If file is not detected
+        if ~exist(fullfile(fName),'file')
+            flag = true;
+        else
+            updateFlag(iCh) = true;
+            blockObj.Streams.(field)(iCh)=nigeLab.libs.DiskData('Hybrid',fName);
+        end
+        
+        counter = counter + 1;
+        pct = 100 * (counter / numel(blockObj.Mask));
+        fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+    end
 end
 blockObj.updateStatus(field,updateFlag);
 

@@ -374,6 +374,7 @@ classdef Block < handle
       % Methods for parsing Fields info:
       fType = getFieldType(blockObj,field); % Get file type corresponding to field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
+      flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
       
       % Miscellaneous utilities:
