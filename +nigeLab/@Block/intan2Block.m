@@ -326,7 +326,7 @@ end
 progress=0;
 num_gaps = 0;
 index = 0;
-
+  
 deBounce = false; % This just for the update job Tag part
 F = fieldnames(buffer);
 D = fieldnames(digBuffer);
@@ -359,7 +359,8 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    index =uint32( index(end) + 1 : index(end)+nPerBlock*blocksToread);
    
    t=typecast(dataBuffer(time_buffer_index(1:dataPointsToRead)),'int32');
-   if any(t(2:end)==0),continue;end
+%    FB, Blame on meeeeeee. Blame me ooooonnn. 10/07/19
+%    if any(t(2:end)==0),continue;end 
    t = reshape(t,1,numel(t)); % ensure correct orientation
    Files.Time.append(t);
    num_gaps = num_gaps + sum(diff(t) ~= 1);
