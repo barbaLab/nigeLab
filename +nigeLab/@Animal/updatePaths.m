@@ -3,14 +3,15 @@ function flag = updatePaths(animalObj,SaveLoc)
 flag = false;
 B=animalObj.Blocks;
 
-if nargin <2
-    SaveLoc = animalObj.Paths.SaveLoc;
-else
+if nargin ==2
     animalObj.Paths.SaveLoc = SaveLoc;
 end
 
 for ii=1:numel(B)
-    B(ii).genPaths(SaveLoc);
+    
+    p = fullfile(animalObj.Paths.SaveLoc,B(ii).Name);
+    B(ii).updatePaths(p);
+   
 end
 animalObj.save;
 flag = true;
