@@ -118,7 +118,7 @@ for f = fields
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
-         notifyUser(blockObj,myJob,this,'info');
+%          notifyUser(blockObj,myJob,this,'info');
          info = blockObj.Meta.Header.RawChannels;
          infoname = fullfile(paths.(this).info);
          save(fullfile(infoname),'info','-v7.3');
@@ -137,7 +137,7 @@ for f = fields
                'access','w',...
                'class','single');
             Files.(this){iCh} = makeDiskFile(diskPars);
-            notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
+%             notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
          end
       case 'Events'
          fName = sprintf(strrep(paths.(this).file,'\','/'), this);
@@ -168,7 +168,7 @@ for f = fields
          Files.(this) = makeDiskFile(diskPars);
          
       case 'Streams'
-         notifyUser(blockObj,myJob,this,'info');
+%          notifyUser(blockObj,myJob,this,'info');
          infofield = [this 'Channels'];
          info = blockObj.Meta.Header.(infofield);
          infoname = fullfile(paths.(this).info);
@@ -205,7 +205,7 @@ for f = fields
                   diskPars.class = 'int8';
                end
                Files.(U{ii}){chCount} = makeDiskFile(diskPars);
-               notifyUser(blockObj,myJob,this,'info',chCount,nCh.(U{ii}))
+%                notifyUser(blockObj,myJob,this,'info',chCount,nCh.(U{ii}))
             end
          end
          

@@ -46,18 +46,21 @@ function count = cprintf(style,format,varargin)
 %    CPRINTF by itself, without any input parameters, displays a demo
 %
 % Example:
-%    cprintf;   % displays the demo
-%    cprintf('text',   'regular black text');
-%    cprintf('hyper',  'followed %s','by');
-%    cprintf('key',    '%d colored', 4);
-%    cprintf('-comment','& underlined');
-%    cprintf('err',    'elements\n');
-%    cprintf('cyan',   'cyan');
-%    cprintf('_green', 'underlined green');
-%    cprintf(-[1,0,1], 'underlined magenta');
-%    cprintf([1,0.5,0],'and multi-\nline orange\n');
-%    cprintf('*blue',  'and *bold* (R2011b+ only)\n');
-%    cprintf('string');  % same as fprintf('string') and cprintf('text','string')
+%    nigeLab.utils.cprintf;   % displays the demo
+%
+%    nigeLab.utils.cprintf('-Magenta', 'nigeLab.utils.cprintf demo:\n');
+%    nigeLab.utils.cprintf('text',   '->\tRegular black text ');
+%    nigeLab.utils.cprintf('hyper',  'followed %s ','by');
+%    nigeLab.utils.cprintf('key',    '%d colored ', 4);
+%    nigeLab.utils.cprintf('-comment','& underlined ');
+%    nigeLab.utils.cprintf('err',    'elements.\n');
+%    nigeLab.utils.cprintf('cyan',   '->\tCyan, ');
+%    nigeLab.utils.cprintf('_green', 'underlined green, ');
+%    nigeLab.utils.cprintf(-[1,0,1], 'underlined magenta, ');
+%    nigeLab.utils.cprintf([1,0.5,0],'\n\n\tmulti-\n\tline\n\torange\n\n');
+%    nigeLab.utils.cprintf('*blue',  '\tand *bold* (R2011b+ only)\n');
+%
+%    nigeLab.utils.cprintf('string');  % same as fprintf('string') and cprintf('text','string')
 %
 % Bugs and suggestions:
 %    Please send to Yair Altman (altmany at gmail dot com)
@@ -560,20 +563,20 @@ function showDemo(majorVersion,minorVersion)
   fprintf(['Technical description: <a href="' url '">' url '</a>\n\n']);
   fprintf('Demo:\n\n');
   boldFlag = majorVersion>7 || (majorVersion==7 && minorVersion>=13);
-  s = ['cprintf(''text'',    ''regular black text'');' 10 ...
-       'cprintf(''hyper'',   ''followed %s'',''by'');' 10 ...
-       'cprintf(''key'',     ''%d colored'',' num2str(4+boldFlag) ');' 10 ...
-       'cprintf(''-comment'',''& underlined'');' 10 ...
-       'cprintf(''err'',     ''elements:\n'');' 10 ...
-       'cprintf(''cyan'',    ''cyan'');' 10 ...
-       'cprintf(''_green'',  ''underlined green'');' 10 ...
-       'cprintf(-[1,0,1],  ''underlined magenta'');' 10 ...
-       'cprintf([1,0.5,0], ''and multi-\nline orange\n'');' 10];
+  s = ['nigeLab.utils.cprintf(''text'',    ''regular black text'');' 10 ...
+       'nigeLab.utils.cprintf(''hyper'',   ''followed %s'',''by'');' 10 ...
+       'nigeLab.utils.cprintf(''key'',     ''%d colored'',' num2str(4+boldFlag) ');' 10 ...
+       'nigeLab.utils.cprintf(''-comment'',''& underlined'');' 10 ...
+       'nigeLab.utils.cprintf(''err'',     ''elements:\n'');' 10 ...
+       'nigeLab.utils.cprintf(''cyan'',    ''cyan'');' 10 ...
+       'nigeLab.utils.cprintf(''_green'',  ''underlined green'');' 10 ...
+       'nigeLab.utils.cprintf(-[1,0,1],  ''underlined magenta'');' 10 ...
+       'nigeLab.utils.cprintf([1,0.5,0], ''and multi-\nline orange\n'');' 10];
    if boldFlag
        % In R2011b+ the internal bug that causes the need for an extra space
        % is apparently fixed, so we must insert the sparator spaces manually...
        % On the other hand, 2011b enables *bold* format
-       s = [s 'cprintf(''*blue'',   ''and *bold* (R2011b+ only)\n'');' 10];
+       s = [s 'nigeLab.utils.cprintf(''*blue'',   ''and *bold* (R2011b+ only)\n'');' 10];
        s = strrep(s, ''')',' '')');
        s = strrep(s, ''',5)',' '',5)');
        s = strrep(s, '\n ','\n');

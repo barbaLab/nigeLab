@@ -37,8 +37,10 @@ switch blockObj.RecType
    case 'TDT'
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
-      nigeLab.utils.cprintf('UnterminatedStrings','%s extraction is still WIP. It might take a while.',...
-         blockObj.RecType);
+      fprintf(1,' \n');
+      nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
+      nigeLab.utils.cprintf('Magenta-', 'WIP\n');
+      nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
       flag = tdt2Block(blockObj);
       
    case 'mat'
