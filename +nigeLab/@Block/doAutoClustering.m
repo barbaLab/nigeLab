@@ -13,11 +13,9 @@ end
 if strcmpi(unit,'all'),unit = 0:par.NCLUS_MAX;end
 fprintf(1,'Performing auto clustering... %.3d%%',0);
 
-ProgressPath = fullfile(tempdir,['doAutoClustering',blockObj.Name]);
-fid = fopen(ProgressPath,'wb');
-fwrite(fid,numel(blockObj.Mask),'int32');
-fclose(fid);
 SuppressText = true;
+
+myJob = getCurrentJob;
 
 for iCh = chan
    [inspk] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
@@ -63,15 +61,11 @@ for iCh = chan
    saveClusters(blockObj,classes,iCh,temp);
    
    blockObj.updateStatus('Clusters',true,iCh);
-   pct = floor(100 * (iCh / blockObj.NumChannels));
-   if ~mod(pct,5) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   end
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
+%    pct = floor(100 * (iCh / blockObj.NumChannels));
+%    if ~mod(pct,5) % only increment counter by 5%
+%       fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
+%    end
+   blockObj.notifyUser(myJob,'doAutoClustering','SPC',iCh,max(chan));
 end
 fprintf(1,'\b\b\b\bDone.\n');
 flag = true;

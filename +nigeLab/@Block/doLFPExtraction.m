@@ -10,19 +10,23 @@ function flag = doLFPExtraction(blockObj)
 %% INITIALIZE PARAMETERS
 flag = false;
 if ~genPaths(blockObj)
-   warning('Something went wrong when generating paths for extraction.');
-   return;
+%    warning('Something went wrong when generating paths for extraction.');
+%    return;
+   error('Something went wrong when generating paths for extraction.');
 end
 
 if ~blockObj.updateParams('LFP')
-   warning('Something went wrong setting the LFP parameters.');
-   return;
+%    warning('Something went wrong setting the LFP parameters.');
+%    return;
+   error('Something went wrong setting the LFP parameters.');
 end
 
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
 DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
 DecimationFactor =   blockObj.LFPPars.DecimationFactor;
 blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
+
+myJob = getCurrentJob;
 
 %% DECIMATE DATA AND SAVE IT
 fprintf(1,'Decimating raw data... %.3d%%\n',0);
@@ -38,19 +42,19 @@ for iCh=blockObj.Mask
    
    % Assign to diskData and protect it:
    fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
-   blockObj.Channels(iCh).LFP=nigeLab.libs.DiskData(fType,...
+   blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
    
-   pct = 100 * (iCh / blockObj.NumChannels);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
+%    pct = 100 * (iCh / blockObj.NumChannels);
+%    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
+   
+   blockObj.notifyUser(myJob,'doLFPExtraction','Decimation',iCh,max(blockObj.Mask));
+
 end
 blockObj.updateStatus('LFP',true);
 blockObj.save;
 flag = true;
-notify(blockObj,processCompleteEvent);
 end
 
 function fName = parseFileName(blockObj,channel)
