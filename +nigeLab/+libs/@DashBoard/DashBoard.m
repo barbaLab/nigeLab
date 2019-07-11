@@ -24,8 +24,11 @@ classdef DashBoard < handle
          obj.Tank = tankObj;
          
          %% Load Graphics
-         obj.nigelGui = figure('Units','pixels','Position',[500 50 1200 800],...
-            'Color',bCol,'ToolBar','none','MenuBar','none');
+         obj.nigelGui = figure('Units','Normalized',...
+            'Position',[0.1 0.1 0.8 0.8],...
+            'Color',bCol,...
+            'ToolBar','none',...
+            'MenuBar','none');
          loadPanels(obj)
          
          %% Create Tank Tree
@@ -122,6 +125,8 @@ classdef DashBoard < handle
    
    methods(Access = private)
       
+      % Method to create all the custom uipanels (nigelPanels) that
+      % populate most of the GUI interface.
       function loadPanels(obj)
          %% Create Panels
          
@@ -132,7 +137,7 @@ classdef DashBoard < handle
          Tag      = 'Overview';
          Position = [.01,.01,.33,.91];
          %[left bottom width height]
-         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+         obj.Children{1} = nigeLab.libs.nigelPanel(obj.nigelGui,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
@@ -143,11 +148,10 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Stats';
          Position = [.35, .45, .43 ,.47];
-         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{2} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-         
          
          
          %% Queued works
@@ -155,28 +159,25 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Queue';
          Position = [.35, .01, .43 , .43];
-         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{3} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
             'Scrollable','on');
-         
          
          %% Options pannel
          str    = {'Parameters'};
          strSub = {''};
          Tag      = 'Parameters';
          Position = [.79 , .01, .2, 0.91];
-         obj.Children{end+1} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{4} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-         
-         
-         
-         
+
       end
       
+      % Method to create each Tank node on the tree.
       function Tree = getTankTree(obj,Tree)
          tankObj = obj.Tank;
          Tree.Root.Name = tankObj.Name;
@@ -385,14 +386,23 @@ classdef DashBoard < handle
             case 0  % tank
                obj.qOperations(m.Label,obj.Tank)
             case 1  % animal
+               n = 0;
                for ii=1:size(SelectedItems,1)
                   A = obj.Tank.Animals(SelectedItems(ii));
-                  obj.qOperations(m.Label,A)
+                  obj.qOperations(m.Label,A,ii+n)
+                  n = n + obj.Tank.Animals(SelectedItems(ii)).getNumBlocks;
                end
             case 2  % block
-               for ii=1:size(SelectedItems,1)
-                  B = obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2));
-                  obj.qOperations(m.Label,B)
+               B = [];
+               for ii = 1:size(SelectedItems,1)
+                  B = [B, obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2))]; %#ok<AGROW>
+               end
+               if ~obj.initJobs(B)
+                  fprintf(1,'Jobs are still running. Aborted.\n');
+                  return;
+               end
+               for ii=1:numel(B)
+                  obj.qOperations(m.Label,B(ii),ii)
                end
          end
       end
@@ -441,13 +451,18 @@ classdef DashBoard < handle
          % Remove any previous progress bars, if they exist
          if ~isempty(obj.jobProgressBar)
             for ii = 1:numel(obj.jobProgressBar)
-               delete(obj.jobProgressBar{ii});
+               f = fieldnames(obj.jobProgressBar{ii});
+               for ik = 1:numel(f)
+                  if isvalid(obj.jobProgressBar{ii}.(f{ik}))
+                     delete(obj.jobProgressBar{ii}.(f{ik}));
+                  end
+               end   
             end
          end
          
-         obj.jobIsRunning = false(1,target.getNumBlocks);
-         obj.jobProgressBar = cell(1,target.getNumBlocks);
-         obj.job = cell(1,target.getNumBlocks);         
+         obj.jobIsRunning = false(1,getNumBlocks(target));
+         obj.jobProgressBar = cell(1,getNumBlocks(target));
+         obj.job = cell(1,getNumBlocks(target));         
          
          flag = true; % If completed successfully
       end
@@ -555,14 +570,21 @@ classdef DashBoard < handle
          idx = src.UserData;
          pct = nigeLab.utils.jobTag2Pct(obj.job{idx});
          
+         % Get the offset of the progressbar from the left of the panel
          xStart = obj.jobProgressBar{idx}.progpatch.XData(1);
+         
+         % Compute how far the bar should be filled based on the percent
+         % completion, accounting for offset from left of panel
          xStop = xStart + (1-xStart) * (pct/100);
+         
+         % Redraw the patch that colors in the progressbar
          obj.jobProgressBar{idx}.progpatch.XData = ...
             [xStart, xStop, xStop, xStart];
          obj.jobProgressBar{idx}.progtext.String = ...
             sprintf('%.3g%%',pct);
          drawnow;
          
+         % If the job is completed, then run the completion method
          if pct == 100
             obj.completeRemoteMonitor(idx);
          end
@@ -571,23 +593,30 @@ classdef DashBoard < handle
       
       % Once job reaches 100% complete, delete existing
       function completeRemoteMonitor(obj,idx)
+         % Stop the timer and wait briefly
          stop(obj.jobProgressBar{idx}.progtimer);
-         pause(2); % wait a couple seconds 
-         f = fieldnames(obj.jobProgressBar{idx});
-         for ii = 1:numel(f)
-            if isvalid(obj.jobProgressBar{idx}.(f{ii}))
-               delete(obj.jobProgressBar{idx}.(f{ii}));
-            end
-         end
-         qPanel = obj.getChildPanel('Queue');
-         cname = sprintf('ProgressBar_%02d',idx);
-         qPanel.removeChild(cname);
+%          pause(2);     
+%          % Delete all the graphics associated with the progressbar, since
+%          % it has been completed.
+%          f = fieldnames(obj.jobProgressBar{idx});
+%          for ii = 1:numel(f)
+%             if isvalid(obj.jobProgressBar{idx}.(f{ii}))
+%                delete(obj.jobProgressBar{idx}.(f{ii}));
+%             end
+%          end        
+         
          obj.jobIsRunning(idx) = false;
-
+         
+%          % Remove the progressbar from the parent panel.
+%          qPanel = obj.getChildPanel('Queue');
+%          cname = sprintf('ProgressBar_%02d',idx);
+%          qPanel.removeChild(cname);
+         
+         % Play a sound to indicate it has been completed.
          nigeLab.sounds.play('bell',1.5);
       end
       
-      remoteMonitor(obj,Labels,Files,Fig,parent);
+      remoteMonitor(obj,jobName,idx);
    end
 end
 

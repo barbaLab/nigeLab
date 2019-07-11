@@ -137,7 +137,7 @@ for f = fields
                'access','w',...
                'class','single');
             Files.(this){iCh} = makeDiskFile(diskPars);
-%             notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
+            notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
          end
       case 'Events'
          fName = sprintf(strrep(paths.(this).file,'\','/'), this);
@@ -383,7 +383,7 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
 
-   blockObj.notifyUser(myJob,'doRawExtraction','binary',progress,info.NumDataBlocks);
+%    blockObj.notifyUser(myJob,'doRawExtraction','binary',progress,info.NumDataBlocks);
 
 end
 fprintf(1,newline);

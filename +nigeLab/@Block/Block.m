@@ -380,6 +380,7 @@ classdef Block < handle
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,myJob,op,stage,curIdx,totIdx) % Update the user of progress
+      checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
    
    end
    

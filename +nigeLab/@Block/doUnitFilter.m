@@ -27,6 +27,9 @@ end
 
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
+%% ENSURE MASK IS ACCURATE
+blockObj.checkMask;
+
 %% DESIGN FILTER
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
@@ -36,8 +39,11 @@ fprintf(1,'%.3d%%',0)
 j = getCurrentJob;
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
-   if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
-      error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
+%    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
+%       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
+%    end
+   if blockObj.Channels(iCh).Raw.length <= nfact
+      continue; % It should leave the updateFlag as false for this channel
    end
    if ~pars.STIM_SUPPRESS
       % Filter and and save amplifier_data by probe/channel
@@ -48,8 +54,8 @@ for iCh = blockObj.Mask
          pNum, chNum);
       
       % bank of filters. This is necessary when the designed filter is high
-      % order SOS. Otherwise L should be one. See the filter difinition
-      % params in defualt.Filt
+      % order SOS. Otherwise L should be one. See the filter definition
+      % params in default.Filt
       data = blockObj.Channels(iCh).Raw(:);
       for ii=1:L
          data = (ff(b,a,data,nfact,zi));
@@ -73,7 +79,7 @@ for iCh = blockObj.Mask
       fprintf(1,'\b\b\b\b%.3d%%',pct)
    end
 
-   blockObj.notifyUser(j,mfilename,'Digital Filter',iCh,blockObj.NumChannels);
+   blockObj.notifyUser(j,mfilename,'Digital Filter',iCh,max(blockObj.Mask));
    
 end
 fprintf(1,'\b\b\b\bDone.\n');
