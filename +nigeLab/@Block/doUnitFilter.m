@@ -12,7 +12,8 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
-if ~genPaths(blockObj)
+UseRemote = nigeLab.defaults.Queue('UseRemote');
+if ~genPaths(blockObj,UseRemote)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
@@ -32,6 +33,7 @@ fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 %% DO FILTERING AND SAVE
 fprintf(1,'\nApplying bandpass filtering... ');
 fprintf(1,'%.3d%%',0)
+j = getCurrentJob;
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
@@ -68,15 +70,19 @@ for iCh = blockObj.Mask
    updateFlag(iCh) = true;
    pct = floor(100 * (iCh / blockObj.NumChannels));
    if ~mod(pct,5) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
+      fprintf(1,'\b\b\b\b%.3d%%',pct)
    end
+   if ~isempty(j)
+      blockObj.notifyUser(j,mfilename,[],iCh,blockObj.NumChannels);
+   end
+   
 %    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
 %    notify(blockObj,channelCompleteEvent,evtData);
-   
-   if ~isempty(blockObj.UserData)
-      send(blockObj.UserData.D,...
-         struct('pct',pct,'idx',blockObj.UserData.idx));
-   end
+%    
+%    if ~isempty(blockObj.UserData)
+%       send(blockObj.UserData.D,...
+%          struct('pct',pct,'idx',blockObj.UserData.idx));
+%    end
    
 end
 fprintf(1,'\b\b\b\bDone.\n');

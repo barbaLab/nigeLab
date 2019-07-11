@@ -61,6 +61,10 @@ end
 %% PARSE HEADER
 fid = fopen(blockObj.RecFile, 'r');
 s = dir(blockObj.RecFile);
+if isempty(s)
+   warning(1,'No files found! Extraction aborted.');
+   return;
+end
 filesize = s.bytes;
 switch blockObj.FileExt
    case '.rhd'
@@ -332,17 +336,13 @@ F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
 fprintf(1,'File too long to safely lolad in memory.\nSplitted in %d blocks',ceil(info.NumDataBlocks/nBlocks));
-ProgressPath  = fullfile(nigeLab.defaults.Tempdir,['doRawExtraction',blockObj.Name]);
-fidprog = fopen(ProgressPath,'wb');
-fwrite(fidprog,ceil(info.NumDataBlocks/nBlocks),'int32');
-fclose(fidprog);
 
 for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    pct = round(iBlock/nBlocks*100);
    if rem(pct,5)==0 && ~deBounce
-      if ~isnan(myJob(1))
-         set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
-      end
+%       if ~isnan(myJob(1))
+%          set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
+%       end
       deBounce = true;
    elseif rem(pct+1,5)==0 && deBounce
       deBounce = false;
@@ -382,14 +382,9 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
-%    fidprog = fopen(fullfile(ProgressPath),'ab');
-%    fwrite(fidprog,1,'uint8');
-%    fclose(fidprog);
-   
-   if ~isempty(blockObj.UserData)
-      send(blockObj.UserData.D,...
-         struct('pct',pct,'idx',blockObj.UserData.idx));
-   end
+
+   blockObj.notifyUser(myJob,'doRawExtraction','binary',progress,info.NumDataBlocks);
+
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.
@@ -417,16 +412,16 @@ fclose(fid);
 
 for iCh = 1:blockObj.NumChannels
    blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
-   pct = floor(iCh/blockObj.NumChannels*100);
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
+%    pct = floor(iCh/blockObj.NumChannels*100);
+%    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+%    notify(blockObj,channelCompleteEvent,evtData);
 end
 blockObj.linkToData;
 
 % % % % % % % % % % % % % % % % % % % % % %
-if ~isnan(myJob(1))
-   set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
-end
+% if ~isnan(myJob(1))
+%    set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
+% end
 
 flag = true;
 updateStatus(blockObj,'Raw',true(1,blockObj.NumChannels));
@@ -461,32 +456,6 @@ diskFile = nigeLab.libs.DiskData(...
    'class',diskPars.class,...
    'size',diskPars.size,...
    'access',diskPars.access);
-end
-
-function notifyUser(blockObj,myJob,curField,stage,curIdx,totIdx)
-%% NOTIFYUSER  Update user of job processing status
-
-% Compute overall completion percentage
-if nargin < 6
-   pctComplete = 0;
-else
-   pctComplete = floor(100 * (curIdx / totIdx));
-end
-
-% If parallel job, update the job status tag so you can track progress
-% using the Parallel Job Monitor
-if isa(myJob,'parallel.job.CJSCommunicatingJob')
-   set(myJob,'Tag',sprintf('%s: Extracting %s %s...%.3d%%',...
-      blockObj.Name,curField,stage,pctComplete));
-   
-else % Otherwise, print to Command Window
-   if pctComplete==0
-      fprintf(1, '\t->Extracting %s %s...%.3d%%\n',...
-         curField,stage,pctComplete);
-   else
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',pctComplete);
-   end
-end
 end
 
 function availableMemory = getMemory(pctToAllocate)

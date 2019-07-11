@@ -36,7 +36,8 @@ classdef nigelPanel < handle
    end
    
    properties (Access = private)
-       OutPanel;
+      OutPanel;
+      ChildName 
       panel;
       axes
       titleBox
@@ -154,9 +155,35 @@ classdef nigelPanel < handle
          cl = sprintf('nigelPanel (%s)', obj.Tag);
       end
       
-      function nestObj(this,Obj)
+      function nestObj(this,Obj,name)
+         if nargin < 3
+            name = '';
+         end
          set(Obj, 'Parent', this.panel);
          this.Children{end+1} = Obj;
+         this.ChildName{end+1} = name;
+      end
+      
+      % Return handle to child object corresponding to 'name'
+      function c = getChild(obj,name)
+         idx = ismember(obj.ChildName,name);
+         if isempty(idx)
+            c = [];
+         else
+            c = obj.Children{idx};
+         end
+      end
+      
+      % Remove the child object corresponding to 'name'
+      function removeChild(obj,name)
+         idx = ismember(obj.ChildName,name);
+         if ~isempty(idx)
+            if isvalid(obj.Children{idx})
+               delete(obj.Children{idx});
+            end
+            obj.ChildName(idx) = [];
+            obj.Children(idx) = [];
+         end
       end
       
       function UnitsChanged(obj, src, Event)
@@ -176,6 +203,10 @@ classdef nigelPanel < handle
       end
       
       function resizeInnerPanel(obj, src, Event)
+         % Doesn't need to do anything if all children are removed, maybe?
+         if isempty(obj.Children)
+            return;
+         end
          if obj.Children{end}.Position(2)<0
             panPos = getpixelposition(obj.panel);
             chPos = getpixelposition(obj.Children{end});

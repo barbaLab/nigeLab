@@ -25,6 +25,18 @@ width = qPanel.InnerPosition(3)*0.6;
 hoff = qPanel.InnerPosition(3)*0.05;
 voff = qPanel.InnerPosition(4)*0.88;
 
+pars = nigeLab.defaults.Notifications();
+
+% Create timer that will fire at regular intervals until remote job
+% completion, allowing periodic checks of the
+% parallel.job.CJSCommunicatingJob Tag property in order to update the
+% progress bar status.
+progdata.progtimer = timer('Name',sprintf('%s_timer',jobName),...
+   'Period',pars.NotifyTimer,...
+   'ExecutionMode','fixedDelay',...
+   'UserData',idx,...
+   'TimerFcn',@obj.updateRemoteMonitor);
+
 % Create axes, patch, and text
 progdata.progaxes = axes( ...
    'Units','pixels',...
@@ -79,14 +91,16 @@ pp = uipanel('BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
     'Units','pixels','Position',pos,'BorderType','none');
 progdata.progaxes.Parent=pp;
 ax.Parent=pp;
-qPanel.nestObj(pp);
+qPanel.nestObj(pp,sprintf('ProgressBar_%02d',idx));
 
-obj.jobProgressBar{idx}=pp;
+obj.jobProgressBar{idx}=progdata;
 
 
 % Set starting time reference
 if ~isfield(progdata, 'starttime') || isempty(progdata.starttime)
    progdata.starttime = clock;
 end
+
+
 
 end
