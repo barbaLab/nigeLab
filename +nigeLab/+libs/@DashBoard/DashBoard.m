@@ -96,12 +96,6 @@ classdef DashBoard < handle
          ax.YRuler.Axle.Visible = 'off'; % removes axes line
          ax.XRuler.Axle.Visible = 'off';
          
-         
-         Tree.SelectedNodes = Tree.Root;
-         Nodes.Nodes = Tree.Root;
-         Nodes.AddedNodes = Tree.Root;
-         treeSelectionFcn(obj,Tree,Nodes)
-         
          %% Create title bar
          Position = [.01,.93,.98,.06];
          Btns = struct('String',  {'Home','Visualization Tools'},...
@@ -115,6 +109,14 @@ classdef DashBoard < handle
          h=uitabgroup();
          Pan = getChildPanel(obj,'Parameters');
          Pan.nestObj(h);
+         
+         
+         
+         %% Set the selected node as the root node
+         Tree.SelectedNodes = Tree.Root;
+         Nodes.Nodes = Tree.Root;
+         Nodes.AddedNodes = Tree.Root;
+         treeSelectionFcn(obj,Tree,Nodes)
       end
       
    end
