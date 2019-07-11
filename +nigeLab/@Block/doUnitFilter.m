@@ -13,7 +13,7 @@ function flag = doUnitFilter(blockObj)
 %% GET DEFAULT PARAMETERS
 flag = false;
 UseRemote = nigeLab.defaults.Queue('UseRemote');
-if ~genPaths(blockObj,UseRemote)
+if ~genPaths(blockObj,blockObj.AnimalLoc,UseRemote)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
@@ -72,24 +72,15 @@ for iCh = blockObj.Mask
    if ~mod(pct,5) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',pct)
    end
-   if ~isempty(j)
-      blockObj.notifyUser(j,mfilename,[],iCh,blockObj.NumChannels);
-   end
-   
-%    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-%    notify(blockObj,channelCompleteEvent,evtData);
-%    
-%    if ~isempty(blockObj.UserData)
-%       send(blockObj.UserData.D,...
-%          struct('pct',pct,'idx',blockObj.UserData.idx));
-%    end
+
+   blockObj.notifyUser(j,mfilename,'Digital Filter',iCh,blockObj.NumChannels);
    
 end
 fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('Filt',updateFlag);
 flag = true;
 blockObj.save;
-notify(blockObj,processCompleteEvent);
+
 end
 
 function Y = ff(b,a,X,nEdge,IC)

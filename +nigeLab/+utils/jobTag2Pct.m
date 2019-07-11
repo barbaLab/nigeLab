@@ -24,6 +24,7 @@ tagString = jobObject.Tag;
 
 % Split the tag up; if it has % on the end, remove that:
 tmp = strsplit(tagString,{TagDelim,'%'});
+disp(tmp{2}); % for debug
 
 % The second part should be the completion percentage
 pct = str2double(tmp{2});

@@ -352,9 +352,9 @@ classdef DashBoard < handle
       end
       
       function plotRecapCircle(obj,Status)
+         % What does this do?
          
-         
-         ax = obj.Children{2}.Children{2};
+         ax = obj.Children{2}.Children{2};  % what is this axes?
          cla(ax);
          [NAn,~] = size(Status);
          St = obj.Tank.Animals(1).Blocks(1).Fields;
@@ -452,6 +452,8 @@ classdef DashBoard < handle
          flag = true; % If completed successfully
       end
       
+      % This function wraps any of the "do" methods of Block, allowing them
+      % to be added to a job queue for parallel and/or remote processing
       function qOperations(obj,operation,target,idx)
          % Set indexing to assign to UserData property of Jobs, so that on
          % job completion the corresponding "jobIsRunning" property array
@@ -546,21 +548,9 @@ classdef DashBoard < handle
          drawnow;
          
       end
-      
-%       % Function to attach to jobs, which will execute upon completion
-%       function jobFinishedFcn(obj,src,~)
-%          % Read out a generic completion to the command window
-%          nigeLab.utils.jobFinishedAlert(src);
-%
-%          % Indicate that this job is no longer running in properties
-%          obj.jobIsRunning(src.UserData) = false;
-%
-%          % Update remoteMonitor corresponding to this job
-%
-%       end
-      
-      % Function to attach to listeners that monitor job progress, which
-      % will update when the 'Tag' property of the job is updated.
+            
+      % Function to attach to timers that monitor job progress, which
+      % will update with the TimerFcn period (default: 0.1 sec)
       function updateRemoteMonitor(obj,src,~)
          idx = src.UserData;
          pct = nigeLab.utils.jobTag2Pct(obj.job{idx});
@@ -571,7 +561,6 @@ classdef DashBoard < handle
             [xStart, xStop, xStop, xStart];
          obj.jobProgressBar{idx}.progtext.String = ...
             sprintf('%.3g%%',pct);
-         disp(pct); % for debug
          drawnow;
          
          if pct == 100
@@ -583,6 +572,7 @@ classdef DashBoard < handle
       % Once job reaches 100% complete, delete existing
       function completeRemoteMonitor(obj,idx)
          stop(obj.jobProgressBar{idx}.progtimer);
+         pause(2); % wait a couple seconds 
          f = fieldnames(obj.jobProgressBar{idx});
          for ii = 1:numel(f)
             if isvalid(obj.jobProgressBar{idx}.(f{ii}))
@@ -593,20 +583,9 @@ classdef DashBoard < handle
          cname = sprintf('ProgressBar_%02d',idx);
          qPanel.removeChild(cname);
          obj.jobIsRunning(idx) = false;
-         if isvalid(obj.jobProgressBar{idx})
-            delete(obj.jobProgressBar{idx});
-         end
-         nigeLab.sounds.play('alert',4);
+
+         nigeLab.sounds.play('bell',1.5);
       end
-
-
-
-%       function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
-%          cancel(obj.qJobs{ind});
-%          pause(0.1)
-%          delete(obj.qJobs{ind});
-%          obj.qJobs(ind)=[];
-%       end
       
       remoteMonitor(obj,Labels,Files,Fig,parent);
    end

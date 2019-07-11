@@ -15,7 +15,7 @@ pars.NMaxNameChars = 15;  % If less than this, uses full name on notifications
 pars.TagDelim = '||'; % This should separate TagString between naming and % complete
 pars.TagString = '%s: %s%s%03d%%'; % regexp for Tag updates
 pars.NotifyString = '\t->Extracting %s %s...%.3d%%\n'; % regexp for command window updates
-pars.NotifyTimer = 1; % timer period (seconds) for remote monitor checks
+pars.NotifyTimer = 0.1; % timer period (seconds) for remote monitor checks
 
 if nargin > 0
    if isfield(pars,paramName)
