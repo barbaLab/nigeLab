@@ -1,28 +1,22 @@
 ---
 name: Bug report
 about: Create a report to help us improve
+title: "[BUG]"
+labels: bug
+assignees: Nabarb, m053m716
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+# Bug Report
+## Description
+This bug happens when...
+I think it may be related to...
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to the Matlab Command Window.
-2. Copy the Matlab Error that is issued in the command line and paste it here, along with any optional arguments that were specified when calling the function.
+## Error Messages
+```matlab
+Copy/paste error stack here
+```
 
-
-
-**Expected behavior**
-A clear and concise description of what you expected to happen.
-
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS, Win64]
- - Matlab Version [e.g. R2017a]
-
-**Additional context**
-Add any other context about the problem here.
+## Machine
+ - OS: **Win-64 (64-bit)**
+ - Matlab Version: **R2017a**

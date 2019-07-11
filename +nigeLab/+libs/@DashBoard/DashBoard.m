@@ -537,24 +537,24 @@ classdef DashBoard < handle
                   
                   str = target.Name(1:(min(16,numel(target.Name))));
                   str = strrep(str,'_',' ');
-%                   myJob = createCommunicatingJob(myCluster, ...
-%                      'AttachedFiles', attachedFiles, ...
-%                      'Name', [operation target.Name], ...
-%                      'NumWorkersRange', qParams.nWorkerMinMax, ...
-%                      'Type','pool', ...
-%                      'Tag',sprintf('%s: %s',operation,str));
+                  myJob = createCommunicatingJob(myCluster, ...
+                     'AttachedFiles', attachedFiles, ...
+                     'Name', [operation target.Name], ...
+                     'NumWorkersRange', qParams.nWorkerMinMax, ...
+                     'Type','pool', ...
+                     'Tag',sprintf('%s: %s',operation,str));
                   
                   target.UserData = struct('D',D,'idx',idx);
                   obj.remoteMonitor(sprintf('%s - %s',str,operation),idx);
                   obj.jobIsRunning(idx) = true;
                   
-%                   createTask(myJob,operation,0,{target});
-%                   submit(myJob);
+                  createTask(myJob,operation,0,{target});
+                  submit(myJob);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
 %                   op = ['@nigeLab.Block.' operation];
 %                   delete(gcp('nocreate'));
 %                   parfeval(parpool(myCluster),operation,0,target);
-                  parfeval(gcp,operation,0,target);
+%                   parfeval(gcp,operation,0,target);
                   
                   
                   
