@@ -17,9 +17,9 @@ pars.UseRemote = true; % set false to use local machine
 pars.UNCPath = {'\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; ...
                 '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Processed_Data\'};
 pars.ClusterList = {'CPLMJS'; 'CPLMJS2'; 'CPLMJS3'};
-pars.nWorkerMinMax = [1,4]; % Min & Max # workers to assign to a job
-pars.waitTimeSec = 15; % Time to wait between checking for new cluster
-pars.initTimeSec = 30; % Time to wait when initializing cluster
+pars.NWorkerMinMax = [1,4]; % Min & Max # workers to assign to a job
+pars.WaitTimeSec = 15; % Time to wait between checking for new cluster
+pars.InitTimeSec = 30; % Time to wait when initializing cluster
 
 
 end

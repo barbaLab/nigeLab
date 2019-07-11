@@ -8,8 +8,8 @@ classdef DashBoard < handle
    end
    
    properties(Access=private)
-%       jobCompleteListener
-%       jobUpdateListener
+      %       jobCompleteListener
+      %       jobUpdateListener
       jobIsRunning = false;
       jobProgressBar
    end
@@ -279,74 +279,74 @@ classdef DashBoard < handle
          end
          
       end
-       function setTankTablePars(obj)
-          T = obj.Tank;
-          Pan = getChildPanel(obj,'Parameters');
-          h =  Pan.Children{1};
-          delete(h.Children);
-              ActPars = T.Pars;
-              
-              dd=struct2cell(ActPars);
-              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
-              
-              ff =fieldnames(ActPars);
-              if any(inx)
-                  tab1 = uitab(h,'Title','Pars');
-                  InnerPos = getpixelposition(tab1) .*tab1.Position;
-                  InneWidth = InnerPos(3);
-                  uit = uitable(tab1,'Units','normalized',...
-                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
-                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
-              end
-          
-       end
-       
-       function setAnimalTablePars(obj,SelectedItems)
-          A = obj.Tank.Animals(SelectedItems);
-          Pan = getChildPanel(obj,'Parameters');
-          h =  Pan.Children{1};
-          delete(h.Children);
-              ActPars = A.Pars;
-              
-              dd=struct2cell(ActPars);
-              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
-              
-              ff =fieldnames(ActPars);
-              if any(inx)
-                  tab1 = uitab(h,'Title','Pars');
-                  InnerPos = getpixelposition(tab1) .*tab1.Position;
-                  InneWidth = InnerPos(3);
-                  uit = uitable(tab1,'Units','normalized',...
-                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
-                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
-              end
-          
-       end
-       
+      function setTankTablePars(obj)
+         T = obj.Tank;
+         Pan = getChildPanel(obj,'Parameters');
+         h =  Pan.Children{1};
+         delete(h.Children);
+         ActPars = T.Pars;
+         
+         dd=struct2cell(ActPars);
+         inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+         
+         ff =fieldnames(ActPars);
+         if any(inx)
+            tab1 = uitab(h,'Title','Pars');
+            InnerPos = getpixelposition(tab1) .*tab1.Position;
+            InneWidth = InnerPos(3);
+            uit = uitable(tab1,'Units','normalized',...
+               'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+               'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+         end
+         
+      end
+      
+      function setAnimalTablePars(obj,SelectedItems)
+         A = obj.Tank.Animals(SelectedItems);
+         Pan = getChildPanel(obj,'Parameters');
+         h =  Pan.Children{1};
+         delete(h.Children);
+         ActPars = A.Pars;
+         
+         dd=struct2cell(ActPars);
+         inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+         
+         ff =fieldnames(ActPars);
+         if any(inx)
+            tab1 = uitab(h,'Title','Pars');
+            InnerPos = getpixelposition(tab1) .*tab1.Position;
+            InneWidth = InnerPos(3);
+            uit = uitable(tab1,'Units','normalized',...
+               'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+               'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+         end
+         
+      end
+      
       function setBlockTablePars(obj,SelectedItems)
-          
-          B = obj.Tank.Animals(SelectedItems(1,1)).Blocks(SelectedItems(1,2));
-          Fnames = fieldnames(B.Pars);
-          Pan = getChildPanel(obj,'Parameters');
-          h =  Pan.Children{1};
-          delete(h.Children);
-          for ii=1:numel(Fnames)
-              ActPars = B.Pars.(Fnames{ii});
-              
-              
-              dd=struct2cell(ActPars);
-              inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
-              
-              ff =fieldnames(ActPars);
-              if any(inx)
-                  tab1 = uitab(h,'Title',Fnames{ii});
-                  InnerPos = getpixelposition(tab1) .*tab1.Position;
-                  InneWidth = InnerPos(3);
-                  uit = uitable(tab1,'Units','normalized',...
-                      'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
-                      'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
-              end
-          end
+         
+         B = obj.Tank.Animals(SelectedItems(1,1)).Blocks(SelectedItems(1,2));
+         Fnames = fieldnames(B.Pars);
+         Pan = getChildPanel(obj,'Parameters');
+         h =  Pan.Children{1};
+         delete(h.Children);
+         for ii=1:numel(Fnames)
+            ActPars = B.Pars.(Fnames{ii});
+            
+            
+            dd=struct2cell(ActPars);
+            inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+            
+            ff =fieldnames(ActPars);
+            if any(inx)
+               tab1 = uitab(h,'Title',Fnames{ii});
+               InnerPos = getpixelposition(tab1) .*tab1.Position;
+               InneWidth = InnerPos(3);
+               uit = uitable(tab1,'Units','normalized',...
+                  'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
+                  'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+            end
+         end
       end
       
       function plotRecapCircle(obj,Status)
@@ -424,18 +424,18 @@ classdef DashBoard < handle
          % updated to only re-initialize the jobIsRunning array if it
          % should change size. Then, you could have asymmetric job
          % advancement by only checking on BLOCK case for job creation.
-         if any(obj.jobIsRunning) 
+         if any(obj.jobIsRunning)
             fprintf(1,'Jobs are still running. Aborted.\n');
-            return;            
+            return;
          end
-
+         
          % Remove any previous listener handle objects, if they exist
 %          if ~isempty(obj.jobUpdateListener)
 %             for ii = 1:numel(obj.jobUpdateListener)
 %                delete(obj.jobUpdateListener{ii});
 %             end
 %          end
-         
+
 %          % Remove any previous listener handle objects, if they exist
 %          if ~isempty(obj.jobCompleteListener)
 %             for ii = 1:numel(obj.jobCompleteListener)
@@ -449,12 +449,12 @@ classdef DashBoard < handle
                delete(obj.jobProgressBar{ii});
             end
          end
-                  
+         
          obj.jobIsRunning = false(1,target.getNumBlocks);
          obj.jobProgressBar = cell(1,target.getNumBlocks);
          
-%          obj.jobCompleteListener = cell(1,target.getNumBlocks); 
-%          obj.jobUpdateListener = cell(1,target.getNumBlocks); 
+%          obj.jobCompleteListener = cell(1,target.getNumBlocks);
+%          obj.jobUpdateListener = cell(1,target.getNumBlocks);
          
          
          flag = true; % If completed successfully
@@ -471,7 +471,7 @@ classdef DashBoard < handle
          % Create a parallel pool data queue object so we can send info
          % from the workers back to the client.
          if nargin < 5
-            if (license('test','Distrib_Computing_Toolbox')) 
+            if (license('test','Distrib_Computing_Toolbox'))
                D = parallel.pool.DataQueue;
                afterEach(D,@obj.updateRemoteMonitor);
             else
@@ -494,20 +494,20 @@ classdef DashBoard < handle
                      idx = idx + 1;
                   end
                end
-
+               
             case 'nigeLab.Animal'
                if ~obj.initJobListeners(target)
                   return;
-               end               
+               end
                
                for ii = 1:numel(target.Blocks)
                   qOperations(obj,operation,target.Blocks(ii),ii,D);
                end
-
+               
             case 'nigeLab.Block'
                if obj.jobIsRunning(idx)
                   fprintf(1,'Jobs are still running. Aborted.\n');
-                  return; 
+                  return;
                end
                
                qParams = nigeLab.defaults.Queue;
@@ -553,7 +553,7 @@ classdef DashBoard < handle
 %                   delete(gcp('nocreate'));
 %                   parfeval(parpool(myCluster),operation,0,target);
                   parfeval(gcp,operation,0,target);
-
+                  
                   
                   
                   
@@ -576,7 +576,7 @@ classdef DashBoard < handle
                      operation,target.Name);
                   feval(operation,target);
                end
-
+               
             otherwise
                error('Invalid target class: %s',class(target));
          end
@@ -588,19 +588,19 @@ classdef DashBoard < handle
 %       function jobFinishedFcn(obj,src,~)
 %          % Read out a generic completion to the command window
 %          nigeLab.utils.jobFinishedAlert(src);
-%          
+%
 %          % Indicate that this job is no longer running in properties
 %          obj.jobIsRunning(src.UserData) = false;
-%          
+%
 %          % Update remoteMonitor corresponding to this job
-%          
+%
 %       end
       
       % Function to attach to listeners that monitor job progress, which
       % will update when the 'Tag' property of the job is updated.
       function updateRemoteMonitor(obj,data)
          pct = data.pct;
-         idx = data.idx;         
+         idx = data.idx;
          
          xStart = obj.jobProgressBar{idx}.XData(1);
          xStop = xStart + (1-xStart) * (pct/100);
@@ -609,7 +609,7 @@ classdef DashBoard < handle
          obj.jobProgressBar{idx}.progtext.String = ...
             sprintf('%.3g%%',pct);
          disp(pct);
-         drawnow;   
+         drawnow;
       end
       
 %       function completeRemoteMonitor(obj,src,~)
@@ -621,8 +621,8 @@ classdef DashBoard < handle
 %          delete(obj.jobProgressBar{idx}.X);
 %       end
 
-   
-      
+
+
 %       function deleteJob(obj,ind) %%%%%%%%%%%%%%%%%%%%% ToDO
 %          cancel(obj.qJobs{ind});
 %          pause(0.1)
