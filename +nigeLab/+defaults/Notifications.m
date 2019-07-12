@@ -16,7 +16,7 @@ pars.TagDelim = '||'; % This should separate TagString between naming and % comp
 pars.TagString = '%s: %s%s%03d%%'; % regexp for Tag updates
 pars.NotifyString = '\t->Extracting %s %s...%.3d%%\n'; % regexp for command window updates
 pars.NotifyTimer = 0.1; % timer period (seconds) for remote monitor checks
-
+pars.UseParallel=0;
 if nargin > 0
    if isfield(pars,paramName)
       pars = pars.(paramName);
