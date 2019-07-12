@@ -15,7 +15,6 @@ fprintf(1,'Performing auto clustering... %.3d%%',0);
 
 SuppressText = true;
 
-myJob = getCurrentJob;
 
 for iCh = chan
    [inspk] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
@@ -61,11 +60,7 @@ for iCh = chan
    saveClusters(blockObj,classes,iCh,temp);
    
    blockObj.updateStatus('Clusters',true,iCh);
-%    pct = floor(100 * (iCh / blockObj.NumChannels));
-%    if ~mod(pct,5) % only increment counter by 5%
-%       fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-%    end
-   blockObj.notifyUser(myJob,'doAutoClustering','SPC',iCh,max(chan));
+   blockObj.notifyUser('doAutoClustering','SPC',iCh,max(chan));
 end
 fprintf(1,'\b\b\b\bDone.\n');
 flag = true;

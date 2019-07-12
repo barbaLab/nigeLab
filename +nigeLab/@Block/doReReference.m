@@ -44,7 +44,6 @@ end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
 fprintf(1,'Computing common average... %.3d%%',0);
-myJob = getCurrentJob;
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -60,7 +59,7 @@ for iCh = blockObj.Mask
    if ~floor(mod(pc,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
    end
-   blockObj.notifyUser(myJob,mfilename,'Get Reference',iCh,max(blockObj.Mask));
+   blockObj.notifyUser('doReReference','Get Reference',iCh,max(blockObj.Mask));
 end
 fprintf(1,'\b\b\b\bDone.\n');
 
@@ -101,7 +100,7 @@ for iCh = blockObj.Mask
    % Update user
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   blockObj.notifyUser(myJob,mfilename,'Mean Subtract',...
+   blockObj.notifyUser('doReReference','Mean Subtract',...
       max(blockObj.Mask)+iCh,max(blockObj.Mask)*2);
 end
 

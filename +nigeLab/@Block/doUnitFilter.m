@@ -36,7 +36,6 @@ blockObj.checkMask;
 %% DO FILTERING AND SAVE
 fprintf(1,'\nApplying bandpass filtering... ');
 fprintf(1,'%.3d%%',0)
-j = getCurrentJob;
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
 %    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
@@ -74,15 +73,10 @@ for iCh = blockObj.Mask
    end
    
    updateFlag(iCh) = true;
-   pct = floor(100 * (iCh / blockObj.NumChannels));
-   if ~mod(pct,5) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',pct)
-   end
 
-   blockObj.notifyUser(j,mfilename,'Digital Filter',iCh,max(blockObj.Mask));
+   blockObj.notifyUser('doUnitFilter','Digital Filter',iCh,max(blockObj.Mask));
    
 end
-fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('Filt',updateFlag);
 flag = true;
 blockObj.save;

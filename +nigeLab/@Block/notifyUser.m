@@ -1,4 +1,4 @@
-function notifyUser(blockObj,myJob,op,stage,curIdx,totIdx)
+function notifyUser(blockObj,op,stage,curIdx,totIdx)
 %% NOTIFYUSER  Update user of job processing status
 %
 %  blockObj = nigeLab.Block();
@@ -22,7 +22,14 @@ else
    pctComplete = floor(100 * (curIdx / totIdx));
 end
 
+
 pars = nigeLab.defaults.Notifications();
+
+if (pars.UseParallel) && (license('test','Distrib_Computing_Toolbox'))
+   myJob = getCurrentJob;
+else
+   myJob = [];
+end
 
 % If parallel job, update the job status tag so you can track progress
 % using the Parallel Job Monitor
@@ -31,7 +38,6 @@ if ~isempty(myJob)
    n = min(numel(blockObj.Name),pars.NMaxNameChars);
    name = blockObj.Name(1:n);
    strrep(name,'_','-');
-   myJob = getCurrentJob; % I know this seems redundant, but I forgot: you can't pass job objects as function arguments. Because that makes sense. -MM
    set(myJob,'Tag',sprintf(pars.TagString,op,name,pars.TagDelim,pctComplete));
    
 else % Otherwise, print to Command Window

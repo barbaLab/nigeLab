@@ -35,11 +35,9 @@ function flag = intan2Block(blockObj,fields,paths)
 
 %% PARSE INPUT
 flag = false;
+UseParallel = nigeLab.defaults.Queue('UseParallel');
 if nargin < 3 % If 2 inputs, need to specify default paths struct
    paths = blockObj.Paths;
-   myJob = nan;
-else % Otherwise, it was run via a "q" command (hence different paths)
-   myJob = getCurrentJob;
 end
 
 if nargin < 2 % If 1 input, need to specify default fields
@@ -118,7 +116,6 @@ for f = fields
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
-%          notifyUser(blockObj,myJob,this,'info');
          info = blockObj.Meta.Header.RawChannels;
          infoname = fullfile(paths.(this).info);
          save(fullfile(infoname),'info','-v7.3');
@@ -137,7 +134,7 @@ for f = fields
                'access','w',...
                'class','single');
             Files.(this){iCh} = makeDiskFile(diskPars);
-            notifyUser(blockObj,myJob,this,'info',iCh,nCh.(this))
+            notifyUser(blockObj,this,'info',iCh,nCh.(this))
          end
       case 'Events'
          fName = sprintf(strrep(paths.(this).file,'\','/'), this);
@@ -168,7 +165,6 @@ for f = fields
          Files.(this) = makeDiskFile(diskPars);
          
       case 'Streams'
-%          notifyUser(blockObj,myJob,this,'info');
          infofield = [this 'Channels'];
          info = blockObj.Meta.Header.(infofield);
          infoname = fullfile(paths.(this).info);
@@ -205,7 +201,6 @@ for f = fields
                   diskPars.class = 'int8';
                end
                Files.(U{ii}){chCount} = makeDiskFile(diskPars);
-%                notifyUser(blockObj,myJob,this,'info',chCount,nCh.(U{ii}))
             end
          end
          
@@ -382,8 +377,6 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
-
-%    blockObj.notifyUser(myJob,'doRawExtraction','binary',progress,info.NumDataBlocks);
 
 end
 fprintf(1,newline);
