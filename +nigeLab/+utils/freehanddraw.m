@@ -45,7 +45,7 @@ hold on;
 set(gcf,'Pointer','crosshair','doublebuffer','on');
 
 %Get the initial point
-[xs,ys,zs] = ginput(1);
+[xs,ys,zs] = nigeLab.utils.ginput(1);
 
 %Create and store line object
 if axdef
