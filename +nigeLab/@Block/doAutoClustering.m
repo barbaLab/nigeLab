@@ -87,5 +87,17 @@ if exist(blockObj.Paths.Clusters.dir,'dir')==0
    mkdir(blockObj.Paths.Clusters.dir);
 end
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData(fType,...
-   fName,data,'access','w');
+    fName,data,'access','w');
+
+% initialize the 'Sorted' DiskData file
+fType = blockObj.getFileType('Sorted');
+fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+    num2str(blockObj.Channels(iCh).probe),...
+    blockObj.Channels(iCh).chStr));
+if exist(blockObj.Paths.Sorted.dir,'dir')==0
+    mkdir(blockObj.Paths.Sorted.dir);
+end
+blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData(fType,...
+    fName,data,'access','w');
+
 end

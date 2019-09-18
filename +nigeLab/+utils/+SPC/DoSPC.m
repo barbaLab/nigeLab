@@ -49,16 +49,19 @@ end
 %% CHECK TO MAKE SURE "BAD" FILES ARE NOT STILL PRESENT
 fprintf(1,'Beginning SPC...');
 
+cleanup(temppath,pars);
+
 inspk_aux = features(ind,:);
 save(fullfile(temppath, pars.FNAME_IN),'inspk_aux','-ascii');
 
-if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01.lab']), 'file')
-   delete( sprintf('%s.dg_01.lab',fullfile(temppath,pars.FNAME_IN )));
-end
+% if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01.lab']), 'file')
+%    delete( sprintf('%s.dg_01.lab',fullfile(temppath,pars.FNAME_IN )));
+% end
+% 
+% if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01']), 'file')
+%    delete( sprintf('%s.dg_01',    fullfile(temppath,pars.FNAME_IN )));
+% end
 
-if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01']), 'file')
-   delete( sprintf('%s.dg_01',    fullfile(temppath,pars.FNAME_IN )));
-end
 
 %% PRINT INPUT FILE FOR SPC
 fprintf(1,' writing input...');
@@ -91,7 +94,7 @@ switch str
           copyfile(fullfile(localpath,'cluster.exe'),fullfile(temppath,'tmp_cluster.exe'));
       end
       oldfold = pwd;cd(temppath);
-      [~,~] = dos(sprintf('%s "%s.run" ', fullfile(temppath,'tmp_cluster.exe'), pars.FNAME_OUT));
+      [~,~] = dos(sprintf('%s "%s.run" ', fullfile('tmp_cluster.exe'), pars.FNAME_OUT));
       cd(oldfold);
       fprintf(1,' cleaning up files...');
       delete(fullfile(temppath,'tmp_cluster.exe'));
@@ -247,6 +250,25 @@ fprintf(1,'complete.\n');
 
 end
 
+function cleanup(temppath,pars)o
+warning off
+delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01']));
+delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01.lab']));
+delete(fullfile(temppath, pars.FNAME_IN));
+
+delete(fullfile(temppath,'*.run'));
+delete(fullfile(temppath,'*.edges'));
+delete(fullfile(temppath,'*.mag'));
+delete(fullfile(temppath,'*.param'));
+if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01.lab']), 'file')
+   eval(sprintf('delete ''%s.dg_01.lab''',fullfile(temppath,pars.FNAME_IN)))
+end
+
+if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01']), 'file')
+   eval(sprintf('delete ''%s.dg_01''',fullfile(temppath,pars.FNAME_IN)))
+end
+warning on
+end
 function [out,skip] = RandSelect(in, num)
 %% Randomly selects specified subset of indices from "in"
 
