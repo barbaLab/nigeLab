@@ -86,7 +86,7 @@ classdef HighDimsUI < handle
             stopRot = @(~,~,x) set(x,'UserData',1);
 
             
-            if ~isempty(obj.panels)
+            if ~isempty(obj.panels) && all(isvalid(obj.panels))
                for ii = (obj.num_dims-1):obj.maxDim
                   obj.panels(ii).Visible = false;
                   obj.panels(ii+15).Visible = false;                    
@@ -313,7 +313,7 @@ classdef HighDimsUI < handle
         end
         
         function closeF(obj)
-            if isvalid(obj.FeaturesUI)
+            if isvalid(obj.FeaturesUI.FeatX) && isvalid(obj.FeaturesUI.FeatY)
                 obj.FeaturesUI.FeatX.Enable = 'on';
                 obj.FeaturesUI.FeatY.Enable = 'on';
             end

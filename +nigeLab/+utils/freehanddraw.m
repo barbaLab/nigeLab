@@ -58,20 +58,22 @@ setappdata(gcf,'lineobj',lineobj);
 %Modify wbmf of current figure to update lineobject on mouse motion
 set(gcf,'windowbuttonmotionfcn',@wbmfcn);
 set(gcf,'windowbuttondownfcn',@wbdfcn);
+sltype = 'normal';
 %Wait for right-click or double-click
-while ~strcmp(get(gcf,'SelectionType'),'alt') & ~strcmp(get(gcf,'SelectionType'),'open')
+while ~strcmp(sltype,'alt') & ~strcmp(sltype,'open')
 	drawnow;
+    sltype = get(gcf,'SelectionType');
 end
-
-%Extract xyz data from line object for return in output variables
-%(Also retrievable from first output argument)
-if nargout > 1
-	xs = get(getappdata(gcf,'lineobj'),'xdata')';
+if strcmp(sltype,'open')
+    %Extract xyz data from line object for return in output variables
+    %(Also retrievable from first output argument)
+    if nargout > 1
+        xs = get(getappdata(gcf,'lineobj'),'xdata')';
+    end
+    if nargout > 2
+        ys = get(getappdata(gcf,'lineobj'),'ydata')';
+    end
 end
-if nargout > 2
-	ys = get(getappdata(gcf,'lineobj'),'ydata')';
-end
-
 %Clear temporary variables from base workspace
 evalin('caller','clear tmpx tmpy tmpz done gca lineobj');
 
@@ -84,8 +86,9 @@ if ~oldhold, hold off; end
 
 function wbmfcn(varargin)
 lineobj = getappdata(gcf,'lineobj');
+if ~isempty(lineobj) & ~isvalid(lineobj),return;end
 if strcmp(get(gcf,'selectiontype'),'normal');
-    tmpx = get(lineobj,'xdata');
+     tmpx = get(lineobj,'xdata');
     tmpy = get(lineobj,'ydata');
     a=get(gca,'currentpoint');
     set(lineobj,'xdata',[tmpx,a(1,1)],'ydata',[tmpy,a(1,2)]);
