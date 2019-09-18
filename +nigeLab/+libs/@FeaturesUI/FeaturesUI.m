@@ -194,7 +194,8 @@ classdef FeaturesUI < handle
             'NumberTitle','off',...
             'Position',[0.050,0.075,0.4,0.450],...
             'Color',nigeLab.defaults.nigelColors('background'),...
-            'SizeChangedFcn',@obj.ChangeSize);          
+            'SizeChangedFcn',@obj.ChangeSize,...
+            'CloseRequestFcn',@(~,~)obj.ExitFeatures);          
          
          featureComboSelectorPanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...
@@ -466,15 +467,17 @@ classdef FeaturesUI < handle
          
          % Get the potential features to move clusters
          curCh = obj.ChannelSelector.Channel;
-         feat = obj.Data.feat{curCh}(:,obj.featInd);
-         
-         [~,~,~,binX,binY] = histcounts2(feat(:,1),feat(:,2),...
+         feat = obj.Data.feat{curCh};
+         fi = ismember( obj.Data.class{curCh},find(obj.VisibleClusters));
+         X = feat*obj.projVecs';
+         [~,~,~,binX,binY] = histcounts2(X(:,1),X(:,2),...
             obj.sdMeshEdges,obj.sdMeshEdges);
          
          % Draw polygon
          set(obj.Figure,'Pointer','circle');
          
 %          snipped_region = drawfreehand(ax,'Smoothing',5);
+          axes(ax);
          [h,x,y]=nigeLab.utils.freehanddraw(ax);
 %          pos = snipped_region.Position;
 %          delete(snipped_region);
@@ -495,7 +498,7 @@ classdef FeaturesUI < handle
          
          iMove = [];
          for ii = 1:numel(row)
-            moveIdx = find(binX == col(ii) & binY == row(ii));
+            moveIdx = find(binX == col(ii) & binY == row(ii) & fi);
             iMove = [iMove; moveIdx]; %#ok<AGROW>
          end
          iMove = unique(iMove);

@@ -769,7 +769,7 @@ classdef SpikeImage < handle
       
       function UpdateClusterAssignments(obj,~,evt)
          %% UPDATECLUSTERASSIGNMENTS   Update cluster assigns and notify  
-         
+         if ~isprop(evt,'subs'),return;end
          % Identify plots to update
          plotsToUpdate = unique(obj.Spikes.Class(evt.subs));
          plotsToUpdate = reshape(plotsToUpdate,1,numel(plotsToUpdate));

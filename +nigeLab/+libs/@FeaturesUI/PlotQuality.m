@@ -7,7 +7,7 @@ obj.UpdateSil;
 curCh = obj.ChannelSelector.Channel;
 cl = obj.Data.class{curCh};
 silh = obj.SilScores;
-   obj.QualityBars=[];
+obj.QualityBars=[];
 % Create the bars:  group silhouette values into clusters, sort values
 % within each cluster.  Concatenate all the bars together, separated by
 % empty bars.  Locate each tick midway through each group of bars
@@ -17,10 +17,10 @@ bars = NaN(space,1);
 clS = bars;
 tcks(1) = length(bars);
 for i = 1:max(cl)
-   tmp =  -sort(-silh( cl(obj.rsel) == i) );
-   bars = [bars;tmp; NaN(space,1);];
-   tcks(i) = length(bars);
-   clS = [clS; ones(size(tmp))*i;NaN(space,1);];
+    tmp =  -sort(-silh( cl(obj.rsel) == i) );
+    bars = [bars;tmp; NaN(space,1);];
+    tcks(i) = length(bars);
+    clS = [clS; ones(size(tmp))*i;NaN(space,1);];
 end
 tcks = tcks - 0.5*(diff([space tcks]) + space - 1);
 
@@ -33,19 +33,20 @@ Y = obj.QualityBars.XData;
 cla(obj.Silhouette);
 hold(obj.Silhouette,'on');
 for ii=1:obj.NCLUS_MAX
-   if ii==1
-      col = [0.15 0.15 0.15];
-   else
-      col= obj.COLS{ii};
-   end
-   if sum(clS==ii) > obj.MINSPIKES
-       bb = bar(obj.Silhouette,Y(clS==ii),bars(clS==ii), 1.0,'FaceColor',col,'EdgeColor','none');
-
-   end
-   
-   
-%    I = 0.5:1/sum(indx)/2:1.5;
-%    I = I(2:2:end)+ii-1;
+    if ii==1
+        col = [0.15 0.15 0.15];
+    else
+        col= obj.COLS{ii};
+    end
+    %    if sum(clS==ii) > obj.MINSPIKES
+    if sum(clS==ii)==0,continue;end
+    bb = bar(obj.Silhouette,Y(clS==ii),bars(clS==ii), 1.0,'FaceColor',col,'EdgeColor','none');
+    if ~obj.VisibleClusters(ii),bb.Visible = 'off';end
+    %    end
+    
+    
+    %    I = 0.5:1/sum(indx)/2:1.5;
+    %    I = I(2:2:end)+ii-1;
 end
 
 % ylim(obj.Silhouette,[-.5 .5]);
