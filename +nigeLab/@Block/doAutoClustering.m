@@ -56,7 +56,7 @@ for iCh = chan
 %% Perfomring clustering
     
     [classes_,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
-    classes_ = classes_ + offs;
+%     classes_ = classes_ + offs;
     classes_(classes_>par.NCLUS_MAX) = par.NCLUS_MAX;
     classes(subsetIndex) = classes_;
     
@@ -91,4 +91,16 @@ if exist(blockObj.Paths.Clusters.dir,'dir')==0
 end
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData(fType,...
     fName,data,'access','w');
+
+% initialize the 'Sorted' DiskData file
+fType = blockObj.getFileType('Sorted');
+fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+    num2str(blockObj.Channels(iCh).probe),...
+    blockObj.Channels(iCh).chStr));
+if exist(blockObj.Paths.Sorted.dir,'dir')==0
+    mkdir(blockObj.Paths.Sorted.dir);
+end
+blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData(fType,...
+    fName,data,'access','w');
+
 end
