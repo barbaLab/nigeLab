@@ -59,8 +59,8 @@ else % If it doesn't exist
    if getStatus(blockObj,'Spikes',ch) % but spikes do
       ts = getSpikeTimes(blockObj,ch);
       n = numel(ts);
-      clusterIdx = zeros(n,1);
-      data = [zeros(n,2) clusterIdx ts zeros(n,1)];
+      clusterIndex = zeros(n,1);
+      data = [zeros(n,2) clusterIndex ts zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
       fType = blockObj.getFileType('Clusters');

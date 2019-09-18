@@ -68,7 +68,7 @@ for iCh = blockObj.Mask
    if (iCh == 1)
       [spk,feat,art,blockObj.SDPars] = PerChannelDetection(data,pars);
    else
-      [spk,feat,art] = PerChannelDetection(data,pars);
+      [spk,feat,art] = PerChannelDetection(data,blockObj.SDPars);
    end
    
    if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
@@ -275,7 +275,7 @@ flag = true;
             end
          else
             % Just make features reflect poor quality of (small) cluster
-            features = randn(size(spikes,1),pars.NINPUT) * 10;
+            features = randn(size(spikes,1),numel(pars.FEAT_NAMES)) * 10;
          end
          
       else % If there are no spikes in the current signal
