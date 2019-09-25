@@ -250,7 +250,7 @@ fprintf(1,'complete.\n');
 
 end
 
-function cleanup(temppath,pars)o
+function cleanup(temppath,pars)
 warning off
 delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01']));
 delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01.lab']));

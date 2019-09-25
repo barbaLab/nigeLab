@@ -59,14 +59,29 @@ for iCh = chan
     
 %% Perfomring clustering
     
+    allLabels = 1:par.NCLUS_MAX;
+    usedClasses = unique(classes(~subsetIndex));
+    usedClasses(usedClasses < 1) = 1;
+    if isempty(usedClasses),freeLabels = allLabels;else
+    freeLabels = allLabels(ismember(allLabels, usedClasses));
+    freeLabels = [freeLabels(:);...
+        ones(numel(unique(classes_))-numel(freeLabels),1)*par.NCLUS_MAX];
+    end
+    
+    par.NCLUS_MAX = numel(freeLabels);
     [classes_,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
-    classes_ = classes_ + offs;
     classes_(classes_>par.NCLUS_MAX) = par.NCLUS_MAX;
+    
+    jj=1;
+    for ii=unique(classes_(:))'
+       classes_(classes_==ii)= freeLabels(jj);
+       jj=jj+1;
+    end
     classes(subsetIndex) = classes_;
       
       for bb=1:numel(animalObj.Blocks)
          blockObj = animalObj.Blocks(bb);
-         saveClusters(blockObj,classes(BlInd == bb),temp,iCh);         
+         saveClusters(blockObj,classes(BlInd == bb),iCh,temp);         
          blockObj.updateStatus('Clusters',true,iCh);
       end
       

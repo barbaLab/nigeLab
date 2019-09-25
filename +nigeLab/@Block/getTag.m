@@ -66,7 +66,7 @@ end
 if ~isnumeric(tag)
    tag = parseSpikeTagIdx(blockObj,tag);
 end
-
-str = blockObj.SortPars.TagOpts(unique(tag));
+str='';
+% str = blockObj.SortPars.TagOpts(unique(tag));
 
 end
