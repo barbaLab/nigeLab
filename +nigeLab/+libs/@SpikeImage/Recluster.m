@@ -10,7 +10,7 @@ inspk = obj.Parent.spk.feat{ch};
 
 fprintf(1,'Performing reclustering...');
 
-    offs = max(unique(classes))-1;
+    offs = numel(unique(classes))-1;
     subsetIndex = find(ismember(classes,unit));
 
     
@@ -41,9 +41,17 @@ fprintf(1,'Performing reclustering...');
     
 %% Perfomring clustering
 
-
-    [classes,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
-
+% [coeff,score,~,~,expl,~] = pca(inspk);
+% inspk=[inspk score(:,1:find(cumsum(expl)>90,1))];
+%     [classes,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
+try
+    inspk = gpuArray(inspk);
+catch
+    warning('gpuArray non available. Computing on CPU;');
+end
+classes = gather(kmeans(inspk,9-offs));
+classes(classes~=1)=classes(classes~=1)+offs;
+classes(classes==1)=unit;
 %% Moving spikes
    uclass = unique(classes);
    if iscolumn(uclass),uclass=uclass';end
