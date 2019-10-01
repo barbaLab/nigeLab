@@ -276,7 +276,7 @@ classdef HighDimsUI < handle
           update_panels(obj);
         end
         
-        function Panel_ButtonDownFcn(obj, hObject, ~)
+        function Panel_ButtonDownFcn(obj, hObject, evt)
             % PANEL background click
             % Make sure user hasn't disabled all the conditions
             if isempty(get(obj.axesMain, 'children'))
@@ -302,12 +302,15 @@ classdef HighDimsUI < handle
             
             % set the flag to keep the while loop running
             set(obj.axesMain, 'UserData', 0);
-            
+            if evt.Button == 1, direction ='forward';
+            elseif evt.Button == 3,direction ='backward';
+            else return;end
+                
             % continuously rotate the object
             if (panel_index <= 15)  % it is on the left
-                obj.Continuously_Rotate_BigTraj(hObject, 'forward', 'left', obj.Q1, panel_index);
+                obj.Continuously_Rotate_BigTraj(hObject, direction, 'left', obj.Q1, panel_index);
             else
-                obj.Continuously_Rotate_BigTraj(hObject, 'forward', 'right', obj.Q2, panel_index - 15);
+                obj.Continuously_Rotate_BigTraj(hObject, direction, 'right', obj.Q2, panel_index - 15);
             end
             
         end

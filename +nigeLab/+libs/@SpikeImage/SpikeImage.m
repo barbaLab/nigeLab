@@ -332,7 +332,7 @@ classdef SpikeImage < handle
          x = [1, size(spikes,2)];
          xv = linspace(x(1),x(2),obj.XPoints);
          
-         LoopFunction = @(xin) (interp1(x(1):x(2),spikes(xin,:),xv));
+         LoopFunction = @(xin) (nigeLab.utils.interp1qr((x(1):x(2))',spikes(xin,:)',xv'));
          
          % Make ProgressCircle object
          pcirc = nigeLab.libs.ProgressCircle(LoopFunction);
