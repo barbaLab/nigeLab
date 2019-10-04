@@ -5,7 +5,7 @@ ch = obj.Parent.UI.ch;
 unit = obj.Spikes.CurClass;
 classes = obj.Spikes.Class;
 inspk = obj.Parent.spk.feat{ch};
-
+spks =  obj.Parent.spk.spikes{ch};
 %% runs automatic clustering algorithms
 
 fprintf(1,'Performing reclustering...');
@@ -13,7 +13,7 @@ fprintf(1,'Performing reclustering...');
     offs = numel(unique(classes))-1;
     subsetIndex = find(ismember(classes,unit));
 
-    
+    spks = spks(subsetIndex,:);
     inspk = inspk(subsetIndex,:);
     if size(inspk,1) < 15
        nigeLab.utils.cprintf('err','Channel %.3d: Not enough Spikes!\nLess than 15 spikes detected.',1);
@@ -41,8 +41,9 @@ fprintf(1,'Performing reclustering...');
     
 %% Perfomring clustering
 
-% [coeff,score,~,~,expl,~] = pca(inspk);
-% inspk=[inspk score(:,1:find(cumsum(expl)>90,1))];
+[coeff,score,~,~,expl,~] = pca(spks);
+inspk=[inspk score(:,1:find(cumsum(expl)>95,1))];
+
 %     [classes,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
 try
     inspk = gpuArray(inspk);
