@@ -530,6 +530,29 @@ classdef DashBoard < handle
                      matlab.codetools.requiredFilesAndProducts(...
                      sprintf('%s.m',operation));
                   
+                  p = mfilename('fullpath');
+                  p = strsplit(p,filesep);
+                  p = strjoin(p(1:(end-3)),filesep);
+                  
+                  F = dir(fullfile(p,'+defaults','*.m'));
+                  for iF = 1:numel(F)
+                     attachedFiles = [attachedFiles, {fullfile(...
+                        F(iF).folder,F(iF).name)}]; %#ok<*AGROW>
+                  end
+                  
+                  F = dir(fullfile(p,'@Block','*.m'));
+                  for iF = 1:numel(F)
+                     attachedFiles = [attachedFiles, {fullfile(...
+                        F(iF).folder,F(iF).name)}]; 
+                  end
+                  
+                  F = dir(fullfile(p,'@Block','private','*'));
+                  F = F(~[F.isdir]);
+                  for iF = 1:numel(F)
+                     attachedFiles = [attachedFiles, {fullfile(...
+                        F(iF).folder,F(iF).name)}]; 
+                  end
+                  
                   nPars = nigeLab.defaults.Notifications();
                   n = min(nPars.NMaxNameChars,numel(target.Name));
                   name = target.Name(1:n);

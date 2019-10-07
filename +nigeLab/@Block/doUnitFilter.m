@@ -4,10 +4,6 @@ function flag = doUnitFilter(blockObj)
 %  blockObj = nigeLab.Block;
 %  doUnitFilter(blockObj);
 %
-%  Note: added varargin so you can pass <'NAME', value> input argument
-%        pairs to specify adhoc filter parameters if desired, rather than
-%        modifying the defaults.Filt source code.
-%
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% GET DEFAULT PARAMETERS
