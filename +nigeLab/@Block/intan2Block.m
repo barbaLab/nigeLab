@@ -378,13 +378,18 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
-   pct = round(100 * (progress / info.NumDataBlocks));
+   pct = floor(100 * (progress / info.NumDataBlocks));
    if ~floor(mod(pct,5)) % only increment counter by 5%
       fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
    end
-   fidprog = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fidprog,1,'uint8');
-   fclose(fidprog);
+%    fidprog = fopen(fullfile(ProgressPath),'ab');
+%    fwrite(fidprog,1,'uint8');
+%    fclose(fidprog);
+   
+   if ~isempty(blockObj.UserData)
+      send(blockObj.UserData.D,...
+         struct('pct',pct,'idx',blockObj.UserData.idx));
+   end
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.
@@ -412,6 +417,9 @@ fclose(fid);
 
 for iCh = 1:blockObj.NumChannels
    blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
+   pct = floor(iCh/blockObj.NumChannels*100);
+   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+   notify(blockObj,channelCompleteEvent,evtData);
 end
 blockObj.linkToData;
 

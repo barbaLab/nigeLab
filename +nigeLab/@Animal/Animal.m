@@ -135,6 +135,8 @@ classdef Animal < handle
       flag = findCorrectPath(animalObj,paths)   % Find correct Animal path
       flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
       flag = doAutoClustering(animalObj,chan,unit)
+      
+      N = getNumBlocks(animalObj); % Gets total number of blocks (useful interchangeably with Tank method)
    end
    
    %% PRIVATE METHODS

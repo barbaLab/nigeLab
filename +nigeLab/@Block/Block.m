@@ -76,7 +76,13 @@ classdef Block < handle
       Events     % Struct array of asynchronous events
       Streams    % Struct array of non-electrode data streams
       
-      Graphics   % Struct for associated graphics objects      
+      Graphics   % Struct for associated graphics objects
+      
+      Pars
+   end
+   
+   properties (SetAccess = public, Hidden = true)
+      UserData % Allow UserData property to exist
    end
    
    properties (SetAccess = private, GetAccess = public)
@@ -150,6 +156,11 @@ classdef Block < handle
       DiscardChar      % Character indicating discarded name elements
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+   end
+   
+   events
+      channelCompleteEvent
+      processCompleteEvent
    end
    
    %% METHODS
@@ -365,6 +376,9 @@ classdef Block < handle
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
+      
+      % Miscellaneous utilities:
+      N = getNumBlocks(blockObj); % This is just to make it easier to count total # blocks
    
    end
    

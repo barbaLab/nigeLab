@@ -61,6 +61,7 @@ end
 
 %% FOR EACH FILE, EXTRACT VIDEO INFORMATION OF INTEREST
 flag = updateVidInfo(blockObj);
+notify(blockObj,processCompleteEvent);
 
    function match_str = parseVidFileName(blockObj,fName,initFlag)
       %% PARSEVIDFILENAME  Get video file info from video file

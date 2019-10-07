@@ -107,6 +107,8 @@ for iCh = blockObj.Mask
    % Update user
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
+   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+   notify(blockObj,channelCompleteEvent,evtData);
    
 end
 

@@ -30,11 +30,12 @@ blockObj.updateStatus('SpikeFeatures',false,blockObj.Mask);
 blockObj.updateStatus('Clusters',false,blockObj.Mask);
 blockObj.updateStatus('Sorted',false,blockObj.Mask);
 
+j = [];
+if (license('test','Distrib_Computing_Toolbox'))
+   j = getCurrentJob;
+end
+
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-ProgressPath = fullfile(nigeLab.defaults.Tempdir,['doSD',blockObj.Name]);
-fid = fopen(ProgressPath,'wb');
-fwrite(fid,numel(blockObj.Mask),'int32');
-fclose(fid);
 fprintf(1,'\n000%%\n');
 for iCh = blockObj.Mask
    
@@ -86,16 +87,18 @@ for iCh = blockObj.Mask
 
    
    % And update the status indicator in Command Window:
-   pct = 100 * (iCh / blockObj.NumChannels);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
+   pct = floor(100 * (iCh / blockObj.NumChannels));
+   str = sprintf('%0.3d%%',pct);
+   fprintf(1,'\b\b\b\b\b%s\n',str);
+   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
+   notify(blockObj,channelCompleteEvent,evtData);
+      
 end
 
 % Indicate that it is finished at the end
 blockObj.save;
 flag = true;
+notify(blockObj,processCompleteEvent);
 
    function [spk,feat,art,pars] = PerChannelDetection(data, pars)
       %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
