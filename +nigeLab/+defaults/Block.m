@@ -86,6 +86,8 @@ pars.DiscardChar='~';
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
 pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+
+
 % _____________________________
 % Many animals in one block
 %
