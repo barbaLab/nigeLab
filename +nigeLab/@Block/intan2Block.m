@@ -144,9 +144,9 @@ for f = fields
             'class','single');
          
          if strcmp(this,'Stim')
-            info = blockObj.Meta.Header.RawChannels;
-            Files.(this)(1:32)= {(makeDiskFile(diskPars))};
-            nCh.(this) = blockObj.NumChannels;
+            info = blockObj.Meta.Header.SpikeTriggers;
+            Files.(this)(1:numel(info))= {(makeDiskFile(diskPars))};
+            nCh.(this) = numel(info);
          else
            Files.(this)(1)= {(makeDiskFile(diskPars))};
             nCh.(this) = 1;
@@ -161,7 +161,7 @@ for f = fields
             'size',[1 blockObj.Meta.Header.NumRawSamples],...
             'access','w',...
             'class','int32');
-         Files.(this) = makeDiskFile(diskPars);
+         Files.(this){1} = makeDiskFile(diskPars);
          
       case 'Streams'
          notifyUser(blockObj,myJob,this,'info');
@@ -362,7 +362,7 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
 %    FB, Blame on meeeeeee. Blame me ooooonnn. 10/07/19
 %    if any(t(2:end)==0),continue;end 
    t = reshape(t,1,numel(t)); % ensure correct orientation
-   Files.Time.append(t);
+   Files.Time{1}.append(t);
    num_gaps = num_gaps + sum(diff(t) ~= 1);
    
    % Write data to file
@@ -414,14 +414,26 @@ fclose(fid);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % DiskData makes it easy to access data stored in matfies.
 % Assigning each file to the right channel
-
-for iCh = 1:blockObj.NumChannels
-   blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
-   pct = floor(iCh/blockObj.NumChannels*100);
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
+infoNames = fieldnames(Files);
+for f = 1:numel(fields)
+    idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
+    switch blockObj.FieldType{idx}
+        case 'Channels'
+            ChIdx = 1:numel(Files.(infoNames{f}));
+        case 'Streams'
+            sigTypes = {blockObj.Streams.signal_type};
+            ChIdx = find(strcmp(sigTypes,infoNames{f}));
+        case 'Meta'
+            ChIdx = 1:numel(Files.(infoNames{f}));
+        case 'Events'
+            ChIdx = 1:numel(Files.(infoNames{f}));
+    end
+    for iCh = 1:numel(Files.(infoNames{f}))
+        
+        blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(infoNames{f}) = lockData(Files.(infoNames{f}){iCh});
+    end
 end
-blockObj.linkToData;
+blockObj.linkToData;  
 
 % % % % % % % % % % % % % % % % % % % % % %
 if ~isnan(myJob(1))
