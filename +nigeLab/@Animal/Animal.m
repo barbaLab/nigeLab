@@ -1,4 +1,4 @@
-classdef Animal < handle
+classdef Animal < matlab.mixin.Copyable
    %% ANIMAL   Class for handling each nigeLab.Block for one animal
    
    %% PUBLIC PROPERTIES
@@ -125,6 +125,7 @@ classdef Animal < handle
       flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
       linkToData(animalObj)                    % Link disk data of all Blocks in Animal
+      flag = splitMultiAnimals(blockObj,tabpanel)
    end
    
    methods (Access = public, Hidden = true)

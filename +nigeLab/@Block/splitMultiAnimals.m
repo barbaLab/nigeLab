@@ -1,11 +1,42 @@
-function flag = splitMultiAnimals(blockObj,varargin)
-flag = false;
+function Tree = splitMultiAnimals(blockObj,varargin)
+
+if nargin < 2
+ f = figure(...
+    'Toolbar','none',...
+    'MenuBar','none',...
+    'NumberTitle','off',...
+    'Units','pixels',...
+    'Position',[100 100 600 400],...
+     'Color',nigeLab.defaults.nigelColors('bg'));
+    tabgroup = uitabgroup(f,'Position',[.05 .05 .9 .9]);
+    set(tabgroup,'Units','pixels');tabgroup.Position(2) = 30;set(tabgroup,'Units','normalized')
+tabpanel = uitab(tabgroup,...
+        'Title',blockObj.Name,...
+        'UserData',blockObj,...
+        'BackgroundColor',nigeLab.defaults.nigelColors('sfc'));
+
+    
+elseif nargin == 2
+    switch class(varargin{1})
+        case 'matlab.ui.container.Tab'
+            tabpanel = varargin{1};
+            f = tabpanel.Parent.Parent;
+        case  'uiw.widget.Tree'
+            Tree = varargin{1};
+            f = Tree(1).Parent.Parent.Parent;
+             btn = findobj(f,'Style','pushbutton','String','Accept');
+            ApplyCallback(btn,[],Tree);
+            return;
+        otherwise
+    end
+end
+
 if ~(blockObj.ManyAnimals)
     warning('No multi animals recording detected');
     return;
 end
 
-if isempty(blockObj.ManyAnimalsLinkedBocks)
+if isempty(blockObj.ManyAnimalsLinkedBlocks)
     ff = fieldnames(blockObj.Meta)';
     ff = ff(~strcmp(ff,'Header'));
     for ii = ff
@@ -38,7 +69,7 @@ if isempty(blockObj.ManyAnimalsLinkedBocks)
         end %kk
         bl.Name = str(1:(end-1));
         bl.Channels = [];
-        bl.Events = [];
+        bl.initEvents;
         bl.Streams = [];
         bl.NumChannels = 0;
         bl.NumProbes = 0;
@@ -46,32 +77,46 @@ if isempty(blockObj.ManyAnimalsLinkedBocks)
     end %ii
     
     splittedBlocks(1).Channels = blockObj.Channels;
-    splittedBlocks(1).Events = blockObj.Events;
     splittedBlocks(1).Streams = blockObj.Streams;
     splittedBlocks(1).NumProbes = blockObj.NumProbes;
     splittedBlocks(1).NumChannels = blockObj.NumChannels;
+
+    % save new blocks under the Parent block folder
+%     for ii=1:numel(splittedBlocks)
+%         newPath = fullfile(fileparts(splittedBlocks(ii).Paths.SaveLoc.dir),splittedBlocks(ii).Name);
+%         splittedBlocks(ii).updatePaths(newPath);
+%     end
     
-    blockObj.ManyAnimalsLinkedBocks = splittedBlocks;
+    blockObj.ManyAnimalsLinkedBlocks = splittedBlocks;
+    
+    % Save the blocks in the corresponding Animal folders. 
+    for ii =1:numel(blockObj.ManyAnimalsLinkedBlocks)
+        animalPath = fullfile(fileparts(fileparts(blockObj.Paths.SaveLoc.dir)),...
+            blockObj.ManyAnimalsLinkedBlocks(ii).Meta.AnimalID);
+        BlockPath = fullfile(animalPath,blockObj.ManyAnimalsLinkedBlocks(ii).Name);
+        blockObj.ManyAnimalsLinkedBlocks(ii).updatePaths(BlockPath);
+    end
 end
 %% gui
-f = figure(...
-    'Toolbar','none',...
-    'MenuBar','none',...
-    'NumberTitle','off',...
-    'Units','pixels',...
-    'Position',[100 100 220 320],...
-    'UserData',blockObj);
-movegui(f,[100 -100]);
-for ii=1:numel(blockObj.ManyAnimalsLinkedBocks)
+
+for ii=1:numel(blockObj.ManyAnimalsLinkedBlocks)
     Tree(ii)= uiw.widget.Tree(...
-        'Parent',f,...
-        'Label', blockObj.ManyAnimalsLinkedBocks(ii).Meta.AnimalID, ...
+        'Parent',tabpanel,...
+        'Label', blockObj.ManyAnimalsLinkedBlocks(ii).Meta.AnimalID, ...
         'LabelLocation','top',...
         'LabelHeight',18,...
-        'Units', 'pixels', ...
-        'Position', [110*(ii-1)+10 60 100 260],...
-        'UserData',blockObj.ManyAnimalsLinkedBocks(ii),...
-        'SelectionType','discontiguous');
+        'Units', 'normalized', ...
+        'Position', [0.01+(ii-1)*0.5 0.01 0.45 0.95],...
+        'UserData',blockObj.ManyAnimalsLinkedBlocks(ii),...
+        'SelectionType','discontiguous',...
+        'ForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
+        'LabelForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
+        'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+        'TreePaneBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+        'TreeBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+        'SelectionBackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+        'SelectionForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
+    
     Tree(ii).Units = 'normalized';
     Tree(ii).RootVisible = false;
     Tree(ii).DndEnabled = true;
@@ -81,14 +126,20 @@ end
 f.Position(3)=110*(ii-1)+110;
 populateTree(Tree);
 
-btn = uicontrol('Style','pushbutton',...
-    'Position',[150 20 50 20],'Callback',{@(~,~,x)ApplyCallback(x),Tree},...
-    'String','Accept');
+if nargin < 2
+    btn = uicontrol('Style','pushbutton',...
+    'Position',[150 5 50 20],'Callback',{@(h,e,x) ApplyCallback(h,e,x),Tree},...
+    'String','Accept','Enable','off','Parent',f,...
+    'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+    'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
 end
 
-function ApplyCallback(Tree)
+end
+
+function ApplyCallback(h,e,Tree)
 answer = questdlg('Are you sure?','Confirm Changes','Yes','No','Yes to all','No');
 if strcmp(answer,'No'),return;end
+set(h,'Enable','off');
 for ii=1:numel(Tree)
     T = Tree(ii);
     for jj=1:numel(T.Root.Children) % Channels,Events,Streams
@@ -119,7 +170,7 @@ for ii=1:numel(Tree)
         for kk = allSrcBlck
             srcBlck = Tree(kk).UserData;
             srcStuffs = srcBlck.(field)(index(index(:,1)==kk,2));
-            trgtStuff = [trgtStuff srcStuffs];
+            trgtStuff = [trgtStuff;srcStuffs];
             if isprop(srcBlck,'Mask')&&strcmp(field,'Channels' )
                 srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
                 trgtMask = [trgtMask srcMask];
@@ -143,20 +194,20 @@ for ii=1:numel(Tree)
     
     fixPortsAndNumbers(bl);
     bl.ManyAnimals = false;
-    bl.ManyAnimalsLinkedBocks = jointBlock;
+    bl.ManyAnimalsLinkedBlocks = jointBlock;
 end
-
+populateTree(Tree);
 
 end
 
 function fixPortsAndNumbers(bl)
 %% port_number
-PN = [bl.Channels.port_number];
-OldPN = unique(PN);
-NewPn = 1:numel(OldPN);
-PN = num2cell((PN'==OldPN)*NewPn');
-[bl.Channels.port_number]=deal(PN{:});
-bl.NumProbes = numel(NewPn);
+ PN = [bl.Channels.port_number];
+ OldPN = unique(PN);
+% NewPn = 1:numel(OldPN);
+% PN = num2cell((PN'==OldPN)*NewPn');
+% [bl.Channels.port_number]=deal(PN{:});
+bl.NumProbes = numel(OldPN);
 bl.NumChannels = numel(bl.Channels);
 end
 
@@ -184,6 +235,9 @@ for kk = 1:numel(e.Source)
         dropOk = true;
         
     elseif strcmpi(e.DropAction,'move')
+        
+        btn = findobj(h.Parent.Parent.Parent,'Style','pushbutton','String','Accept');
+        set(btn,'Enable','on');
         
         NewNode = copy(srcNode);
         Node = srcNode;
@@ -223,15 +277,17 @@ end %function
 function populateTree(Tree)
 for tt=1:numel(Tree)
     bl = Tree(tt).UserData;
+    if ~isempty(Tree(tt).Root.Children),delete(Tree(tt).Root.Children);end
     %% channels
     Channels_T = uiw.widget.TreeNode('Name','Channels',...
         'Parent',Tree(tt).Root,'UserData',0);
     if numel(bl.Channels)>0
         ProbesNames = unique({bl.Channels.port_name});
-        ProbesNumbers = [bl.Channels.port_number];
+        AllProbesNumbers = [bl.Channels.port_number];
+        ProbesNumbers = unique(AllProbesNumbers);
         Chans = {bl.Channels.custom_channel_name};
-        for ii = unique(ProbesNumbers)
-            indx = find(ProbesNumbers == ii);
+        for ii = 1:bl.NumProbes
+            indx = find(AllProbesNumbers == ProbesNumbers(ii));
             Probe_T =  uiw.widget.TreeNode('Name',ProbesNames{ii},...
                 'Parent',Channels_T);
             for jj= indx

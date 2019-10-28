@@ -42,7 +42,7 @@ switch nargin
             Col = [18, 18, 18]./255;
          case {'surface','sfc',0.1}
             Col = [55, 56, 58]./255;
-         case {'onsurface','sfc',0.2}
+         case {'onsurface','onsfc',0.2}
             Col = [255, 255, 255]./255;
             
       end
