@@ -157,7 +157,7 @@ classdef Block < matlab.mixin.Copyable
       
       ManyAnimalsChar  % Character indicating the presence of many animals in the recording
       ManyAnimals = false; % flag for many animals contained in one block
-      ManyAnimalsLinkedBocks % Pointer to the splitted blocks. 
+      ManyAnimalsLinkedBlocks % Pointer to the splitted blocks. 
 %                 In conjuction with the multianimals flag keeps track of
 %                 where the data is temporary saved.
       

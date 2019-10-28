@@ -28,7 +28,12 @@ P = blockObj.Paths;
 
 % look for old data to move
 for jj=1:numel(OldFN)
-   
+   switch blockObj.FieldType{jj}
+       case 'Channels'
+       case 'Streams'
+       case 'Meta'
+   end
+%    [blockObj.(blockObj.FieldType{jj}).(OldFN{jj})].getPath
     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
     moveFiles(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info);
     
@@ -40,6 +45,7 @@ blockObj.save;
 flag = true;
 
 end
+
 function moveFiles(oldPath,NewPath)
  oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
     newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
@@ -60,6 +66,6 @@ function moveFiles(oldPath,NewPath)
             VarParts{hh} = source(ind(1,hh):ind(2,hh));
         end
         target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
-        [status,msg] = movefile(source,target);
+        [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
     end
 end
