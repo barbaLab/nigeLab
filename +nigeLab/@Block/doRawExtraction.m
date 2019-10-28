@@ -24,6 +24,25 @@ if ~genPaths(blockObj)
    return;
 end
 
+%% Check for MultiAnimals
+% More than one animal can be recorded simultaneously in one single file. 
+% Thi eventuality is explicitely handled here. The init process looks for a
+% special char string in the block ID (defined in defaults), if detected
+% the flag ManyAnimalsLinkedBlocks is set true. 
+% The function splitMultiAnimals prompts the user to assign channels and
+% other inputs to the different animals. When this is done two or ore child
+% blocks are initialized and stored in the ManyAnimalsLinkedBlocks field.
+ 
+% flag = [blockObj.ManyAnimals ~isempty(blockObj.ManyAnimalsLinkedBlocks)];
+% if all(flag == [false true]) % child block. Call rawExtraction on father
+%     blockObj.ManyAnimalsLinkedBlocks.doRawExtraction;
+% elseif all(flag == [true false]) % father block without childern. Call splitMultiAnimals
+%     blockObj.splitMultiAnimals;
+% elseif all(flag == [true true])  % father block with children. Go on with extraction and move files at the end
+%     ManyAnimals = true;
+% else
+% end
+%% extraction
 switch blockObj.RecType
    case 'Intan'
       flag = blockObj.intan2Block;
@@ -63,6 +82,8 @@ switch blockObj.RecType
          blockObj.RecType);
       return;
 end
+
+%%
 blockObj.updateStatus('Raw',true);
 blockObj.save;
 end

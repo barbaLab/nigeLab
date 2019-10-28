@@ -28,11 +28,16 @@ P = blockObj.Paths;
 
 % look for old data to move
 for jj=1:numel(OldFN)
-   
-   moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-   moveFiles(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info);
-   
-   
+   switch blockObj.FieldType{jj}
+       case 'Channels'
+       case 'Streams'
+       case 'Meta'
+   end
+%    [blockObj.(blockObj.FieldType{jj}).(OldFN{jj})].getPath
+    moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
+    moveFiles(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info);
+    
+    
 end
 
 blockObj.linkToData;
@@ -40,28 +45,28 @@ blockObj.save;
 flag = true;
 
 end
+
 function moveFiles(oldPath,NewPath)
-oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
-newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
-source_ = dir([oldPathSplit{1} '*']);
-numVarParts = numel(strfind(oldPath,'%'));
-for kk = 1:numel(source_)
-   source = fullfile(source_(kk).folder,source_(kk).name);
-   offs=1;
-   ind=[];VarParts={};
-   for hh=1:numVarParts
-      tmp = strfind(source(offs:end),oldPathSplit{hh}) + length(oldPathSplit{hh});
-      ind(1,hh) = offs -1 + tmp(1);
-      offs = ind(1,hh);
-      tmp = strfind(source(offs:end),oldPathSplit{hh+1})-1;
-      if isempty(tmp)
-         tmp=length(source(offs:end));
-      end
-      ind(2,hh) = offs -1 + tmp(1);
-      offs = ind(2,hh);
-      VarParts{hh} = source(ind(1,hh):ind(2,hh));
-   end
-   target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
-   [status,msg] = movefile(source,target);
+ oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
+    newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
+    source_ = dir([oldPathSplit{1} '*']);
+    numVarParts = numel(strfind(oldPath,'%'));
+    for kk = 1:numel(source_)
+        source = fullfile(source_(kk).folder,source_(kk).name);
+        offs=1;
+        ind=[];VarParts={};
+        for hh=1:numVarParts
+            tmp = strfind(source(offs:end),oldPathSplit{hh}) + length(oldPathSplit{hh});
+            ind(1,hh) = offs -1 + tmp(1);
+            offs = ind(1,hh);
+            tmp = strfind(source(offs:end),oldPathSplit{hh+1})-1;
+            if isempty(tmp),tmp=length(source(offs:end));end
+            ind(2,hh) = offs -1 + tmp(1);
+            offs = ind(2,hh);
+            VarParts{hh} = source(ind(1,hh):ind(2,hh));
+        end
+        target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
+        [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
+    end
 end
 end
