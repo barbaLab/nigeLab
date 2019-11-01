@@ -8,8 +8,13 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
-UseRemote = nigeLab.defaults.Queue('UseRemote');
-if ~genPaths(blockObj,blockObj.AnimalLoc,UseRemote)
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
+if ~genPaths(blockObj,blockObj.AnimalLoc)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
@@ -30,8 +35,7 @@ blockObj.checkMask;
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-fprintf(1,'\nApplying bandpass filtering... ');
-fprintf(1,'%.3d%%',0)
+reportProgress(blockObj,'Filtering',0);
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
 %    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
@@ -69,8 +73,8 @@ for iCh = blockObj.Mask
    end
    
    updateFlag(iCh) = true;
-
-   blockObj.notifyUser('doUnitFilter','Digital Filter',iCh,max(blockObj.Mask));
+   pct = floor(iCh/max(blockObj.Mask)*100);
+   reportProgress(blockObj,'Filtering',pct);
    
 end
 blockObj.updateStatus('Filt',updateFlag);
@@ -108,7 +112,7 @@ Xf   = 2 * X(end) - X((end - nEdge):(end - 1));
 [~, Zi] = nigeLab.utils.FilterX.FilterX(b, a, Xi, IC * Xi(end),true);   
 
 % Use the final conditions of the initial part for the actual signal:
-[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);              % "s"teady state
+[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);                    % "s"teady state
 Yf        = nigeLab.utils.FilterX.FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
 
 % Filter signal again in reverse order:

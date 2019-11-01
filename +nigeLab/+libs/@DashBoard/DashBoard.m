@@ -529,50 +529,60 @@ classdef DashBoard < handle
                   attachedFiles = ...
                      matlab.codetools.requiredFilesAndProducts(...
                      sprintf('%s.m',operation));
+                 
+                  p = nigeLab.utils.getNigelPath('UNC');
                   
-                  p = mfilename('fullpath');
-                  p = strsplit(p,filesep);
-                  p = strjoin(p(1:(end-3)),filesep);
+                  % programmatically create a worker config file.
+                  % TODO, maybe using a template? for the time being we
+                  % only need a addpath function
+                  configFilePath = fullfile(nigeLab.defaults.Tempdir,'configW.m');
+                  fid = fopen(configFilePath,'w');
+                  fprintf(fid,'addpath(''%s'');',p);
+                  fclose(fid);
+                  attachedFiles = [attachedFiles, {configFilePath}];
                   
-                  F = dir(fullfile(p,'+defaults','*.m'));
-                  for iF = 1:numel(F)
-                     attachedFiles = [attachedFiles, {fullfile(...
-                        F(iF).folder,F(iF).name)}]; %#ok<*AGROW>
+%                   F = dir(fullfile(p,'+defaults','*.m'));
+%                   for iF = 1:numel(F)
+%                      attachedFiles = [attachedFiles, {fullfile(...
+%                         F(iF).folder,F(iF).name)}]; %#ok<*AGROW>
+%                   end
+%                   
+%                   F = dir(fullfile(p,'@Block','*.m'));
+%                   for iF = 1:numel(F)
+%                      attachedFiles = [attachedFiles, {fullfile(...
+%                         F(iF).folder,F(iF).name)}]; 
+%                   end
+%                   
+%                   F = dir(fullfile(p,'@Block','private','*'));
+%                   F = F(~[F.isdir]);
+%                   for iF = 1:numel(F)
+%                      attachedFiles = [attachedFiles, {fullfile(...
+%                         F(iF).folder,F(iF).name)}]; 
+%                   end
+                  for jj=1:numel(attachedFiles)
+                      attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
                   end
-                  
-                  F = dir(fullfile(p,'@Block','*.m'));
-                  for iF = 1:numel(F)
-                     attachedFiles = [attachedFiles, {fullfile(...
-                        F(iF).folder,F(iF).name)}]; 
-                  end
-                  
-                  F = dir(fullfile(p,'@Block','private','*'));
-                  F = F(~[F.isdir]);
-                  for iF = 1:numel(F)
-                     attachedFiles = [attachedFiles, {fullfile(...
-                        F(iF).folder,F(iF).name)}]; 
-                  end
-                  
                   nPars = nigeLab.defaults.Notifications();
                   n = min(nPars.NMaxNameChars,numel(target.Name));
                   name = target.Name(1:n);
                   name = strrep(name,'_','-');
                   
-                  tagStr = sprintf(nPars.TagString,operation,name,nPars.TagDelim,0);
-                  obj.job{idx} = createCommunicatingJob(myCluster, ...
+                  tagStr = reportProgress(target,'Queuing',0);
+                  job = createCommunicatingJob(myCluster, ...
                      'AttachedFiles', attachedFiles, ...
                      'Name', [operation target.Name], ...
                      'NumWorkersRange', qParams.NWorkerMinMax, ...
                      'Type','pool', ...
                      'UserData',idx,...
                      'Tag',tagStr);
-
-                  obj.remoteMonitor(sprintf('%s - %s',name,operation),idx);
-                  obj.jobIsRunning(idx) = true;
-                  createTask(obj.job{idx},operation,0,{target});
-                  submit(obj.job{idx});
-                  start(obj.jobProgressBar{idx}.progtimer);
+                obj.remoteMonitor.addBar(tagStr,job);
+%                   obj.remoteMonitor(sprintf('%s - %s',name,operation),idx);
+%                   obj.jobIsRunning(idx) = true;
+                  createTask(job,operation,0,{target});
+                  submit(job);
+%                   start(obj.jobProgressBar{idx}.progtimer);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
+                  
                else
                   % otherwise run single operation
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...

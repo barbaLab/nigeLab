@@ -9,11 +9,18 @@ function flag = doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
-%    error('Something went wrong when generating paths for extraction.');
 end
+
+
 
 if ~blockObj.updateParams('LFP')
    warning('Something went wrong setting the LFP parameters.');

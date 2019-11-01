@@ -13,12 +13,17 @@ function flag = doRawExtraction(blockObj)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
-flag = false; 
+flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-   
+
 switch blockObj.RecType
    case 'Intan'
       flag = blockObj.intan2Block;

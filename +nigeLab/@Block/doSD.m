@@ -12,6 +12,12 @@ function flag = doSD(blockObj)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;

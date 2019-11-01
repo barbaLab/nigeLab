@@ -9,10 +9,18 @@ function flag = doReReference(blockObj)
 
 %% CHECK FOR PROBLEMS
 flag = false; % Create flag for reporting successful execution
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
+
+
 
 if isempty(blockObj.Mask) % need to set the mask before doing CAR
    warning(sprintf(['Channel Mask (blockObj.Mask) has not been set yet.\n' ...

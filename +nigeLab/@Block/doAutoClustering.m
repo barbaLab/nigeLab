@@ -1,5 +1,11 @@
 function flag = doAutoClustering(blockObj,chan,unit)
 flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 par = nigeLab.defaults.SPC;
 %% runs automatic clustering algorithms
 switch nargin
