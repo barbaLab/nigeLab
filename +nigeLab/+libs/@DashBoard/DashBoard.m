@@ -5,17 +5,18 @@ classdef DashBoard < handle
       nigelGui
       Children
       Tank
+      remoteMonitor
    end
    
    properties(Access=private)
       job
       jobIsRunning = false;
-      jobProgressBar
+      
    end
    
    methods
       function obj = DashBoard(tankObj)
-         
+        
          %% Defaults Values
          bCol = nigeLab.defaults.nigelColors('background');
          PBCol = nigeLab.defaults.nigelColors('surface'); % Panel background colors
@@ -30,7 +31,8 @@ classdef DashBoard < handle
             'ToolBar','none',...
             'MenuBar','none');
          loadPanels(obj)
-         
+         obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
+
          %% Create Tank Tree
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
@@ -397,10 +399,10 @@ classdef DashBoard < handle
                for ii = 1:size(SelectedItems,1)
                   B = [B, obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2))]; %#ok<AGROW>
                end
-               if ~obj.initJobs(B)
-                  fprintf(1,'Jobs are still running. Aborted.\n');
-                  return;
-               end
+%                if ~obj.initJobs(B)
+%                   fprintf(1,'Jobs are still running. Aborted.\n');
+%                   return;
+%                end
                for ii=1:numel(B)
                   obj.qOperations(m.Label,B(ii),ii)
                end
@@ -476,14 +478,15 @@ classdef DashBoard < handle
          if nargin < 4
             idx = 1;
          end 
+        
          
          % Want to split this up based on target type so that we can
          % manage Job/Task creation depending on the input target class
          switch class(target)
             case 'nigeLab.Tank'
-               if ~obj.initJobs(target)
-                  return;
-               end
+%                if ~obj.initJobs(target)
+%                   return;
+%                end
                
                for ii = 1:numel(target.Animals)
                   for ik = 1:target.Animals(ii).getNumBlocks
@@ -494,19 +497,19 @@ classdef DashBoard < handle
                end
                
             case 'nigeLab.Animal'
-               if ~obj.initJobs(target)
-                  return;
-               end
-               
+%                if ~obj.initJobs(target)
+%                   return;
+%                end
+%                
                for ii = 1:numel(target.Blocks)
                   qOperations(obj,operation,target.Blocks(ii),ii);
                end
                
             case 'nigeLab.Block'
-               if obj.jobIsRunning(idx)
-                  fprintf(1,'Jobs are still running. Aborted.\n');
-                  return;
-               end
+%                if obj.jobIsRunning(idx)
+%                   fprintf(1,'Jobs are still running. Aborted.\n');
+%                   return;
+%                end
                
                qParams = nigeLab.defaults.Queue;
                if (license('test','Distrib_Computing_Toolbox')) && ...
@@ -596,60 +599,6 @@ classdef DashBoard < handle
          drawnow;
          
       end
-            
-      % Function to attach to timers that monitor job progress, which
-      % will update with the TimerFcn period (default: 0.1 sec)
-      function updateRemoteMonitor(obj,src,~)
-         idx = src.UserData;
-         pct = nigeLab.utils.jobTag2Pct(obj.job{idx});
-         
-         % Get the offset of the progressbar from the left of the panel
-         xStart = obj.jobProgressBar{idx}.progpatch.XData(1);
-         
-         % Compute how far the bar should be filled based on the percent
-         % completion, accounting for offset from left of panel
-         xStop = xStart + (1-xStart) * (pct/100);
-         
-         % Redraw the patch that colors in the progressbar
-         obj.jobProgressBar{idx}.progpatch.XData = ...
-            [xStart, xStop, xStop, xStart];
-         obj.jobProgressBar{idx}.progtext.String = ...
-            sprintf('%.3g%%',pct);
-         drawnow;
-         
-         % If the job is completed, then run the completion method
-         if pct == 100
-            obj.completeRemoteMonitor(idx);
-         end
-      end
-      
-      
-      % Once job reaches 100% complete, delete existing
-      function completeRemoteMonitor(obj,idx)
-         % Stop the timer and wait briefly
-         stop(obj.jobProgressBar{idx}.progtimer);
-%          pause(2);     
-%          % Delete all the graphics associated with the progressbar, since
-%          % it has been completed.
-%          f = fieldnames(obj.jobProgressBar{idx});
-%          for ii = 1:numel(f)
-%             if isvalid(obj.jobProgressBar{idx}.(f{ii}))
-%                delete(obj.jobProgressBar{idx}.(f{ii}));
-%             end
-%          end        
-         
-         obj.jobIsRunning(idx) = false;
-         
-%          % Remove the progressbar from the parent panel.
-%          qPanel = obj.getChildPanel('Queue');
-%          cname = sprintf('ProgressBar_%02d',idx);
-%          qPanel.removeChild(cname);
-         
-         % Play a sound to indicate it has been completed.
-         nigeLab.sounds.play('bell',1.5);
-      end
-      
-      remoteMonitor(obj,jobName,idx);
    end
 end
 
