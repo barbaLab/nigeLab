@@ -134,7 +134,9 @@ for f = fields
                'access','w',...
                'class','single');
             Files.(this){iCh} = makeDiskFile(diskPars);
-            notifyUser(blockObj,this,'info',iCh,nCh.(this))
+            pct = floor(iCh/nCh.(this) * 100);
+            reportProgress(blockObj, 'Chan info', pct)
+%             notifyUser(blockObj,this,'info',iCh,nCh.(this))
          end
       case 'Events'
          fName = sprintf(strrep(paths.(this).file,'\','/'), this);
@@ -374,9 +376,7 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
    pct = floor(100 * (progress / info.NumDataBlocks));
-   if ~floor(mod(pct,5)) % only increment counter by 5%
-      fprintf(1,'%.3d%% Blocks completed.\n',floor(pct));
-   end
+   reportProgress(blockObj,'Extracting',pct);
 
 end
 fprintf(1,newline);
@@ -405,7 +405,8 @@ fclose(fid);
 
 for iCh = 1:blockObj.NumChannels
    blockObj.Channels(iCh).Raw = lockData(Files.Raw{iCh});
-%    pct = floor(iCh/blockObj.NumChannels*100);
+   pct = floor(iCh/blockObj.NumChannels*100);
+   reportProgress(blockObj,'Linking data',pct);
 %    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
 %    notify(blockObj,channelCompleteEvent,evtData);
 end
