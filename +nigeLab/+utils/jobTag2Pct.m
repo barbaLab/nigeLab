@@ -1,4 +1,4 @@
-function pct = jobTag2Pct(jobObject)
+function [pct,str] = jobTag2Pct(jobObject)
 %% JOBTAG2PCT  Convert tagged CJS communicating job tag to completion %
 %
 %  pct = JOBTAG2PCT(jobObject);
@@ -28,5 +28,5 @@ tmp = strsplit(tagString,{TagDelim,'%'});
 
 % The second part should be the completion percentage
 pct = str2double(tmp{2});
-
+str = tmp{1};
 end
