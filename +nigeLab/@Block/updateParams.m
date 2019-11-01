@@ -29,20 +29,23 @@ ConstructProps = {'Block','Shortcuts','Animal','Tank'};
 PropsToSkip ={'nigelColors','Tempdir','Notifications'};
 
 % Make sure a valid parameter type is selected:
-tmp = what('+nigeLab/+defaults');
-tmp = cellfun(@(x)x(1:(end-2)),tmp(1).m,'UniformOutput',false);
+tmp = dir(fullfile(nigeLab.utils.getNigelPath('UNC'),'+nigeLab','+defaults','*.m'));
+tmp = cellfun(@(x)x(1:(end-2)),{tmp.name},'UniformOutput',false);
 
 % The following properties do not apply or should be set in constructor:
 tmp = setdiff(tmp,[PropsToSkip,ConstructProps]);
 
 if nargin < 2 % if not supplied, select from list...
+
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
 elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
-   paramType = tmp;
+
+    paramType = tmp;
    flag = blockObj.updateParams(paramType);
    return;
 elseif iscell(paramType) % Use recursion to run if cell array is given
+
    %       flag = false(size(paramType));
    %       for i = 1:numel(paramType)
    %          flag(i) = blockObj.updateParams(paramType{i});
@@ -58,7 +61,7 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
    flag = blockObj.updateParams(paramType{1}) && blockObj.updateParams(paramType(2:N));
    return;
 elseif any(ismember(paramType,ConstructProps))
-   ... Right now no action is required here
+     ... Right now no action is required here
       [pars,~] = nigeLab.defaults.(paramType)();
    allNames = fieldnames(pars);
    allNames = reshape(allNames,1,numel(allNames));

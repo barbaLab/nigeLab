@@ -1,4 +1,4 @@
-function paths = getFolderTree(blockObj,paths,useRemote)
+function paths = getFolderTree(blockObj,paths)
 %% GETFOLDERTREE  Returns paths struct that parses folder names
 %
 %  paths = GETFOLDERTREE(blockObj);
@@ -39,19 +39,9 @@ if nargin < 2
    paths = struct(); 
 end
 
-if nargin < 3
-   useRemote = false;
-end
-
 blockObj.updateParams('Block');
 F = fieldnames(blockObj.BlockPars);
 del = blockObj.Delimiter;
-
-if useRemote
-   UNCPath = nigeLab.defaults.Queue('UNCPath');
-   paths.SaveLoc.q = [UNCPath.SaveLoc ...
-      paths.SaveLoc.dir((find(paths.SaveLoc.dir == filesep,1,'first')+1):end)];
-end
 
 for iF = 1:numel(F) % For each field, update field type
    p = blockObj.BlockPars.(F{iF});
@@ -64,9 +54,9 @@ for iF = 1:numel(F) % For each field, update field type
    % Set folder name for this particular Field
    paths.(F{iF}).dir = fullfile(paths.SaveLoc.dir,...
       [p.Folder]);
-   if useRemote
-      paths.(F{iF}).q = fullfile(paths.Saveloc.q, [p.Folder]);
-   end
+%    if useRemote
+%       paths.(F{iF}).q = fullfile(paths.Saveloc.q, [p.Folder]);
+%    end
    
    % Parse for both old and new versions of file naming convention
    
@@ -80,11 +70,11 @@ for iF = 1:numel(F) % For each field, update field type
    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
    paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[p.Info]);
    
-   if useRemote
-      paths.(F{iF}).qfile = fullfile(paths.(F{iF}).q,[p.File]);
-      paths.(F{iF}).qold = getOldFiles(p,paths.(F{iF}),'q');
-      paths.(F{iF}).qinfo = fullfile(paths.(F{iF}).q,[p.Info]);
-   end
+%    if useRemote
+%       paths.(F{iF}).qfile = fullfile(paths.(F{iF}).q,[p.File]);
+%       paths.(F{iF}).qold = getOldFiles(p,paths.(F{iF}),'q');
+%       paths.(F{iF}).qinfo = fullfile(paths.(F{iF}).q,[p.Info]);
+%    end
 end
 end
 

@@ -8,6 +8,7 @@ pathParts = strsplit(p,filesep);
 if isempty(pathParts{1}),uncPath=p;return;end
 switch isunix
     case true  % TODO. linux or mac.
+        
        fprintf('TODO.')
     case false
         attempt = getUncPathFromMappedDrive(pathParts{1});

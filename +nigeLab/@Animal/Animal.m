@@ -65,7 +65,7 @@ classdef Animal < handle
                error('%s is not a valid block directory.',animalObj.RecDir);
             end
          end
-         
+        animalObj.RecDir = nigeLab.utils.getUNCPath(animalObj.RecDir);
          %% INITIALIZE ANIMAL OBJECT
          animalObj.init;
        

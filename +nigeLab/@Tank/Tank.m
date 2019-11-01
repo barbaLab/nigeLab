@@ -108,7 +108,7 @@ classdef Tank < handle
                error('%s is not a valid block directory.',tankObj.RecDir);
             end
          end
-         
+         tankObj.RecDir = nigeLab.utils.getUNCPath(tankObj.RecDir);
          %% INITIALIZE TANK OBJECT
          if ~tankObj.init
             error('Could not initialize TANK object.');

@@ -1,4 +1,4 @@
-function flag = genPaths(blockObj,animalLoc,useRemote)
+function flag = genPaths(blockObj,animalLoc)
 %% GENPATHS    Set some useful path variables to file locations
 %
 %  flag = GENPATHS(blockObj);
@@ -27,13 +27,13 @@ if (nargin > 1)
 %    paths.Animal_idx = 1;
 end
 
-if nargin < 3
-   useRemote = false;
-end
+% if nargin < 3
+%    useRemote = false;
+% end
 
 % paths.Animal.dir = blockObj.AnimalLoc;
 paths.SaveLoc.dir = fullfile(blockObj.AnimalLoc,blockObj.Name);
-paths = blockObj.getFolderTree(paths,useRemote);
+paths = blockObj.getFolderTree(paths);
 F=fields(paths);
 for ff=1:numel(F)
    if ~exist(paths.(F{ff}).dir,'dir')

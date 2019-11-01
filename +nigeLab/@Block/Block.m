@@ -201,8 +201,8 @@ classdef Block < handle
          if isempty(blockObj.RecFile)
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
-            blockObj.RecFile = fullfile(path,file);
-            if blockObj.RecFile == 0
+            blockObj.RecFile =(fullfile(path,file));
+            if all(blockObj.RecFile == [0 '\' 0])
                error('No block selected. Object not created.');
             end
          else
@@ -210,7 +210,7 @@ classdef Block < handle
                error('%s is not a valid block file.',blockObj.RecFile);
             end
          end
-         
+         blockObj.RecFile =nigeLab.utils.getUNCPath(blockObj.RecFile);
          %% INITIALIZE BLOCK OBJECT
          if ~blockObj.init()
             error('Block object construction unsuccessful.');
@@ -380,6 +380,7 @@ classdef Block < handle
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
+      str = reportProgress(blockObj, string, pct ) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
    
    end
