@@ -41,10 +41,10 @@ classdef remoteMonitor < handle
             end
             
             % Define figure size and axes padding for the single bar case
-            obj.qPanel.Units = 'pixels';
-            obj.width = obj.qPanel.InnerPosition(3)*0.8;
-            obj.hoff = obj.qPanel.InnerPosition(3)*0.05;
-            obj.voff = obj.qPanel.InnerPosition(4)*0.88;
+            pos = obj.qPanel.getPixelPosition();
+            obj.width = pos(3)*0.8;
+            obj.hoff = pos(3)*0.05;
+            obj.voff = pos(4)*0.88;
             
             obj.pars = nigeLab.defaults.Notifications();
             

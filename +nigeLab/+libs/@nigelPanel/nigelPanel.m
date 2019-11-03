@@ -186,6 +186,10 @@ classdef nigelPanel < handle
          end
       end
       
+      function pos = getPixelPosition(obj)
+          pos = getpixelposition(obj.panel);
+      end
+      
       function UnitsChanged(obj, src, Event)
          switch Event.AffectedObject.Units
             case 'normalized'
