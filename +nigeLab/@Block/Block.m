@@ -221,6 +221,15 @@ classdef Block < handle
          %% SAVE  Overload save of BLOCK
          save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
       end
+      
+      function reload(blockObj)
+          obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
+          ff=fieldnames(obj.blockObj);
+          for f=1:numel(ff)
+              blockObj.(ff{f}) = obj.blockObj.(ff{f});
+          end
+      end
+      
 %       function disp(blockObj)
 %          %% DISP  Overload display of BLOCK contents
 %          if any([blockObj.Verbose])

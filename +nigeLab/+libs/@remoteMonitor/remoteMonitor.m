@@ -16,6 +16,10 @@ classdef remoteMonitor < handle
         pars
     end
     
+    events
+       jobCompleted 
+    end
+    
     methods
         function obj = remoteMonitor(panel)
             
@@ -42,7 +46,7 @@ classdef remoteMonitor < handle
             
             % Define figure size and axes padding for the single bar case
             pos = obj.qPanel.getPixelPosition();
-            obj.width = pos(3)*0.8;
+            obj.width = pos(3)*0.85;
             obj.hoff = pos(3)*0.05;
             obj.voff = pos(4)*0.88;
             
@@ -60,9 +64,11 @@ classdef remoteMonitor < handle
                   'progaxes'
                   'progpatch'
                   'progtext'
+                  'statustext'
                   'proglabel'
                   'X'
-                  'containerPanel'}';
+                  'containerPanel'
+                  'UserData'}';
               cc{2,1}={};
               obj.bars = struct(cc{:});
         end
@@ -73,12 +79,17 @@ classdef remoteMonitor < handle
             delete(obj);
         end
         
-        function addBar(monitorObj,name,job)
+        function bar = addBar(monitorObj,name,job,UserData)
             nBars = numel(monitorObj.bars);
             idx = nBars+1;
             
             bar.idx = idx;
             bar.job = job;
+            
+            if nargin < 4
+                UserData = [];
+            end
+            bar.UserData=UserData;
             
             % Set starting time reference
             if ~isfield(bar, 'starttime') || isempty(bar.starttime)
@@ -113,7 +124,14 @@ classdef remoteMonitor < handle
                 'FontUnits', 'Normalized', ...
                 'FontSize', 0.7,...
                 'FontName','Droid Sans');            
-            set(bar.progtext, 'String', '0%');
+            set(bar.progtext, 'String', '0%');    
+            
+            bar.statustext = text(bar.progaxes,0.52, 0.5, '', ...
+                'HorizontalAlignment', 'Left', ...
+                'FontUnits', 'Normalized', ...
+                'FontSize', 0.7,...
+                'FontName','Droid Sans');            
+            set(bar.progtext, 'String', '');
             
             bar.proglabel = text(bar.progaxes,0.01, 0.5, '', ...
                 'HorizontalAlignment', 'Left', ...
@@ -195,7 +213,7 @@ classdef remoteMonitor < handle
                     [xStart, xStop, xStop, xStart];
                 bar.progtext.String = ...
                     sprintf('%.3g%%',pct);
-                bar.proglabel.String = str;
+%                 bar.proglabel.String = str;
                 drawnow;
                 
                 % If the job is completed, then run the completion method
@@ -207,6 +225,10 @@ classdef remoteMonitor < handle
             catch
                 ...
             end
+        end
+        
+        function updateStatus(moitorObj,bar,st)
+             set(bar.statustext, 'String', st);
         end
         
         function deleteBar(monitorObj,bar)
@@ -230,9 +252,11 @@ classdef remoteMonitor < handle
             end
         end
         
-        function barCompleted(monitorObj)
+        function barCompleted(monitorObj,bar)
             nigeLab.sounds.play('bell',1.5);
- 
+            evtData = nigeLab.evt.jobCompleted(bar);
+            notify(monitorObj,'jobCompleted',evtData);
+            monitorObj.updateStatus(bar,'Done')
         end
         
 

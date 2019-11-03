@@ -15,7 +15,7 @@ classdef DashBoard < handle
    end
    
    methods
-      function obj = DashBoard(tankObj)
+          function obj = DashBoard(tankObj)
         
          %% Defaults Values
          bCol = nigeLab.defaults.nigelColors('background');
@@ -32,7 +32,7 @@ classdef DashBoard < handle
             'MenuBar','none');
          loadPanels(obj)
          obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
-
+         addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats)
          %% Create Tank Tree
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
@@ -355,7 +355,7 @@ classdef DashBoard < handle
       end
       
       function plotRecapCircle(obj,Status)
-         % What does this do?
+        %% plots the overview of the performed operations inside the Stats panel 
          
          ax = obj.Children{2}.Children{2};  % what is this axes?
          cla(ax);
@@ -382,30 +382,40 @@ classdef DashBoard < handle
          ax.XAxis.TickLabelRotation = 30;
       end
       
+      function refreshStats(obj,src,evt)
+          bar = evt.bar;
+          idx = bar.UserData;
+          obj.Tank.Animals(idx(1)).Blocks(idx(2)).reload;
+          pan = obj.getChildPanel('Overview');
+          Tr = pan.Children{1};
+          Nodes.Nodes = Tr.SelectedNodes;
+          Nodes.AddedNodes = Tr.SelectedNodes;
+          obj.treeSelectionFcn(Tr, Nodes)
+      end
+      
+      
       function uiCMenuClick(obj,m,~,Tree)
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
          switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
             case 0  % tank
                obj.qOperations(m.Label,obj.Tank)
             case 1  % animal
-               n = 0;
                for ii=1:size(SelectedItems,1)
                   A = obj.Tank.Animals(SelectedItems(ii));
-                  obj.qOperations(m.Label,A,ii+n)
-                  n = n + obj.Tank.Animals(SelectedItems(ii)).getNumBlocks;
+                  obj.qOperations(m.Label,A,SelectedItems(ii))
                end
             case 2  % block
-               B = [];
                for ii = 1:size(SelectedItems,1)
-                  B = [B, obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2))]; %#ok<AGROW>
+                  B = obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2)); %#ok<AGROW>
+                  obj.qOperations(m.Label,B(ii),SelectedItems(ii,:));
                end
 %                if ~obj.initJobs(B)
 %                   fprintf(1,'Jobs are still running. Aborted.\n');
 %                   return;
 %                end
-               for ii=1:numel(B)
-                  obj.qOperations(m.Label,B(ii),ii)
-               end
+%                for ii=1:numel(B)
+%                   obj.qOperations(m.Label,B(ii),ii)
+%                end
          end
       end
       
@@ -476,7 +486,7 @@ classdef DashBoard < handle
          % job completion the corresponding "jobIsRunning" property array
          % element can be updated appropriately.
          if nargin < 4
-            idx = 1;
+            idx = [1 1];
          end 
         
          
@@ -491,8 +501,8 @@ classdef DashBoard < handle
                for ii = 1:numel(target.Animals)
                   for ik = 1:target.Animals(ii).getNumBlocks
                      qOperations(obj,operation,...
-                        target.Animals(ii).Blocks(ik),idx);
-                     idx = idx + 1;
+                        target.Animals(ii).Blocks(ik),[ii ik]);
+                     
                   end
                end
                
@@ -502,7 +512,7 @@ classdef DashBoard < handle
 %                end
 %                
                for ii = 1:numel(target.Blocks)
-                  qOperations(obj,operation,target.Blocks(ii),ii);
+                  qOperations(obj,operation,target.Blocks(ii),[idx ii]);
                end
                
             case 'nigeLab.Block'
@@ -578,9 +588,20 @@ classdef DashBoard < handle
                      'Type','pool', ...
                      'UserData',idx,...
                      'Tag',tagStr);
-                obj.remoteMonitor.addBar(tagStr,job);
+                 
+                 BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 BlName = BlName(1:min(end,25));
+                 barName = sprintf('%s %s',BlName,operation(3:end));
+                 bar = obj.remoteMonitor.addBar(barName,job,idx);
 %                   obj.remoteMonitor(sprintf('%s - %s',name,operation),idx);
 %                   obj.jobIsRunning(idx) = true;
+                obj.remoteMonitor.updateStatus(bar,'Pending')
+
+                  job.FinishedFcn = {@(~,~,b)obj.remoteMonitor.barCompleted(b),bar};
+%                 updating ststus labels
+                  job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing'),bar};
+                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(bar,'Running'),bar};
+
                   createTask(job,operation,0,{target});
                   submit(job);
 %                   start(obj.jobProgressBar{idx}.progtimer);
