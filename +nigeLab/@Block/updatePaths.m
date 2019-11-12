@@ -7,14 +7,14 @@ function flag = updatePaths(blockObj,SaveLoc)
 % object is used. The script detects any variablke part of the name (eg %s)
 % and replicates it in the new file. This means that if the old file had
 % two variable parts, typically probe and channels, the new one must have
-% two varible parts as well. 
+% two varible parts as well.
 %
-% This is a problem only when changing the naming in the defaults params. 
+% This is a problem only when changing the naming in the defaults params.
 
 flag = false;
 
 if nargin ==2
-    blockObj.Paths.SaveLoc = SaveLoc;
+   blockObj.Paths.SaveLoc = SaveLoc;
 end
 
 % Get old paths
@@ -68,4 +68,5 @@ function moveFiles(oldPath,NewPath)
         target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
         [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
     end
+end
 end

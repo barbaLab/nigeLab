@@ -9,14 +9,23 @@ function flag = doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
 
+
+
 if ~blockObj.updateParams('LFP')
    warning('Something went wrong setting the LFP parameters.');
    return;
+%    error('Something went wrong setting the LFP parameters.');
 end
 
 DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
@@ -38,19 +47,16 @@ for iCh=blockObj.Mask
    
    % Assign to diskData and protect it:
    fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
-   blockObj.Channels(iCh).LFP=nigeLab.libs.DiskData(fType,...
+   blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
    
-   pct = 100 * (iCh / blockObj.NumChannels);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
+   blockObj.notifyUser('doLFPExtraction','Decimation',iCh,max(blockObj.Mask));
+
 end
 blockObj.updateStatus('LFP',true);
 blockObj.save;
 flag = true;
-notify(blockObj,processCompleteEvent);
 end
 
 function fName = parseFileName(blockObj,channel)

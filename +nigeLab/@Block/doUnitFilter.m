@@ -4,15 +4,17 @@ function flag = doUnitFilter(blockObj)
 %  blockObj = nigeLab.Block;
 %  doUnitFilter(blockObj);
 %
-%  Note: added varargin so you can pass <'NAME', value> input argument
-%        pairs to specify adhoc filter parameters if desired, rather than
-%        modifying the defaults.Filt source code.
-%
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
-if ~genPaths(blockObj)
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
+if ~genPaths(blockObj,blockObj.AnimalLoc)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
@@ -26,16 +28,21 @@ end
 
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
+%% ENSURE MASK IS ACCURATE
+blockObj.checkMask;
+
 %% DESIGN FILTER
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-fprintf(1,'\nApplying bandpass filtering... ');
-fprintf(1,'%.3d%%',0)
+reportProgress(blockObj,'Filtering',0);
 updateFlag = false(1,blockObj.NumChannels);
 for iCh = blockObj.Mask
-   if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
-      error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
+%    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
+%       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
+%    end
+   if blockObj.Channels(iCh).Raw.length <= nfact
+      continue; % It should leave the updateFlag as false for this channel
    end
    if ~pars.STIM_SUPPRESS
       % Filter and and save amplifier_data by probe/channel
@@ -46,8 +53,8 @@ for iCh = blockObj.Mask
          pNum, chNum);
       
       % bank of filters. This is necessary when the designed filter is high
-      % order SOS. Otherwise L should be one. See the filter difinition
-      % params in defualt.Filt
+      % order SOS. Otherwise L should be one. See the filter definition
+      % params in default.Filt
       data = blockObj.Channels(iCh).Raw(:);
       for ii=1:L
          data = (ff(b,a,data,nfact,zi));
@@ -66,24 +73,14 @@ for iCh = blockObj.Mask
    end
    
    updateFlag(iCh) = true;
-   pct = floor(100 * (iCh / blockObj.NumChannels));
-   if ~mod(pct,5) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   end
-%    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-%    notify(blockObj,channelCompleteEvent,evtData);
-   
-   if ~isempty(blockObj.UserData)
-      send(blockObj.UserData.D,...
-         struct('pct',pct,'idx',blockObj.UserData.idx));
-   end
+   pct = floor(iCh/max(blockObj.Mask)*100);
+   reportProgress(blockObj,'Filtering',pct);
    
 end
-fprintf(1,'\b\b\b\bDone.\n');
 blockObj.updateStatus('Filt',updateFlag);
 flag = true;
 blockObj.save;
-notify(blockObj,processCompleteEvent);
+
 end
 
 function Y = ff(b,a,X,nEdge,IC)
@@ -115,7 +112,7 @@ Xf   = 2 * X(end) - X((end - nEdge):(end - 1));
 [~, Zi] = nigeLab.utils.FilterX.FilterX(b, a, Xi, IC * Xi(end),true);   
 
 % Use the final conditions of the initial part for the actual signal:
-[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);              % "s"teady state
+[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);                    % "s"teady state
 Yf        = nigeLab.utils.FilterX.FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
 
 % Filter signal again in reverse order:

@@ -40,19 +40,19 @@ if isfield(qParams,'ClusterList')
    ClusterList = qParams.ClusterList;
 end
 
-nWorkerMinMax = [1, 4];            % Min and Max # workers for job
-if isfield(qParams,'nWorkerMinMax')
-   nWorkerMinMax = qParams.nWorkerMinMax;
+NWorkerMinMax = [1, 4];            % Min and Max # workers for job
+if isfield(qParams,'NWorkerMinMax')
+   NWorkerMinMax = qParams.NWorkerMinMax;
 end
 
-waitTimeSec = 15;                  % Wait between loops (seconds)
-if isfield(qParams,'waitTimeSec')
-   waitTimeSec = qParams.waitTimeSec;
+WaitTimeSec = 15;                  % Wait between loops (seconds)
+if isfield(qParams,'WaitTimeSec')
+   WaitTimeSec = qParams.WaitTimeSec;
 end
 
-initTimeSec = 60;                  % Wait before loop (seconds)
-if isfield(qParams,'initTimeSec')
-   initTimeSec = qParams.initTimeSec;
+InitTimeSec = 60;                  % Wait before loop (seconds)
+if isfield(qParams,'InitTimeSec')
+   InitTimeSec = qParams.InitTimeSec;
 end
 
 %% INFINITELY LOOP UNTIL A CLUSTER IS ASSIGNED
@@ -63,32 +63,32 @@ if nargin < 1
    for iC = 1:N
       myCluster{iC,1} = parcluster(ClusterList{iC}); % get MJS objects
    end
-   pause(initTimeSec); % Make sure it has time to process previous commands
+   pause(InitTimeSec); % Make sure it has time to process previous commands
    
    AssignedCluster = false; % Just to keep the infinite loop going
    while ~AssignedCluster
       for iC = 1:N
          % All logic reduced to 1 line:
-         if myCluster{iC,1}.NumIdleWorkers >= min(nWorkerMinMax)
+         if myCluster{iC,1}.NumIdleWorkers >= min(NWorkerMinMax)
             myCluster = myCluster{iC,1};
             AssignedCluster = true; % Actually unnecessary; for clarity
             break;
          end
-         pause(waitTimeSec); % I think this reduces the loop processing burden
+         pause(WaitTimeSec); % I think this reduces the loop processing burden
       end
    end
    
 else % Otherwise just make sure there are idle workers to assign
    Cluster = parcluster(Cluster);
-   pause(initTimeSec);
+   pause(InitTimeSec);
    
    while true
       % All logic reduced to 1 line:
-      if Cluster.NumIdleWorkers >= min(nWorkerMinMax)
+      if Cluster.NumIdleWorkers >= min(NWorkerMinMax)
          myCluster = Cluster;
          break;
       end
-      pause(waitTimeSec); % I think this reduces the loop processing burden
+      pause(WaitTimeSec); % I think this reduces the loop processing burden
    end
    
 end

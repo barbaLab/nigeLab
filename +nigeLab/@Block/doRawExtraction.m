@@ -13,7 +13,12 @@ function flag = doRawExtraction(blockObj)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
-flag = false; 
+flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
@@ -56,8 +61,10 @@ switch blockObj.RecType
    case 'TDT'
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
-      nigeLab.utils.cprintf('UnterminatedStrings','%s extraction is still WIP. It might take a while.',...
-         blockObj.RecType);
+      fprintf(1,' \n');
+      nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
+      nigeLab.utils.cprintf('Magenta-', 'WIP\n');
+      nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
       flag = tdt2Block(blockObj);
       
    case 'mat'
@@ -79,5 +86,4 @@ end
 %%
 blockObj.updateStatus('Raw',true);
 blockObj.save;
-notify(blockObj,processCompleteEvent);
 end

@@ -17,7 +17,7 @@ elseif isempty(animalLoc) % if nargin is < 2, will throw error if above
 else
    tmp = animalLoc;
 end
-
+tmp = nigeLab.utils.getUNCPath(tmp);
 %% Abort if cancel was clicked, otherwise set it
 if tmp == 0
    disp('Save location selection canceled manually.');
