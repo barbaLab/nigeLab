@@ -521,24 +521,31 @@ classdef DashBoard < handle
 %                   return;
 %                end
                
+% checking licences and parallel flags to determine where to execute the
+% computation. Three possible outcomes:
+% local - Serialized
+% local - Distributed
+% remote - Distributed
                qParams = nigeLab.defaults.Queue;
-               if (license('test','Distrib_Computing_Toolbox')) && ...
-                     (qParams.UseParallel)
-                  
+               
+               
+               if qParams.UseParallel...              check user preference
+                       && license('test','Distrib_Computing_Toolbox')... check if toolbox is licensed
+                       && ~isempty(ver('distcomp'))...           and check if it's installed
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Configure remote or local cluster for correct parallel computation
                   fprintf(1,'Initializing job: %s - %s\n',operation,target.Name);
-                  if isfield(qParams,'Cluster')
-                     if qParams.UseRemote
-                        myCluster = parcluster(qParams.Cluster);
-                     else
-                        myCluster = parcluster();
-                     end
+                  if qParams.UseRemote
+                      if isfield(qParams,'Cluster')                          
+                          myCluster = parcluster(qParams.Cluster);
+                      else
+                          myCluster = nigeLab.utils.findGoodCluster();
+                      end
                   else
-                     if qParams.UseRemote
-                        myCluster = nigeLab.utils.findGoodCluster();
-                     else
-                        myCluster = parcluster();
-                     end
+                      myCluster = parcluster();
                   end
+                  
+                  
                   attachedFiles = ...
                      matlab.codetools.requiredFilesAndProducts(...
                      sprintf('%s.m',operation));
@@ -554,24 +561,7 @@ classdef DashBoard < handle
                   fclose(fid);
                   attachedFiles = [attachedFiles, {configFilePath}];
                   
-%                   F = dir(fullfile(p,'+defaults','*.m'));
-%                   for iF = 1:numel(F)
-%                      attachedFiles = [attachedFiles, {fullfile(...
-%                         F(iF).folder,F(iF).name)}]; %#ok<*AGROW>
-%                   end
-%                   
-%                   F = dir(fullfile(p,'@Block','*.m'));
-%                   for iF = 1:numel(F)
-%                      attachedFiles = [attachedFiles, {fullfile(...
-%                         F(iF).folder,F(iF).name)}]; 
-%                   end
-%                   
-%                   F = dir(fullfile(p,'@Block','private','*'));
-%                   F = F(~[F.isdir]);
-%                   for iF = 1:numel(F)
-%                      attachedFiles = [attachedFiles, {fullfile(...
-%                         F(iF).folder,F(iF).name)}]; 
-%                   end
+                 
                   for jj=1:numel(attachedFiles)
                       attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
                   end
@@ -587,7 +577,7 @@ classdef DashBoard < handle
                      'NumWorkersRange', qParams.NWorkerMinMax, ...
                      'Type','pool', ...
                      'UserData',idx,...
-                     'Tag',tagStr);
+                     'Tag',tagStr); %#ok<*PROPLC>
                  
                  BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
                  BlName = BlName(1:min(end,25));
@@ -598,17 +588,19 @@ classdef DashBoard < handle
                 obj.remoteMonitor.updateStatus(bar,'Pending')
 
                   job.FinishedFcn = {@(~,~,b)obj.remoteMonitor.barCompleted(b),bar};
+                  
 %                 updating ststus labels
                   job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing'),bar};
                   job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(bar,'Running'),bar};
 
                   createTask(job,operation,0,{target});
                   submit(job);
-%                   start(obj.jobProgressBar{idx}.progtimer);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
                   
+                  
                else
-                  % otherwise run single operation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                   
+                  %% otherwise run single operation serially
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
                      operation,target.Name);
                   feval(operation,target);
