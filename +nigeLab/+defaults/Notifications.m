@@ -20,7 +20,7 @@ pars.TagString.Vars = {'blockObj.Meta.AnimalID',...
 
 
 
-pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%\n'; % regexp for command window updates
+pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; % regexp for command window updates
 pars.NotifyString.Vars = {'blockObj.Meta.AnimalID',...
                           'blockObj.Meta.RecID'};
 %                 Animal.Block -> operation : progress
