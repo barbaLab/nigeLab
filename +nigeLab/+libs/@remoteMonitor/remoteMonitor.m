@@ -84,6 +84,9 @@ classdef remoteMonitor < handle
             idx = nBars+1;
             
             bar.idx = idx;
+            if nargin < 3
+                job = [];
+            end
             bar.job = job;
             
             if nargin < 4
@@ -131,7 +134,7 @@ classdef remoteMonitor < handle
                 'FontUnits', 'Normalized', ...
                 'FontSize', 0.7,...
                 'FontName','Droid Sans');            
-            set(bar.progtext, 'String', '');
+            set(bar.statustext, 'String', '');
             
             bar.proglabel = text(bar.progaxes,0.01, 0.5, '', ...
                 'HorizontalAlignment', 'Left', ...
@@ -190,7 +193,7 @@ classdef remoteMonitor < handle
             jObj.setBorderPainted(false);
             
             %%% if first bar we need to start timer
-            if strcmp(monitorObj.progtimer.Running,'off')
+            if strcmp(monitorObj.progtimer.Running,'off')...
                start(monitorObj.progtimer); 
             end
         end
@@ -199,8 +202,15 @@ classdef remoteMonitor < handle
             try
             for ii=1:numel(monitorObj.bars)
                 bar = monitorObj.bars(ii);
-                [pct,str] = nigeLab.utils.jobTag2Pct(bar.job);
-                
+                if isempty(bar.job)
+                    if strcmp(get(bar.statustext, 'String'),'Done.')
+                        pct = 100;
+                    else
+                        pct = nan;
+                    end
+                else
+                    [pct,str] = nigeLab.utils.jobTag2Pct(bar.job);
+                end
                 % Get the offset of the progressbar from the left of the panel
                 xStart = bar.progpatch.XData(1);
                 

@@ -32,7 +32,7 @@ classdef DashBoard < handle
             'MenuBar','none');
          loadPanels(obj)
          obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
-         addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats)
+         addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
          %% Create Tank Tree
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
@@ -603,7 +603,17 @@ classdef DashBoard < handle
                   %% otherwise run single operation serially
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
                      operation,target.Name);
-                  feval(operation,target);
+                 
+                 BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 BlName = BlName(1:min(end,25));
+                 barName = sprintf('%s %s',BlName,operation(3:end));
+                 bar = obj.remoteMonitor.addBar(barName);
+                 obj.remoteMonitor.updateStatus(bar,'Serial. Check command window.')
+                 pause(0.1);
+                 feval(operation,target);
+                 tmp.bar.UserData = idx;
+                 obj.refreshStats([],tmp);
+                 obj.remoteMonitor.updateStatus(bar,'Done.')
                end
                
             otherwise
