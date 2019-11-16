@@ -135,7 +135,7 @@ for f = fields
                'class','single');
             Files.(this){iCh} = makeDiskFile(diskPars);
             pct = floor(iCh/nCh.(this) * 100);
-            reportProgress(blockObj, 'Chan info', pct)
+            reportProgress(blockObj, 'Chan info', pct);
 %             notifyUser(blockObj,this,'info',iCh,nCh.(this))
          end
       case 'Events'
