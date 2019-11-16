@@ -607,12 +607,11 @@ classdef DashBoard < handle
                  BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
                  BlName = BlName(1:min(end,25));
                  barName = sprintf('%s %s',BlName,operation(3:end));
-                 bar = obj.remoteMonitor.addBar(barName);
+                 bar = obj.remoteMonitor.addBar(barName,[],idx);
                  obj.remoteMonitor.updateStatus(bar,'Serial. Check command window.')
                  pause(0.1);
                  feval(operation,target);
-                 tmp.bar.UserData = idx;
-                 obj.refreshStats([],tmp);
+                 obj.remoteMonitor.barCompleted(bar);
                  obj.remoteMonitor.updateStatus(bar,'Done.')
                end
                
