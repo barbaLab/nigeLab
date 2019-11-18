@@ -4,7 +4,7 @@ function str = reportProgress(blockObj, string, pct ) %#ok<INUSL>
 job = getCurrentJob;
 pars = nigeLab.defaults.Notifications;
 
-if isempty(job) % serial execution on localhost
+if ~nigeLab.utils.checkForWorker % serial execution on localhost
     metas = cell(1, numel(pars.NotifyString.Vars));
     for ii=1:numel(pars.NotifyString.Vars),metas{ii} = eval(pars.NotifyString.Vars{ii});end
         str = sprintf(pars.NotifyString.String,metas{:},...         % constant part of the message

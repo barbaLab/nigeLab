@@ -15,7 +15,7 @@ function flag = doRawExtraction(blockObj)
 % If returns before completion, indicate failure to complete with flag
 flag = false;
 
-nigeLab.utils.checkWorkerConfig;
+nigeLab.utils.checkForWorker('config');
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
