@@ -1,3 +1,4 @@
+qParams = nigeLab.defaults.Queue;
 if    qParams.UseParallel...              check user preference
    && license('test','Distrib_Computing_Toolbox')... check if toolbox is licensed
    && ~isempty(ver('distcomp'))...           and check if it's installed
