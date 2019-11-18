@@ -10,10 +10,7 @@ function flag = doLFPExtraction(blockObj)
 %% INITIALIZE PARAMETERS
 flag = false;
 
-job = getCurrentJob;
-if ~isempty(job) % we are on a remote worker
-    configW;     % run the programmatically generated configuration script
-end
+nigeLab.utils.checkForWorker('config');
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');

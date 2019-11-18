@@ -9,11 +9,8 @@ function flag = doReReference(blockObj)
 
 %% CHECK FOR PROBLEMS
 flag = false; % Create flag for reporting successful execution
+nigeLab.utils.checkForWorker('config');
 
-job = getCurrentJob;
-if ~isempty(job) % we are on a remote worker
-    configW;     % run the programmatically generated configuration script
-end
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');

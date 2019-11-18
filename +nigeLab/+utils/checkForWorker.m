@@ -1,6 +1,6 @@
 function flag = checkForWorker(mode)
 if nargin < 1
-    
+    flag = false;
     qParams = nigeLab.defaults.Queue;
     if    qParams.UseParallel...              check user preference
             && license('test','Distrib_Computing_Toolbox')... check if toolbox is licensed
@@ -19,8 +19,10 @@ if nargin < 1
     
 elseif strcmpi(mode,'config')  % nargin > 0
     %% in config mode checkForWorker and run the config script
-    if nigeLab.utils.checkForWorker
+    flag = false;
+    if nigeLab.utils.checkForWorker()
         configW;     % run the programmatically generated configuration script
+        flag = true;
     end
     
 end

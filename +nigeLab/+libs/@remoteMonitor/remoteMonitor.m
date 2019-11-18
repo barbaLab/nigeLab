@@ -266,7 +266,7 @@ classdef remoteMonitor < handle
             nigeLab.sounds.play('bell',1.5);
             evtData = nigeLab.evt.jobCompleted(bar);
             notify(monitorObj,'jobCompleted',evtData);
-            monitorObj.updateStatus(bar,'Done')
+            monitorObj.updateStatus(bar,'Done.')
         end
         
 

@@ -585,13 +585,13 @@ classdef DashBoard < handle
                  bar = obj.remoteMonitor.addBar(barName,job,idx);
 %                   obj.remoteMonitor(sprintf('%s - %s',name,operation),idx);
 %                   obj.jobIsRunning(idx) = true;
-                obj.remoteMonitor.updateStatus(bar,'Pending')
+                obj.remoteMonitor.updateStatus(bar,'Pending...')
 
                   job.FinishedFcn = {@(~,~,b)obj.remoteMonitor.barCompleted(b),bar};
                   
 %                 updating ststus labels
-                  job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing'),bar};
-                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(bar,'Running'),bar};
+                  job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing...'),bar};
+                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(bar,'Running...'),bar};
 
                   createTask(job,operation,0,{target});
                   submit(job);
