@@ -1,7 +1,6 @@
 function str = reportProgress(blockObj, string, pct ) %#ok<INUSL>
 %%
 
-job = getCurrentJob;
 pars = nigeLab.defaults.Notifications;
 
 if ~nigeLab.utils.checkForWorker % serial execution on localhost
@@ -40,6 +39,7 @@ if ~nigeLab.utils.checkForWorker % serial execution on localhost
         end
     
 else % we are in worker environment
+    job = getCurrentJob;
     metas = cell(1, numel(pars.TagString.Vars));
     for ii=1:numel(pars.TagString.Vars),metas{ii} = eval(pars.TagString.Vars{ii});end
     str = sprintf(pars.TagString.String,metas{:},...                     % variable part of the message

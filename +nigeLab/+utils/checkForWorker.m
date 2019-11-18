@@ -7,7 +7,7 @@ if nargin < 1
             && ~isempty(ver('distcomp'))...           and check if it's installed
             
         job = getCurrentJob;
-        flag = isempty(job);            % if job is empyty, we are running locally. Or at least not on a worker.
+        flag = ~isempty(job);            % if job is empyty, we are running locally. Or at least not on a worker.
         
     elseif   (~license('test','Distrib_Computing_Toolbox')... 
             || isempty(ver('distcomp')) ) && qParams.UseParallel ...
