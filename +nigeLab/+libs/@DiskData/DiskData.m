@@ -133,6 +133,8 @@ classdef DiskData < handle
          %       is. -MM
          nargin=jj-1;
          switch nargin
+            case 1
+               access_ = 'r';
             case 2
                size_=[1 inf];
                name_='data';
@@ -162,9 +164,21 @@ classdef DiskData < handle
                if isa(varargin{1},'matlab.io.MatFile')
                   obj.diskfile_ = varargin{1};
                   info = whos(obj.diskfile_);
+                  
+                  if ~exist('name_','var')
+                     obj.name_ = info.name;
+                  else
+                     obj.name_ = name_;
+                     if ~exist('size_','var')
+                        obj.size_ = info(strcmp({info.name},name_)).size;
+                     else
+                        obj.size_ = size_;
+                     end
+                  end
+                  
                   obj.type_='MatFile';
-                  obj.name_ = info.name;
-                  obj.writable_ = isWritable(obj.diskfile_);
+                  obj.writable_ = obj.diskfile_.Properties.Writable;
+                  
                   if obj.writable_
                      obj.access_ = 'w';
                   else

@@ -51,8 +51,16 @@ Lstruc=cell2struct(cell(1,numel(VariableNames)),VariableNames,2);
 
 for ii=1:numel(tankObj.Animals)
     an=tankObj.Animals(ii);
-    for kk=1:numel(VariableNames)
-        Lstruc(ii).(VariableNames{kk}) =  GatherFunction{kk}(an);
+    if isempty(an.Blocks)
+       Lstruc(ii).(VariableNames{1}) = GatherFunction{1}(an);
+       Lstruc(ii).(VariableNames{2}) = 'Empty';
+       for kk=3:numel(VariableNames)
+          Lstruc(ii).(VariableNames{kk}) = '---';
+       end
+    else
+       for kk=1:numel(VariableNames)
+          Lstruc(ii).(VariableNames{kk}) =  GatherFunction{kk}(an);
+       end
     end
 %     I=ismember(tmp.Properties.VariableNames,'Animals');
 %     L_(jj,:)=[tmp(1,I),tmp(1,~I)];
@@ -77,6 +85,10 @@ function Status = getAnimalStatus(animalObj)
 end
 
 function D = getAnimalDate(animalObj)
-tmp = cat(1,animalObj.Blocks.Meta);
-D = unique(datetime({tmp.RecDate},'InputFormat','yyMMdd'));
+   try
+      tmp = cat(1,animalObj.Blocks.Meta);
+      D = unique(datetime({tmp.RecDate},'InputFormat','yyMMdd'));
+   catch
+      D = NaT;
+   end
 end

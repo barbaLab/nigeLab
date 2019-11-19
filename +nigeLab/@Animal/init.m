@@ -28,10 +28,17 @@ for bb=1:numel(Recordings)
    [~,~,ext] = fileparts(Recordings(bb).name);
    addBlock = false;
    if Recordings(bb).isdir
-      tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
-      if ~isempty(tmp)
+      % handling tdt case
+      if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev')))
+         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
          addBlock = true;
          RecFile = fullfile(tmp.folder,tmp.name);
+         
+      % handling already extracted to matfile case
+      elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
+         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
+         RecFile = fullfile(tmp.folder,tmp.name);
+         addBlock = true;
       end
    elseif any(strcmp(ext,supportedFormats))
       addBlock = true;

@@ -10,7 +10,8 @@ function [pars,Fields] = Block()
 % structure:
 pars             = struct;
 
-pars.SupportedFormats = {'rhs','rhd','tdt'};
+pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
+pars.ReadMatInfoFile = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them!
 pars.RecLocDefault  = 'R:/Rat';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
@@ -80,9 +81,11 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
 pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
 % pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
+pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
+
 pars.IncludeChar='$';
 pars.DiscardChar='&';
-% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
+pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
 pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 

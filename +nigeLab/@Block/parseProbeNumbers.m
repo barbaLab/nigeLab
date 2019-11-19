@@ -35,7 +35,8 @@ switch blockObj.RecType
             blockObj.Channels(iCh).chStr] = getChannelNum(...
             blockObj.Channels(iCh).custom_channel_name);
       end
-      
+   case 'Matfile'
+      nigeLab.utils.cprintf([255,88,0]./255, 'Matfile detected!\nBe sure you handled everything correctly in your custom load function!\n');
    otherwise
       warning('%s is not a supported RecType.',blockObj.RecType);
       return;
