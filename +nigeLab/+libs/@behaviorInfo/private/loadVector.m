@@ -1,10 +1,11 @@
-function var = loadVector(F,defVal,varNum,warnFlag)
+function var = loadVector(F,defVal,varNum,warnFlag,verbose)
 %% LOADVECTOR    Load a Vector variable without needing specific name
 %
 %  var = LOADVECTOR(F);
 %  var = LOADVECTOR(F,defVal);
 %  var = LOADVECTOR(F,defVal,varNum);
 %  var = LOADVECTOR(F,defVal,varNum,warnFlag);
+%  var = LOADVECTOR(F,defVal,varNum,warnFlag,verbose);
 %
 %  --------
 %   INPUTS
@@ -30,6 +31,9 @@ function var = loadVector(F,defVal,varNum,warnFlag)
 %                                 loading a particular file with multiple
 %                                 variables, but not recommended.
 %
+%  verbose        :     (Optional) bool flag. Default is false. Set true to
+%                                print indicator text to Command Window.
+%
 %  --------
 %   OUTPUT
 %  --------
@@ -41,6 +45,11 @@ function var = loadVector(F,defVal,varNum,warnFlag)
 % By: Max Murphy  v1.0   09/03/2018  Original version (R2017b)
 
 %% PARSE INPUT
+% Default of whether to display issues to UI
+if nargin < 5
+   verbose = false;
+end
+
 % Default to warning user about multiple variables
 if nargin < 4
    warnFlag = true;
@@ -59,7 +68,9 @@ end
 %% CHECK FOR FILE EXISTENCE
 fname = fullfile(F.folder,F.name);
 if exist(fname,'file') == 0
-   fprintf(1,'->\t%s not found.\n',F.name);
+   if verbose
+      fprintf(1,'->\t%s not found.\n',F.name);
+   end
    var = defVal;
    return;
 end
@@ -70,7 +81,7 @@ in = fieldnames(tmp);
 
 
 %% (OPTIONAL) WARN USER IF MULTIPLE VARIABLES IN FILE
-if warnFlag
+if warnFlag && verbose
    % If there is more than one vector, warn user that they might not be
    % loading the one they hoped...
    k = numel(in);
@@ -82,7 +93,7 @@ end
 %% PICK 1 VARIABLE TO RETURN
 var = tmp.(in{varNum});
 % Check if it doesn't look like a vector
-if numel(var) < 2
+if (numel(var) < 2) && verbose
    warning('Only 1 element in %s. Is this what you meant to load?',...
       in{varNum});
 end

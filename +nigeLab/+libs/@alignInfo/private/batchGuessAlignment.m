@@ -50,7 +50,7 @@ for iV = 1:2:numel(varargin)
 end
 
 %% PARSE INPUT TABLE
-if exist('T_in','var')==0
+if nargin < 1
    load(DEF_FILE,'T'); % T: Matlab table with 1 column: name
 else
    T = T_in; clear T_in

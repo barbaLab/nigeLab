@@ -37,7 +37,7 @@ load(scoring_file,'behaviorData');
 %% MODIFY DESCRIPTION
 todays_date = datestr(datetime,'YYYY-mm-dd');
 behaviorData.Properties.Description = sprintf('Scored by %s on %s',...
-   scorer_ID,todays_date); %#ok<STRNU>
+   scorer_ID,todays_date); 
 
 %% OVERWRITE SCORING FILE
 save(scoring_file,'behaviorData','-v7.3');

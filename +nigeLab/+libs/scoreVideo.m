@@ -1,12 +1,36 @@
-function scoreVideo(varargin)
+function fig = scoreVideo(varargin)
 %% SCOREVIDEO  Locates successful grasps in behavioral video.
 %
-%  SCOREVIDEO;
-%  SCOREVIDEO('NAME',value,...);
+%  fig = SCOREVIDEO;
+%  fig = SCOREVIDEO('NAME',value,...);
+%
+%  --------
+%   INPUTS
+%  --------
+%  varargin       :     (Optional) 'NAME', value input argument pairs.
+%
+%                       -> 'FNAME_TRIALS' (def: NaN) // Specify as string 
+%                                                       to full filename 
+%                                                       (including path)
+%                                                       of TRIALS file.
+%
+%                       -> 'FNAME_SCORE' (def: NaN) // Specify as string 
+%                                                      to full filename 
+%                                                      (including path)
+%                                                       of SCORING file.
+%
+%                       -> 'FNAME_ALIGN' (def: NaN) // Specify as string 
+%                                                      to full filename 
+%                                                      (including path)
+%                                                      of ALIGN file.
 %  
 % Modifed by: Max Murphy   v3.0  08/07/2018  Basically modified the whole
 %                                            thing. Changed to
 %                                            object-oriented structure.
+%                          v3.1  12/30/2018  Add additional scoring field
+%                                            to get the timestamp of
+%                                            COMPLETED grasp. Add a bunch
+%                                            of documentation. 
 
 %% DEFAULTS
 DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
@@ -15,13 +39,45 @@ DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
 VID_DIR = 'C:\RC_Video_Scoring'; % MUST point to where the videos are
 VID_TYPE = '.avi';
 ALT_VID_DIR = 'K:\Rat\Video\BilateralReach\RC';
-FNAME = nan;
+
+% Full filename of any one of these three can be optionally specified
+% to skip video scoring selection UI
+FNAME_TRIALS = nan;
+FNAME_SCORE = nan;
+FNAME_ALIGN = nan;
 
 USER = 'MM'; % track scoring
 % USER = 'AP';
 
-VARS = {'Trial','Reach','Grasp','Support','Pellets','PelletPresent','Outcome','Forelimb'};
-VAR_TYPE = [0,1,1,1,2,3,4,5]; % must have same number of elements as VARS
+% NOTE: values for VARS should match HOTKEYS function values!
+%  -> Change values in HOTKEYS (at bottom of file), in VARS, and make sure
+%     the changes match the table file convention for the '_Scoring.mat'
+%     files. In this way it is relatively easy to customize this code to
+%     represent whatever kind of scoring you want...
+
+VARS = {'Trial',...
+        'Reach',...         % First frame of paw coming through box opening
+        'Grasp',...         % First frame of reaching paw closing digits
+        'Support',...       % First frame other paw touches glass or apex 
+        'Complete',...      % First frame when paw comes back into the box
+        'Pellets',...   % # pellets present
+        'PelletPresent',... % Is there a pellet in front of the RAT?
+        'Stereotyped',... % Is this a stereotyped trial?
+        'Outcome',...   % Did the rat carry the pellet into the box?
+        'Forelimb'};    % Which handedness is the rat?
+
+% NOTE: values for VAR_TYPE should also match HOTKEYS function values!
+%  -> This is the other part to customize the scoring. Different indices of
+%     "VAR_TYPE" represent a switch for keeping elements of the GUI
+%     straight in terms of what is returned for a given value of that
+%     particular variable. The difference between VAR_TYPE [3,4,5] is
+%     mostly cosmetic. If you just want to leave things as [0 or 1] for
+%     binary events, then just keep VAR_TYPE as [2]. If you try to 
+%     customize, and get errors, make sure the VAR_TYPE matches what values
+%     is given to that particular variable in the HOTKEYS function at the
+%     bottom of this file...
+
+VAR_TYPE = [0,1,1,1,1,2,3,3,4,5]; % must have same number of elements as VARS
                               % options: 
                               % -> 0: Trial "onset" guess
                               % -> 1: Timestamps
@@ -30,9 +86,31 @@ VAR_TYPE = [0,1,1,1,2,3,4,5]; % must have same number of elements as VARS
                               % -> 4: Unsuccessful (0) or Successful (1)
                               % -> 5: Left (0) or Right (1)
                               
-ALIGN_ID = '_VideoAlignment.mat';
-TRIAL_ID = '_Trials.mat';
-SCORE_ID = '_Scoring.mat';
+ALIGN_ID = '_VideoAlignment.mat'; % Identifier for file containing 
+                                  % VideoStart scalar, which is in seconds,
+                                  % of the number of seconds prior to the
+                                  % video recording that the neural
+                                  % recording was started. So if video
+                                  % starts first, then this number should
+                                  % be negative.
+                                  
+TRIAL_ID = '_Trials.mat'; % Identifier for file containing guesses of trial
+                          % onset times. Not necessary to have this to
+                          % actually run the code. Left-over from some
+                          % deprecated stuff and trying to make good
+                          % guesses based on DeepLabCut of when the paw is
+                          % actually present.
+                          
+SCORE_ID = '_Scoring.mat'; % Identifier for file that contains 
+                           % behaviorData, which is a Matlab Table
+                           % variable.
+                           % behaviorData.Properties.VariableNames should
+                           % be the same as VARS.
+                           % behaviorData.Properties.UserData should be the
+                           % same as VAR_TYPE.
+                           % Number of rows in behaviorData determines how
+                           % many maximum possible behavioral trials there
+                           % can be scored.
 
 %% PARSE VARARGIN
 for iV = 1:2:numel(varargin)
@@ -40,19 +118,48 @@ for iV = 1:2:numel(varargin)
 end
 
 %% GET TRIALS FILE
-if isnan(FNAME)
-   [FNAME,DIR] = uigetfile(['*' TRIAL_ID],'Select TRIALS file',DEF_DIR);
-   if FNAME == 0
-      error('No file selected. Script aborted.');
+if isnan(FNAME_TRIALS)
+   if isnan(FNAME_SCORE)
+      if isnan(FNAME_ALIGN)
+         fOpts = {['*' TRIAL_ID]; ...
+                  ['*' SCORE_ID]; ...
+                  ['*' ALIGN_ID]};
+               
+         [FNAME_TRIALS,DIR,fIdx] = uigetfile(fOpts,...
+            'Select TRIALS or SCORE or ALIGN file',...
+            DEF_DIR);
+         if FNAME_TRIALS == 0
+            error('No file selected. Script aborted.');
+         else
+            switch fIdx
+               case 1 % TRIAL_ID
+                  % leave as is
+               case 2 % SCORE_ID
+                  FNAME_TRIALS = strrep(FNAME_TRIALS,SCORE_ID,TRIAL_ID);
+               case 3 % ALIGN_ID
+                  FNAME_TRIALS = strrep(FNAME_TRIALS,ALIGN_ID,TRIAL_ID);
+            end
+         end
+         Name = strsplit(FNAME_TRIALS,TRIAL_ID);
+         Name = Name{1};
+      else
+         [DIR,FNAME_ALIGN,ext] = fileparts(FNAME_ALIGN);
+         FNAME_ALIGN = [FNAME_ALIGN,ext];
+         Name = strsplit(FNAME_ALIGN,ALIGN_ID);
+         Name = Name{1};
+      end
+   else
+      [DIR,FNAME_SCORE,ext] = fileparts(FNAME_SCORE);
+      FNAME_SCORE = [FNAME_SCORE,ext];
+      Name = strsplit(FNAME_SCORE,SCORE_ID);
+      Name = Name{1};
    end
 else
-   [DIR,FNAME,ext] = fileparts(FNAME);
-   FNAME = [FNAME,ext];
+   [DIR,FNAME_TRIALS,ext] = fileparts(FNAME_TRIALS);
+   FNAME_TRIALS = [FNAME_TRIALS,ext];
+   Name = strsplit(FNAME_TRIALS,TRIAL_ID);
+   Name = Name{1};
 end
-
-%% PARSE FILE NAMES
-Name = strsplit(FNAME,TRIAL_ID);
-Name = Name{1};
 
 %% PARSE VIDEO FILES / LOCATION
 % Check in several places for the video files...
@@ -94,7 +201,8 @@ fig=figure('Name','Bilateral Reach Scoring',...
            'Units','Normalized',...
            'MenuBar','none',...
            'ToolBar','none',...
-           'Position',[0.1 0.1 0.8 0.8]);
+           'Position',[0.1 0.1 0.8 0.8],...
+           'UserData','Check');
         
 % Panel for displaying information text
 dispPanel = uipanel(fig,'Units','Normalized',...
@@ -139,6 +247,9 @@ graphicsUpdateObj.addListeners(vidInfoObj,behaviorInfoObj);
 set(fig,'WindowKeyPressFcn',...
    {@hotKey,vidInfoObj,behaviorInfoObj});
 
+% Create close request function for figure
+set(fig,'CloseRequestFcn',@closeUI);
+
 % Update everything to make sure it looks correct
 vidInfoObj.setOffset(behaviorInfoObj.VideoStart);
 notify(vidInfoObj,'vidChanged');
@@ -159,87 +270,93 @@ behaviorInfoObj.setUserID(USER);
       b.setTrial(nan,newTrial);
    end 
 
-%% Function to add/remove current frame as Reach
-   function markReachFrame(b,t)
-      b.setValue(2,t);
+%% General function to update a behaviorData variable
+   function setValue(b,varName,val)
+      b.setValue(b.getVarIdx(varName),val);
    end
 
-%% Function to add/remove current frame as Grasp
-   function markGraspFrame(b,t)
-      b.setValue(3,t);    
+%% General function to update ALL rows of a behaviorData variable
+   function setAllValues(b,varName,val)
+      b.setValueAll(b.getVarIdx(varName),val);
    end
 
-%% Function to add/remove "both" hands (support)
-   function markSupportFrame(b,t)
-      b.setValue(4,t); 
+%% Function to save file
+   function saveFile(b)
+      b.saveScoring;
    end
 
-%% Function to mark number of pellets around box in trial
-   function markPelletCount(b,n)
-      b.setValue(5,n);
-   end
-
-%% Function to mark presence or absence of pellet in front of rat
-   function markPelletPresence(b,pelletPresent)
-      b.setValue(6,pelletPresent);
-   end
-
-%% Function to set trial outcome
-   function markTrialOutcome(b,outcome)
-      b.setValue(7,outcome);    
-   end
-
-%% Function to set trial forelimb
-   function markTrialForelimb(b,limb)
-      b.setValue(8,limb);
-   end
-
-
-%% Function to mark all trial forelimbs (for single-handed task)
-   function markAllTrialForelimb(b,limb)
-      b.setValueAll(8,limb);
+%% Function to close figure
+   function closeUI(src,~)
+      switch src.UserData
+         case 'Check' % Prompt user to close
+            str = questdlg('Close scoring UI?','Exit','Yes','No','Yes');
+            switch str
+               case 'Yes'
+                  delete(src);
+               case 'No'
+                  return;
+            end
+         case 'Force' % Automatically delete without checking
+            delete(src);
+         otherwise
+            return;
+      end
    end
 
 %% Function for hotkeys
    function hotKey(~,evt,v,b)
       t = v.tVid;
       switch evt.Key
+         case 'comma' % not a stereotyped trial (default)
+            setValue(b,'Stereotyped',0);
+            
+         case 'period' % set as stereotyped trial
+            setValue(b,'Stereotyped',1);
+            
          case 't' % set reach frame
-            markReachFrame(b,t);
+            setValue(b,'Reach',t);
             
          case 'r' % set no reach for trial
-            markReachFrame(b,inf);
+            setValue(b,'Reach',inf);
             
          case 'g' % set grasp frame
-            markGraspFrame(b,t);
+            setValue(b,'Grasp',t);
             
          case 'f' % set no grasp for trial
-            markGraspFrame(b,inf);
+            setValue(b,'Grasp',inf);
             
          case 'b' % set "both" (support) frame
-            markSupportFrame(b,t);
+            setValue(b,'Support',t);
             
          case 'v' % (next to 'b') -> no "support" for this trial
-            markSupportFrame(b,inf);
+            setValue(b,'Support',inf);
+            
+         case 'multiply' % set trial Complete frame
+            setValue(b,'Complete',t); 
+            
+         case 'divide' % set "no" trial Complete frame (i.e. he never 
+                       % brought paw back into box before reaching on next
+                       % trial)
+            setValue(b,'Complete',inf);
             
          case 'w' % set outcome as Successful
-            markTrialOutcome(b,1);
+            setValue(b,'Outcome',1);
             
          case 'x' % set outcome as Unsuccessful
-            markTrialOutcome(b,0);
+            setValue(b,'Outcome',0);
             
          case 'e' % set forelimb as 'Right' (1)
             if strcmpi(evt.Modifier,'alt') % alt + e: all trials are 'right'
-               markAllTrialForelimb(b,1);
+               setAllValues(b,'Forelimb',1);
             else
-               markTrialForelimb(b,1);
+               setValue(b,'Forelimb',1);
             end
             
          case 'q' % set forelimb as 'Left' (0)
             if strcmpi(evt.Modifier,'alt') % alt + q: all trials are 'left'
-              markAllTrialForelimb(b,0);
+              setAllValues(b,'Forelimb',0);
             else
-               markTrialForelimb(b,0);
+               setValue(b,'Forelimb',0);
             end
             
          case 'a' % previous frame
@@ -256,36 +373,40 @@ behaviorInfoObj.setUserID(USER);
             
          case 's' % alt + s = save
             if strcmpi(evt.Modifier,'alt')
-               b.saveScoring;
+               saveFile(b);
             end           
             
          case 'numpad0'
-            markPelletCount(b,0);
+            setValue(b,'Pellets',0);
          case 'numpad1'
-            markPelletCount(b,1);
+            setValue(b,'Pellets',1);
          case 'numpad2'
-            markPelletCount(b,2);
+            setValue(b,'Pellets',2);
          case 'numpad3'
-            markPelletCount(b,3);
+            setValue(b,'Pellets',3);
          case 'numpad4'
-            markPelletCount(b,4);
+            setValue(b,'Pellets',4);
          case 'numpad5'
-            markPelletCount(b,5);
+            setValue(b,'Pellets',5);
          case 'numpad6'
-            markPelletCount(b,6);
+            setValue(b,'Pellets',6);
          case 'numpad7'
-            markPelletCount(b,7);
+            setValue(b,'Pellets',7);
          case 'numpad8'
-            markPelletCount(b,8);
+            setValue(b,'Pellets',8);
          case 'numpad9'
-            markPelletCount(b,9);     
+            setValue(b,'Pellets',9);     
          case 'subtract'
-            markPelletPresence(b,0);
+            setValue(b,'PelletPresent',0);
          case 'add'
-            markPelletPresence(b,1);
+            setValue(b,'PelletPresent',1);
             
+         case 'escape' % Close scoring UI
+            closeUI(gcf);
+
          case 'delete'
             b.removeTrial;
+            
          case 'space'
             v.playPauseVid;
       end
