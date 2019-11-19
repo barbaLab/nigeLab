@@ -1,7 +1,7 @@
 function varargout = initEmpty()
 %% INITEMPTY   [var1,var2,...] = utils.initEmpty; % Initialize empty array
 %
-%  varargout = INITEMPTY;
+%  varargout = utils.INITEMPTY;
 %
 %  Initialize an empty array for each requested output argument.
 
