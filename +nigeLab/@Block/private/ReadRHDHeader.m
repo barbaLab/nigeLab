@@ -323,7 +323,7 @@ header_size=ftell(FID);
 
 nPort   = [raw_channels(:).port_number];
 probes = unique(nPort);
-num_probes = numel(unique(nPort));
+num_probes = numel(probes);
 DC_amp_data_saved = false;
 num_dac_channels = 0;
 num_dac_samples = 0;

@@ -26,14 +26,6 @@ function T = addTableVar(T,fieldName,colIdx,varType,value)
 %                                cell array of strings, then colIdx must
 %                                match the number of elements of fieldName.
 %
-%  varType     :     (Optional) [1 x nFieldsAdded] vector of varTypes:
-%                       -> 0: "Trials" (basically an unused variable type)
-%                       -> 1: "Timestamps" (scalar; seconds)
-%                       -> 2: "Counts" (scalar; integer 0-9)
-%                       -> 3: "No/Yes" (0 or 1)
-%                       -> 4: "Unsuccessful/Successful" (0 or 1)
-%                       -> 5: "L/R" (0 or 1)
-%
 %  value       :     (Optional) N x 1 vector of values to use for the
 %                                appended variable. By default if this is
 %                                not specified, the value is set to NaN for
@@ -42,6 +34,14 @@ function T = addTableVar(T,fieldName,colIdx,varType,value)
 %                                this should be an N x K matrix of values,
 %                                where K is the number of cell elements
 %                                added.
+%
+%  varType     :     (Optional) [1 x nFieldsAdded] vector of varTypes:
+%                       -> 0: "Trials" (basically an unused variable type)
+%                       -> 1: "Timestamps" (scalar; seconds)
+%                       -> 2: "Counts" (scalar; integer 0-9)
+%                       -> 3: "No/Yes" (0 or 1)
+%                       -> 4: "Unsuccessful/Successful" (0 or 1)
+%                       -> 5: "L/R" (0 or 1)
 %
 %  --------
 %   OUTPUT

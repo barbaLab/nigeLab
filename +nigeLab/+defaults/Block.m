@@ -6,12 +6,19 @@ function [pars,Fields] = Block()
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Modify all properties here
+% NOTE: Capitalization is important here, as some of the properties are
+%        added from this struct to the BLOCK object and will not be
+%        correctly incorporated unless the capitalization matches BLOCK
+%        property.
 % Define general values used when parsing metadata from file name and
 % structure:
 pars             = struct;
 
 pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
-pars.ReadMatInfoFile = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them!
+% pars.ReadMatInfoFileFcn = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them! -- good idea!! (MM to FB)
+pars.ReadMatInfoFileFcn = @nigeLab.utils.ReadBlockChannelInfo;
+% pars.ConvertOldBlockFcn = []; % Most cases, this will be blank
+pars.ConvertOldBlockFcn = @nigeLab.convert.rc2block;
 pars.RecLocDefault  = 'R:/Rat';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
@@ -79,7 +86,8 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 % ~/path/R18-68_0_180724_141203
 
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
+% pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
@@ -87,7 +95,8 @@ pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUM
 pars.IncludeChar='$';
 pars.DiscardChar='~';
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
-pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
+pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
+% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 
