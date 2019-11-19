@@ -2,7 +2,8 @@ function flag = genPaths(blockObj,animalLoc)
 %% GENPATHS    Set some useful path variables to file locations
 %
 %  flag = GENPATHS(blockObj);
-%  flag = GENPATHS(blockObj,animalPath);
+%  flag = GENPATHS(blockObj,animalLoc);
+%  flag = GENPATHS(blockObj,animalLoc,useRemote);
 %
 %     Here are defined all the paths where data will be saved.
 %     The folder tree is also created here(if not already existing)
@@ -26,12 +27,18 @@ if (nargin > 1)
 %    paths.Animal_idx = 1;
 end
 
+% if nargin < 3
+%    useRemote = false;
+% end
+
 % paths.Animal.dir = blockObj.AnimalLoc;
 paths.SaveLoc.dir = fullfile(blockObj.AnimalLoc,blockObj.Name);
 paths = blockObj.getFolderTree(paths);
 F=fields(paths);
 for ff=1:numel(F)
-   if ~exist(paths.(F{ff}).dir,'dir'),mkdir(paths.(F{ff}).dir);end 
+   if ~exist(paths.(F{ff}).dir,'dir')
+      mkdir(paths.(F{ff}).dir);
+   end 
 end
 blockObj.Paths = paths;
 flag = true;

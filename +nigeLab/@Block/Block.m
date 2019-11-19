@@ -1,4 +1,4 @@
-classdef Block < handle
+classdef Block < matlab.mixin.Copyable
    %% BLOCK    Creates datastore for an electrophysiology recording.
    %
    %  blockObj = BLOCK();
@@ -154,6 +154,13 @@ classdef Block < handle
       DynamicVarExp    % Expression for parsing BLOCK names from raw file
       IncludeChar      % Character indicating included name elements
       DiscardChar      % Character indicating discarded name elements
+      
+      ManyAnimalsChar  % Character indicating the presence of many animals in the recording
+      ManyAnimals = false; % flag for many animals contained in one block
+      ManyAnimalsLinkedBlocks % Pointer to the splitted blocks. 
+%                 In conjuction with the multianimals flag keeps track of
+%                 where the data is temporary saved.
+      
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
       
@@ -203,8 +210,8 @@ classdef Block < handle
          if isempty(blockObj.RecFile)
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
-            blockObj.RecFile = fullfile(path,file);
-            if blockObj.RecFile == 0
+            blockObj.RecFile =(fullfile(path,file));
+            if all(blockObj.RecFile == [0 '\' 0])
                error('No block selected. Object not created.');
             end
          else
@@ -212,7 +219,7 @@ classdef Block < handle
                error('%s is not a valid block file.',blockObj.RecFile);
             end
          end
-         
+         blockObj.RecFile =nigeLab.utils.getUNCPath(blockObj.RecFile);
          %% INITIALIZE BLOCK OBJECT
          if ~blockObj.init()
             error('Block object construction unsuccessful.');
@@ -223,12 +230,22 @@ classdef Block < handle
          %% SAVE  Overload save of BLOCK
          save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
       end
+      
+      function reload(blockObj)
+          obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
+          ff=fieldnames(obj.blockObj);
+          for f=1:numel(ff)
+              blockObj.(ff{f}) = obj.blockObj.(ff{f});
+          end
+      end
+      
 %       function disp(blockObj)
 %          %% DISP  Overload display of BLOCK contents
 %          if any([blockObj.Verbose])
 %             builtin('disp',blockObj);
 %          end
-%       end    
+%       end
+
       function varargout = subsref(blockObj,s)
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
@@ -322,15 +339,15 @@ classdef Block < handle
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
       
       % Methods for parsing spike info:
-      tagIdx = parseSpikeTagIdx(blockObj,tagArray); % Get tag ID vector
-      ts = getSpikeTimes(blockObj,ch,class);    % Get spike times (sec)
-      idx = getSpikeTrain(blockObj,ch,class);   % Get spike sample indices
-      spikes = getSpikes(blockObj,ch,class,type);    % Get spike waveforms
-      sortIdx = getSort(blockObj,ch,suppress);  % Get spike sorted classes
-      clusIdx = getClus(blockObj,ch,suppress);  % Get spike cluster classes
-      [tag,str] = getTag(blockObj,ch);          % Get spike sorted tags
-      flag = saveChannelSpikingEvents(blockObj,ch,spk,feat,art); % Save spikes for a channel
-      flag = checkSpikeFile(blockObj,ch); % Check a spike file for compatibility
+      tagIdx = parseSpikeTagIdx(blockObj,tagArray) % Get tag ID vector
+      ts = getSpikeTimes(blockObj,ch,class)    % Get spike times (sec)
+      idx = getSpikeTrain(blockObj,ch,class)   % Get spike sample indices
+      spikes = getSpikes(blockObj,ch,class,type)   % Get spike waveforms
+      sortIdx = getSort(blockObj,ch,suppress)  % Get spike sorted classes
+      clusIdx = getClus(blockObj,ch,suppress)  % Get spike cluster classes
+      [tag,str] = getTag(blockObj,ch)          % Get spike sorted tags
+      flag = saveChannelSpikingEvents(blockObj,ch,spk,feat,art) % Save spikes for a channel
+      flag = checkSpikeFile(blockObj,ch) % Check a spike file for compatibility
       
       % Method for getting event info:
       [data,blockIdx] = getEventData(blockObj,type,field,ch,matchValue,matchField) % Retrieve event data
@@ -353,34 +370,37 @@ classdef Block < handle
       flag = linkChannelsField(blockObj,field,fType)  % Link Channels field data
       flag = linkEventsField(blockObj,field)    % Link Events field data
       flag = linkStreamsField(blockObj,field)   % Link Streams field data
-      flag = linkTime(blockObj);     % Link Time stream
-      flag = linkNotes(blockObj);    % Link notes metadata
-      flag = linkProbe(blockObj);    % Link probe metadata
+      flag = linkTime(blockObj)     % Link Time stream
+      flag = linkNotes(blockObj)    % Link notes metadata
+      flag = linkProbe(blockObj)    % Link probe metadata
       
-      flag = linkRaw(blockObj);  % Link raw data
-      flag = linkFilt(blockObj); % Link filtered data
-      flag = linkStim(blockObj); % Link stimulation data
-      flag = linkLFP(blockObj);  % Link LFP data
-      flag = linkCAR(blockObj);  % Link CAR data
-      flag = linkSpikes(blockObj);   % Link Spikes data
-      flag = linkClusters(blockObj); % Link Clusters data
-      flag = linkSorted(blockObj);   % Link Sorted data
-      flag = linkADC(blockObj);      % Link ADC data
-      flag = linkDAC(blockObj);      % Link DAC data
-      flag = linkDigIO(blockObj);    % Link Digital-In and Digital-Out data
+      flag = linkRaw(blockObj)  % Link raw data
+      flag = linkFilt(blockObj) % Link filtered data
+      flag = linkStim(blockObj) % Link stimulation data
+      flag = linkLFP(blockObj)  % Link LFP data
+      flag = linkCAR(blockObj)  % Link CAR data
+      flag = linkSpikes(blockObj)   % Link Spikes data
+      flag = linkClusters(blockObj) % Link Clusters data
+      flag = linkSorted(blockObj)   % Link Sorted data
+      flag = linkADC(blockObj)      % Link ADC data
+      flag = linkDAC(blockObj)      % Link DAC data
+      flag = linkDigIO(blockObj)    % Link Digital-In and Digital-Out data
       
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
       
       % Methods for parsing Fields info:
-      fType = getFieldType(blockObj,field); % Get file type corresponding to field
+      fType = getFieldType(blockObj,field) % Get file type corresponding to field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
       
       % Miscellaneous utilities:
-      N = getNumBlocks(blockObj); % This is just to make it easier to count total # blocks
+      N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
+      notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
+      str = reportProgress(blockObj, string, pct ) % Update the user of progress
+      checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
    
    end
    
@@ -391,10 +411,10 @@ classdef Block < handle
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK
       flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK
       
-      flag = genPaths(blockObj,tankPath) % Generate paths property struct
+      flag = genPaths(blockObj,tankPath,useRemote) % Generate paths property struct
       flag = findCorrectPath(blockObj,paths)   % Find correct Animal path
       flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
-      paths = getFolderTree(blockObj,paths)     % returns a populated path struct
+      paths = getFolderTree(blockObj,paths,useRemote) % returns a populated path struct
       
       clearSpace(blockObj,ask,usrchoice)     % Clear space on disk      
 
@@ -406,5 +426,7 @@ classdef Block < handle
       meta = parseNamingMetadata(blockObj); % Get metadata struct from recording name
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
+      
+      blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end
 end

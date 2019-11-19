@@ -108,7 +108,7 @@ classdef Tank < handle
                error('%s is not a valid block directory.',tankObj.RecDir);
             end
          end
-         
+         tankObj.RecDir = nigeLab.utils.getUNCPath(tankObj.RecDir);
          %% INITIALIZE TANK OBJECT
          if ~tankObj.init
             error('Could not initialize TANK object.');
@@ -180,7 +180,8 @@ classdef Tank < handle
 %       flag = tankSet(tankObj,prop)    % Set a specific TANK property      
       flag = updatePaths(tankObj,SaveLoc)
       N = getNumBlocks(tankObj) % Get the total number of blocks in TANK
-
+      runFun(tankObj,f) % Run function f on all child blocks in tank
+      
    end
    %% PRIVATE METHODS
    methods (Access = public, Hidden = true)

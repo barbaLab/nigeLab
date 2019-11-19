@@ -7,14 +7,14 @@ function flag = updatePaths(blockObj,SaveLoc)
 % object is used. The script detects any variablke part of the name (eg %s)
 % and replicates it in the new file. This means that if the old file had
 % two variable parts, typically probe and channels, the new one must have
-% two varible parts as well. 
+% two varible parts as well.
 %
-% This is a problem only when changing the naming in the defaults params. 
+% This is a problem only when changing the naming in the defaults params.
 
 flag = false;
 
 if nargin ==2
-    blockObj.Paths.SaveLoc = SaveLoc;
+   blockObj.Paths.SaveLoc = SaveLoc;
 end
 
 % Get old paths
@@ -28,7 +28,12 @@ P = blockObj.Paths;
 
 % look for old data to move
 for jj=1:numel(OldFN)
-   
+   switch blockObj.FieldType{jj}
+       case 'Channels'
+       case 'Streams'
+       case 'Meta'
+   end
+%    [blockObj.(blockObj.FieldType{jj}).(OldFN{jj})].getPath
     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
     moveFiles(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info);
     
@@ -40,6 +45,7 @@ blockObj.save;
 flag = true;
 
 end
+
 function moveFiles(oldPath,NewPath)
  oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
     newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
@@ -60,6 +66,7 @@ function moveFiles(oldPath,NewPath)
             VarParts{hh} = source(ind(1,hh):ind(2,hh));
         end
         target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
-        [status,msg] = movefile(source,target);
+        [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
     end
+end
 end

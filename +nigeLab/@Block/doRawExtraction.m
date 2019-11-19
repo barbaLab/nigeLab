@@ -13,12 +13,36 @@ function flag = doRawExtraction(blockObj)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
-flag = false; 
+flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-   
+
+%% Check for MultiAnimals
+% More than one animal can be recorded simultaneously in one single file. 
+% Thi eventuality is explicitely handled here. The init process looks for a
+% special char string in the block ID (defined in defaults), if detected
+% the flag ManyAnimalsLinkedBlocks is set true. 
+% The function splitMultiAnimals prompts the user to assign channels and
+% other inputs to the different animals. When this is done two or ore child
+% blocks are initialized and stored in the ManyAnimalsLinkedBlocks field.
+ 
+% flag = [blockObj.ManyAnimals ~isempty(blockObj.ManyAnimalsLinkedBlocks)];
+% if all(flag == [false true]) % child block. Call rawExtraction on father
+%     blockObj.ManyAnimalsLinkedBlocks.doRawExtraction;
+% elseif all(flag == [true false]) % father block without childern. Call splitMultiAnimals
+%     blockObj.splitMultiAnimals;
+% elseif all(flag == [true true])  % father block with children. Go on with extraction and move files at the end
+%     ManyAnimals = true;
+% else
+% end
+%% extraction
 switch blockObj.RecType
    case 'Intan'
       flag = blockObj.intan2Block;
@@ -37,8 +61,10 @@ switch blockObj.RecType
    case 'TDT'
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
-      nigeLab.utils.cprintf('UnterminatedStrings','%s extraction is still WIP. It might take a while.',...
-         blockObj.RecType);
+      fprintf(1,' \n');
+      nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
+      nigeLab.utils.cprintf('Magenta-', 'WIP\n');
+      nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
       flag = tdt2Block(blockObj);
       
    case 'Matfile'
@@ -66,7 +92,8 @@ switch blockObj.RecType
          blockObj.RecType);
       return;
 end
+
+%%
 blockObj.updateStatus('Raw',true);
 blockObj.save;
-notify(blockObj,processCompleteEvent);
 end
