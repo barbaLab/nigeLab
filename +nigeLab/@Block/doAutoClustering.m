@@ -23,56 +23,6 @@ SuppressText = true;
 
 
 for iCh = chan
-    [inspk] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
-    classes = getClus(blockObj,iCh,SuppressText);
-    offs = max(classes);
-    %% runs automatic clustering algorithms
-        
-    subsetIndex = find(ismember(classes,unit));
-    
-    
-    inspk = inspk(subsetIndex,:);
-    if size(inspk,1) < 15
-        nigeLab.utils.cprintf('err','Channel %.3d: Not enough Spikes!\nLess than 15 spikes detected.',1);
-        return;
-    end
-    
-%% TODO, permuting spikes
-%     if par.permut == 'y'
-%        if par.match == 'y'
-%           naux = min(par.max_spk,size(inspk,1));
-%           ipermut = randperm(length(inspk));
-%           ipermut(naux+1:end) = [];
-%        else
-%           ipermut = randperm(length(inspk));
-%        end
-%        inspk_aux = inspk(ipermut,:);
-%     else
-%        if par.match == 'y'
-%           naux = min(par.max_spk,size(inspk,1));
-%           inspk_aux = inspk(1:naux,:);
-%        else
-%           inspk_aux = inspk;
-%        end
-%     end
-    
-%% Perfomring clustering
-    
-    [classes_,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
-%     classes_ = classes_ + offs;
-    classes_(classes_>par.NCLUS_MAX) = par.NCLUS_MAX;
-    classes(subsetIndex) = classes_;
-    
-    saveClusters(blockObj,classes,iCh,temp);
-
-    blockObj.updateStatus('Clusters',true,iCh);
-   pct = floor(100 * (iCh / blockObj.NumChannels));
-   if ~mod(pct,5) % only increment counter by 5%
-      fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   end
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
 end
 fprintf(1,'\b\b\b\bDone.\n');
 flag = true;

@@ -34,6 +34,14 @@ for ii = 1:numel(nameCon)
 end
 blockObj.Name = str(1:(end-1));
 
+%% Check for multiple Animals
+for ii = fieldnames(meta)'
+   if contains(meta.(ii{:}),blockObj.ManyAnimalsChar)
+       blockObj.ManyAnimals = true;
+       break;
+   end
+end
+
 %% GET/CREATE SAVE LOCATION FOR BLOCK
 % blockObj.AnimalLoc is probably empty [] at this point, which will prompt 
 % a UI to point to the block save directory:

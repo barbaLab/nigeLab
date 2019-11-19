@@ -1,4 +1,4 @@
-classdef Block < handle
+classdef Block < matlab.mixin.Copyable
    %% BLOCK    Creates datastore for an electrophysiology recording.
    %
    %  blockObj = BLOCK();
@@ -154,6 +154,13 @@ classdef Block < handle
       DynamicVarExp    % Expression for parsing BLOCK names from raw file
       IncludeChar      % Character indicating included name elements
       DiscardChar      % Character indicating discarded name elements
+      
+      ManyAnimalsChar  % Character indicating the presence of many animals in the recording
+      ManyAnimals = false; % flag for many animals contained in one block
+      ManyAnimalsLinkedBlocks % Pointer to the splitted blocks. 
+%                 In conjuction with the multianimals flag keeps track of
+%                 where the data is temporary saved.
+      
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
       
@@ -237,7 +244,8 @@ classdef Block < handle
 %          if any([blockObj.Verbose])
 %             builtin('disp',blockObj);
 %          end
-%       end    
+%       end
+
       function varargout = subsref(blockObj,s)
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
@@ -418,5 +426,7 @@ classdef Block < handle
       meta = parseNamingMetadata(blockObj); % Get metadata struct from recording name
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
+      
+      blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end
 end

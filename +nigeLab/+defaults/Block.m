@@ -79,15 +79,31 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 % ~/path/R18-68_0_180724_141203
 
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+% pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
 pars.IncludeChar='$';
-pars.DiscardChar='&';
-pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
+pars.DiscardChar='~';
+% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
 pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+
+
+% _____________________________
+% Many animals in one block
+%
+% Modern recording amplifiers usually have the capabilities to record from
+% many channels  simultaneously. This can be exploited to record from many
+% animals simultaneously and save eveything in only one datafile. 
+% You can signal this to nigel by interposing the here defined character
+% between different animal names in the AnimalID field of the recording
+% file
+%
+% Example 
+% R18-68&&R18-69_180724_141203.rhd
+pars.ManyAnimalsChar='&&';
 
 %%
 Fields =  { ...
