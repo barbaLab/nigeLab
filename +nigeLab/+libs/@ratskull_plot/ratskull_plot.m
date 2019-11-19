@@ -1,38 +1,49 @@
 classdef ratskull_plot < handle
-   %RATSKULL_PLOT  Graphics object handle
+   %RATSKULL_PLOT  Graphics object handle to overlay of scatters on rat
+   %  skull. Useful for co-registering different stereotaxic electrode
+   %  recording channels for visualizing spatial distributions of changes
+   %  of some outcome of interest on a per-electrode basis.
    %
-   % obj = ratskull_plot;        % Goes onto current axes
-   % obj = ratskull_plot(ax);    %
+   % obj = nigeLab.libs.ratskull_plot;        % Goes onto current axes
+   % obj = nigeLab.libs.ratskull_plot(ax);    % Goes onto axes object (ax)
    
+   %% Properties
+   % Properties that can be set and accessed externally
    properties(GetAccess = public, SetAccess = public)
-      Name
-      Children
+      Name        % Name of this RATSKULL_PLOT object
+      Children    % Child graphics objects (scatters etc)
    end
    
+   % Graphics objects can be accessed publically but must be set by a
+   % method of RATSKULL_PLOT
    properties (GetAccess = public, SetAccess = private)
-      Figure
-      Axes
-      Score
-      Image
-      Bregma
-      Scale_Compass
+      Figure           % Handle to figure with the RATSKULL_PLOT object
+      Axes             % Axes containing RATSKULL_PLOT object
+      Score            % Score associated with a given RATSKULL_PLOT
+      Image            % Handle to image of RATSKULL_PLOT
+      Bregma           % Handle to scatter group indicating Bregma location
+      Scale_Compass    % Handle to group indicating scale and directions
    end
    
+   % XLim and YLim can be accessed but are Hidden by default
    properties (GetAccess = public, Hidden = true)
-      XLim
-      YLim
+      XLim  % Linked to axes XLim
+      YLim  % Linked to axes YLim
    end
    
+   % Raw data associated with image is Private
    properties (Access = private)
-      CData
+      CData    % Raw color data for skull plot image
    end
    
+   %% Methods
+   % Class constructor
    methods (Access = public)
       % RATSKULL_PLOT Class constructor
       function obj = ratskull_plot(ax)
          % RATSKULL_PLOT   Class constructor: build rat skull image plot
          
-         p = ratskull_plot.def('Image');
+         p = nigeLab.libs.ratskull_plot.def('Image');
          if nargin == 0
             ax = gca;
             fig = ax.Parent;
@@ -64,19 +75,19 @@ classdef ratskull_plot < handle
          % Add listener to axes and set axes properties
          addlistener(ax,'XLim','PostSet',@obj.handleAxesLimChange);
          addlistener(ax,'YLim','PostSet',@obj.handleAxesLimChange);
-         ax = ratskull_plot.setAxProperties(ax);
+         ax = nigeLab.libs.ratskull_plot.setAxProperties(ax);
          obj.Image.Parent = ax;
          obj.Axes = ax;
          
          % Set figure properties
-         fig = ratskull_plot.setFigProperties(fig);
+         fig = nigeLab.libs.ratskull_plot.setFigProperties(fig);
          obj.Figure = fig;
          
          % Make "Bregma" marker
-         obj.Bregma = ratskull_plot.buildBregma(ax);
+         obj.Bregma = nigeLab.libs.ratskull_plot.buildBregma(ax);
          
          % Make Scale bar/compass
-         obj.Scale_Compass = ratskull_plot.buildScale_Compass(ax);
+         obj.Scale_Compass = nigeLab.libs.ratskull_plot.buildScale_Compass(ax);
       end
       
       % Add a scatter plot group to the skull layout plot
@@ -109,12 +120,13 @@ classdef ratskull_plot < handle
       
       % Make the movie frame sequence as a tensor that can then be exported
       % one frame at a time. MV is a nRows x nColumns x 3 (RGB) x nFrames
-      % tensor of class uint8.
+      % tensor of class uint8. Requires the SCREENCAPTURE method from
+      % Matlab File Exchange (has to be in "+utils") 
       function MV = buildMovieFrameSequence(obj,sizeData,scoreData,scoreAx,scoreDays,t_orig_score,orig_score)
          set(obj.Figure,'Position',[0.3 0.3 0.2 0.5]);
          set(obj.Figure,'MenuBar','none');
          set(obj.Figure,'Toolbar','none');
-         tmp = utils.screencapture(obj.Figure);
+         tmp = nigeLab.utils.screencapture(obj.Figure);
          MV = zeros(size(tmp,1),size(tmp,2),size(tmp,3),size(sizeData,2),...
             class(tmp));
          keepvec = true(size(sizeData,2),1);
@@ -174,29 +186,17 @@ classdef ratskull_plot < handle
                end
             end
             obj.changeScatterGroupSizeData(sizeData(:,ii));
-            MV(:,:,:,ii) = utils.screencapture(obj.Figure);
+            MV(:,:,:,ii) = nigeLab.utils.screencapture(obj.Figure);
          end
-      end
+      end      
       
-      % Change the sizes for data on an existing scatter group of electrode
-      % channels
-      function changeScatterGroupSizeData(obj,sizeData,groupIdx)
-         if nargin < 3
-            groupIdx = 1;
-         end
-         for ii = 1:numel(sizeData)
-            obj.Children(groupIdx).Children(ii).SizeData = sizeData(ii);
-         end
-      end
-      
-      % MV(:,:,:,fi) = getMovieFrame(obj);
-      function MV = getMovieFrame(obj)
-         MV = utils.screencapture(obj.Axes);
-      end
-      
+   end
+   
+   % OVERLOADED methods
+   methods (Access = public)
       % Overloads SCATTER method
       function hgg = scatter(obj,x,y,scattername,varargin)
-         p = ratskull_plot.def('Scatter');
+         p = nigeLab.libs.ratskull_plot.def('Scatter');
          if nargin < 4
             scattername = p.GroupName;
          end
@@ -252,7 +252,22 @@ classdef ratskull_plot < handle
                'Parent',p.Parent);
          end
       end
+   end
+   
+   % "GET" methods
+   methods (Access = public)
+      % MV(:,:,:,fi) = getMovieFrame(obj);
+      % GETMOVIEFRAME  Requires SCREENCAPTURE function from Matlab File
+      % Exchange
+      function MV = getMovieFrame(obj)
+         MV = nigeLab.utils.screencapture(obj.Axes);
+      end
       
+   end
+   
+   % "SET" methods
+   methods (Access = public)      
+      % Set a particular property of the RATSKULL_PLOT object
       function setProp(obj,propName,propVal)
          % Parse input arrays
          if numel(obj) > 1
@@ -289,8 +304,21 @@ classdef ratskull_plot < handle
             end
          end
       end
+      
+      % Change the sizes for data on an existing scatter group of electrode
+      % channels
+      function setScatterGroupSizeData(obj,sizeData,groupIdx)
+         % SETSCATTERGROUPSIZEDATA  Set the markersize of a scatter group
+         if nargin < 3
+            groupIdx = 1;
+         end
+         for ii = 1:numel(sizeData)
+            obj.Children(groupIdx).Children(ii).SizeData = sizeData(ii);
+         end
+      end
    end
    
+   % Private "listener" methods used by other methods of this class
    methods (Access = private)
       % Listener function that handles changes in axes limits
       function handleAxesLimChange(obj,src,evt)
@@ -299,10 +327,11 @@ classdef ratskull_plot < handle
       
    end
    
+   % Static methods (call as ratskull_plot.(method))
    methods (Access = private, Static = true)
       % Make property struct with graphics object and graphics text label
       function bregma = buildBregma(ax)
-         p = ratskull_plot.def('Bregma');
+         p = nigeLab.libs.ratskull_plot.def('Bregma');
          bregma.Marker = fill(ax,p.X,p.Y,p.C);
          bregma.Label = text(ax,0,0,'Bregma','FontName','Arial',...
             'Color','k','FontWeight','bold','FontSize',14);
@@ -310,7 +339,7 @@ classdef ratskull_plot < handle
       
       % Make Scale_Compass property using graphics objects and text labels
       function scale_compass = buildScale_Compass(ax)
-         p = ratskull_plot.def('Scale');
+         p = nigeLab.libs.ratskull_plot.def('Scale');
          scale_compass = hggroup(ax,'DisplayName','Compass');
          
          % Horizontal arrow component
@@ -345,7 +374,7 @@ classdef ratskull_plot < handle
       
       % Set axes properties in constructor
       function ax = setAxProperties(ax)
-         p = ratskull_plot.def('Axes');
+         p = nigeLab.libs.ratskull_plot.def('Axes');
          ax.XLim = p.XLim;
          ax.YLim = p.YLim;
          ax.XTick = p.XTick;
@@ -355,7 +384,7 @@ classdef ratskull_plot < handle
       
       % Set figure properties in constructor
       function fig = setFigProperties(fig)
-         p = ratskull_plot.def('Fig');
+         p = nigeLab.libs.ratskull_plot.def('Fig');
          if isempty(get(fig,'Name'))
             set(fig,'Name',p.Name);
          end
@@ -366,6 +395,7 @@ classdef ratskull_plot < handle
       end
    end
    
+   % "DEFAULTS" method
    methods (Access = public, Static = true)
       function param = def(name)
          % DEF  Static method to return ratskull_plot defaults
@@ -374,7 +404,7 @@ classdef ratskull_plot < handle
          p = struct;
          
          % Image
-         p.Image.CData = utils.load_ratskull_plot_img('low');
+         p.Image.CData = nigeLab.utils.load_ratskull_plot_img('low');
          p.Image.XData = [-11, 9.65];    % mm
          p.Image.YData = [-6.10 7.00];    % mm
          
