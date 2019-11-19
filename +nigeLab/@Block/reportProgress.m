@@ -15,6 +15,8 @@ if ~nigeLab.utils.checkForWorker % serial execution on localhost
             lastDisplText = getLastDispText(numel(str)+3);
             
             lastDisplText = regexprep(lastDisplText,'>> ','');
+            strtIndx = regexp(lastDisplText,[eval(pars.NotifyString.Vars{1})]);
+            lastDisplText = lastDisplText(strtIndx:end);
             nextDisplText = regexprep(lastDisplText,'\d*%',sprintf('%.3d%%%%\n',pct));
             nextDisplText = regexprep(nextDisplText,'\n*','\\n');
             nextDisplText = regexprep(nextDisplText,'\r','\\r');

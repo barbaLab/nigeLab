@@ -79,10 +79,10 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
 % ~/path/R18-68_0_180724_141203
 
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-% pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
-pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
+pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+% pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
-pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
+% pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
 pars.IncludeChar='$';
 pars.DiscardChar='~';
