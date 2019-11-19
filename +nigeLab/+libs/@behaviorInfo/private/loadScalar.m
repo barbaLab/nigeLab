@@ -1,10 +1,11 @@
-function scalar = loadScalar(F,defVal,varNum,warnFlag)
+function scalar = loadScalar(F,defVal,varNum,warnFlag,verbose)
 %% LOADSCALAR    Load a Scalar variable without needing specific name
 %
 %  scalar = LOADSCALAR(F);
 %  scalar = LOADSCALAR(F,defVal);
 %  scalar = LOADVECTOR(F,defVal,varNum);
 %  scalar = LOADVECTOR(F,defVal,varNum,warnFlag);
+%  scalar = LOADVECTOR(F,defVal,varNum,warnFlag,verbose);
 %
 %  --------
 %   INPUTS
@@ -30,6 +31,9 @@ function scalar = loadScalar(F,defVal,varNum,warnFlag)
 %                                 loading a particular file with multiple
 %                                 variables, but not recommended.
 %
+%  verbose        :     (Optional) bool flag. Default is false. Set true to
+%                                print indicator text to Command Window.
+%
 %  --------
 %   OUTPUT
 %  --------
@@ -38,6 +42,11 @@ function scalar = loadScalar(F,defVal,varNum,warnFlag)
 % By: Max Murphy  v1.0   09/03/2018  Original version (R2017b)
 
 %% PARSE INPUT
+% Default of whether to display issues to UI
+if nargin < 5
+   verbose = false;
+end
+
 % Default to warning user about multiple variables
 if nargin < 4
    warnFlag = true;
@@ -56,7 +65,9 @@ end
 %% CHECK FOR FILE EXISTENCE
 fname = fullfile(F.folder,F.name);
 if exist(fname,'file') == 0
-   fprintf(1,'->\t%s not found.\n',F.name);
+   if verbose
+      fprintf(1,'->\t%s not found.\n',F.name);
+   end
    scalar = defVal;
    return;
 end
@@ -66,7 +77,7 @@ tmp = load(fname);
 in = fieldnames(tmp);
 
 %% (OPTIONAL) WARN USER IF MULTIPLE VARIABLES IN FILE
-if warnFlag
+if warnFlag && verbose
    % If there is more than one vector, warn user that they might not be
    % loading the one they hoped...
    k = numel(in);

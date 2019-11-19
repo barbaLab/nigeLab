@@ -1,10 +1,11 @@
-function T = loadTable(F,defVal,varNum,warnFlag)
+function T = loadTable(F,defVal,varNum,warnFlag,verbose)
 %% LOADTABLE    Load a Table variable without needing specific name
 %
 %  T = LOADTABLE(F);
 %  T = LOADTABLE(F,defVal);
 %  T = LOADTABLE(F,defVal,varNum);
 %  T = LOADTABLE(F,defVal,varNum,warnFlag);
+%  T = LOADTABLE(F,defVal,varNum,warnFlag,verbose);
 %
 %  --------
 %   INPUTS
@@ -30,6 +31,9 @@ function T = loadTable(F,defVal,varNum,warnFlag)
 %                                 loading a particular file with multiple
 %                                 variables, but not recommended.
 %
+%  verbose        :     (Optional) bool flag. Default is false. Set true to
+%                                print indicator text to Command Window.
+%
 %  --------
 %   OUTPUT
 %  --------
@@ -38,6 +42,11 @@ function T = loadTable(F,defVal,varNum,warnFlag)
 % By: Max Murphy  v1.0   09/03/2018  Original version (R2017b)
 
 %% PARSE INPUT
+% Default of whether to display issues to UI
+if nargin < 5
+   verbose = false;
+end
+
 % Default to warning user about multiple variables
 if nargin < 4
    warnFlag = true;
@@ -56,7 +65,9 @@ end
 %% CHECK FOR FILE EXISTENCE
 fname = fullfile(F.folder,F.name);
 if exist(fname,'file') == 0
-   fprintf(1,'->\t%s not found.\n',F.name);
+   if verbose
+      fprintf(1,'->\t%s not found.\n',F.name);
+   end
    T = defVal;
    return;
 end
@@ -66,7 +77,7 @@ tmp = load(fname);
 in = fieldnames(tmp);
 
 %% (OPTIONAL) WARN USER IF MULTIPLE VARIABLES IN FILE
-if warnFlag
+if warnFlag && verbose
    % If there is more than one vector, warn user that they might not be
    % loading the one they hoped...
    k = numel(in);
@@ -80,6 +91,14 @@ T = tmp.(in{varNum});
 
 % Check if it is not a Table
 if ~istable(T)
+   if numel(in) > 1
+      for ii = 2:numel(fieldnames)
+         if istable(tmp.(in{ii}))
+            T = tmp.(in{ii});
+            return;
+         end
+      end
+   end
    error('%s is not a table. Check contents of %s.',in{varNum},F.name);
 end
 

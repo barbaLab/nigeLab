@@ -1,7 +1,7 @@
 classdef behaviorInfo < handle
-%% BEHAVIORINFO  Class to update HUD & track button information
-
-%% Properties 
+   %% BEHAVIORINFO  Class to update HUD & track button information
+   
+   %% Properties
    properties(SetAccess = private, GetAccess = public)
       parent  % Figure handle of parent
       
@@ -15,7 +15,7 @@ classdef behaviorInfo < handle
       
       % Info about alignment
       VideoStart = 0; % Default to 0 offset
-      Trials            
+      Trials
       
       behaviorData % Table to keep track of all behavior scoring
       
@@ -26,7 +26,7 @@ classdef behaviorInfo < handle
       
       
    end
-
+   
    properties(SetAccess = private, GetAccess = private)
       % Constants
       TRIAL_OFFSET = -0.25; % Time before "trial" to offset
@@ -41,20 +41,28 @@ classdef behaviorInfo < handle
       ScoringTracker_ax;   % Axes for scoring tracker image/line
       ScoringTracker_im;   % Image for overall trial progress bar
       ScoringTracker_line; % Overlay line for current trial indicator
-      ScoringTracker_lab;  % Title of progress tracker indicator
+      ScoringTracker_lab;  % Label to keep track of scoring completion
+      SuccessTracker_lab;  % Label to keep track of total # successful
       trialPop;            % Popupmenu for selecting trial
       editArray;           % Cell array of handles to edit boxes
    end
    
-%% Events
-   events % These correspond to different scoring events
-      update   % When a value is modified during scoring
-      newTrial % Switch to a new trial ("row" of behaviorData)
-      load     % When a behavior file is loaded
-      saveFile % When file is saved
+   properties(SetAccess = immutable, GetAccess = private)
+      verbose = false;
    end
    
-%% Methods
+   %% Events
+   events % These correspond to different scoring events
+      update      % When a value is modified during scoring
+      newTrial    % Switch to a new trial ("row" of behaviorData)
+      load        % When a behavior file is loaded
+      saveFile    % When file is saved
+      closeReq    % When UI is requested to close
+      countIsZero % No pellets are on platform, or pellet not present
+      nSuccessChanged % # successful trials changed
+   end
+   
+   %% Methods
    methods (Access = public)
       % Construct the behaviorInfo object
       function obj = behaviorInfo(figH,F,vname,vtype,container)
@@ -84,8 +92,7 @@ classdef behaviorInfo < handle
             obj.buildContainer(container);
          end
          obj.buildVideoControlPanel;
-         obj.buildProgressTracker;
-         
+         obj.buildProgressTracker;        
          
       end
       
@@ -106,7 +113,7 @@ classdef behaviorInfo < handle
          for ii = 2:numel(vname)
             tmp = [tmp, ...
                table(nan(size(obj.Trials)),...
-                  'VariableNames',vname(ii))]; %#ok<AGROW>
+               'VariableNames',vname(ii))]; %#ok<AGROW>
          end
          obj.behaviorData = tmp;
          obj.behaviorData.Properties.UserData = obj.varType;
@@ -148,14 +155,25 @@ classdef behaviorInfo < handle
          % Add a "reset" arg that can be used in specific instances where
          % we WANT to reset the trial based on having the same index (for
          % example, after a trial deletion).
-         if exist('reset','var')==0
+         if nargin < 4
             reset = false;
          end
          
          % Or just using newTrial as extra input argument
          if ((newTrial ~= obj.cur) && ...
-            (newTrial > 0) && ...
-            (newTrial <= obj.N) || reset)
+               (newTrial > 0) && ...
+               (newTrial <= obj.N) || reset)
+            
+            % Update "Trials" to reflect the earliest "timestamped" indicator
+            % (in this case, update to the "Reach" timestamp for Trial, if it
+            %  exists).
+            tsIdx = find(obj.varType==1,1,'first');
+            if ~isempty(tsIdx)
+               t = obj.behaviorData.(obj.varName{tsIdx})(newTrial);
+               if (~isnan(t)) && (~isinf(t))
+                  obj.Trials(newTrial) = t;
+               end
+            end
             
             obj.idx = 1;  % reset index to 1 for checking graphics
             obj.cur = newTrial;
@@ -170,24 +188,105 @@ classdef behaviorInfo < handle
          % Remove entry from list
          obj.behaviorData(obj.cur,:) = [];
          obj.Trials(obj.cur) = [];
-         obj.trialPop.String(obj.cur) = []; 
+         obj.trialPop.String(obj.cur) = [];
          obj.ScoringTracker_im.CData(:,obj.cur,:) = [];
          
          obj.N = obj.N - 1;
          if obj.N > 0
             obj.cur = min(obj.cur,obj.N); % Make sure you don't go over
-            obj.setTrial(nan,obj.cur,true);          
+            obj.setTrial(nan,obj.cur,true);
          else
             delete(gcf);
             warning('No valid trials for this video!');
          end
       end
       
-      % Set the associated value and notify
+      % Gets the variable index for a particular named variable or array of
+      % indices for set of named variables
+      function idx = getVarIdx(obj,varName)
+         idx = find(ismember(obj.varName,varName));
+      end
+      
+      % Set the associated value and notify. Parse different kinds of
+      % inputs to create "shortcuts" here that automatically update certain
+      % elements.
       function setValue(obj,idx,val)
-         obj.varVal(idx) = val;
-         obj.idx = idx;
-         notify(obj,'update');
+         switch obj.varName{idx}
+            case 'Grasp'
+               obj.varVal(idx) = val;
+               obj.idx = idx;
+               notify(obj,'update');
+               if isinf(val) % Must be unsuccessful if no grasp
+                  idx = getVarIdx(obj,'Outcome');
+                  
+                  if ~isempty(idx)
+                     obj.idx = idx;
+                     obj.varVal(idx) = 0;
+                     notify(obj,'countIsZero');
+                  end
+                  
+                  % Check that support not entered; if not, default it to
+                  % inf at this point.
+                  idx = getVarIdx(obj,'Support');
+                  if ~isempty(idx)
+                     if isnan(obj.varVal(idx))
+                        obj.varVal(idx) = inf;
+                        obj.idx = idx;
+                        notify(obj,'update');
+                     end
+                  end
+               end
+            case 'Pellets' % if 0 pellets are present, must be no pellet
+               if val==0
+                  idx = getVarIdx(obj,{'Pellets','PelletPresent','Outcome'});
+                  if ~isempty(idx)
+                     obj.idx = idx;
+                     for ii = 1:numel(idx)
+                        obj.varVal(idx(ii)) = 0;
+                     end
+                     notify(obj,'countIsZero');
+                  end
+               else
+                  obj.varVal(idx) = val;
+                  obj.idx = idx;
+                  notify(obj,'update');
+               end
+            case 'PelletPresent' % if pellet presence
+               if val==0 % if not present, must be unsuccessful
+                  idx = getVarIdx(obj,{'PelletPresent','Outcome'});
+                  if ~isempty(idx)
+                     obj.idx = idx;
+                     for ii = 1:numel(idx)
+                        obj.varVal(idx(ii)) = 0;
+                     end
+                     notify(obj,'countIsZero');
+                  end
+                  
+               else
+                  obj.varVal(idx) = val;
+                  obj.idx = idx;
+                  notify(obj,'update');
+               end
+               
+               % should also check what previous trial pellet count was
+               % and set this one to that if possible
+               idx = getVarIdx(obj,'Pellets');
+               
+               if ~isempty(idx)
+                  if (isnan(obj.varVal(idx)) || isinf(obj.varVal(idx))) ...
+                        && (obj.cur>1)
+                     obj.idx = idx;
+                     % If everything works, get previous value:
+                     obj.varVal(idx) = ...
+                        obj.behaviorData.(obj.varName{idx})(obj.cur-1);
+                     notify(obj,'update');
+                  end
+               end
+            otherwise
+               obj.varVal(idx) = val;
+               obj.idx = idx;
+               notify(obj,'update');
+         end
       end
       
       % Set all associated values
@@ -212,7 +311,38 @@ classdef behaviorInfo < handle
          else
             obj.behaviorData.(obj.varName{obj.idx})(obj.cur) = val;
             varState = true;
-         end        
+         end
+      end
+      
+      % Force the value to zero for the current variable index
+      function varState = forceZeroValue(obj)
+         varState = true(size(obj.idx));
+         for i = 1:numel(obj.idx)
+            k = obj.idx(i);
+            
+            % Always set value to input value
+            switch obj.varType(k)
+               case 0 % Trial "onset" guess
+                  varState(i) = false; % something is wrong
+               case 1 % Timestamps
+                  obj.behaviorData.(obj.varName{k})(obj.cur) = inf;
+                  varState(i) = true;
+               case 2 % Counts
+                  obj.behaviorData.(obj.varName{k})(obj.cur) = 0;
+                  varState(i) = true;
+               case 3 % No (0) or Yes (1)
+                  obj.behaviorData.(obj.varName{k})(obj.cur) = 0;
+                  varState(i) = true;
+               case 4 % Unsuccessful (0) or Successful (1)
+                  obj.behaviorData.(obj.varName{k})(obj.cur) = 0;
+                  varState(i) = true;
+               case 5 % Left (0) or Right (1)
+                  obj.behaviorData.(obj.varName{k})(obj.cur) = inf;
+                  varState(i) = false; % something is wrong
+               otherwise
+                  varState(i) = true; % something is wrong
+            end
+         end
       end
       
       % Increment the idx property by 1 and return false if out of range
@@ -221,7 +351,7 @@ classdef behaviorInfo < handle
          flag = obj.idx <= obj.K;
          if ~flag
             obj.idx = 2;
-         end            
+         end
       end
       
       % Returns a struct of handles to graphics objects
@@ -229,17 +359,20 @@ classdef behaviorInfo < handle
          graphics = struct('trialTracker_display',obj.ScoringTracker_im,...
             'trialTracker_displayOverlay',obj.ScoringTracker_line,...
             'trialTracker_label',obj.ScoringTracker_lab,...
+            'successTracker_label',obj.SuccessTracker_lab,...
             'trialPopup_display',obj.trialPop,...
             'editArray_display',{obj.editArray},...
             'behavior_panel',obj.panel,...
             'behavior_conPanel',obj.conPanel,...
             'behavior_trkPanel',obj.trkPanel);
       end
-            
+      
       function saveScoring(obj)
          fname = fullfile(obj.tables.behaviorData.folder,...
             obj.tables.behaviorData.name);
-         fprintf(1,'Saving %s...',obj.tables.behaviorData.name);
+         if obj.verbose
+            fprintf(1,'Saving %s...',obj.tables.behaviorData.name);
+         end
          behaviorData = obj.behaviorData;  %#ok<*PROP>
          for ii = 1:numel(obj.varName) % Set correct offset
             if behaviorData.Properties.UserData(ii) < 2
@@ -249,15 +382,34 @@ classdef behaviorInfo < handle
          end
          save(fname,'behaviorData','-v7.3');
          notify(obj,'saveFile');
-         fprintf(1,'complete.\n');
+         if obj.verbose
+            fprintf(1,'complete.\n');
+         end
       end
-   
+      
+      % Request to close scoring UI
+      function closeScoringRequest(obj,forceClose)
+         if nargin < 2
+            forceClose = false;
+         end
+         
+         if forceClose
+            notify(obj,'closeReq')
+         else
+            str = questdlg('Exit scoring?','Close Prompt',...
+               'Yes','No','Yes');
+            if strcmpi(str,'Yes')
+               notify(obj,'closeReq');
+            end
+         end
+      end
+      
    end
-
+   
    methods (Access = private)
-            % Build panel that contains graphics for this object
+      % Build panel that contains graphics for this object
       function buildContainer(obj,container)
-         if exist('container','var')==0 
+         if exist('container','var')==0
             obj.panel = uipanel(obj.parent,...
                'Units','Normalized',...
                'BackgroundColor','k',...
@@ -285,7 +437,7 @@ classdef behaviorInfo < handle
          % Create axes that will display "progress" image
          obj.ScoringTracker_ax = axes(obj.trkPanel,...
             'Units','Normalized',...
-            'Position',[0.025 0.025 0.95 0.725],...
+            'Position',[0.025 0.025 0.95 0.5],...
             'NextPlot','replacechildren',...
             'XLim',[0 1],...
             'YLim',[0 1],...
@@ -298,16 +450,26 @@ classdef behaviorInfo < handle
             'YColor','k');
          
          obj.ScoringTracker_lab = annotation(obj.trkPanel, ...
-            'textbox',[0.025 0.825 0.95 0.15],...
+            'textbox',[0.025 0.600 0.95 0.125],...
             'Units', 'Normalized', ...
-            'Position', [0.025 0.825 0.95 0.15], ...
+            'Position', [0.025 0.600 0.95 0.125], ...
             'FontName','Arial',...
-            'FontSize',24,...
+            'FontSize',22,...
             'FontWeight','bold',...
             'Color','w',...
             'String','Progress Indicator');
          
-         % Make the progress image and an overlay line to indicate 
+         obj.SuccessTracker_lab = annotation(obj.trkPanel, ...
+            'textbox',[0.025 0.825 0.95 0.125],...
+            'Units', 'Normalized', ...
+            'Position', [0.025 0.825 0.95 0.125], ...
+            'FontName','Arial',...
+            'FontSize',22,...
+            'FontWeight','bold',...
+            'Color','w',...
+            'String',sprintf('%g Successful Trials',nansum(obj.behaviorData.Outcome)));
+         
+         % Make the progress image and an overlay line to indicate
          % current trial.
          obj.ScoringTracker_im = image(obj.ScoringTracker_ax,x,y,C);
          obj.ScoringTracker_line = line(obj.ScoringTracker_ax,[0 0],[0 1],...
@@ -333,7 +495,7 @@ classdef behaviorInfo < handle
          % Make controller for switching between trials
          str = cellstr(num2str(obj.behaviorData.(obj.varName{1})));
          % This makes it look nicer:
-         str = cellfun(@(x) strrep(x,' ',''),str,'UniformOutput',false); 
+         str = cellfun(@(x) strrep(x,' ',''),str,'UniformOutput',false);
          
          % Make box for selecting current trial
          obj.trialPop = uicontrol(obj.conPanel,'Style','popupmenu',...
@@ -384,7 +546,7 @@ classdef behaviorInfo < handle
          vname = fieldnames(f);
          for iV = 1:numel(vname)
             if ismember(vname{iV},properties(obj))
-               obj.(vname{iV}) = loadScalar(f.(vname{iV}));           
+               obj.(vname{iV}) = loadScalar(f.(vname{iV}));
             end
          end
       end
@@ -395,7 +557,7 @@ classdef behaviorInfo < handle
          vname = fieldnames(f);
          for iV = 1:numel(vname)
             if ismember(vname{iV},properties(obj))
-               obj.(vname{iV}) = loadVector(f.(vname{iV}));           
+               obj.(vname{iV}) = loadVector(f.(vname{iV}));
             end
          end
       end
@@ -406,7 +568,7 @@ classdef behaviorInfo < handle
          vname = fieldnames(f);
          for iV = 1:numel(vname)
             if ismember(vname{iV},properties(obj))
-               obj.(vname{iV}) = loadTable(f.(vname{iV})); 
+               obj.(vname{iV}) = loadTable(f.(vname{iV}));
                
                if ~isempty(obj.(vname{iV}))
                   % And make sure to remove the neural offset
@@ -414,7 +576,7 @@ classdef behaviorInfo < handle
                   for ii = 1:numel(v)
                      if obj.(vname{iV}).Properties.UserData(ii) < 2
                         obj.(vname{iV}).(v{ii}) = ...
-                           obj.(vname{iV}).(v{ii}) - obj.VideoStart; 
+                           obj.(vname{iV}).(v{ii}) - obj.VideoStart;
                      end
                   end
                end
@@ -429,10 +591,16 @@ classdef behaviorInfo < handle
          X = table2array(obj.behaviorData(:,2:end));
          nextTrial = find(any(isnan(X),2),1,'first');
          
-         % If it can't find any NaN entries, its already been fully scored.
-         % Default to final trial to indicate that.
+%          % If it can't find any NaN entries, its already been fully scored.
+%          % Default to final trial to indicate that.
+%          if isempty(nextTrial)
+%             nextTrial = size(obj.behaviorData,1);
+%          end
+
+         % 2019-10-15: Change this to initialize to first trial to
+         % facilitate appending the 'Stereotyped' tag to trials.
          if isempty(nextTrial)
-            nextTrial = size(obj.behaviorData,1);
+            nextTrial = 1;
          end
       end
       
