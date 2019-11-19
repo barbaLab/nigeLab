@@ -1,8 +1,8 @@
-function fig = scoreVideo(varargin)
+function fig = scoreVideo(blockObj,varargin)
 %% SCOREVIDEO  Locates successful grasps in behavioral video.
 %
-%  fig = SCOREVIDEO;
-%  fig = SCOREVIDEO('NAME',value,...);
+%  fig = blockObj.SCOREVIDEO;
+%  fig = blockObj.SCOREVIDEO('NAME',value,...);
 %
 %  --------
 %   INPUTS
@@ -30,7 +30,8 @@ function fig = scoreVideo(varargin)
 %                          v3.1  12/30/2018  Add additional scoring field
 %                                            to get the timestamp of
 %                                            COMPLETED grasp. Add a bunch
-%                                            of documentation. 
+%                                            of documentation.
+%                          v4.0  11/19/2019  Ported from rc-proj to nigeLab
 
 %% DEFAULTS
 DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
