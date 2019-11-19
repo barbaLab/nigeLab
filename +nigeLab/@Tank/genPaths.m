@@ -16,7 +16,9 @@ if (nargin > 1)
 else
    paths.SaveLoc     = fullfile(tankObj.TanklLoc,tankObj.Name);
 end
-if ~exist(paths.SaveLoc,'dir'), mkdir(paths.SaveLoc);end
+if ~exist(paths.SaveLoc,'dir')
+   mkdir(paths.SaveLoc);
+end
 tankObj.Paths = paths;
 % flag = findCorrectPath(animalObj,paths);
 flag = true;

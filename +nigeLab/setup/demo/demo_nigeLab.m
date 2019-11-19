@@ -8,7 +8,7 @@ if(~isdeployed)
 end
 
 % unzip data
-unzip('myTank.zip')
+if ~exist('myTank','dir'), unzip('myTank.zip');end
 % create destination folder for analysis
 mkdir('myTank_analysis')
 

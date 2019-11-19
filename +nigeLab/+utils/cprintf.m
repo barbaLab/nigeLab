@@ -46,18 +46,21 @@ function count = cprintf(style,format,varargin)
 %    CPRINTF by itself, without any input parameters, displays a demo
 %
 % Example:
-%    cprintf;   % displays the demo
-%    cprintf('text',   'regular black text');
-%    cprintf('hyper',  'followed %s','by');
-%    cprintf('key',    '%d colored', 4);
-%    cprintf('-comment','& underlined');
-%    cprintf('err',    'elements\n');
-%    cprintf('cyan',   'cyan');
-%    cprintf('_green', 'underlined green');
-%    cprintf(-[1,0,1], 'underlined magenta');
-%    cprintf([1,0.5,0],'and multi-\nline orange\n');
-%    cprintf('*blue',  'and *bold* (R2011b+ only)\n');
-%    cprintf('string');  % same as fprintf('string') and cprintf('text','string')
+%    nigeLab.utils.cprintf;   % displays the demo
+%
+%    nigeLab.utils.cprintf('-Magenta', 'nigeLab.utils.cprintf demo:\n');
+%    nigeLab.utils.cprintf('text',   '->\tRegular black text ');
+%    nigeLab.utils.cprintf('hyper',  'followed %s ','by');
+%    nigeLab.utils.cprintf('key',    '%d colored ', 4);
+%    nigeLab.utils.cprintf('-comment','& underlined ');
+%    nigeLab.utils.cprintf('err',    'elements.\n');
+%    nigeLab.utils.cprintf('cyan',   '->\tCyan, ');
+%    nigeLab.utils.cprintf('_green', 'underlined green, ');
+%    nigeLab.utils.cprintf(-[1,0,1], 'underlined magenta, ');
+%    nigeLab.utils.cprintf([1,0.5,0],'\n\n\tmulti-\n\tline\n\torange\n\n');
+%    nigeLab.utils.cprintf('*blue',  '\tand *bold* (R2011b+ only)\n');
+%
+%    nigeLab.utils.cprintf('string');  % same as fprintf('string') and cprintf('text','string')
 %
 % Bugs and suggestions:
 %    Please send to Yair Altman (altmany at gmail dot com)

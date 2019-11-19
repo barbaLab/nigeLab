@@ -1,5 +1,11 @@
 function flag = doAutoClustering(blockObj,chan,unit)
 flag = false;
+
+job = getCurrentJob;
+if ~isempty(job) % we are on a remote worker
+    configW;     % run the programmatically generated configuration script
+end
+
 par = nigeLab.defaults.SPC;
 %% runs automatic clustering algorithms
 switch nargin
@@ -13,11 +19,8 @@ end
 if strcmpi(unit,'all'),unit = 0:par.NCLUS_MAX;end
 fprintf(1,'Performing auto clustering... %.3d%%',0);
 
-ProgressPath = fullfile(tempdir,['doAutoClustering',blockObj.Name]);
-fid = fopen(ProgressPath,'wb');
-fwrite(fid,numel(blockObj.Mask),'int32');
-fclose(fid);
 SuppressText = true;
+
 
 for iCh = chan
     [inspk] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
@@ -63,13 +66,13 @@ for iCh = chan
     saveClusters(blockObj,classes,iCh,temp);
 
     blockObj.updateStatus('Clusters',true,iCh);
-    pc = 100 * (iCh / blockObj.NumChannels);
-    if ~floor(mod(pc,5)) % only increment counter by 5%
-        fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
-    end
-    fid = fopen(fullfile(ProgressPath),'ab');
-    fwrite(fid,1,'uint8');
-    fclose(fid);
+   pct = floor(100 * (iCh / blockObj.NumChannels));
+   if ~mod(pct,5) % only increment counter by 5%
+      fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
+   end
+   fid = fopen(fullfile(ProgressPath),'ab');
+   fwrite(fid,1,'uint8');
+   fclose(fid);
 end
 fprintf(1,'\b\b\b\bDone.\n');
 flag = true;

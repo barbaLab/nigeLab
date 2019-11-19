@@ -9,10 +9,15 @@ function flag = doReReference(blockObj)
 
 %% CHECK FOR PROBLEMS
 flag = false; % Create flag for reporting successful execution
+nigeLab.utils.checkForWorker('config');
+
+
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
+
+
 
 if isempty(blockObj.Mask) % need to set the mask before doing CAR
    warning(sprintf(['Channel Mask (blockObj.Mask) has not been set yet.\n' ...
@@ -44,12 +49,6 @@ end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
 fprintf(1,'Computing common average... %.3d%%',0);
-ProgressPath  = fullfile(nigeLab.defaults.Tempdir,['doReReference',blockObj.Name]);
-fid = fopen(ProgressPath,'wb');
-fwrite(fid,numel(blockObj.Mask),'int32');
-fclose(fid);
-
-
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -65,9 +64,7 @@ for iCh = blockObj.Mask
    if ~floor(mod(pc,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
    end
-   fid = fopen(fullfile(ProgressPath),'ab');
-   fwrite(fid,1,'uint8');
-   fclose(fid);
+   blockObj.notifyUser('doReReference','Get Reference',iCh,max(blockObj.Mask));
 end
 fprintf(1,'\b\b\b\bDone.\n');
 
@@ -85,6 +82,7 @@ end
 
 %% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
 updateFlag = false(1,blockObj.NumChannels);
+
 for iCh = blockObj.Mask
    % Do re-reference
    data = doCAR(blockObj.Channels(iCh),...
@@ -107,9 +105,8 @@ for iCh = blockObj.Mask
    % Update user
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-   notify(blockObj,channelCompleteEvent,evtData);
-   
+   blockObj.notifyUser('doReReference','Mean Subtract',...
+      max(blockObj.Mask)+iCh,max(blockObj.Mask)*2);
 end
 
 fprintf(1,'\b\b\b\bDone.\n');
