@@ -70,11 +70,39 @@ if ~blockObj.initEvents
 end
 blockObj.updateStatus('init');
 
+% Prior to link to data, check if a function handle for conversion has been
+% specified; if so, then do the conversion FIRST, then link it to data.
+if ~isempty(blockObj.MatFileWorkflow.ConvertFcn)
+   % Give the opportunity to cancel 
+   % (function handle can just be configured to [] once Block has been 
+   %  "converted" the first time)
+   printWarningLoop(char(blockObj.MatFileWorkflow.ConvertFcn),blockObj.RecFile,10);
+   % If not canceled yet, run conversion
+   blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,blockObj.AnimalLoc);
+end
+
+
 % Link to data and save
 flag = blockObj.linkToData(true);
 if ~flag
    nigeLab.utils.cprintf('UnterminatedStrings','Could not successfully link %s to data.',blockObj.Name);
 end
    
+   function printWarningLoop(convertFcnName,recFileName,nsec)
+      % PRINTWARNINGLOOP  Warning function to count down before conversion
+      if nargin < 3
+         nsec = 10;
+      end
+      fprintf(1,' \n');
+      nigeLab.utils.cprintf('Blue','-->\tRunning CONVERSION (%s) in ',...
+         convertFcnName);
+      nigeLab.utils.cprintf('*Red','%02gs\n',nsec);
+      for i = nsec:-1:1
+         nigeLab.utils.cprintf('*Red','\b\b\b\b%02gs\n',i);
+      end
+      clc; 
+      nigeLab.utils.cprintf('Green-','-->\tConverting %s\n',...
+         recFileName);
+   end
 
 end

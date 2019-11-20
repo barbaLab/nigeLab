@@ -143,9 +143,9 @@ new_trigger_channel = spike_trigger_struct;
 spike_triggers = spike_trigger_struct;
 
 % Create structure arrays for each type of data channel.
-raw_channels = channel_struct;
-analogIO_channels = channel_struct;
-digIO_channels = channel_struct;
+raw_channels = utils.initChannelStruct('Channels',1); 
+analogIO_channels = utils.initChannelStruct('Channels',1); 
+digIO_channels = utils.initChannelStruct('Channels',1); 
 
 raw_index = 1;
 analogIO_index = 1;
@@ -170,8 +170,8 @@ for signal_group = 1:number_of_signal_groups
    
    if (signal_group_num_channels > 0 && signal_group_enabled > 0)
       for signal_channel = 1:signal_group_num_channels
-         % channel_struct is defined below in its function
-         new_channel = channel_struct;
+         % channel_struct is defined in nigeLab.utils.initChannelStruct
+         new_channel = nigeLab.utils.initChannelStruct('Channels',1);
          
          % fill out fields of channel_struct
          new_channel(1).port_name = signal_group_name;
@@ -335,13 +335,17 @@ num_stim_samples = 0;
 for iN = 1:num_probes
    eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
 end
-for ii=DesiredOutputs.' %  DesiredOutputs defined below
-   header.(ii{:})=eval(ii{:});
+
+DesiredOutputs = nigeLab.utils.desiredHeaderFields('RHD').';
+for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOutVal = eval(fieldOut{:});
+   header.(fieldOut{ii}) = fieldOutVal;
 end
 
 return
 end
 
+%% Helper functions
 function a = fread_QString(FID)
 
 % a = read_QString(FID)
@@ -381,84 +385,7 @@ end
 return
 end
 
-function DesiredOutputs=DesiredOutputs()
-% DesiredOutputs = {
-%    'data_present';
-%    'eval_board_mode';
-%    'sample_rate';
-%    'frequency_parameters';
-%    'amplifier_channels';
-%    'aux_input_channels';
-%    'supply_voltage_channels';
-%    'board_adc_channels';
-%    'board_dig_in_channels';
-%    'board_dig_out_channels';
-%    'spike_triggers';
-%    'num_amplifier_channels';
-%    'num_aux_input_channels';
-%    'num_supply_voltage_channels'
-%    'num_board_adc_channels';
-%    'num_temp_sensor_channels';
-%    'num_board_dig_in_channels';
-%    'num_board_dig_out_channels';
-%    'probes';
-%    'num_probes';
-%    'num_data_blocks';
-%    'num_samples_per_data_block';
-%    'num_amplifier_samples';
-%    'num_aux_input_samples';
-%    'num_supply_voltage_samples';
-%    'num_temp_sensor_samples';
-%    'num_adc_samples';
-%    'num_digin_samples';
-%    'num_digout_samples';
-%    'header_size';
-%    'filesize';
-%    'bytes_per_block';
-%    'data_file_main_version_number';
-%    };
-DesiredOutputs = {
-   'data_present';
-   'DC_amp_data_saved';
-   'eval_board_mode';
-   'sample_rate';
-   'frequency_parameters';
-   'raw_channels';
-   'analogIO_channels';
-   'digIO_channels';
-   'spike_triggers';
-   'num_raw_channels';
-   'num_DC_channels';
-   'num_stim_channels';
-   'num_digIO_channels';
-   'num_analogIO_channels';
-   'num_aux_channels';
-   'num_supply_channels';
-   'num_sensor_channels';
-   'num_adc_channels';
-   'num_dac_channels';
-   'num_dig_in_channels';
-   'num_dig_out_channels';
-   'probes';
-   'num_probes';
-   'num_data_blocks';
-   'num_samples_per_data_block';
-   'num_raw_samples';
-   'num_DC_samples';
-   'num_stim_samples';
-   'num_aux_samples';
-   'num_supply_samples';
-   'num_sensor_samples';
-   'num_adc_samples';
-   'num_dac_samples';
-   'num_dig_in_samples';
-   'num_dig_out_samples';
-   'header_size';
-   'filesize';
-   'bytes_per_block';
-   'data_file_main_version_number';
-   };
-end
+
 
 function spike_trigger_struct_=spike_trigger_struct()
 spike_trigger_struct_ = struct( ...
@@ -466,23 +393,5 @@ spike_trigger_struct_ = struct( ...
    'voltage_threshold', {}, ...
    'digital_trigger_channel', {}, ...
    'digital_edge_polarity', {} );
-return
-end
-
-function channel_struct_=channel_struct()
-channel_struct_ = struct( ...
-   'native_channel_name', {}, ...
-   'custom_channel_name', {}, ...
-   'native_order', {}, ...
-   'custom_order', {}, ...
-   'board_stream', {}, ...
-   'chip_channel', {}, ...
-   'port_name', {}, ...
-   'port_prefix', {}, ...
-   'port_number', {}, ...
-   'probe', {}, ...
-   'electrode_impedance_magnitude', {}, ...
-   'electrode_impedance_phase', {}, ...
-   'signal_type', {});
 return
 end

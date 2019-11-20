@@ -15,14 +15,19 @@ function [pars,Fields] = Block()
 pars             = struct;
 
 pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
-% pars.ReadMatInfoFileFcn = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them! -- good idea!! (MM to FB)
-pars.ReadMatInfoFileFcn = @nigeLab.utils.ReadBlockChannelInfo;
-% pars.ConvertOldBlockFcn = []; % Most cases, this will be blank
-pars.ConvertOldBlockFcn = @nigeLab.convert.rc2block;
-pars.RecLocDefault  = 'R:/Rat';
+% If you have pre-extracted data, the workflow can be customized here
+% pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
+pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
+% pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
+pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC)
+% pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
+pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
+% pars.RecLocDefault  = 'R:/Rat';
+pars.RecLocDefault = 'C:\MyRepos\shared\pkg\dev\oldFormat\RC-05_2012_06_25';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
-pars.AnimalLocDefault = 'P:/Rat';
+% pars.AnimalLocDefault = 'P:/Rat';
+pars.AnimalLocDefault = 'C:\MyRepos\shared\pkg\dev\newFormat\RC-05';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
@@ -129,8 +134,8 @@ Fields =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'Video';          % 13
-   'Stim';           % 14 - hard-coded for extraction in RHS
-   'DC';             % 15 - hard-coded for extraction in RHS
+%    'Stim';           % 14 - hard-coded for extraction in RHS
+%    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
@@ -150,8 +155,8 @@ FieldType = { ...
    'Streams';  % 11
    'Events';   % 12
    'Streams';  % 13
-   'Events';   % 14
-   'Channels'; % 15
+%    'Events';   % 14
+%    'Channels'; % 15
    'Meta';     % 16
 %    'Meta';     % 17
    'Meta'      % 18
@@ -171,8 +176,8 @@ OldNames       =  { ...
    {'*ANA*'};                       % 11
    {'*Scoring.mat'};                % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
-   {'*STIM*'};                      % 14
-   {'*DC*'};                        % 15
+%    {'*STIM*'};                      % 14
+%    {'*DC*'};                        % 15
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
    {'*probes.xlsx'};                % 18
@@ -192,8 +197,8 @@ FolderNames     = {  ...
    'Digital';           % 11
    'Digital';           % 12
    'Video';             % 13
-   'StimData';          % 14
-   'StimData';          % 15
+%    'StimData';          % 14
+%    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
    'Metadata'           % 18
@@ -213,8 +218,8 @@ FileNames =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'Video';          % 13
-   'Stim';           % 14 - hard-coded for extraction in RHS
-   'DC';             % 15 - hard-coded for extraction in RHS
+%   'Stim';           % 14 - hard-coded for extraction in RHS
+%   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
@@ -234,8 +239,8 @@ FileType = { ...
    'Hybrid';   % 11
    'Event';    % 12
    'Hybrid';   % 13
-   'Event';    % 14
-   'Hybrid';   % 15
+%    'Event';    % 14
+%    'Hybrid';   % 15
    'Hybrid';   % 16
 %    'Other';    % 17
    'Other';    % 18

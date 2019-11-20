@@ -48,7 +48,7 @@ for ii = 1:nStreamTypes
    end
 end
 
-blockObj.Streams=repmat(channel_struct(),1,sum(tmpSize));
+blockObj.Streams=nigeLab.utils.initChannelStruct('Streams',sum(tmpSize));
 index = 1;
 for ii = 1:jj-1
     blockObj.Streams(index:(tmpSize(ii)+index-1)) = tmp{ii};

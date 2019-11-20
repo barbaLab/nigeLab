@@ -1,4 +1,4 @@
-function header = ReadMatInfo(path)
+function header = readMatInfo(path)
 %% Function to read a nigeLab block header previously stored in a matfile
 % define here your own function! Parse the data according to nigeLab
 % header format!
