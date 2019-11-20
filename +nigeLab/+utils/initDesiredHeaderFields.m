@@ -1,9 +1,10 @@
-function fieldNames = desiredHeaderFields(RecType)
-%% DESIREDHEADERFIELDS  Returns array of desired header fields (previously Desired_Outputs)
+function fieldNames = initDesiredHeaderFields(RecType)
+%% INITDESIREDHEADERFIELDS  Returns array of desired header fields (previously Desired_Outputs)
 %
-%  fieldNames = nigeLab.utils.DESIREDHEADERFIELDS;
-%  --> Returns ALL fields
-%  fieldNames = nigeLab.utils.DESIREDHEADERFIELDS(RecType);
+%  fieldNames = nigeLab.utils.INITDESIREDHEADERFIELDS;
+%  --> Returns ALL possible header fields
+%
+%  fieldNames = nigeLab.utils.INITDESIREDHEADERFIELDS(RecType);
 %  --> Returns fields relevant to RecType
 
 %%

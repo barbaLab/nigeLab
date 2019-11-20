@@ -2,10 +2,13 @@ function channel_struct_ = initChannelStruct(FieldType,n,varargin)
 %% INITCHANNELSTRUCT  Initialize STREAMS channel struct with correct fields
 %
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT;
-%   --> Initialize 'Channels' (FieldType) Channels struct (default)
+%   --> Initialize 'Channels' (FieldType) Channels struct scalar (default)
 %
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(FieldType);
-%   --> Initialize as [1 x n] 'FieldType' Channels struct array
+%   --> Initialize 'FieldType' Channels struct scalar
+%
+%  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(n);
+%   --> Initialize as [1 x n] 'Channels' (FieldType) Channels struct array
 %
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(FieldType,n);
 %   --> Initialize as [1 x n] 'FieldType' Channels struct array
@@ -13,11 +16,17 @@ function channel_struct_ = initChannelStruct(FieldType,n,varargin)
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(__,'name',value,...);
 %   --> Sets struct value of 'name' to corresponding value (for each
 %        struct array element
-
+%      Note: 'name' is case-sensitive and by default is lower-case with '_'
+%             where ' ' might normally go.
 
 %%
 if nargin < 2
-   n = 1;
+   if isnumeric(FieldType)
+      n = FieldType;
+      FieldType = 'Channels';
+   else
+      n = 1;
+   end
 end
 
 if nargin < 1

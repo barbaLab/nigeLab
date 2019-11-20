@@ -148,6 +148,10 @@ num_raw_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_ra
 % --> nigeLab.utils.initChannelStruct('Streams') 
 % (Allows extraction from different systems to keep data in common "header"
 %  format)
+%
+% Note: 
+%  data.epocs should be parsed using the format of
+%  --> nigeLab.utils.initSpikeTriggerStruct('TDT') % for example
 
 % board_adc_channels = channel_struct;
 % board_dig_in_channels = channel_struct;
@@ -164,7 +168,7 @@ num_digIO_channels = 0;
 % num_board_dig_in_samples
 % num_board_dig_out_samples
 
-DesiredOutputs = nigeLab.utils.desiredHeaderFields('TDT').';
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('TDT').';
 for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOutVal = eval(fieldOut{:});
    header.(fieldOut{ii}) = fieldOutVal;
@@ -173,12 +177,5 @@ end
 return
 end
 
-function spike_trigger_struct_=spike_trigger_struct()
-spike_trigger_struct_ = struct( ...
-   'voltage_trigger_mode', {}, ...
-   'voltage_threshold', {}, ...
-   'digital_trigger_channel', {}, ...
-   'digital_edge_polarity', {} );
-return
-end
+
 

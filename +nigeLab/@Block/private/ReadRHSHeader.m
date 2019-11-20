@@ -50,7 +50,7 @@ raw_channels = nigeLab.utils.initChannelStruct('Channels',1);
 analogIO_channels = nigeLab.utils.initChannelStruct('Channels',1);
 digIO_channels = nigeLab.utils.initChannelStruct('Channels',1);
 
-spike_triggers=spike_trigger_struct;
+spike_triggers=nigeLab.utils.initSpikeTriggerStruct('RHS',1);
 
 
 
@@ -332,7 +332,7 @@ header_size=ftell(FID);
 probes = unique([raw_channels.port_number]);
 num_probes = numel(probes);
 
-DesiredOutputs = nigeLab.utils.desiredHeaderFields('RHS').';
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHS').';
 for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOutVal = eval(fieldOut{:});
    header.(fieldOut{ii}) = fieldOutVal;

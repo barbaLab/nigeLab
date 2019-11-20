@@ -139,8 +139,8 @@ frequency_parameters = struct( ...
    'actual_impedance_test_frequency', actual_impedance_test_frequency );
 
 % spike_trigger_struct is defined below in its function
-new_trigger_channel = spike_trigger_struct;
-spike_triggers = spike_trigger_struct;
+new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
+spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 
 % Create structure arrays for each type of data channel.
 raw_channels = utils.initChannelStruct('Channels',1); 
@@ -336,7 +336,7 @@ for iN = 1:num_probes
    eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
 end
 
-DesiredOutputs = nigeLab.utils.desiredHeaderFields('RHD').';
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHD').';
 for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOutVal = eval(fieldOut{:});
    header.(fieldOut{ii}) = fieldOutVal;
@@ -382,16 +382,5 @@ else
    s = 's';
 end
 
-return
-end
-
-
-
-function spike_trigger_struct_=spike_trigger_struct()
-spike_trigger_struct_ = struct( ...
-   'voltage_trigger_mode', {}, ...
-   'voltage_threshold', {}, ...
-   'digital_trigger_channel', {}, ...
-   'digital_edge_polarity', {} );
 return
 end
