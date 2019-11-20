@@ -67,7 +67,7 @@ classdef Block < matlab.mixin.Copyable
    % Expanded by: MAECI 2018 collaboration (Federico Barban & Max Murphy)
    
    %% PROPERTIES
-   
+   % Public properties that can be modified externally
    properties (SetAccess = public, GetAccess = public)
       Name  % Name of the recording block
       Meta  % Metadata about the recording
@@ -81,10 +81,14 @@ classdef Block < matlab.mixin.Copyable
       Pars
    end
    
+   % Public properties that can be modified externally but don't show up in
+   % the list of fields that you see in the Matlab editor
    properties (SetAccess = public, Hidden = true)
       UserData % Allow UserData property to exist
    end
    
+   % Properties that can be obtained externally, but must be set by a
+   % method of the class object.
    properties (SetAccess = private, GetAccess = public)
       SampleRate  % Recording sample rate
       Samples     % Total number of samples in original record
@@ -108,6 +112,9 @@ classdef Block < matlab.mixin.Copyable
       FileExt     % .rhd, .rhs, or other
    end
    
+   % Properties that can be obtained externally, but must be set by a
+   % method of the class object, and don't populate in the editor window or
+   % in the tab-completion window
    properties (SetAccess = private, GetAccess = public, Hidden = true)
       Date              % Date of recording
       Month             % Month of recording
@@ -143,6 +150,8 @@ classdef Block < matlab.mixin.Copyable
       SaveFormat    % saving format (MatFile,HDF5,dat, current: "Hybrid")
    end
   
+   % Properties that must be both set and accessed by methods of the BLOCK
+   % class only.
    properties (SetAccess = private, GetAccess = private)      
       ForceSaveLoc      % Flag to force make non-existent directory      
       RecLocDefault     % Default location of raw binary recording
@@ -164,17 +173,28 @@ classdef Block < matlab.mixin.Copyable
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
       
-      ReadMatInfoFile  % function handle to external matfile header loading function
+      MatFileWorkflow     % Struct with fields below:
+                          % --> ReadFcn     function handle to external 
+                          %                 matfile header loading function
+                          % --> ConvertFcn  function handle to "convert" 
+                          %                 old (pre-extracted) blocks to 
+                          %                 nigeLab format
+                          % --> ExtractFcn  function handle to use for
+                          %                 'do' extraction methods
+
    end
    
+   % Still on the fence about incorporating Events more frequently, but it
+   % could be useful to put more things into event structures -MM 11/19/19
    events
       channelCompleteEvent
       processCompleteEvent
    end
    
    %% METHODS
+   % BLOCK class constructor
    methods (Access = public)
-      % Overloaded methods:
+      % BLOCK class constructor
       function blockObj = Block(varargin)
          %% BLOCK Create a datastore object based on CPL data structure
          %
@@ -210,10 +230,10 @@ classdef Block < matlab.mixin.Copyable
          if isempty(blockObj.RecFile)
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
-            blockObj.RecFile =(fullfile(path,file));
-            if all(blockObj.RecFile == [0 '\' 0])
+            if file == 0
                error('No block selected. Object not created.');
             end
+            blockObj.RecFile =(fullfile(path,file));
          else
             if exist(blockObj.RecFile,'file')==0
                error('%s is not a valid block file.',blockObj.RecFile);
@@ -226,11 +246,16 @@ classdef Block < matlab.mixin.Copyable
          end
          
       end
+   end
+   
+   % OVERLOADED methods
+   methods (Access = public)
+      % Overloaded SAVE method to save a BLOCK matfile
       function save(blockObj)
          %% SAVE  Overload save of BLOCK
          save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
       end
-      
+      % Overloaded RELOAD method for loading a BLOCK matfile
       function reload(blockObj)
           obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
           ff=fieldnames(obj.blockObj);
@@ -238,14 +263,7 @@ classdef Block < matlab.mixin.Copyable
               blockObj.(ff{f}) = obj.blockObj.(ff{f});
           end
       end
-      
-%       function disp(blockObj)
-%          %% DISP  Overload display of BLOCK contents
-%          if any([blockObj.Verbose])
-%             builtin('disp',blockObj);
-%          end
-%       end
-
+      % Overloaded SUBSREF method for indexing shortcuts on BLOCK
       function varargout = subsref(blockObj,s)
          %% SUBSREF  Overload indexing operators for BLOCK
          switch s(1).type
@@ -305,6 +323,7 @@ classdef Block < matlab.mixin.Copyable
                error('Not a valid indexing expression')
          end
       end
+      % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
@@ -322,7 +341,10 @@ classdef Block < matlab.mixin.Copyable
             n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
          end
       end
-      
+   end
+   
+   % Methods to be catalogued in CONTENTS.M
+   methods (Access = public)      
       % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
@@ -333,7 +355,7 @@ classdef Block < matlab.mixin.Copyable
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
-      
+
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at
@@ -401,9 +423,10 @@ classdef Block < matlab.mixin.Copyable
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
       str = reportProgress(blockObj, string, pct ) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
-   
+      idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
    
+   % "PRIVATE" methods
    methods (Access = public, Hidden = true) % Can make things PRIVATE later
       flag = intan2Block(blockObj,fields,paths) % Convert Intan to BLOCK
       flag = tdt2Block(blockObj) % Convert TDT to BLOCK

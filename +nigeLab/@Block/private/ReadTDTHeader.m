@@ -57,7 +57,7 @@ wav_data = fn(contains(fn,TDTNaming.WaveformName));
 
 dataType = cell(1,numel(fn));
 for ii=1:numel(fn)
-  dataType{ii} = heads.stores.(fn{ii}).typeStr; 
+   dataType{ii} = heads.stores.(fn{ii}).typeStr;
 end
 dataType = unique(dataType);
 
@@ -68,7 +68,7 @@ s1 = datenum([1970, 1, 1, 0, 0, heads.startTime]);
 s2 = datenum([1970, 1, 1, 0, 0, heads.stopTime]);
 info.date = datestr(s1,'yyyy-mmm-dd');
 if ~isnan(heads.startTime)
-    d = datevec(s1);
+   d = datevec(s1);
    info.Year = d(1);
    info.Month = d(2);
    info.Day = d(3);
@@ -77,38 +77,40 @@ if ~isnan(heads.startTime)
    
    info.utcStartTime = datestr(s1,'HH:MM:SS');
 else
-    info.utcStartTime = nan;
+   info.utcStartTime = nan;
 end
 if ~isnan(heads.stopTime)
-    info.utcStopTime = datestr(s2,'HH:MM:SS');
+   info.utcStopTime = datestr(s2,'HH:MM:SS');
 else
-    info.utcStopTime = nan;
+   info.utcStopTime = nan;
 end
 
 if heads.stopTime > 0
-    info.duration = datestr(s2-s1,'HH:MM:SS');
+   info.duration = datestr(s2-s1,'HH:MM:SS');
 end
 
 
 
 num_probes = length(wav_data);
 probes = char((1:num_probes) -1 + double('A')); % nice
-raw_channels = channel_struct;
+raw_channels = nigeLab.utils.initChannelStruct('Channels',1);
 for pb = 1:num_probes
    Chans = unique(heads.stores.(wav_data{pb}).chan);
    for iCh = 1:numel(Chans)
-   ind = numel(raw_channels)+1;
-   raw_channels(ind).custom_channel_name = sprintf('%c%.3d',probes(pb),iCh);
-   raw_channels(ind).native_channel_name = sprintf('%c-%.3d',probes(pb),Chans(iCh));
-   raw_channels(ind).native_order = iCh;
-   raw_channels(ind).custom_order = iCh;
-   raw_channels(ind).board_stream = nan;
-   raw_channels(ind).chip_channel = nan;
-   raw_channels(ind).port_name = ['Port ' probes(pb)];
-   raw_channels(ind).port_prefix = probes(pb);
-   raw_channels(ind).port_number = pb;
-   raw_channels(ind).electrode_impedance_magnitude = nan;
-   raw_channels(ind).electrode_impedance_phase = nan;
+      ind = numel(raw_channels)+1;
+      raw_channels(ind).custom_channel_name = sprintf('%c%.3d',probes(pb),iCh);
+      raw_channels(ind).native_channel_name = sprintf('%c-%.3d',probes(pb),Chans(iCh));
+      raw_channels(ind).native_order = iCh;
+      raw_channels(ind).custom_order = iCh;
+      raw_channels(ind).board_stream = nan;
+      raw_channels(ind).chip_channel = nan;
+      raw_channels(ind).port_name = ['Port ' probes(pb)];
+      raw_channels(ind).port_prefix = probes(pb);
+      raw_channels(ind).port_number = pb;
+      raw_channels(ind).electrode_impedance_magnitude = nan;
+      raw_channels(ind).electrode_impedance_phase = nan;
+      ]raw_channels(ind).chNum,raw_channels(ind).chStr] = nigeLab.utils.getChannelNum(...
+         raw_channels(ind).native_channel_name);
    end
 end
 
@@ -142,79 +144,41 @@ num_raw_channels = numel(raw_channels);
 npts = (heads.stores.((wav_data{1})).size-10) * 4/sz;
 num_raw_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_raw_channels;
 
+%% --> For JB to update <-- 2019-11-20 (MM)
+% Note: 
+% channel_struct should follow format of
+% --> nigeLab.utils.initChannelStruct('Streams') 
+% (Allows extraction from different systems to keep data in common "header"
+%  format)
+%
+% Note: 
+%  data.epocs should be parsed using the format of
+%  --> nigeLab.utils.initSpikeTriggerStruct('TDT') % for example
+
 % board_adc_channels = channel_struct;
 % board_dig_in_channels = channel_struct;
 % board_dig_out_channels = channel_struct;
-% 
-%% For now, still in development
+%
 num_analogIO_channels = 0;
 num_digIO_channels = 0;
 % num_board_dig_out_channels
 % num_data_blocks
 % bytes_per_block
 % num_samples_per_data_block
-% 
+%
 % num_board_adc_samples
 % num_board_dig_in_samples
 % num_board_dig_out_samples
 
-for ii=DesiredOutputs' %  DesiredOutputs defined below
-   header.(ii{:})=eval(ii{:});
-end
-end
-
-function DesiredOutputs=DesiredOutputs()
-DesiredOutputs = {
-   'data_present';
-%    'DC_amp_data_saved';
-   'sample_rate';
-%    'frequency_parameters';
-%    'stim_parameters'
-   'raw_channels';
-%    'board_adc_channels';
-%    'board_dig_in_channels';
-%    'board_dig_out_channels';
-   'num_raw_channels';
-   'num_analogIO_channels';
-   'num_digIO_channels';
-%    'num_board_dig_out_channels';
-   'num_probes';
-%    'num_data_blocks';
-%    'bytes_per_block';
-%    'num_samples_per_data_block';
-   'num_raw_samples';
-%    'num_board_adc_samples';
-%    'num_board_dig_in_samples';
-%    'num_board_dig_out_samples';
-   'filesize';
-   'info';
-   'dataType';
-   'fn';
-   };
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('TDT').';
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;
 end
 
-function spike_trigger_struct_=spike_trigger_struct()
-spike_trigger_struct_ = struct( ...
-   'voltage_trigger_mode', {}, ...
-   'voltage_threshold', {}, ...
-   'digital_trigger_channel', {}, ...
-   'digital_edge_polarity', {} );
 return
 end
 
-function channel_struct_=channel_struct()
-channel_struct_ = struct( ...
-   'native_channel_name', {}, ...
-   'custom_channel_name', {}, ...
-   'native_order', {}, ...
-   'custom_order', {}, ...
-   'board_stream', {}, ...
-   'chip_channel', {}, ...
-   'port_name', {}, ...
-   'port_prefix', {}, ...
-   'port_number', {}, ...
-   'probe', {}, ...
-   'electrode_impedance_magnitude', {}, ...
-   'electrode_impedance_phase', {} );
-return
-end
+
+

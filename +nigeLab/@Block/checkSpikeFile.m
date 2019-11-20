@@ -20,29 +20,61 @@ function flag = checkSpikeFile(blockObj,ch)
 % By: Max Murphy & Federico Barban MAECI 2019 Collaboration
 
 %% PARSE MULTIPLE ELEMENTS OF CHANNEL
-if numel(ch) > 1
-   flag = false(size(ch));
-   for ii = 1:numel(ch)
-      flag(ii) = checkSpikeFile(blockObj,ch(ii));
-   end   
-   return;
+if isnumeric(ch)
+   if numel(ch) > 1
+      flag = false(size(ch));
+      for ii = 1:numel(ch)
+         flag(ii) = checkSpikeFile(blockObj,ch(ii));
+      end   
+      return;
+   end
+   f = blockObj.Channels(ch).Spikes;
+   info = getInfo(f);
+elseif ischar(ch)
+   f = matfile(ch);
+   info = whos(f);
+else
+   error('Unrecognized input (ch) type: %s',class(ch));
 end
 
 %% CHECK FOR OLD VERSIONS
 % If old version, will have 7 fields from whos
-info = getInfo(blockObj.Channels(ch).Spikes);
+
+
 flag = numel(info) > 1;
 
 if ~flag
    return;
 end
 
+if ischar(ch)
+   [~,fname,~] = fileparts(ch);
+   strinfo = strsplit(fname,blockObj.Delimiter);
+   idx = find(ismember(strinfo,'Ch'),1,'first') + 1; % Channel # follows "Ch_"
+   chnum = str2double(strinfo{idx});
+   pnum = str2double(strinfo{idx-2}(2));
+   
+   ch = blockObj.matchProbeChannel(chnum,pnum);
+end
+
 %% IF OLD VERSION, FIX IT
 names = {info.name};
-spikes = blockObj.Channels(ch).Spikes.spikes;
-peak_train = blockObj.Channels(ch).Spikes.peak_train;
-features = blockObj.Channels(ch).Spikes.features;
-artifact = blockObj.Channels(ch).Spikes.artifact;
+toCheck = {'spikes','peak_train','features','artifact'};
+
+for iCheck = 1:numel(toCheck)
+   if ~ismember(toCheck{iCheck},names)
+      flag = false;
+      return;
+   end
+end
+
+spikes = f.spikes;
+peak_train = f.peak_train;
+   
+
+peak_train = f.peak_train;
+features = f.features;
+artifact = f.artifact;
 
 tIdx = find(peak_train);
 
@@ -67,6 +99,8 @@ ts = artifact./blockObj.SampleRate;
 snippet = zeros(nArt,1);
 
 art = [type, value, tag, ts, snippet];
+
+
 
 if ~blockObj.saveChannelSpikingEvents(ch,spk,feat,art)
    error('Could not save spikes for channel %d.',ch);
