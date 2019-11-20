@@ -109,6 +109,8 @@ for pb = 1:num_probes
       raw_channels(ind).port_number = pb;
       raw_channels(ind).electrode_impedance_magnitude = nan;
       raw_channels(ind).electrode_impedance_phase = nan;
+      ]raw_channels(ind).chNum,raw_channels(ind).chStr] = nigeLab.utils.getChannelNum(...
+         raw_channels(ind).native_channel_name);
    end
 end
 
@@ -142,7 +144,7 @@ num_raw_channels = numel(raw_channels);
 npts = (heads.stores.((wav_data{1})).size-10) * 4/sz;
 num_raw_samples = double(npts) * numel(heads.stores.((wav_data{1})).data)/num_raw_channels;
 
-%% --> For JB to update <-- 2019-11-20
+%% --> For JB to update <-- 2019-11-20 (MM)
 % Note: 
 % channel_struct should follow format of
 % --> nigeLab.utils.initChannelStruct('Streams') 
@@ -169,9 +171,10 @@ num_digIO_channels = 0;
 % num_board_dig_out_samples
 
 DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('TDT').';
-for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
-   fieldOutVal = eval(fieldOut{:});
-   header.(fieldOut{ii}) = fieldOutVal;
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;
 end
 
 return

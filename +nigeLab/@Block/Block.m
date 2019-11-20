@@ -423,6 +423,7 @@ classdef Block < matlab.mixin.Copyable
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
       str = reportProgress(blockObj, string, pct ) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
+      idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
    
    % "PRIVATE" methods

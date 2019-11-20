@@ -170,6 +170,7 @@ for signal_group = 1:number_of_signal_groups
       for signal_channel = 1:signal_group_num_channels
          % channel_struct is defined in nigeLab.utils
          new_channel = nigeLab.utils.initChannelStruct('Channels',1);
+         new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHS',1);
          
          % fill out fields of channel_struct
          new_channel(1).port_name = signal_group_name;
@@ -190,6 +191,8 @@ for signal_group = 1:number_of_signal_groups
          new_trigger_channel(1).digital_edge_polarity = fread(FID, 1, 'int16');
          new_channel(1).electrode_impedance_magnitude = fread(FID, 1, 'single');
          new_channel(1).electrode_impedance_phase = fread(FID, 1, 'single');
+         [new_channel(1).chNum,new_channel(1).chStr] = ...
+            nigeLab.utils.getChannelNum(new_channel(1).custom_channel_name);
          
          if (channel_enabled)
             switch (signal_type)
@@ -333,9 +336,10 @@ probes = unique([raw_channels.port_number]);
 num_probes = numel(probes);
 
 DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHS').';
-for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
-   fieldOutVal = eval(fieldOut{:});
-   header.(fieldOut{ii}) = fieldOutVal;
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;
 end
 
 return;

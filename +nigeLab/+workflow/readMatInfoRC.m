@@ -69,7 +69,7 @@ frequency_parameters = struct(...
    'desired_lower_bandwidth',FC(1),... % not actually "desired" :(
    'desired_upper_bandwidth',FC(2));
 raw_channels = doInfoConversion(ChannelInfo);
-analogIO_channels = [];
+analogIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
 digIO_channels = makeRCdigIO(digFields);
 num_raw_channels = numel(raw_channels);
 num_digIO_channels = numel(digFields);
@@ -89,8 +89,11 @@ if isfield(in,'block')
 end
 
 %%
-for out = DesiredOutputs'
-   header.(out{:}) = eval(out{:});
+
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RC').';
+for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOutVal = eval(fieldOut{:});
+   header.(fieldOut{:}) = fieldOutVal;
 end
 
 fChannelMask = fullfile(path,[blockName '_ChannelMask.mat']);
@@ -101,31 +104,10 @@ if exist(fChannelMask,'file')~=0
    end
 end
 
-%%
-   % Shortcut to all "Desired" outputs that go into the traditional
-   % "Intan-like" header for compatibility with the rest of the pipeline
-   function DesiredOutputs=DesiredOutputs()
-      % DESIREDOUTPUTS  Enumerates a list of variables to return in header
-      
-      DesiredOutputs = {
-         'data_present';
-         'sample_rate';
-         'frequency_parameters';
-         'raw_channels';
-         'analogIO_channels';
-         'digIO_channels';
-         'num_raw_channels';
-         'num_digIO_channels';
-         'num_analogIO_channels';
-         'probes';
-         'num_probes';
-         'num_raw_samples';
-         'num_analogIO_samples';
-         'num_digIO_samples';
-         'duration';
-         'blocktime';
-         };
-   end
+return
+end
+
+%% Helper functions
 
    % Does the actual conversion from "ChannelInfo" array used in 'rc-proj'
    % repository to the "Intan-like" struct array format for channels
@@ -137,7 +119,7 @@ end
       % Note that most of these aren't really representative, but rather to
       % fit the existing workflow; for example, there is no "chip_channel"
       % for the TDT system on which this data was acquired.
-      c = makeChannelStruct(n,true);
+      c = makeChannelStruct(n,'Channels');
       
       for i = 1:n
          p = info(i).probe;
@@ -161,6 +143,7 @@ end
          c(i).ml = info(i).ml; % 'M' or 'L' for Medial vs Lateral
          c(i).icms = info(i).icms;              % 'DF', 'PF', 'DF-PF', 'O', 'NR' are options
          c(i).area = info(i).area((end-2):end); % 'RFA' or 'CFA'
+         [c(i).chNum,c(i).chStr] = nigeLab.utils.getChannelNum(name);
       end
    end
 
@@ -177,44 +160,31 @@ end
    % struct array format for channels. Specify addExtraInfo as 'true' to
    % add fields for 'icms' 'area' and 'ml' that had been parsed from the
    % probe layout previously from elsewhere.
-   function c = makeChannelStruct(n,addExtraInfo)
+   function c = makeChannelStruct(n,FieldType)
       % MAKECHANNELSTRUCT  Helper to return struct n x 1 struct array
       if nargin < 2
-         addExtraInfo = false;
+         FieldType = 'Channels';
       end
       
-      if addExtraInfo
-         c = struct(...
-            'native_channel_name',cell(1,n),...
-            'custom_channel_name',cell(1,n),...
-            'native_order',cell(1,n),...
-            'custom_order',cell(1,n),...
-            'board_stream',cell(1,n),...
-            'chip_channel',cell(1,n),...
-            'port_name',cell(1,n),...
-            'port_prefix',cell(1,n),...
-            'port_number',cell(1,n),...
-            'probe',cell(1,n),...
-            'electrode_impedance_magnitude',nan,...
-            'electrode_impedance_phase',nan,...
-            'signal_type',repmat({'Raw'},1,n),...
-            'ml',cell(1,n),...
-            'icms',cell(1,n),...
-            'area',cell(1,n));
-      else
-         c = struct(...
-            'native_channel_name',cell(1,n),...
-            'custom_channel_name',cell(1,n),...
-            'native_order',cell(1,n),...
-            'custom_order',cell(1,n),...
-            'board_stream',0,...
-            'chip_channel',cell(1,n),...
-            'port_name',repmat({'Board Digital Inputs'},1,n),...
-            'port_prefix',repmat({'DIN'},1,n),...
-            'port_number',6,...
-            'electrode_impedance_magnitude',0,...
-            'electrode_impedance_phase',0,...
-            'signal_type',repmat({'DigIn'},1,n));
+      switch FieldType
+         case 'Channels'
+            c = nigeLab.utils.initChannelStruct(FieldType,n,...
+                  'electrode_impedance_magnitude',nan,...
+                  'electrode_impedance_phase',nan,...
+                  'ml',cell(1,n),...
+                  'icms',cell(1,n),...
+                  'area',cell(1,n));
+         case 'Streams'
+            c = nigeLab.utils.initChannelStruct(FieldType,n,...
+                  'board_stream',0,...
+                  'port_name',{'Board Digital Inputs'},...
+                  'port_prefix',{'DIN'},...
+                  'port_number',6,...
+                  'electrode_impedance_magnitude',0,...
+                  'electrode_impedance_phase',0,...
+                  'signal_type',{'DigIn'});
+         otherwise
+            error('Unrecognized FieldType: %s',FieldType);
       end
    end
 
@@ -223,7 +193,7 @@ end
    function c = makeRCdigIO(names)
       % MAKERCDIGIO  Return RC "digital IO" channel struct 
       
-      c = makeChannelStruct(numel(names),false);
+      c = makeChannelStruct(numel(names),'Streams');
       for i = 1:numel(names)    
          c(i).native_channel_name = sprintf('DIN-%02g',i);
          c(i).custom_channel_name = names{i};
@@ -233,4 +203,3 @@ end
       end
 
    end
-end

@@ -146,7 +146,7 @@ switch RecType
          'bytes_per_block';
       };
    case 'TDT'
-      DesiredOutputs = {
+      fieldNames = {
          'data_present';
          %    'DC_amp_data_saved';
          'sample_rate';
@@ -172,6 +172,25 @@ switch RecType
          'info';
          'dataType';
          'fn';
+      };
+   case 'RC' % MM experiment
+      fieldNames = {
+         'data_present';
+         'sample_rate';
+         'frequency_parameters';
+         'raw_channels';
+         'analogIO_channels';
+         'digIO_channels';
+         'num_raw_channels';
+         'num_digIO_channels';
+         'num_analogIO_channels';
+         'probes';
+         'num_probes';
+         'num_raw_samples';
+         'num_analogIO_samples';
+         'num_digIO_samples';
+         'duration';
+         'blocktime';
       };
    otherwise
       error('Unrecognized RecType: %s',RecType);

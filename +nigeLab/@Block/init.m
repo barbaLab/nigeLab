@@ -76,33 +76,34 @@ if ~isempty(blockObj.MatFileWorkflow.ConvertFcn)
    % Give the opportunity to cancel 
    % (function handle can just be configured to [] once Block has been 
    %  "converted" the first time)
-   printWarningLoop(char(blockObj.MatFileWorkflow.ConvertFcn),blockObj.RecFile,10);
+   printWarningLoop(3);
    % If not canceled yet, run conversion
-   blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,blockObj.AnimalLoc);
+   blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,...
+      blockObj.AnimalLoc,...
+      blockObj.BlockPars);
 end
 
 
 % Link to data and save
 flag = blockObj.linkToData(true);
 if ~flag
-   nigeLab.utils.cprintf('UnterminatedStrings','Could not successfully link %s to data.',blockObj.Name);
+   nigeLab.utils.cprintf('UnterminatedStrings',...
+      'Could not successfully link %s to data.',blockObj.Name);
 end
    
-   function printWarningLoop(convertFcnName,recFileName,nsec)
+   function printWarningLoop(nsec)
       % PRINTWARNINGLOOP  Warning function to count down before conversion
-      if nargin < 3
+      if nargin < 1
          nsec = 10;
       end
       fprintf(1,' \n');
-      nigeLab.utils.cprintf('Blue','-->\tRunning CONVERSION (%s) in ',...
-         convertFcnName);
-      nigeLab.utils.cprintf('*Red','%02gs\n',nsec);
+      nigeLab.utils.cprintf('Blue','-->\tRunning CONVERSION in ');
+      nigeLab.utils.cprintf('UnterminatedStrings','%02gs\n',nsec);
+      pause('on');
       for i = nsec:-1:1
-         nigeLab.utils.cprintf('*Red','\b\b\b\b%02gs\n',i);
+         nigeLab.utils.cprintf('UnterminatedStrings','\b\b\b\b%02gs\n',i);
+         pause(1);
       end
-      clc; 
-      nigeLab.utils.cprintf('Green-','-->\tConverting %s\n',...
-         recFileName);
    end
 
 end
