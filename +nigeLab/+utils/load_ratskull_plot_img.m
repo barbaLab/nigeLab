@@ -3,8 +3,8 @@ function CData = load_ratskull_plot_img(res)
 %
 %  Returns image array for ratskull_plot class object.
 %
-%  CData = load_ratskull_plot_img; % return full-resolution image
-%  CData = load_ratskull_plot_img('low'); % return low-resolution image
+%  CData = nigeLab.utils.load_ratskull_plot_img; % return full-resolution image
+%  CData = nigeLab.utils.load_ratskull_plot_img('low'); % return low-resolution image
 %  
 
 %% PARSE INPUT
