@@ -55,8 +55,8 @@ end
 %% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
 fType = blockObj.getFileType('Sorted');
 fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
-        num2str(blockObj.Channels(ch).probe),...
-        blockObj.Channels(ch).chStr));
+            num2str(blockObj.Channels(ch).probe),...
+            blockObj.Channels(ch).chStr));
     
 if getStatus(blockObj,'Sorted',ch) % If sorting already exists, use those
     clusterIndex = getCIFromExistingFile(blockObj,ch);

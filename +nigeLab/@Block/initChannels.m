@@ -35,7 +35,7 @@ switch blockObj.FileExt
       
    case '.mat'
       blockObj.RecType='Matfile';
-       header = blockObj.ReadMatInfoFileFcn(blockObj.RecFile); 
+      header = blockObj.MatFileWorkflow.ReadFcn(blockObj.RecFile); 
    otherwise
       blockObj.RecType='other';
       warning('Not a recognized file extension: %s',blockObj.FileExt);
@@ -59,7 +59,9 @@ blockObj.Samples = header.num_raw_samples;
 
 %% SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
 parseChannelID(blockObj);
-if isempty(blockObj.Mask)
+if isfield(header,'Mask')
+   blockObj.Mask = reshape(find(header.Mask),1,numel(header.Mask));
+elseif isempty(blockObj.Mask)
    blockObj.Mask = 1:blockObj.NumChannels;
 else
    blockObj.Mask(blockObj.Mask > blockObj.NumChannels) = [];

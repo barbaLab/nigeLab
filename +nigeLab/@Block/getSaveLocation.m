@@ -11,9 +11,9 @@ flag = false;
 
 %% Prompt for location using previously set location
 if nargin < 2 
-   tmp = uigetdir(blockObj.AnimalLocDefault,'Select ANIMAL location');
+   tmp = uigetdir(blockObj.AnimalLocDefault,'Select folder with ANIMAL name');
 elseif isempty(animalLoc) % if nargin is < 2, will throw error if above
-   tmp = uigetdir(blockObj.AnimalLocDefault,'Select ANIMAL location');
+   tmp = uigetdir(blockObj.AnimalLocDefault,'Select folder with ANIMAL name');
 else
    tmp = animalLoc;
 end

@@ -173,8 +173,15 @@ classdef Block < matlab.mixin.Copyable
       NamingConvention % How to parse dynamic name variables for Block
       DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
       
-      ReadMatInfoFileFcn  % function handle to external matfile header loading function
-      ConvertOldBlockFcn  % function handle to "convert" old (pre-extracted) blocks to nigeLab format
+      MatFileWorkflow     % Struct with fields below:
+                          % --> ReadFcn     function handle to external 
+                          %                 matfile header loading function
+                          % --> ConvertFcn  function handle to "convert" 
+                          %                 old (pre-extracted) blocks to 
+                          %                 nigeLab format
+                          % --> ExtractFcn  function handle to use for
+                          %                 'do' extraction methods
+
    end
    
    % Still on the fence about incorporating Events more frequently, but it
@@ -223,10 +230,10 @@ classdef Block < matlab.mixin.Copyable
          if isempty(blockObj.RecFile)
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
-            blockObj.RecFile =(fullfile(path,file));
-            if all(blockObj.RecFile == [0 '\' 0])
+            if file == 0
                error('No block selected. Object not created.');
             end
+            blockObj.RecFile =(fullfile(path,file));
          else
             if exist(blockObj.RecFile,'file')==0
                error('%s is not a valid block file.',blockObj.RecFile);
@@ -416,6 +423,7 @@ classdef Block < matlab.mixin.Copyable
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
       str = reportProgress(blockObj, string, pct ) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
+      idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
    
    % "PRIVATE" methods

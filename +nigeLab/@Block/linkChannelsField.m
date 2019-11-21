@@ -32,8 +32,18 @@ for iCh = blockObj.Mask
       flag = true;
    else
       updateFlag(iCh) = true;
-      blockObj.Channels(iCh).(field) = ...
-         nigeLab.libs.DiskData(fType,fName);
+      switch fType
+         case 'Event'
+            try
+               blockObj.Channels(iCh).(field) = ...
+                  nigeLab.libs.DiskData(fType,fName);
+            catch % If spikes exist but in "bad format", fix that
+               updateFlag(iCh) = blockObj.checkSpikeFile(fName);
+            end
+         otherwise
+            blockObj.Channels(iCh).(field) = ...
+               nigeLab.libs.DiskData(fType,fName);
+      end
    end
    
    counter = counter + 1;
