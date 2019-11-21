@@ -275,8 +275,8 @@ pars.FileType = FileType;
 pars.FieldType = FieldType;
 
 % Check that FieldType is viable
-VIABLE_FIELDS = fieldnames(TAG);
-idx = ~cellfun(@(x)ismember(x,VIABLE_FIELDS),FieldType);
+pars.ViableFieldTypes = fieldnames(TAG);
+idx = ~cellfun(@(x)ismember(x,pars.ViableFieldTypes),FieldType);
 if sum(idx)>0
    idx = find(idx);
    warning('\nInvalid: FieldType{%d} (%s)\n',idx,FieldType{idx});

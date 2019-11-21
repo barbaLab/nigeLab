@@ -182,11 +182,10 @@ classdef Block < matlab.mixin.Copyable
                           %                 nigeLab format
                           % --> ExtractFcn  function handle to use for
                           %                 'do' extraction methods
+      ViableFieldTypes  % List of 'Viable' possible field types
 
    end
-   
-   % Still on the fence about incorporating Events more frequently, but it
-   % could be useful to put more things into event structures -MM 11/19/19
+
    events
       channelCompleteEvent
       processCompleteEvent
@@ -204,6 +203,7 @@ classdef Block < matlab.mixin.Copyable
          %
          % By: Max Murphy  v1.0  08/25/2017
          %     F. Barban   v2.0  11/2018
+         %     MM, FB      v3.0  11/2019
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -415,7 +415,9 @@ classdef Block < matlab.mixin.Copyable
       parseNotes(blockObj,str)            % Update notes for a recording
       
       % Methods for parsing Fields info:
-      fType = getFieldType(blockObj,field) % Get file type corresponding to field
+      fileType = getFileType(blockObj,field) % Get file type corresponding to field  
+      [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
+      [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
@@ -447,6 +449,7 @@ classdef Block < matlab.mixin.Copyable
       flag = initChannels(blockObj);   % Initialize Channels property
       flag = initEvents(blockObj);     % Initialize Events property 
       flag = initStreams(blockObj);    % Initialize Streams property
+      flag = initVideos(blockObj);     % Initialize Videos property
       
       meta = parseNamingMetadata(blockObj); % Get metadata struct from recording name
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
