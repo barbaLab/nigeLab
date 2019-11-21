@@ -93,9 +93,9 @@ feat = [type, value, tag, ts, features];
 
 % Format artifact data
 type = zeros(nArt,1);
-value = artifact;
+value = reshape(artifact,nArt,1);
 tag = zeros(nArt,1);
-ts = artifact./blockObj.SampleRate;
+ts = reshape(artifact./blockObj.SampleRate,nArt,1);
 snippet = zeros(nArt,1);
 
 art = [type, value, tag, ts, snippet];

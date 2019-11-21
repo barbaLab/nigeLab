@@ -59,10 +59,14 @@ for iF = 1:numel(F)
       in = load(fullfile(F(iF).folder,F(iF).name),'data');
       data = in.data;
       save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
+%       if strcmpi(dtype,'Paw')
+%          save(fullfile(block_out,p.Video.Folder),sprintf(p.Video.File,
+%       end
    elseif ismember(dtype,{'Scoring','VideoAlignment'})
       copyfile(fullfile(F(iF).folder,F(iF).name),...
          fullfile(f_out,sprintf(p.DigEvents.File,dtype)));
    end
+   
 end
 
 %% Move filtered and raw streams

@@ -43,7 +43,7 @@ filesize = s.bytes;
 %% Read the file header
 
 header = ReadRHSHeader('FID',fid);
-blockObj.Meta.Header = fixNamingConvention(header);
+blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -454,20 +454,5 @@ if (data_present)
    updateStatus(blockObj,'Raw',true);
    
 end
-
-function header_out = fixNamingConvention(header_in)
-%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
-
-header_out = struct;
-f = fieldnames(header_in);
-for iF = 1:numel(f)
-   str = strsplit(f{iF},'_');
-   for iS = 1:numel(str)
-      str{iS}(1) = upper(str{iS}(1));
-   end
-   str = strjoin(str,'');
-   header_out.(str) = header_in.(f{iF});
-end
-
 
 
