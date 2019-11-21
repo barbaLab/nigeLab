@@ -83,7 +83,7 @@ for iCh = blockObj.Mask
       blockObj.getSort(iCh,true);
    end
    blockObj.updateStatus('Spikes',true,iCh);
-   blockObj.notifyUser('doSD','Per-Channel Detection',iCh,max(blockObj.Mask));
+%    blockObj.notifyUser('doSD','Per-Channel Detection',iCh,max(blockObj.Mask));
    
       
 end

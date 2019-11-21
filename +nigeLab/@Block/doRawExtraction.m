@@ -24,22 +24,32 @@ end
 
 %% Check for MultiAnimals
 % More than one animal can be recorded simultaneously in one single file. 
-% Thi eventuality is explicitely handled here. The init process looks for a
+% This eventuality is explicitely handled here. The init process looks for a
 % special char string in the block ID (defined in defaults), if detected
-% the flag ManyAnimalsLinkedBlocks is set true. 
+% the flag ManyAnimals is set true. 
 % The function splitMultiAnimals prompts the user to assign channels and
-% other inputs to the different animals. When this is done two or ore child
-% blocks are initialized and stored in the ManyAnimalsLinkedBlocks field.
- 
-% flag = [blockObj.ManyAnimals ~isempty(blockObj.ManyAnimalsLinkedBlocks)];
-% if all(flag == [false true]) % child block. Call rawExtraction on father
-%     blockObj.ManyAnimalsLinkedBlocks.doRawExtraction;
-% elseif all(flag == [true false]) % father block without childern. Call splitMultiAnimals
-%     blockObj.splitMultiAnimals;
-% elseif all(flag == [true true])  % father block with children. Go on with extraction and move files at the end
-%     ManyAnimals = true;
-% else
-% end
+% other inputs to the different animals. When this is done two or more
+% children blocks are initialized and stored in the ManyAnimalsLinkedBlocks
+% field.
+ManyAnimals = false;
+flag = [blockObj.ManyAnimals ~isempty(blockObj.ManyAnimalsLinkedBlocks)];
+if all(flag == [false true]) 
+    % child block. Call rawExtraction on Parent
+    blockObj.ManyAnimalsLinkedBlocks.doRawExtraction;
+elseif all(flag == [true false]) 
+    % Parent block without childern.
+    % Go on with extraction and move files at
+    % the end.
+    ManyAnimals = true;
+elseif all(flag == [true true])  
+    % Parent block with children.
+    % Go on with extraction and move files at
+    % the end.
+    ManyAnimals = true;
+else
+    ...
+end
+
 %% extraction
 switch blockObj.RecType
    case 'Intan'
@@ -91,7 +101,17 @@ switch blockObj.RecType
       return;
 end
 
-%%
+%% If this is a ManyAnimals case, move the blocks and files to the appropriate path
+if ManyAnimals
+    blockObj.splitMultiAnimals;
+   for bl = blockObj.ManyAnimalsLinkedBlocks
+       bl.updatePaths(bl.Paths.SaveLoc);
+       bl.updateStatus('Raw', blockObj.Status.Raw);
+       bl.save;
+   end
+end
+
+%% Update status and save
 blockObj.updateStatus('Raw',true);
 blockObj.save;
 end

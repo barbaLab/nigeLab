@@ -10,44 +10,67 @@ function flag = updatePaths(blockObj,SaveLoc)
 % two varible parts as well.
 %
 % This is a problem only when changing the naming in the defaults params.
+%
+% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 flag = false;
 
-if nargin ==2
+if nargin == 2
    blockObj.Paths.SaveLoc = SaveLoc;
 end
 
 % Get old paths
 OldP = blockObj.Paths;
-OldFN = fieldnames(OldP);
-OldFN(strcmp(OldFN,'SaveLoc'))=[];
+OldFN_ = fieldnames(OldP);
+OldFN_(strcmp(OldFN_,'SaveLoc'))=[];
+OldFN = [];
 
 % generate new paths
-blockObj.genPaths(fileparts(blockObj.Paths.SaveLoc));
+blockObj.genPaths(fileparts(blockObj.Paths.SaveLoc.dir));
 P = blockObj.Paths;
 
+
+uniqueTypes = unique(blockObj.FieldType);
+
 % look for old data to move
-for jj=1:numel(OldFN)
-   switch blockObj.FieldType{jj}
-       case 'Channels'
-       case 'Streams'
-       case 'Meta'
-   end
-%    [blockObj.(blockObj.FieldType{jj}).(OldFN{jj})].getPath
-    moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-    moveFiles(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info);
-    
-    
+filePaths = [];
+for jj=1:numel(uniqueTypes)
+    if ~isempty(blockObj.(uniqueTypes{jj}))
+        ff = fieldnames(blockObj.(uniqueTypes{jj})(1));
+        
+        fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),'DiskData.\w', 'once')),...
+            struct2cell(blockObj.(uniqueTypes{jj})(1))));
+        OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))];
+        for hh=1:numel(fieldsToMove)
+            if all(blockObj.getStatus(fieldsToMove{hh}))
+                filePaths = [filePaths; cellfun(@(x)x.getPath,{blockObj.(uniqueTypes{jj}).(fieldsToMove{hh})},...
+                    'UniformOutput',false)'];
+            end %fi
+        end %hh
+    end %fi
+end %jj
+
+% moves all the files from folder to folder
+for ii=1:numel(filePaths)
+    source = filePaths{ii};
+    [~,target] = strsplit(source,'\\\w*\\\w*.mat','DelimiterType', 'RegularExpression');
+    target = fullfile(P.SaveLoc.dir,target{1});
+    [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
 end
 
+% copy all the info files from one folder t the new one
+for jj = 1:numel(OldFN)
+%     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
+    moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'cp');
+end
 blockObj.linkToData;
 blockObj.save;
 flag = true;
 
 end
 
-function moveFiles(oldPath,NewPath)
- oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
+function moveFilesAround(oldPath,NewPath,str)
+    oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
     newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
     source_ = dir([oldPathSplit{1} '*']);
     numVarParts = numel(strfind(oldPath,'%'));
@@ -64,9 +87,14 @@ function moveFiles(oldPath,NewPath)
             ind(2,hh) = offs -1 + tmp(1);
             offs = ind(2,hh);
             VarParts{hh} = source(ind(1,hh):ind(2,hh));
-        end
+        end % hh
         target = fullfile( sprintf(strrep(strjoin(newPathSplit, '%s'),'\','/'),  VarParts{:}));
+        
+        switch str
+            case 'mv'
         [status,msg] = nigeLab.utils.FileRename.FileRename(source,target);
-    end
-end
+            case 'cp'
+           [status,msg] = copyfile(source,target);     
+        end %str
+    end %kk
 end

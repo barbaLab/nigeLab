@@ -211,7 +211,7 @@ classdef Block < matlab.mixin.Copyable
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
             blockObj.RecFile =(fullfile(path,file));
-            if all(blockObj.RecFile == [0 '\' 0])
+            if strcmp(blockObj.RecFile,[0 '\' 0])
                error('No block selected. Object not created.');
             end
          else
@@ -226,9 +226,23 @@ classdef Block < matlab.mixin.Copyable
          end
          
       end
-      function save(blockObj)
+      function flag = save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+         
+         % Handles the case of MultiAnimals. Avoids infinite save loop
+         try
+             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+             for bl = blockObj.ManyAnimalsLinkedBlocks % save multianimals if present
+                 if blockObj.ManyAnimals
+                     bl.ManyAnimalsLinkedBlocks=[];
+                     bl.save();
+                 end
+             end
+         catch
+             flag = false;
+             return;
+         end
+         flag = true;
       end
       
       function reload(blockObj)
@@ -428,5 +442,15 @@ classdef Block < matlab.mixin.Copyable
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
+   end
+   
+   methods (Static)
+       function obj = loadobj(obj)
+           if obj.ManyAnimals
+               for bl=obj.ManyAnimalsLinkedBlocks
+                   bl.reload();
+               end
+           end
+       end
    end
 end
