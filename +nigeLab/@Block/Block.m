@@ -1,3 +1,4 @@
+
 classdef Block < matlab.mixin.Copyable
    %% BLOCK    Creates datastore for an electrophysiology recording.
    %
