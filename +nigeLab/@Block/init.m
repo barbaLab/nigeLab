@@ -76,7 +76,10 @@ if ~isempty(blockObj.MatFileWorkflow.ConvertFcn)
    % Give the opportunity to cancel 
    % (function handle can just be configured to [] once Block has been 
    %  "converted" the first time)
-   printWarningLoop(3);
+   warningParams = struct('n',3,...
+      'warning_string', '-->\tCONVERSION in ');
+   h = nigeLab.utils.printWarningLoop(warningParams);
+   waitfor(h);
    % If not canceled yet, run conversion
    blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,...
       blockObj.AnimalLoc,...
@@ -91,19 +94,6 @@ if ~flag
       'Could not successfully link %s to data.',blockObj.Name);
 end
    
-   function printWarningLoop(nsec)
-      % PRINTWARNINGLOOP  Warning function to count down before conversion
-      if nargin < 1
-         nsec = 10;
-      end
-      fprintf(1,' \n');
-      nigeLab.utils.cprintf('Blue','-->\tRunning CONVERSION in ');
-      nigeLab.utils.cprintf('UnterminatedStrings','%02gs\n',nsec);
-      pause('on');
-      for i = nsec:-1:1
-         nigeLab.utils.cprintf('UnterminatedStrings','\b\b\b\b%02gs\n',i);
-         pause(1);
-      end
-   end
+   
 
 end
