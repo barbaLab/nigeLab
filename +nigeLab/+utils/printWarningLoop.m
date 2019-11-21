@@ -44,7 +44,7 @@ end
 h = figure('Name','printWarningLoop Object Handle',...
    'Visible',p.fig_visible,...
    'WindowKeyPressFcn',p.fig_key_press_fcn,...
-   'CreateFcn',p.obj_create_fcn);
+   'CreateFcn',p.fig_create_fcn);
 
 % Print a warning and indicate that timer is counting down
 fprintf(1,' \n');
@@ -56,6 +56,8 @@ for i = p.n:-1:1
    nigeLab.utils.cprintf(p.counter_color,'\b\b\b\b%02gs\n',i);
    pause(p.counter_duration);
 end
+
+delete(h);
 
    function warningParams_ = getDefaultWarningParams()
       warningParams_ = struct;

@@ -48,6 +48,9 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    [pars.Delimiter '%s', ...
    pars.Delimiter '%s', ...
    pars.Delimiter 'Stream.mat'];
+TAG.Videos = ... % Videos: behavioral videos
+   [pars.Delimiter '%s', ...
+    pars.Delimiter '%g.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
 
 
 %% Here You can specify the naming format of your block recording
