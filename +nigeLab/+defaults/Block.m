@@ -96,15 +96,15 @@ TAG.Videos = ... % Videos: behavioral videos
 
 %% Common DynamicVarExp values
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
-% pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
+% pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
 %% Common NamingConvention values
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
-pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 pars.IncludeChar='$';
 pars.DiscardChar='~';
