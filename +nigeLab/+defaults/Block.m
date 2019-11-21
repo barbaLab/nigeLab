@@ -133,12 +133,13 @@ Fields =  { ...
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
-   'Video';          % 13
+   'VidStreams';     % 13
 %    'Stim';           % 14 - hard-coded for extraction in RHS
 %    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
+   'Video';          % 19
    };
 
 FieldType = { ...
@@ -160,6 +161,7 @@ FieldType = { ...
    'Meta';     % 16
 %    'Meta';     % 17
    'Meta'      % 18
+   'Videos';   % 19  -- 2019-11-21 Introduce new FieldType for Videos
    };
 
 OldNames       =  { ...
@@ -181,6 +183,7 @@ OldNames       =  { ...
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
    {'*probes.xlsx'};                % 18
+   {'*.mp4','*.avi'};               % 19
    };
 
 FolderNames     = {  ...
@@ -196,12 +199,13 @@ FolderNames     = {  ...
    'Digital';           % 10
    'Digital';           % 11
    'Digital';           % 12
-   'Video';             % 13
+   'Video';             % 13 - for streams parsed from Video
 %    'StimData';          % 14
 %    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
    'Metadata'           % 18
+   'Video';             % 19 - for actual Video
    };
 
 FileNames =  { ...
@@ -217,12 +221,13 @@ FileNames =  { ...
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
-   'Video';          % 13
+   'VidStream';          % 13 - for streams parsed from Videos
 %   'Stim';           % 14 - hard-coded for extraction in RHS
 %   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
+   'Video';          % 19 - for actual Videos
    };
 
 FileType = { ...
@@ -244,6 +249,7 @@ FileType = { ...
    'Hybrid';   % 16
 %    'Other';    % 17
    'Other';    % 18
+   'Other';    % 19
    };
 
 %% DO ERROR PARSING

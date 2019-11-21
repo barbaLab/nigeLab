@@ -30,6 +30,8 @@ switch blockObj.FieldType{fieldIndex}
       % Events have the following fields:
       % 'type', 'value', 'tag', 'ts', 'snippet'
       flag = blockObj.linkEventsField(field);
+   case 'Video'
+      flag = blockObj.linkVideoField(field);
    case 'Meta'
       % Metadata are special cases, basically
       switch lower(field)

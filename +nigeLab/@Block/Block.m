@@ -75,6 +75,7 @@ classdef Block < matlab.mixin.Copyable
       Channels   % Struct array of neurophysiological stream data
       Events     % Struct array of asynchronous events
       Streams    % Struct array of non-electrode data streams
+      Videos     % Struct array of videos associated with recording
       
       Graphics   % Struct for associated graphics objects
       
@@ -392,21 +393,22 @@ classdef Block < matlab.mixin.Copyable
       flag = linkChannelsField(blockObj,field,fType)  % Link Channels field data
       flag = linkEventsField(blockObj,field)    % Link Events field data
       flag = linkStreamsField(blockObj,field)   % Link Streams field data
+      flag = linkVideosField(blockObj,field)    % Link Videos field data
       flag = linkTime(blockObj)     % Link Time stream
       flag = linkNotes(blockObj)    % Link notes metadata
       flag = linkProbe(blockObj)    % Link probe metadata
       
-      flag = linkRaw(blockObj)  % Link raw data
-      flag = linkFilt(blockObj) % Link filtered data
-      flag = linkStim(blockObj) % Link stimulation data
-      flag = linkLFP(blockObj)  % Link LFP data
-      flag = linkCAR(blockObj)  % Link CAR data
-      flag = linkSpikes(blockObj)   % Link Spikes data
-      flag = linkClusters(blockObj) % Link Clusters data
-      flag = linkSorted(blockObj)   % Link Sorted data
-      flag = linkADC(blockObj)      % Link ADC data
-      flag = linkDAC(blockObj)      % Link DAC data
-      flag = linkDigIO(blockObj)    % Link Digital-In and Digital-Out data
+      flag = linkRaw(blockObj)  % Link raw data -- deprecated?
+      flag = linkFilt(blockObj) % Link filtered data -- deprecated?
+      flag = linkStim(blockObj) % Link stimulation data -- deprecated?
+      flag = linkLFP(blockObj)  % Link LFP data -- deprecated?
+      flag = linkCAR(blockObj)  % Link CAR data -- deprecated?
+      flag = linkSpikes(blockObj)   % Link Spikes data -- deprecated?
+      flag = linkClusters(blockObj) % Link Clusters data -- deprecated?
+      flag = linkSorted(blockObj)   % Link Sorted data -- deprecated?
+      flag = linkADC(blockObj)      % Link ADC data -- deprecated?
+      flag = linkDAC(blockObj)      % Link DAC data -- deprecated?
+      flag = linkDigIO(blockObj)    % Link Digital-In and Digital-Out data -- deprecated?
       
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
