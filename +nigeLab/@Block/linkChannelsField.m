@@ -24,8 +24,8 @@ counter = 0;
 for iCh = blockObj.Mask
    
    % Get file name
-   pNum  = num2str(blockObj.ChannelID(iCh,1));
-   chNum = num2str(blockObj.ChannelID(iCh,2),'%03g');
+   pNum  = num2str(blockObj.Channels(iCh).port_number);
+   chNum = num2str(blockObj.Channels(iCh).native_order,'%03g');
    fName = sprintf(strrep(blockObj.Paths.(field).file,'\','/'), ...
       pNum,chNum);
    fName = fullfile(fName);

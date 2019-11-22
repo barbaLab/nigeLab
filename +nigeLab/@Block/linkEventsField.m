@@ -18,7 +18,7 @@ if N == 0
    return;
 end
 
-updateFlag = false(1,blockObj.NumChannels);
+updateFlag = false;
 
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 counter = 0;
@@ -33,7 +33,7 @@ counter = 0;
    if ~exist(fullfile(fName),'file')
       flag = true;
    else
-%       updateFlag(iCh) = true;
+      updateFlag = true;
       indx = strcmp({blockObj.Events.name},field);
       blockObj.Events(indx).data=nigeLab.libs.DiskData('MatFile',fName);
    end
@@ -42,6 +42,6 @@ counter = 0;
 %    pct = 100 * (counter / numel(blockObj.Mask));
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100))
 
-blockObj.updateStatus(field,true);
+blockObj.updateStatus(field,updateFlag);
 
 end

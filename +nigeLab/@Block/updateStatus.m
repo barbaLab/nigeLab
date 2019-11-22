@@ -77,20 +77,21 @@ switch nargin
       if strncmpi('init',operation,N_CHAR_COMPARE)
          blockObj.Status = struct; % Change this to a struct
          for i = 1:numel(allPossibleOperations)
-            switch blockObj.FieldType{i}
-               case 'Channels'
-                  blockObj.Status.(allPossibleOperations{i}) = ...
-                     false(1,blockObj.NumChannels);
-               otherwise
-                  strNumCh = ['Num' allPossibleOperations{i}];
-                  if isprop(blockObj,strNumCh)
-                     n = blockObj.(strNumCh);
-                  else
-                     n = 1;
-                  end
-                  blockObj.Status.(allPossibleOperations{i}) = ...
-                     false(1,n);
-            end
+             switch blockObj.FieldType{i}
+                 case 'Channels'
+                     n = blockObj.NumChannels;
+                 case 'Streams'
+                     n = numel(blockObj.Streams.(allPossibleOperations{i}));
+                 otherwise
+                     strNumCh = ['Num' allPossibleOperations{i}];
+                     if isprop(blockObj,strNumCh)
+                         n = blockObj.(strNumCh);
+                     else
+                         n = 1;
+                     end                     
+             end
+             blockObj.Status.(allPossibleOperations{i}) = ...
+                 false(1,n);
          end
          blockObj.Fields = allPossibleOperations;
       else

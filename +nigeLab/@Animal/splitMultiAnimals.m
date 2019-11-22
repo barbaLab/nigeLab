@@ -30,76 +30,29 @@ for ii= 1:numel(uAnimals)
    an.save;
 end
 
-btn = uicontrol('Style','pushbutton',...
+btn1 = uicontrol('Style','pushbutton',...
     'Position',[150 5 50 20],'Callback',{@(h,e,x) ApplyCallback(h,e,x),Tree},...
     'String','Accept','Enable','off','Parent',f,...
     'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+    'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'),...
+    'UserData',false(1,numel(animalObj.Blocks)));
+
+btn2 = uicontrol('Style','pushbutton',...
+    'Position',[80 5 50 20],'Callback',{@(h,e,x) copyChangesToAll(h,e,x),Tree},...
+    'String','Copy to all','Enable','off','Parent',f,...
+    'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
     'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
+
 end %function
 
 function ApplyCallback(h,e,Tree)
-
+if any(~h.UserData)
+    answer = questdlg('Copy changes to all?',...
+        'Do you want to copy this changes to all blocks?','Yes','No','No');
+end
 splitMultiAnimals(Tree(1).UserData,Tree);
-% 
-% answer = questdlg('Are you sure?','Confirm Changes','Yes','No','Yes to all','No');
-% if strcmp(answer,'No'),return;end
-% set(h,'Enable','off');
-% for ii=1:numel(Tree)
-%     T = Tree(ii);
-%     for jj=1:numel(T.Root.Children) % Channels,Events,Streams
-%         C = T.Root.Children(jj);
-%         if ~isempty([C.Children.Children]) %Channels or Streams
-%             field = C.Name;
-%             Stff = [C.Children.Children];
-%         elseif ~isempty([C.Children]) % events
-%             field = C.Name;
-%             Stff = [C.Children];
-%         else % the field is empty, no children here
-%             continue; 
-%         end
-%         index = cat(1,Stff.UserData);
-%         
-%         % init target data with the stuff to keep
-%         trgtBlck = T.UserData;
-%         trgtStuff = trgtBlck.(field)(index(index(:,1) == ii,2));
-%         if isprop(trgtBlck,'Mask')&&strcmp(field,'Channels' )
-%             trgtMask = trgtBlck.Mask(index(index(:,1)==ii,2));
-%         end
-%         
-%         % make sure not to double assign
-%         allSrcBlck = unique(index(:,1));
-%         allSrcBlck(allSrcBlck==ii) = [];
-%         
-%         % cycle through all the sources and assign all the needed data
-%         for kk = allSrcBlck
-%             srcBlck = Tree(kk).UserData;
-%             srcStuffs = srcBlck.(field)(index(index(:,1)==kk,2));
-%             trgtStuff = [trgtStuff srcStuffs];
-%             if isprop(srcBlck,'Mask')&&strcmp(field,'Channels' )
-%                 srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
-%                 trgtMask = [trgtMask srcMask];
-%             end
-%         end
-%         AllTrgtMask{ii} = trgtMask;
-%         AllTrgtStuff{ii}.(field) = trgtStuff;
-%     end
-% end
-% 
-% % Actually modify the blocks
-% for ii=1:numel(Tree)
-%     jointBlock = Tree(ii).Parent.UserData;
-%     bl = Tree(ii).UserData;
-%     bl.Mask = AllTrgtMask{ii};
-%     Stuff = AllTrgtStuff{ii};
-%     ff = fieldnames(Stuff);
-%     for jj=1:numel(ff)
-%         bl.(ff{jj})=Stuff.(ff{jj});
-%     end
-%     
-%     fixPortsAndNumbers(bl);
-%     bl.ManyAnimals = false;
-%     bl.ManyAnimalsLinkedBlocks = jointBlock;
-% end
-% populateTree(Tree);
+end
 
+function copyChangesToAll(h,e,x)
+   x;
 end

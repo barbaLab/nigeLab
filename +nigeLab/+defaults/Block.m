@@ -96,8 +96,6 @@ TAG.Videos = ... % Videos: behavioral videos
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
 pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
-% pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
-% pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
 pars.IncludeChar='$';
@@ -106,6 +104,7 @@ pars.DiscardChar='~';
 pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 
 % _____________________________

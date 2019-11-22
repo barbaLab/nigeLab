@@ -253,9 +253,22 @@ classdef Block < matlab.mixin.Copyable
    % OVERLOADED methods
    methods (Access = public)
       % Overloaded SAVE method to save a BLOCK matfile
-      function save(blockObj)
          %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+         
+         % Handles the case of MultiAnimals. Avoids infinite save loop
+         try
+             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+             for bl = blockObj.ManyAnimalsLinkedBlocks % save multianimals if present
+                 if blockObj.ManyAnimals
+                     bl.ManyAnimalsLinkedBlocks=[];
+                     bl.save();
+                 end
+             end
+         catch
+             flag = false;
+             return;
+         end
+         flag = true;
       end
       % Overloaded RELOAD method for loading a BLOCK matfile
       function reload(blockObj)
@@ -458,5 +471,15 @@ classdef Block < matlab.mixin.Copyable
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
+   end
+   
+   methods (Static)
+       function obj = loadobj(obj)
+           if obj.ManyAnimals
+               for bl=obj.ManyAnimalsLinkedBlocks
+                   bl.reload();
+               end
+           end
+       end
    end
 end

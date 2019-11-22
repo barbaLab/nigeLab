@@ -204,8 +204,11 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
-         
+         tmp = unique(month( tCell{strcmp(columnFormatsAndData,'datetime')},'shortname'));
+         for ii=1:(numel(tmp)-1),tmp{ii} = [tmp{ii} ', '];end
+         tCell(strcmp(columnFormatsAndData,'datetime')) = {tmp};
+         columnFormatsAndData{strcmp(columnFormatsAndData,'datetime')} = 'cell';
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Tank');
          
          w = obj.Children{2}.Children{1};
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
@@ -228,7 +231,7 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Animal');
          
          
          w = obj.Children{2}.Children{1};
@@ -251,7 +254,7 @@ classdef DashBoard < handle
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
-         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Block');
          
          
          w = obj.Children{2}.Children{1};

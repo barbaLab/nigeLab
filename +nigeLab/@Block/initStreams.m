@@ -21,13 +21,11 @@ end
 blockObj.Streams = struct;
 headerFields = fieldnames(blockObj.Meta.Header);
 
-%%%%%%%%%%% FB modified 10/4/19
 % MM modified 2019-11-20
 
-tmpSize=zeros(1,nStreamTypes);
 for ii = 1:nStreamTypes
    name = fields{ii};
-   
+
    headerStructName = [name 'Channels'];
    if ismember(headerStructName,headerFields)
       blockObj.Streams.(name) = blockObj.Meta.Header.(headerStructName);
@@ -35,8 +33,31 @@ for ii = 1:nStreamTypes
       warning('Missing header: %s',headerStructName);      
    end
 end
-
 flag = true;
+
+%%%%%%%%%%% FB modified 10/4/19
+% jj=1;
+% tmp = cell(1,nStreamTypes);
+% tmpSize=zeros(1,nStreamTypes);
+% for ii = 1:nStreamTypes
+%    name = blockObj.Fields{fieldIdx(ii)};
+%    
+%    headerStructName = [name 'Channels'];
+%    if ismember(headerStructName,headerFields)
+%       tmp{jj} = blockObj.Meta.Header.(headerStructName);
+%       tmpSize(jj) = numel(tmp{jj})';
+%       jj=jj+1;
+%    end
+% end
+% 
+% blockObj.Streams=repmat(channel_struct(),1,sum(tmpSize));
+% index = 1;
+% for ii = 1:jj-1
+%     blockObj.Streams(index:(tmpSize(ii)+index-1)) = tmp{ii};
+%     index = index + tmpSize(ii);
+% end
+% 
+% flag = true;
 
 
 end

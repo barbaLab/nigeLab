@@ -68,18 +68,22 @@ if isempty(blockObj.ManyAnimalsLinkedBlocks)
             end
         end %kk
         bl.Name = str(1:(end-1));
-        bl.Channels = [];
+        Chf = fieldnames(bl.Channels)';
+        Chf{2,1} = {};
+        bl.Channels = struct(Chf{:});
         bl.initEvents;
-        bl.Streams = [];
+        ff = fieldnames(bl.Streams);
+        for ss=1:numel(ff)
+            Stf = fieldnames(bl.Streams.(ff{ss}))';
+            Stf{2,1} = {};
+            bl.Streams.(ff{ss}) = struct(Stf{:});
+        end
         bl.NumChannels = 0;
         bl.NumProbes = 0;
+        bl.Mask = [];
         splittedBlocks(ii) = bl;
     end %ii
-    
-    splittedBlocks(1).Channels = blockObj.Channels;
-    splittedBlocks(1).Streams = blockObj.Streams;
-    splittedBlocks(1).NumProbes = blockObj.NumProbes;
-    splittedBlocks(1).NumChannels = blockObj.NumChannels;
+
 
     % save new blocks under the Parent block folder
 %     for ii=1:numel(splittedBlocks)
@@ -91,11 +95,20 @@ if isempty(blockObj.ManyAnimalsLinkedBlocks)
     
     % Save the blocks in the corresponding Animal folders. 
     for ii =1:numel(blockObj.ManyAnimalsLinkedBlocks)
-        animalPath = fullfile(fileparts(fileparts(blockObj.Paths.SaveLoc.dir)),...
+        animalPath = fullfile((fileparts(blockObj.Paths.SaveLoc.dir)),...
             blockObj.ManyAnimalsLinkedBlocks(ii).Meta.AnimalID);
-        BlockPath = fullfile(animalPath,blockObj.ManyAnimalsLinkedBlocks(ii).Name);
+        BlockPath_ = fullfile(animalPath,blockObj.ManyAnimalsLinkedBlocks(ii).Name);
+        BlockPath.dir = BlockPath_;
         blockObj.ManyAnimalsLinkedBlocks(ii).updatePaths(BlockPath);
     end
+    
+    % Assign all properties to the first block
+    splittedBlocks(1).Mask = blockObj.Mask;
+    splittedBlocks(1).Channels = blockObj.Channels;
+    splittedBlocks(1).Streams = blockObj.Streams;
+    splittedBlocks(1).NumProbes = blockObj.NumProbes;
+    splittedBlocks(1).NumChannels = blockObj.NumChannels;
+    
 end
 %% gui
 
@@ -137,45 +150,59 @@ end
 end
 
 function ApplyCallback(h,e,Tree)
+
 answer = questdlg('Are you sure?','Confirm Changes','Yes','No','Yes to all','No');
 if strcmp(answer,'No'),return;end
 set(h,'Enable','off');
+
+% TODO, if Raw not extracted yet do extraction. 
+
 for ii=1:numel(Tree)
     T = Tree(ii);
     for jj=1:numel(T.Root.Children) % Channels,Events,Streams
         C = T.Root.Children(jj);
-        if ~isempty([C.Children.Children]) %Channels or Streams
-            field = C.Name;
-            Stff = [C.Children.Children];
-        elseif ~isempty([C.Children]) % events
-            field = C.Name;
-            Stff = [C.Children];
-        else % the field is empty, no children here
-            continue; 
+        switch C.Name
+            case 'Streams'
+                Stff = [C.Children];
+                field = C.Name;
+                [trgtStuff] = getUpdatedStreams(T.UserData,Stff,Tree,ii);
+                
+            case 'Channels'
+                field = C.Name;
+                Stff = [C.Children.Children];
+                [trgtStuff,trgtMask] = getUpdateChans(T.UserData,Stff,Tree,ii);
+            case 'Events'
+                field = C.Name;
+                Stff = [C.Children];
+                %             [trgtStuff] = getUpdatedEvnts(trgtBlck,Stff,Tree);
+                
+                continue;
+            otherwise % the field is empty, no children here
+                continue;
         end
-        index = cat(1,Stff.UserData);
-        
-        % init target data with the stuff to keep
-        trgtBlck = T.UserData;
-        trgtStuff = trgtBlck.(field)(index(index(:,1) == ii,2));
-        if isprop(trgtBlck,'Mask')&&strcmp(field,'Channels' )
-            trgtMask = trgtBlck.Mask(index(index(:,1)==ii,2));
-        end
-        
-        % make sure not to double assign
-        allSrcBlck = unique(index(:,1));
-        allSrcBlck(allSrcBlck==ii) = [];
-        
-        % cycle through all the sources and assign all the needed data
-        for kk = allSrcBlck
-            srcBlck = Tree(kk).UserData;
-            srcStuffs = srcBlck.(field)(index(index(:,1)==kk,2));
-            trgtStuff = [trgtStuff;srcStuffs];
-            if isprop(srcBlck,'Mask')&&strcmp(field,'Channels' )
-                srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
-                trgtMask = [trgtMask srcMask];
-            end
-        end
+        %         index = cat(1,Stff.UserData);
+%         
+%         % init target data with the stuff to keep
+%         trgtBlck = T.UserData;
+%         trgtStuff = trgtBlck.(field)(index(index(:,1) == ii,2));
+%         if isprop(trgtBlck,'Mask')&&strcmp(field,'Channels' )
+%             trgtMask = trgtBlck.Mask(index(index(:,1)==ii,2));
+%         end
+%         
+%         % make sure not to double assign
+%         allSrcBlck = unique(index(:,1));
+%         allSrcBlck(allSrcBlck==ii) = [];
+%         
+%         % cycle through all the sources and assign all the needed data
+%         for kk = allSrcBlck
+%             srcBlck = Tree(kk).UserData;
+%             srcStuffs = srcBlck.(field)(index(index(:,1)==kk,2));
+%             trgtStuff = [trgtStuff;srcStuffs];
+%             if isprop(srcBlck,'Mask')&&strcmp(field,'Channels' )
+%                 srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
+%                 trgtMask = [trgtMask srcMask];
+%             end
+%         end
         AllTrgtMask{ii} = trgtMask;
         AllTrgtStuff{ii}.(field) = trgtStuff;
     end
@@ -194,7 +221,8 @@ for ii=1:numel(Tree)
     
     fixPortsAndNumbers(bl);
     bl.ManyAnimals = false;
-    bl.ManyAnimalsLinkedBlocks = jointBlock;
+    bl.updatePaths(bl.Paths.SaveLoc);
+    bl.save();
 end
 populateTree(Tree);
 
@@ -209,6 +237,9 @@ function fixPortsAndNumbers(bl)
 % [bl.Channels.port_number]=deal(PN{:});
 bl.NumProbes = numel(OldPN);
 bl.NumChannels = numel(bl.Channels);
+if isempty(bl.Mask),bl.Mask=1:bl.NumChannels;else
+bl.Mask = bl.Mask - min(bl.Mask) + 1;
+end
 end
 
 function dropOk = dragDropCallback(h,e) %#ok<INUSL>
@@ -235,9 +266,10 @@ for kk = 1:numel(e.Source)
         dropOk = true;
         
     elseif strcmpi(e.DropAction,'move')
-        
+        TabID = ismember(h.Parent, h.Parent.Parent.Children);
         btn = findobj(h.Parent.Parent.Parent,'Style','pushbutton','String','Accept');
         set(btn,'Enable','on');
+        btn.UserData(TabID) = true;
         
         NewNode = copy(srcNode);
         Node = srcNode;
@@ -310,26 +342,114 @@ for tt=1:numel(Tree)
     %% Streams
     Strms_T = uiw.widget.TreeNode('Name','Streams',...
         'Parent',Tree(tt).Root,'UserData',0);
-    if numel(bl.Streams)>0
-        allSignalType = {bl.Streams.port_name};
-        signalType = unique(allSignalType);
-        
-        Streams = {bl.Streams.custom_channel_name};
-        for ii =1:numel(signalType)
-            indx = find(strcmp(allSignalType,signalType{ii}));
-            StrmGrp_T =  uiw.widget.TreeNode('Name',signalType{ii},...
+    streamsType = fieldnames(bl.Streams);
+    if numel(streamsType)>0
+        for kk=1:numel(streamsType)
+            
+            StrmGrnPrnt_T =  uiw.widget.TreeNode('Name',streamsType{kk},...
                 'Parent',Strms_T);
-            for jj = indx
-                chan = uiw.widget.TreeNode('Name',Streams{jj},...
-                    'Parent',StrmGrp_T,'UserData',[tt,jj]);
-                
-            end
-        end
-        
-    end
+            allSignalType = {bl.Streams.(streamsType{kk}).port_name};
+            if isempty(allSignalType),continue;end
+            signalType = unique(allSignalType);
+            Streams = {bl.Streams.(streamsType{kk}).custom_channel_name};
+            for ii =1:numel(signalType)
+                indx = find(strcmp(allSignalType,signalType{ii}));
+                StrmPrnt_T =  uiw.widget.TreeNode('Name',signalType{ii},...
+                    'Parent',StrmGrnPrnt_T);
+                for jj = indx
+                    chan = uiw.widget.TreeNode('Name',Streams{jj},...
+                        'Parent',StrmPrnt_T,'UserData',[tt,jj]);
+                    
+                end %jj
+            end %ii
+        end %kk
+    end %fi
     Strms_T.expand();
     
     
     
 end
+end
+
+function [trgtStuff,trgtMask]=getUpdateChans(trgtBlck,Stff,Tree,ii)
+
+        index = cat(1,Stff.UserData);
+        
+        % init target data with the stuff to keep
+        trgtStuff = trgtBlck.Channels(index(index(:,1) == ii,2));
+        if isprop(trgtBlck,'Mask')
+            trgtMask = trgtBlck.Mask(index(index(:,1)==ii,2));
+        end
+        
+        % make sure not to double assign
+        allSrcBlck = unique(index(:,1));
+        allSrcBlck(allSrcBlck==ii) = [];
+        
+        % cycle through all the sources and assign all the needed data
+        for kk = allSrcBlck
+            srcBlck = Tree(kk).UserData;
+            srcStuffs = srcBlck.Channels(index(index(:,1)==kk,2));
+            trgtStuff = [trgtStuff;srcStuffs];
+            if isprop(srcBlck,'Mask')
+                srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
+                trgtMask = [trgtMask srcMask];
+            end
+        end
+
+
+end
+
+function [trgtStuff,trgtMask]=getUpdatedEvnts(trgtBlck,Stff,Tree)
+
+ index = cat(1,Stff.UserData);
+        
+        % init target data with the stuff to keep
+        trgtStuff = trgtBlck.Events(index(index(:,1) == ii,2));
+        if isprop(trgtBlck,'Mask')&&strcmp(field,'Channels' )
+            trgtMask = trgtBlck.Mask(index(index(:,1)==ii,2));
+        end
+        
+        % make sure not to double assign
+        allSrcBlck = unique(index(:,1));
+        allSrcBlck(allSrcBlck==ii) = [];
+        
+        % cycle through all the sources and assign all the needed data
+        for kk = allSrcBlck
+            srcBlck = Tree(kk).UserData;
+            srcStuffs = srcBlck.Events(index(index(:,1)==kk,2));
+            trgtStuff = [trgtStuff;srcStuffs];
+            if isprop(srcBlck,'Mask')&&strcmp(field,'Channels' )
+                srcMask = srcBlck.Mask(index(index(:,1)==kk,2));
+                trgtMask = [trgtMask srcMask];
+            end
+        end
+
+
+
+end
+
+function [trgtStuff] = getUpdatedStreams(trgtBlck,Stff,Tree,ii)
+
+
+StreamsTypes = {Stff.Name};
+for jj=1:numel(StreamsTypes)
+    tmp = [Stff(jj).Children.Children];
+    if isempty([Stff(jj).Children.Children]),continue;end
+    index = cat(1,tmp.UserData);
+    % init target data with the stuff to keep
+    trgtStuff.(StreamsTypes{jj}) = trgtBlck.Streams.(StreamsTypes{jj})(index(index(:,1) == ii,2));
+    
+    % make sure not to double assign
+    allSrcBlck = unique(index(:,1));
+    allSrcBlck(allSrcBlck==ii) = [];
+    
+    % cycle through all the sources and assign all the needed data
+    for kk = allSrcBlck
+        srcBlck = Tree(kk).UserData;
+        srcStuffs = srcBlck.Streams.(StreamsTypes{jj})(index(index(:,1)==kk,2));
+        trgtStuff.(StreamsTypes{jj}) = [trgtStuff.(StreamsTypes{jj});srcStuffs];
+    end
+end
+
+
 end

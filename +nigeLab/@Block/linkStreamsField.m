@@ -38,6 +38,7 @@ id = strsplit(fname,'%');
 F = dir(fullfile(pname,[id{1} '*'])); % by convention I try to use F for this 'dir' struct
 counter = 0;
 for iCh = 1:numel(F)
+    updateFlag = false(1,numel(info));
    % Parse info from channel struct
    fName = fullfile(F.folder,F.name);
 
@@ -52,7 +53,9 @@ for iCh = 1:numel(F)
    pct = 100 * (counter / numel(F)); 
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
-blockObj.updateStatus(field,updateFlag);
+    blockObj.updateStatus(field,updateFlag);
+% end
+
 
 
 

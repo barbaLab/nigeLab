@@ -308,11 +308,15 @@ end
 
 if (info.NumDigOutChannels > 0)
    digBuffer.DigOut = false(1,nDataPoints);
-   [digBuffer.DigOut,~] = getDigBuffer(digBuffer.DigOut,end_,...
+   [digBuffer.DigOut,end_] = getDigBuffer(digBuffer.DigOut,end_,...
       1,nPerBlock,nBlocks);
    
 end
 
+% sanity check 
+if end_~=nDataPoints
+   error('Error during the extraction process(buffer size doesn''t match the datablock size), the data file might be corrupted.'); 
+end
 %% READ BINARY DATA
 progress=0;
 num_gaps = 0;

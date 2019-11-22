@@ -11,19 +11,20 @@ function flag = linkTime(blockObj)
 
 %%
 flag = false;
-
+updateflag = false;
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Time'),'Time');
 counter = 0;
-fName = fullfile(blockObj.Paths.Time.info);
+fName = fullfile(blockObj.Paths.Time.file);
    
 % If file is not detected
 if ~exist(fullfile(fName),'file')
    flag = true;
 else
+    updateflag = true;
    blockObj.Time = nigeLab.libs.DiskData('Hybrid',fName);
 end
 fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
 
-blockObj.updateStatus('Time',true);
+blockObj.updateStatus('Time',updateflag);
 
 end
