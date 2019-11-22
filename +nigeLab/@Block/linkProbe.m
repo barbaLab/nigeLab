@@ -19,7 +19,7 @@ flag = false;
 updateFlag = false(1,blockObj.NumChannels);
 
 if isfield(blockObj.Notes,'Probes')
-   fprintf(1,'\nLinking PROBES...000%%\n');
+   nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Probes'),'Probes');
    probePorts = fieldnames(blockObj.Notes.Probes);
    % Get the correct file associated with this recording in terms of
    % experimental probes. 

@@ -20,7 +20,7 @@ end
 
 updateFlag = false(1,blockObj.NumChannels);
 
-fprintf(1,'\nLinking Events field: %s ...000%%\n',field);
+nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 counter = 0;
    
    % Get file name

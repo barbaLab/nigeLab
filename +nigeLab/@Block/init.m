@@ -68,6 +68,12 @@ if ~blockObj.initEvents
    warning('Could not initialize Events structure properly.');
    return;
 end
+
+if ~blockObj.initVideos
+   warning('Could not initialize Videos structure properly.');
+   return;
+end
+
 blockObj.updateStatus('init');
 
 % Prior to link to data, check if a function handle for conversion has been

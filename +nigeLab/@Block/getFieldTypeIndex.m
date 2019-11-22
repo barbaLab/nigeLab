@@ -20,7 +20,7 @@ function [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType)
 %     n           :     Total number of fields of type 'fieldType'
 
 %% Check input
-if ~ismember(fieldType,blockobj.ViableFieldTypes)
+if ~ismember(fieldType,blockObj.ViableFieldTypes)
    error('%s is not a member of ViableFieldTypes property.',fieldType);
 end
 

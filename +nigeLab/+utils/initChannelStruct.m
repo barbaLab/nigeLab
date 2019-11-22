@@ -6,6 +6,9 @@ function channel_struct_ = initChannelStruct(FieldType,n,varargin)
 %
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(FieldType);
 %   --> Initialize 'FieldType' Channels struct scalar
+%        * Valid FieldType options (2019-11-21):
+%           - 'Channels'
+%           - 'Streams'
 %
 %  channel_struct_ = nigeLab.utils.INITCHANNELSTRUCT(n);
 %   --> Initialize as [1 x n] 'Channels' (FieldType) Channels struct array
@@ -49,7 +52,7 @@ switch lower(FieldType)
          'probe', cell(1,n), ...
          'electrode_impedance_magnitude', cell(1,n), ...
          'electrode_impedance_phase', cell(1,n), ...
-         'signal_type', cell(1,n),...
+         'signal', cell(1,n),...
          'chNum',cell(1,n),...
          'chStr',cell(1,n));
       
@@ -66,11 +69,17 @@ switch lower(FieldType)
          'port_number', cell(1,n), ...
          'electrode_impedance_magnitude', cell(1,n), ...
          'electrode_impedance_phase', cell(1,n), ...
-         'signal_type', cell(1,n));
+         'signal', cell(1,n),...
+         'data', cell(1,n));
       
    case 'events'
+      %
+      
+   case 'videos'
+      %
       
    case 'meta'
+      %
       
    otherwise
       error('Invalid FieldType: %s\n',FieldType);

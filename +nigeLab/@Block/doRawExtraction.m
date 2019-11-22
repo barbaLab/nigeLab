@@ -61,15 +61,6 @@ switch blockObj.RecType
       %     has already been performed, but some error or something
       %     happened and you no longer have the 'Block' object, but you
       %     would like to associate the 'Block' with that file structure
-      %
-      % Federico did you add this? I don't think there are plans to add
-      % support for acquisition that streams to Matlab files...? -MM
-      %
-      % Yup, I thought this could be a good way to ensure backwards
-      % compatibility for already acquired and extracted files. Also for
-      % other possible future users     -FB
-      %
-      % Good job. -MM
       
       flag = blockObj.MatFileWorkflow.ExtractFcn(blockObj);
    otherwise
@@ -87,6 +78,7 @@ switch blockObj.RecType
 end
 
 %%
-blockObj.updateStatus('Raw',true);
+% blockObj.updateStatus('Raw',true);
+blockObj.linkChannelsField('Raw');
 blockObj.save;
 end

@@ -109,6 +109,7 @@ classdef Block < matlab.mixin.Copyable
       Probes      % Probe configurations associated with saved recording
       Notes       % Notes from text file
       
+      RecSystem   % 'RHS', 'RHD', or 'TDT' (must be one of those)
       RecType     % Intan / TDT / other
       FileExt     % .rhd, .rhs, or other
    end
@@ -418,6 +419,7 @@ classdef Block < matlab.mixin.Copyable
       fileType = getFileType(blockObj,field) % Get file type corresponding to field  
       [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
       [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
+      [fieldIdx,n] = getStreamsFieldIndex(blockObj,field,type) % Get index into Streams for a given Field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status

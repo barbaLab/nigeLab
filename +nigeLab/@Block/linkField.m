@@ -12,7 +12,7 @@ function flag = linkField(blockObj,fieldIndex)
 %%
 flag = false;
 field = blockObj.Fields{fieldIndex};
-fType = blockObj.FileType{fieldIndex};
+fileType = blockObj.FileType{fieldIndex};
 switch blockObj.FieldType{fieldIndex}
    case 'Channels'
       % Streamed data from the high-resolution neurophysiological
@@ -20,7 +20,7 @@ switch blockObj.FieldType{fieldIndex}
       % is acquired in parallel and manipulated together for downstream
       % processing and analyses.
       
-      flag = blockObj.linkChannelsField(field,fType);
+      flag = blockObj.linkChannelsField(field,fileType);
    case 'Streams'
       % Streams are like Channels, but from DAC or ADC, etc. so they are
       % not associated with the neurophysiological recording Channels
@@ -30,8 +30,8 @@ switch blockObj.FieldType{fieldIndex}
       % Events have the following fields:
       % 'type', 'value', 'tag', 'ts', 'snippet'
       flag = blockObj.linkEventsField(field);
-   case 'Video'
-      flag = blockObj.linkVideoField(field);
+   case 'Videos'
+      flag = blockObj.linkVideosField(field);
    case 'Meta'
       % Metadata are special cases, basically
       switch lower(field)

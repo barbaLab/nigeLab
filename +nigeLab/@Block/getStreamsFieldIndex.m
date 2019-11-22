@@ -1,15 +1,17 @@
-function [fieldIdx,n] = getStreamsFieldIndex(blockObj,field)
-%% GETFIELDTYPEINDEX    Returns indices for each Streams of a given field
+function [fieldIdx,n] = getStreamsFieldIndex(blockObj,field,type)
+%% GETSTREAMSFIELDINDEX   Returns indices for each Streams of a given field
 %
-%  fieldIdx = getStreamsFieldIndex(blockObj,field)
-%  [fieldIdx,n] = getStreamsFieldIndex(blockObj,field)
+%  fieldIdx = getStreamsFieldIndex(blockObj,field,type)
+%  [fieldIdx,n] = getStreamsFieldIndex(blockObj,field,type)
 %
 %  --------
 %   INPUTS
 %  --------
 %  blockObj       :     nigeLab.BLOCK class object
 %
-%   field         :     Member of blockObj.Fields
+%   field         :     Member of blockObj.Streams
+%
+%   type          :     signal.type (original; e.g. 'DAC' etc..)
 %
 %  --------
 %   OUTPUT
@@ -21,7 +23,7 @@ function [fieldIdx,n] = getStreamsFieldIndex(blockObj,field)
 
 %% Check input
 if ~ismember(field,blockObj.Fields)
-   error('%s is not a member of ViableFieldTypes property.',field);
+   error('%s is not a member of Fields property.',field);
 end
 
 %% Check Streams
@@ -31,10 +33,15 @@ if numel(blockObj.Streams) == 0
    return;
 end
 
-%% Match field to Streams.signal_type
-streamFields = {blockObj.Streams.signal_type}.';
-fieldIdx = ismember(streamFields,field);
-n = sum(fieldIdx);
+if ~isfield(blockObj.Streams,field)
+   nigeLab.utils.cprintf('UnterminatedStrings',...
+      'Missing %s field of Streams property struct array.',field);
+   error('Check Block.initStreams; Streams not initialized correctly.');
+end
+
+%% Match field to signal.type
+sig = [blockObj.Streams.(field).signal];
+[fieldIdx,n] = ismember(sig,type); % function override on signal class
 
 
 end

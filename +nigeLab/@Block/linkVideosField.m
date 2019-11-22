@@ -11,4 +11,8 @@ function flag = linkVideosField(blockObj,field)
 %
 % By: MAECI 2019 collaboration (Freddy & Max)
 
+%%
+flag = false;
+nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+
 end

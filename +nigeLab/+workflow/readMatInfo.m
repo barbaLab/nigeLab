@@ -5,10 +5,12 @@ function header = readMatInfo(path)
 
 tmp=load(path);
 header = struct();
+% acqsys = ... % need to define acquisition system, at a minimum
 
-%% RAW_CHANNELS STRUCT IS MANDATROY! - lol (MM 2019-11-20)
+%% RAW_CHANNELS STRUCT IS MANDATORY!
 header.raw_channels          = tmp.info;
 header.num_raw_channels      = numel(tmp.info);
+
 %% Remember to handle fields probe  and chNum! Both are numeric values.
 % example below
 for iCh = 1:header.num_raw_channels
@@ -27,6 +29,8 @@ header.sample_rate           = header.raw_channels(1).fs;
 tmp = dir(fullfile(fileparts(path),'*01.mat'));
 m=matfile(fullfile(tmp.folder,tmp.name));
 header.num_raw_samples       = length(m.data);
+
+
 
 
 end

@@ -4,7 +4,7 @@ function flag = initVideos(blockObj)
 %  flag = INITVIDEOS(blockObj);
 
 %%
-
+flag = true;
 
 
 end

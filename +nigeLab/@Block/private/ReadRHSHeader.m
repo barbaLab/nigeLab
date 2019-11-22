@@ -1,5 +1,7 @@
 function [header,FID] = ReadRHSHeader(varargin)
 
+acqsys = 'RHS';
+
 if nargin >0
    VERBOSE = false;
 else
@@ -108,9 +110,9 @@ charge_recovery_target_voltage = fread(FID, 1, 'single');
 
 % Place notes in data strucure
 notes = struct( ...
-   'note1', fread_QString(FID), ...
-   'note2', fread_QString(FID), ...
-   'note3', fread_QString(FID) );
+   'note1', nigeLab.utils.fread_QString(FID), ...
+   'note2', nigeLab.utils.fread_QString(FID), ...
+   'note3', nigeLab.utils.fread_QString(FID) );
 
 % See if dc amplifier data was saved
 DC_amp_data_saved = fread(FID, 1, 'int16');
@@ -143,7 +145,7 @@ stim_parameters = struct( ...
    'charge_recovery_mode', charge_recovery_mode );
 
 
-reference_channel = fread_QString(FID);
+reference_channel = nigeLab.utils.fread_QString(FID);
 
 raw_index = 1;
 analogIO_index = 1;
@@ -159,8 +161,8 @@ board_dig_out_index = 1;
 number_of_signal_groups = fread(FID, 1, 'int16');
 
 for signal_group = 1:number_of_signal_groups
-   signal_group_name = fread_QString(FID);
-   signal_group_prefix = fread_QString(FID);
+   signal_group_name = nigeLab.utils.fread_QString(FID);
+   signal_group_prefix = nigeLab.utils.fread_QString(FID);
    signal_group_enabled = fread(FID, 1, 'int16');
    signal_group_num_channels = fread(FID, 1, 'int16');
    signal_group_num_amp_channels = fread(FID, 1, 'int16');
@@ -176,8 +178,8 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).port_name = signal_group_name;
          new_channel(1).port_prefix = signal_group_prefix;
          new_channel(1).port_number = signal_group;
-         new_channel(1).native_channel_name = fread_QString(FID);
-         new_channel(1).custom_channel_name = fread_QString(FID);
+         new_channel(1).native_channel_name = nigeLab.utils.fread_QString(FID);
+         new_channel(1).custom_channel_name = nigeLab.utils.fread_QString(FID);
          new_channel(1).native_order = fread(FID, 1, 'int16');
          new_channel(1).custom_order = fread(FID, 1, 'int16');
          signal_type = fread(FID, 1, 'int16');
@@ -197,7 +199,7 @@ for signal_group = 1:number_of_signal_groups
          if (channel_enabled)
             switch (signal_type)
                case 0
-                  new_channel(1).signal_type = 'Raw';
+                  new_channel(1).signal = nigeLab.utils.signal('Raw');
                   raw_channels(raw_index) = new_channel;
                   spike_triggers(raw_index) = new_trigger_channel;
                   raw_index = raw_index + 1;
@@ -206,22 +208,22 @@ for signal_group = 1:number_of_signal_groups
                case 2
                   % supply voltage; not used in RHS2000 system
                case 3
-                  new_channel(1).signal_type = 'Adc';
+                  new_channel(1).signal = nigeLab.utils.signal('Adc');
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_adc_index = board_adc_index + 1;
                case 4
-                  new_channel(1).signal_type = 'Dac';
+                  new_channel(1).signal = nigeLab.utils.signal('Dac');
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_dac_index = board_dac_index + 1;
                case 5
-                  new_channel(1).signal_type = 'DigIn';
+                  new_channel(1).signal = nigeLab.utils.signal('DigIn');
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_in_index = board_dig_in_index + 1;
                case 6
-                  new_channel(1).signal_type = 'DigOut';
+                  new_channel(1).signal = nigeLab.utils.signal('DigOut');
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_out_index = board_dig_out_index + 1;
@@ -343,36 +345,4 @@ for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
 end
 
 return;
-end
-
-%% Helper functions
-function a = fread_QString(fid)
-
-% a = read_QString(fid)
-%
-% Read Qt style QString.  The first 32-bit unsigned number indicates
-% the length of the string (in bytes).  If this number equals 0xFFFFFFFF,
-% the string is null.
-
-a = '';
-length = fread(fid, 1, 'uint32');
-if length == hex2num('ffffffff')
-   return;
-end
-% convert length from bytes to 16-bit Unicode words
-length = length / 2;
-
-for i=1:length
-   a(i) = fread(fid, 1, 'uint16');
-end
-
-end
-
-function spike_trigger_struct_=spike_trigger_struct()
-spike_trigger_struct_ = struct( ...
-   'voltage_trigger_mode', {}, ...
-   'voltage_threshold', {}, ...
-   'digital_trigger_channel', {}, ...
-   'digital_edge_polarity', {} );
-return
 end
