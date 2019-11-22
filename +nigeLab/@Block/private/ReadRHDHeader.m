@@ -341,14 +341,14 @@ num_stim_samples = 0;
 for iN = 1:num_probes
    eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
 end
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;
+%% Helper functions
 
 DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHD').';
 for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOut = field{:};
    fieldOutVal = eval(fieldOut);
    header.(fieldOut) = fieldOutVal;
-end
-
-return
-end
-

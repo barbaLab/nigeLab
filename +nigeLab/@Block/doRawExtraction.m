@@ -73,6 +73,7 @@ switch blockObj.RecType
       %     would like to associate the 'Block' with that file structure
       
       flag = blockObj.MatFileWorkflow.ExtractFcn(blockObj);
+      %
    otherwise
       % Currently only working with TDT and Intan, the two types of
       % acquisition hardware that are in place at Nudo Lab at KUMC, and at

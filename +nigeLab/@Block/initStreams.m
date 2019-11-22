@@ -22,7 +22,7 @@ blockObj.Streams = struct;
 headerFields = fieldnames(blockObj.Meta.Header);
 
 % MM modified 2019-11-20
-
+tmp = repmat({nigeLab.utils.initChannelStruct('Streams',0)},1,nStreamTypes);
 for ii = 1:nStreamTypes
    name = fields{ii};
 

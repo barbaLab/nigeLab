@@ -39,6 +39,12 @@ for iCh = blockObj.Mask
          case 'Event' % If it's a 'spikes' file
             try % Channels can also have channel events
                blockObj.Channels(iCh).(field) = ...
+                  nigeLab.libs.DiskData(fType,fName);
+            catch % If spikes exist but in "bad format", fix that
+               updateFlag(iCh) = blockObj.checkSpikeFile(fName);
+            end
+         otherwise
+               blockObj.Channels(iCh).(field) = ...
                   nigeLab.libs.DiskData(fileType,fName);
             catch % If spikes exist but in "bad format", fix that
                updateFlag(iCh) = blockObj.checkSpikeFile(fName);

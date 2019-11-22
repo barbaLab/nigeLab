@@ -345,4 +345,6 @@ for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
 end
 
 return;
+%% Helper functions
+return;
 end
