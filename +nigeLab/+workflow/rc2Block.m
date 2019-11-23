@@ -61,7 +61,7 @@ for iF = 1:numel(F)
       save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
       if strcmpi(dtype,'Paw')
          save(nigeLab.utils.getUNCPath(fullfile(block_out,p.VidStreams.Folder,...
-            sprintf(p.VidStreams.File,'Front-Paw',1,'mat'))),'data','-v7.3');
+            sprintf(p.VidStreams.File,'Front-Paw_Likelihood-Marker',1,'mat'))),'data','-v7.3');
       end
    elseif ismember(dtype,{'Scoring','VideoAlignment'})
       copyfile(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),...

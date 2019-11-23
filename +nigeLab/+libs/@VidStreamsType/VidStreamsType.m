@@ -66,7 +66,7 @@ classdef VidStreamsType < handle
          end
          
          switch field
-            case 'Video'
+            case {'Video', 'Videos'}
                [filename,fileIsPresent] = obj.v.getFile;
             case 'VidStreams'
                [filename,fileIsPresent] = obj.checkData;
