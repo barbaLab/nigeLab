@@ -37,26 +37,24 @@ updateFlag = false(1,numel(blockObj.Streams));
 id = strsplit(fname,'%');
 F = dir(fullfile(pname,[id{1} '*'])); % by convention I try to use F for this 'dir' struct
 counter = 0;
-for iCh = 1:numel(F)
-    updateFlag = false(1,numel(info));
+for iF = 1:numel(F)
+   
    % Parse info from channel struct
-   fName = fullfile(F.folder,F.name);
+   fName = fullfile(F(iF).folder,F(iF).name);
 
    % If file is not detected
    if ~exist(fullfile(fName),'file')
       flag = true;
    else
       counter = counter + 1;
-      updateFlag(iCh) = true;
-      blockObj.Streams.(field)(iCh).data = nigeLab.libs.DiskData('Hybrid',fName);
+      updateFlag(iF) = true;
+      blockObj.Streams.(field)(iF).data = nigeLab.libs.DiskData('Hybrid',fName);
    end
    pct = 100 * (counter / numel(F)); 
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
-    blockObj.updateStatus(field,updateFlag);
-% end
 
-
+blockObj.updateStatus(field,updateFlag);
 
 
 end

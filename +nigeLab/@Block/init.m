@@ -57,6 +57,12 @@ if ~blockObj.initChannels
    return;
 end
 
+%% INITIALIZE VIDEOS STRUCT
+if ~blockObj.initVideos
+   warning('Could not initialize Videos structure properly.');
+   return;
+end
+
 %% INITIALIZE STREAMS STRUCT
 if ~blockObj.initStreams
    warning('Could not initialize Streams structure headers properly.');
@@ -66,11 +72,6 @@ end
 %% INITIALIZE EVENTS STRUCT
 if ~blockObj.initEvents
    warning('Could not initialize Events structure properly.');
-   return;
-end
-
-if ~blockObj.initVideos
-   warning('Could not initialize Videos structure properly.');
    return;
 end
 

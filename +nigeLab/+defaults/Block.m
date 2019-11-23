@@ -1,7 +1,8 @@
-function [pars,Fields] = Block()
+function [pars,Fields] = Block(name)
 %% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = nigeLab.defaults.Block();
+%  pars = nigeLab.defaults.Block('parName');
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
@@ -53,7 +54,7 @@ TAG.Videos = ... % Videos: behavioral videos
     pars.Delimiter '%g.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
 
 
-%% Here You can specify the naming format of your block recording
+%% Explanation of DynamicVarExp and NamingConvention pars fields
 % The block name will be splitted using Delimiter (defined above) and each
 % segment will be assigned to the property definied here.
 % Using namingConvention you can define to what varible each piece of the
@@ -93,22 +94,22 @@ TAG.Videos = ... % Videos: behavioral videos
 %
 % ~/path/R18-68_0_180724_141203
 
+%% Common DynamicVarExp values
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
 pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
-pars.IncludeChar='$';
-pars.DiscardChar='~';
+%% Common NamingConvention values
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
 pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
-pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
+pars.IncludeChar='$';
+pars.DiscardChar='~';
 
-% _____________________________
-% Many animals in one block
+%% Many animals in one block 
 %
 % Modern recording amplifiers usually have the capabilities to record from
 % many channels  simultaneously. This can be exploited to record from many
@@ -157,7 +158,7 @@ FieldType = { ...
    'Streams';  % 10
    'Streams';  % 11
    'Events';   % 12
-   'Streams';  % 13
+   'Videos';  % 13
 %    'Events';   % 14
 %    'Channels'; % 15
    'Meta';     % 16
@@ -254,6 +255,15 @@ FileType = { ...
    'Other';    % 19
    };
 
+if nargin > 0
+   if isfield(pars,name)
+      pars = pars.(name);
+      return;
+   else
+      error('Bad pars field: %s',name);
+   end
+end
+
 %% DO ERROR PARSING
 % Check that all have correct number of elements
 N = numel(Fields);
@@ -282,6 +292,48 @@ if sum(idx)>0
    pars = [];
    Fields = [];
    return;
+end
+
+% Check that if "HasVideo" and/or "HasVidStreams" are true, the appropriate
+% fields and corresponding values are present
+hasVideo = nigeLab.defaults.Video('HasVideo');
+hasVidStreams = nigeLab.defaults.Video('HasVidStreams');
+if hasVideo
+   % Check that there is a 'Video' Field, since Videos defaults assumes
+   % there is (hasVideo is true)
+   idx = find(ismember(Fields,'Video'));
+   if numel(idx) ~= 1
+      error('Not properly configured for Video recordings. Check +defaults.Video');
+   end
+   % Check that FieldType corresponding to 'Video' Field is correct
+   if ~strcmp(FieldType{idx},'Videos')
+      error('Invalid FieldType for Field ''Video'': ''%s''',FieldType{idx});
+   end
+   % Check that FileType corresponding to 'Video' Field is correct
+   if ~strcmp(FileType{idx},'Other')
+      error('Invalid FileType for Field ''Video'': ''%s''',FileType{idx});
+   end
+   % Check dynamic variables expression here and in defaults.Video
+   dyVar = cellfun(@(x)x(2:end),nigeLab.defaults.Video('DynamicVars'),...
+      'UniformOutput',false);
+   if ~any(ismember(pars.NamingConvention,dyVar))
+      error('No matching entries of NamingConvention (metadata field names) and DynamicVars in +defaults.Video');
+   end
+end
+
+if hasVidStreams
+   % defaults.Video is configured to assume there are data streams
+   % associated with the video. Check that there is appropriate Fields
+   % entry for 'VidStreams'
+   idx = find(ismember(Fields,'VidStreams'));
+   if numel(idx) ~= 1
+      error('Not properly configured for parsing VidStreams. Check +defaults.Video');
+   end
+   % Make sure that the FieldType corresponding to that entry is correctly
+   % labeled as 'Streams'
+   if ~strcmp(FieldType{idx},'Videos')
+      error('Invalid FieldType for Field ''VidStreams'': ''%s''',FieldType{idx});
+   end
 end
 
 %% MAKE DIRECTORY PARAMETERS STRUCT

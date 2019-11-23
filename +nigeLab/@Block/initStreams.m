@@ -30,7 +30,9 @@ for ii = 1:nStreamTypes
    if ismember(headerStructName,headerFields)
       blockObj.Streams.(name) = blockObj.Meta.Header.(headerStructName);
    else
-      warning('Missing header: %s',headerStructName);      
+      warning('Missing header: %s',headerStructName); 
+      fprintf(1,'Initializing empty Streams struct: %s\n',headerStructName);
+%       blockObj.Streams.(name) = 
    end
 end
 flag = true;

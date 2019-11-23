@@ -48,8 +48,8 @@ end
 
 %% Move digital streams
 % Make the new '_Digital' folder and move files
-f_in = fullfile(block_in,[blockName '_Digital']);
-f_out = fullfile(block_out,p.DigIO.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_Digital']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.DigIO.Folder));
 
 F = dir(fullfile(f_in,[blockName '*.mat']));
 for iF = 1:numel(F)
@@ -59,11 +59,12 @@ for iF = 1:numel(F)
       in = load(fullfile(F(iF).folder,F(iF).name),'data');
       data = in.data;
       save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
-%       if strcmpi(dtype,'Paw')
-%          save(fullfile(block_out,p.Video.Folder),sprintf(p.Video.File,
-%       end
+      if strcmpi(dtype,'Paw')
+         save(nigeLab.utils.getUNCPath(fullfile(block_out,p.VidStreams.Folder,...
+            sprintf(p.VidStreams.File,'Front-Paw',1,'mat'))),'data','-v7.3');
+      end
    elseif ismember(dtype,{'Scoring','VideoAlignment'})
-      copyfile(fullfile(F(iF).folder,F(iF).name),...
+      copyfile(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),...
          fullfile(f_out,sprintf(p.DigEvents.File,dtype)));
    end
    
@@ -71,8 +72,8 @@ end
 
 %% Move filtered and raw streams
 % Raw
-f_in = fullfile(block_in,[blockName '_RawData']);
-f_out = fullfile(block_out,p.Raw.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_RawData']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.Raw.Folder));
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
    F = dir(fullfile(f_in,[blockName '*.mat']));
@@ -89,8 +90,8 @@ end
 
 
 % Filtered
-f_in = fullfile(block_in,[blockName '_FilteredCAR']);
-f_out = fullfile(block_out,p.CAR.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_FilteredCAR']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.CAR.Folder));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
@@ -108,8 +109,8 @@ end
 
 %% Move Spikes & Clusters (those will have to be converted in a different way, later)
 % Spikes
-f_in = fullfile(block_in,[blockName '_wav-sneo_Car_Spikes']);
-f_out = fullfile(block_out,sprintf(p.Spikes.Folder,'wav-sneo_CAR'));
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_wav-sneo_Car_Spikes']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,sprintf(p.Spikes.Folder,'wav-sneo_CAR')));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
@@ -125,8 +126,8 @@ F = dir(fullfile(f_in,[blockName '*.mat']));
 end
 
 % Clusters
-f_in = fullfile(block_in,[blockName '_wav-sneo_SPC_Car_Clusters']);
-f_out = fullfile(block_out,sprintf(p.Clusters.Folder,'wav-sneo_SPC_CAR'));
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_wav-sneo_SPC_Car_Clusters']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,sprintf(p.Clusters.Folder,'wav-sneo_SPC_CAR')));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)

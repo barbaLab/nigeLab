@@ -2,7 +2,7 @@ function flag = linkVideosField(blockObj,field)
 %% LINKVIDEOSFIELD  Connect the data saved on the disk to Videos
 %
 %  b = nigeLab.Block;
-%  flag = LINKVIDEOSFIELD(b,field);
+%  flag = LINKVIDEOSFIELD(b);
 %
 %  Returns flag as true when a file is missing.
 %
@@ -14,5 +14,9 @@ function flag = linkVideosField(blockObj,field)
 %%
 flag = false;
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+
+[~,updateFlags] = getFile(blockObj.Videos,field);
+blockObj.updateStatus(field,updateFlags);
+flag = true;
 
 end
