@@ -7,6 +7,12 @@ function pars = Video(name)
 % By: MAECI 2018 collaboration (MM, FB, SB)
 
 %% MAIN PARAMETERS TO CHANGE GO HERE
+% Note: to set up video scoring currently (2019-11-23), it is necessary to
+% change parameters **HERE** and also in **nigeLab.defaults.Event** (where
+% the relevant behavioral scoring markers are setup). VidStreams are for
+% analyses that extract markers or synchronization endpoints from the
+% videos, not for things like "beam-break" etc. that are in the separate
+% FieldType of Streams.
 pars = struct;
 pars.HasVideo = true;
 pars.HasVidStreams = true;

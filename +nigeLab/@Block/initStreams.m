@@ -32,34 +32,10 @@ for ii = 1:nStreamTypes
    else
       warning('Missing header: %s',headerStructName); 
       fprintf(1,'Initializing empty Streams struct: %s\n',headerStructName);
-%       blockObj.Streams.(name) = 
+      blockObj.Streams.(name) = nigeLab.utils.initChannels('Streams',0);
    end
 end
 flag = true;
-
-%%%%%%%%%%% FB modified 10/4/19
-% jj=1;
-% tmp = cell(1,nStreamTypes);
-% tmpSize=zeros(1,nStreamTypes);
-% for ii = 1:nStreamTypes
-%    name = blockObj.Fields{fieldIdx(ii)};
-%    
-%    headerStructName = [name 'Channels'];
-%    if ismember(headerStructName,headerFields)
-%       tmp{jj} = blockObj.Meta.Header.(headerStructName);
-%       tmpSize(jj) = numel(tmp{jj})';
-%       jj=jj+1;
-%    end
-% end
-% 
-% blockObj.Streams=repmat(channel_struct(),1,sum(tmpSize));
-% index = 1;
-% for ii = 1:jj-1
-%     blockObj.Streams(index:(tmpSize(ii)+index-1)) = tmp{ii};
-%     index = index + tmpSize(ii);
-% end
-% 
-% flag = true;
 
 
 end

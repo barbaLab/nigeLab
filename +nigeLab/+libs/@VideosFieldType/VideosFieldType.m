@@ -9,11 +9,12 @@ classdef VideosFieldType
       NFrames     % Total number of frames
       Width       % Width of video frame (pixels)
       Source      % Camera "view" (e.g. Door, Top, etc...)
+      fname        % Full filename of video
    end
    
    properties (GetAccess = public, SetAccess = private, Hidden = true)
       isConfigured % Flag indicating that pars.HasVideo is true or not
-      meta        % Struct with metadata parsed from name and DynamicVars parameter
+      meta         % Struct with metadata parsed from name and DynamicVars parameter
       pars         % Parameters struct
    end
    
@@ -69,6 +70,7 @@ classdef VideosFieldType
          end
 
          obj.F = F;
+         obj.fname = getFile(obj);
          obj = obj.setPars(params);
          obj = obj.setVideoInfo;
       end

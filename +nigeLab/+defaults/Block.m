@@ -20,7 +20,7 @@ pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
 % pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
 pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
 % pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
-pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC)
+pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
 % pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
 pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
 % pars.RecLocDefault  = 'R:/Rat';
@@ -143,6 +143,7 @@ Fields =  { ...
 %    'Notes'           % 17
    'Probes';         % 18
    'Video';          % 19
+   'ScoredEvents';   % 20 - for manually-scored sync and alignment
    };
 
 FieldType = { ...
@@ -165,6 +166,7 @@ FieldType = { ...
 %    'Meta';     % 17
    'Meta'      % 18
    'Videos';   % 19  -- 2019-11-21 Introduce new FieldType for Videos
+   'Events';   % 20
    };
 
 OldNames       =  { ...
@@ -179,7 +181,7 @@ OldNames       =  { ...
    {'*sort*'};                      % 9
    {'*DIG*'};                       % 10
    {'*ANA*'};                       % 11
-   {'*Scoring.mat'};                % 12
+   {'*Press.mat';'*Beam.mat'};      % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
 %    {'*STIM*'};                      % 14
 %    {'*DC*'};                        % 15
@@ -187,6 +189,7 @@ OldNames       =  { ...
 %    {'*experiment.txt'};             % 17
    {'*probes.xlsx'};                % 18
    {'*.mp4','*.avi'};               % 19
+   {'*Scoring*','*VideoAlignment*'} % 20
    };
 
 FolderNames     = {  ...
@@ -207,8 +210,9 @@ FolderNames     = {  ...
 %    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
-   'Metadata'           % 18
+   'Metadata';          % 18
    'Video';             % 19 - for actual Video
+   'Video';             % 20 - Events from behavioral scoring
    };
 
 FileNames =  { ...
@@ -231,6 +235,7 @@ FileNames =  { ...
 %    'Notes'           % 17
    'Probes';         % 18
    'Video';          % 19 - for actual Videos
+   'Curated';        % 20 - from behavioral scoring or manual alignment 
    };
 
 FileType = { ...
@@ -253,16 +258,8 @@ FileType = { ...
 %    'Other';    % 17
    'Other';    % 18
    'Other';    % 19
+   'Hybrid';   % 20
    };
-
-if nargin > 0
-   if isfield(pars,name)
-      pars = pars.(name);
-      return;
-   else
-      error('Bad pars field: %s',name);
-   end
-end
 
 %% DO ERROR PARSING
 % Check that all have correct number of elements
@@ -345,6 +342,15 @@ for ii=1:numel(Fields)
    pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
    pars.BlockPars.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
    pars.BlockPars.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
+end
+
+if nargin > 0
+   if isfield(pars,name)
+      pars = pars.(name);
+      return;
+   else
+      error('Bad pars field: %s',name);
+   end
 end
 
 end

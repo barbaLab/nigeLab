@@ -8,27 +8,25 @@ function flag = initEvents(blockObj)
 %%
 flag = false;
 blockObj.updateParams('Event');
-nEventTypes = numel(blockObj.EventPars.Events);
+[uF,~,iU] = unique(blockObj.EventPars.Fields);
+nEventTypes = numel(uF);
 if nEventTypes == 0
    flag = true;
    disp('No EVENTS to initialize.');
    return;
 end
 
-blockObj.Events = buildEventStruct(nEventTypes);
+
+blockObj.Events = struct;
 for ii = 1:nEventTypes
-   blockObj.Events(ii).name = blockObj.EventPars.Events{ii};
-   blockObj.Events(ii).status = false;
+   
+   idx = find(iU == ii);
+   n = numel(idx);
+   blockObj.Events.(uF{ii}) = nigeLab.utils.initChannelStruct('Events',n);
+   for u = 1:n
+      blockObj.Events.(uF{ii})(u).name = blockObj.EventPars.Events{idx};
+      blockObj.Events.(uF{ii})(u).status = false;
+   end
 end
 flag = true;
-
-   function evtStruct = buildEventStruct(n)
-      
-      evtStruct = struct(...
-         'name',cell(n,1),...
-         'data',cell(n,1),...
-         'status',cell(n,1)...
-         )';
-   end
-
 end

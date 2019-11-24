@@ -88,9 +88,7 @@ if ~isempty(blockObj.MatFileWorkflow.ConvertFcn)
    h = nigeLab.utils.printWarningLoop(warningParams);
    waitfor(h);
    % If not canceled yet, run conversion
-   blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,...
-      blockObj.AnimalLoc,...
-      blockObj.BlockPars);
+   blockObj.MatFileWorkflow.ConvertFcn(blockObj);
 end
 
 

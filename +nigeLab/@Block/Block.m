@@ -360,6 +360,8 @@ classdef Block < matlab.mixin.Copyable
    
    % Methods to be catalogued in CONTENTS.M
    methods (Access = public)      
+      flag = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
+      
       % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter

@@ -8,21 +8,6 @@ function fig = scoreVideo(blockObj,varargin)
 %   INPUTS
 %  --------
 %  varargin       :     (Optional) 'NAME', value input argument pairs.
-%
-%                       -> 'FNAME_TRIALS' (def: NaN) // Specify as string 
-%                                                       to full filename 
-%                                                       (including path)
-%                                                       of TRIALS file.
-%
-%                       -> 'FNAME_SCORE' (def: NaN) // Specify as string 
-%                                                      to full filename 
-%                                                      (including path)
-%                                                       of SCORING file.
-%
-%                       -> 'FNAME_ALIGN' (def: NaN) // Specify as string 
-%                                                      to full filename 
-%                                                      (including path)
-%                                                      of ALIGN file.
 %  
 % Modifed by: Max Murphy   v3.0  08/07/2018  Basically modified the whole
 %                                            thing. Changed to
@@ -33,166 +18,12 @@ function fig = scoreVideo(blockObj,varargin)
 %                                            of documentation.
 %                          v4.0  11/19/2019  Ported from rc-proj to nigeLab
 
-%% DEFAULTS
-DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
-% DEF_DIR = 'C:\RC_Video_Scoring';
-
-VID_DIR = 'C:\RC_Video_Scoring'; % MUST point to where the videos are
-VID_TYPE = '.avi';
-ALT_VID_DIR = 'K:\Rat\Video\BilateralReach\RC';
-
-% Full filename of any one of these three can be optionally specified
-% to skip video scoring selection UI
-FNAME_TRIALS = nan;
-FNAME_SCORE = nan;
-FNAME_ALIGN = nan;
-
-USER = 'MM'; % track scoring
-% USER = 'AP';
-
-% NOTE: values for VARS should match HOTKEYS function values!
-%  -> Change values in HOTKEYS (at bottom of file), in VARS, and make sure
-%     the changes match the table file convention for the '_Scoring.mat'
-%     files. In this way it is relatively easy to customize this code to
-%     represent whatever kind of scoring you want...
-
-VARS = {'Trial',...
-        'Reach',...         % First frame of paw coming through box opening
-        'Grasp',...         % First frame of reaching paw closing digits
-        'Support',...       % First frame other paw touches glass or apex 
-        'Complete',...      % First frame when paw comes back into the box
-        'Pellets',...   % # pellets present
-        'PelletPresent',... % Is there a pellet in front of the RAT?
-        'Stereotyped',... % Is this a stereotyped trial?
-        'Outcome',...   % Did the rat carry the pellet into the box?
-        'Forelimb'};    % Which handedness is the rat?
-
-% NOTE: values for VAR_TYPE should also match HOTKEYS function values!
-%  -> This is the other part to customize the scoring. Different indices of
-%     "VAR_TYPE" represent a switch for keeping elements of the GUI
-%     straight in terms of what is returned for a given value of that
-%     particular variable. The difference between VAR_TYPE [3,4,5] is
-%     mostly cosmetic. If you just want to leave things as [0 or 1] for
-%     binary events, then just keep VAR_TYPE as [2]. If you try to 
-%     customize, and get errors, make sure the VAR_TYPE matches what values
-%     is given to that particular variable in the HOTKEYS function at the
-%     bottom of this file...
-
-VAR_TYPE = [0,1,1,1,1,2,3,3,4,5]; % must have same number of elements as VARS
-                              % options: 
-                              % -> 0: Trial "onset" guess
-                              % -> 1: Timestamps
-                              % -> 2: Counts (0 - 9)
-                              % -> 3: No (0) or Yes (1)
-                              % -> 4: Unsuccessful (0) or Successful (1)
-                              % -> 5: Left (0) or Right (1)
-                              
-ALIGN_ID = '_VideoAlignment.mat'; % Identifier for file containing 
-                                  % VideoStart scalar, which is in seconds,
-                                  % of the number of seconds prior to the
-                                  % video recording that the neural
-                                  % recording was started. So if video
-                                  % starts first, then this number should
-                                  % be negative.
-                                  
-TRIAL_ID = '_Trials.mat'; % Identifier for file containing guesses of trial
-                          % onset times. Not necessary to have this to
-                          % actually run the code. Left-over from some
-                          % deprecated stuff and trying to make good
-                          % guesses based on DeepLabCut of when the paw is
-                          % actually present.
-                          
-SCORE_ID = '_Scoring.mat'; % Identifier for file that contains 
-                           % behaviorData, which is a Matlab Table
-                           % variable.
-                           % behaviorData.Properties.VariableNames should
-                           % be the same as VARS.
-                           % behaviorData.Properties.UserData should be the
-                           % same as VAR_TYPE.
-                           % Number of rows in behaviorData determines how
-                           % many maximum possible behavioral trials there
-                           % can be scored.
-
-%% PARSE VARARGIN
-for iV = 1:2:numel(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
+%% Check input
+if ~blockObj.HasVideo
+   error('Check defaults.Video; as configured, no videos associated.');
 end
 
 %% GET TRIALS FILE
-if isnan(FNAME_TRIALS)
-   if isnan(FNAME_SCORE)
-      if isnan(FNAME_ALIGN)
-         fOpts = {['*' TRIAL_ID]; ...
-                  ['*' SCORE_ID]; ...
-                  ['*' ALIGN_ID]};
-               
-         [FNAME_TRIALS,DIR,fIdx] = uigetfile(fOpts,...
-            'Select TRIALS or SCORE or ALIGN file',...
-            DEF_DIR);
-         if FNAME_TRIALS == 0
-            error('No file selected. Script aborted.');
-         else
-            switch fIdx
-               case 1 % TRIAL_ID
-                  % leave as is
-               case 2 % SCORE_ID
-                  FNAME_TRIALS = strrep(FNAME_TRIALS,SCORE_ID,TRIAL_ID);
-               case 3 % ALIGN_ID
-                  FNAME_TRIALS = strrep(FNAME_TRIALS,ALIGN_ID,TRIAL_ID);
-            end
-         end
-         Name = strsplit(FNAME_TRIALS,TRIAL_ID);
-         Name = Name{1};
-      else
-         [DIR,FNAME_ALIGN,ext] = fileparts(FNAME_ALIGN);
-         FNAME_ALIGN = [FNAME_ALIGN,ext];
-         Name = strsplit(FNAME_ALIGN,ALIGN_ID);
-         Name = Name{1};
-      end
-   else
-      [DIR,FNAME_SCORE,ext] = fileparts(FNAME_SCORE);
-      FNAME_SCORE = [FNAME_SCORE,ext];
-      Name = strsplit(FNAME_SCORE,SCORE_ID);
-      Name = Name{1};
-   end
-else
-   [DIR,FNAME_TRIALS,ext] = fileparts(FNAME_TRIALS);
-   FNAME_TRIALS = [FNAME_TRIALS,ext];
-   Name = strsplit(FNAME_TRIALS,TRIAL_ID);
-   Name = Name{1};
-end
-
-%% PARSE VIDEO FILES / LOCATION
-% Check in several places for the video files...
-vid_F = dir(fullfile(VID_DIR,[Name '*' VID_TYPE]));
-
-if isempty(vid_F)
-   fprintf(1,'No videos in\n->\t%s\n',VID_DIR);
-   
-   fprintf(1,'Checking location with _Beam.mat...');
-   % Check for videos in same location as other files
-   vid_F = dir(fullfile(DIR,[Name '*' VID_TYPE]));
-   
-   if isempty(vid_F) % Maybe they are in some other, unspecified directory?
-      fprintf(1,'unsuccessful.\n');
-      VID_DIR = inputdlg({['Bad video directory. ' ...
-         'Specify VID_DIR here (change variable for next time).']},...
-         'Invalid VID_DIR path',1,{ALT_VID_DIR});
-      if isempty(VID_DIR)
-         error('No valid video directory specified. Script canceled.');
-      else
-         VID_DIR = VID_DIR{1};
-      end
-      vid_F = dir(fullfile(VID_DIR,[Name '*' VID_TYPE]));
-      
-      if isempty(vid_F) % If there are still no files something else wrong
-         disp('No video file located!');
-         error('Please check VID_DIR or missing video for that session.');
-      end
-   else
-      fprintf(1,'successful!\n');
-   end
-end
 
 
 %% MAKE UI WINDOW AND DISPLAY CONTAINER
@@ -231,7 +62,7 @@ behaviorInfoObj = behaviorInfo(fig,F,VARS,VAR_TYPE);
 vidInfoObj = vidInfo(fig,dispPanel,vid_F);
  
 %% BUILD GRAPHICAL ELEMENTS                   
-graphicsUpdateObj = graphicsUpdater(vid_F,VARS);
+graphicsUpdateObj = graphicsUpdater(vid_F,variablesToScore);
 
 % Construct video selection interface and load video
 vidInfoObj.buildVidSelectionList;
@@ -255,11 +86,7 @@ set(fig,'CloseRequestFcn',@closeUI);
 vidInfoObj.setOffset(behaviorInfoObj.VideoStart);
 notify(vidInfoObj,'vidChanged');
 behaviorInfoObj.setTrial(nan,behaviorInfoObj.cur,true);
-behaviorInfoObj.setUserID(USER);
-
-% % For debugging:
-% behaviorData = behaviorInfoObj.behaviorData;
-% mtb(behaviorData);
+behaviorInfoObj.setUserID(blockObj.VideoPars.user);
 
 %% Function to set frame when a key is pressed
     function setCurrentFrame(v,newFrame)
