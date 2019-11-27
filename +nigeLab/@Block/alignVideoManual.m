@@ -1,7 +1,11 @@
-function alignVideo(varargin)
-%% ALIGNVIDEO  Aligns neural data and video so reaching time stamps match.
+function fig = alignVideoManual(blockObj,digStreams,vidStreams)
+% ALIGNVIDEOMANUAL  Manually obtain offset between video and neural record,
+%                    using specific streams from the digital record that
+%                    are overlayed on top of streams parsed from the video
+%                    record.
 %
-%  ALIGNVIDEO('NAME',value,...);
+%  blockObj.alignVideoManual();
+%  blockObj.alignVideoManual(digStreams,vidStreams);
 %
 %  --------
 %   INPUTS
@@ -26,7 +30,7 @@ function alignVideo(varargin)
 %                                   version, which had a different name as
 %                                   well.
 
-%% DEFAULTS
+% DEFAULTS
 FNAME = nan;   % Full filename of the beam break file.
 DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
 % DEF_DIR = 'C:\RC_Video_Scoring';
@@ -41,12 +45,7 @@ PRESS_ID = '_Pres';
 PAW_ID = '_Paw';
 OUT_ID = '_VideoAlignment';
 
-%% PARSE VARARGIN
-for iV = 1:2:numel(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
-end
-
-%% PARSE INPUT
+% PARSE INPUT
 if isnan(FNAME)
    [FNAME,DIR] = uigetfile(['*' BEAM_ID '.mat'],...
       'Select Beam Break File',...
@@ -61,11 +60,11 @@ else
    FNAME = [FNAME EXT];
 end
 
-%% PARSE FILE NAMES
+% PARSE FILE NAMES
 Name = strsplit(FNAME,BEAM_ID);
 Name = Name{1};
 
-%% PARSE VIDEO FILES / LOCATION
+% PARSE VIDEO FILES / LOCATION
 % Check in several places for the video files...
 vid_F = dir(fullfile(VID_DIR,[Name '*' VID_TYPE]));
 
@@ -97,7 +96,7 @@ if isempty(vid_F)
    end
 end
 
-%% MAKE STRUCT OF FILE LOCATIONS
+% MAKE STRUCT OF FILE LOCATIONS
 
 % All potential data streams or data files
 dat_F = struct('streams',struct(...
@@ -110,7 +109,7 @@ dat_F = struct('streams',struct(...
 
 
 
-%% CONSTRUCT UI
+% CONSTRUCT UI
 fig=figure('Name','Bilateral Reach Scoring',...
    'Color','k',...
    'NumberTitle','off',...
@@ -126,7 +125,7 @@ dispPanel = uipanel(fig,'Units','Normalized',...
    'Position',[0 0.25 1 0.75]);
 
 
-%% CONSTRUCT CUSTOM CLASS OBJECTS
+% CONSTRUCT CUSTOM CLASS OBJECTS
 % Make video alignment information object
 alignInfoObj = alignInfo(fig,dat_F);
 
@@ -149,16 +148,16 @@ graphicsUpdateObj.addGraphics(graphics);
 graphics = vidInfoObj.getGraphics;
 graphicsUpdateObj.addGraphics(graphics);
 
-%% SET HOTKEY AND MOUSE MOVEMENT FUNCTIONS
+% SET HOTKEY AND MOUSE MOVEMENT FUNCTIONS
 set(fig,'KeyPressFcn',{@hotKey,vidInfoObj,alignInfoObj});
 set(fig,'WindowButtonMotionFcn',{@trackCursor,alignInfoObj});
  
-%% Function for tracking cursor
+% Function for tracking cursor
    function trackCursor(src,~,a)
       a.setCursorPos(src.CurrentPoint(1,1));  
    end
 
-%% Function for hotkeys
+% Function for hotkeys
    function hotKey(~,evt,v,a)
       switch evt.Key     
          case 's' % Press 'alt' and 's' at the same time to save
