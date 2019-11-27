@@ -1,12 +1,11 @@
 function flag = initVideos(blockObj)
 %% INITVIDEOS Initialize Videos struct for nigeLab.Block class object
 %
-%  flag = INITVIDEOS(blockObj);
+%  flag = INITVIDEOS(blockObj); Returns false if initialization fails
 
 %% Get parameters associated with video
 flag = false; % Initialize to false
-p = nigeLab.defaults.Video();
-blockObj.VideoPars = p;
+[~,p] = blockObj.updateParams('Video');
 if ~p.HasVideo
    flag = true;
    return;
@@ -56,7 +55,7 @@ if isempty(p.CameraSourceVar) % Should have same streams for all videos
    
 else % If different videos contain different streams (for example, TOP vs DOOR)
    nVid = numel(vidFieldObj);
-   blockObj.Videos = nigeLab.utils.VidStreamsType(nVid);
+   blockObj.Videos = nigeLab.libs.VidStreamsType(nVid);
    
    for iVid = 1:nVid
       [source,signalIndex] = blockObj.Videos(iVid).getVideoSourceInfo;
@@ -69,7 +68,7 @@ else % If different videos contain different streams (for example, TOP vs DOOR)
          p.VidStreamName{signalIndex},...
          p.VidStreamSubGroup{signalIndex});
       
-      blockObj.Videos(iVid) = nigeLab.utils.VidStreamsType(...
+      blockObj.Videos(iVid) = nigeLab.libs.VidStreamsType(...
          vidFieldObj(iVid),vidStreamSignals);
       
    end

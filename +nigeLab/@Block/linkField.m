@@ -2,7 +2,9 @@ function flag = linkField(blockObj,fieldIndex)
 %% LINKFIELD   Connect the data saved on the disk to a Field of Block
 %
 %  b = nigeLab.Block;
-%  flag = LINKFIELD(b);
+%  flag = LINKFIELD(b,fieldIndex); % fieldIndex is a numeric scalar
+%  flag = LINKFIELD(b,fieldName);  % fieldName is a char array matching
+%                                    an element of blockObj.Fields
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
@@ -11,8 +13,16 @@ function flag = linkField(blockObj,fieldIndex)
 
 %%
 flag = false;
-field = blockObj.Fields{fieldIndex};
-fileType = blockObj.FileType{fieldIndex};
+if isnumeric(fieldIndex)
+   if ~isscalar(fieldIndex)
+      error('fieldIndex must be scalar if it is numeric');
+   end
+   field = blockObj.Fields{fieldIndex};
+elseif ischar(fieldIndex)
+   field = fieldIndex;
+   fieldIndex = blockObj.checkCompatibility(field);
+end
+fileType = blockObj.getFileType(field);
 switch blockObj.FieldType{fieldIndex}
    case 'Channels'
       % Streamed data from the high-resolution neurophysiological

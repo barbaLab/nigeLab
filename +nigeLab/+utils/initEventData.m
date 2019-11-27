@@ -19,6 +19,7 @@ for iV = 1:nargout
    varargout{iV}(:,1) = type;
    if type == 1
       varargout{iV}(:,2) = (1:nEvent).';
+      varargout{iV}(:,3) = ones(nEvent,1);
    end
 end
 

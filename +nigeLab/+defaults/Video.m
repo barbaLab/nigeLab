@@ -2,6 +2,70 @@ function pars = Video(name)
 %% VIDEO  Template for initializing parameters related to experiment trigger synchronization
 %
 %  pars = nigeLab.defaults.Video();
+%  --> Returns struct with following fields:
+%     * HasVideo: (true or false)
+%     * HasVidStreams: (true or false)
+%     * VidStreamName: Name for signal associated with each VidStream.
+%        + [] : (No VidStreams)
+%        + {'Paw_Likelihood'} : Single-level cell array (all cams the same)
+%        + {{'Src1Name1','Src1Name2',...,'Src1NameK'};
+%            ...
+%           {'SrcXName1','SrcXName2',...,'SrcXNameL'}}; : (multi sources)
+%        + NOTE: this cell array format is matched for VidStreamGroup
+%                and VidStreamSubGroup parameters as well.
+%     * VidStreamGroup (see above): e.g. 'Marker' or 'Sync' (so far)
+%     * VidStreamSubGroup (see above): 
+%        + For 'Marker' Group: 'p','x','y','z' (marker likelihood, bases)
+%        + For 'Sync' Group: 'discrete', or 'analog'
+%     * CameraSourceVar:
+%        + [] : Only one view or it's not important to parse
+%        + 'View': Dynamic variable name to parse Camera Source from
+%                  filename. e.g. for some cases, one of the '_' delimited
+%                  variables can take values such as 'Left-A' or 'Right-B';
+%                  this will then be used to co-register naming schema so
+%                  that VidStreamName cell arrays are matched according to
+%                  a key for different 'Source Types'. For example, in the
+%                  reach task, the ceiling-down view ('Top-A') will parse
+%                  different markers and syncs than door views ('Left-A'
+%                  etc). This is a way to reconcile the different number of
+%                  variables per "View" (although it doesn't have to be
+%                  called that explicitly).
+%     * CameraKey: 
+%        + If CameraSourceVar is [], then this should just be a scalar
+%          struct with the fields 'Index' (1) and 'Source' (name of camera
+%          view or label or whatever, for file name).
+%        + If CameraSourceVar specifies a Dynamic variable camera source, 
+%          this is much more important! It becomes a struct array with the
+%          fields 'Index' and 'Source'; each array element specifies a
+%          pairing, where 'Index' gives the index to a sub-cell for
+%          VidStreamName, etc. that is matched for a given 'View' name
+%          parsed from CameraSourceVar. For example, 'Left-A' thru
+%          'Right-C' might all take Index values of 1, while 'Top-A' might
+%          take Index value of 2, in the example given above for
+%          'CameraSourceVar'. 
+%     * VidStreamSource:
+%        + If CameraSourceVar is non-empty, this should just be [].
+%        + If CameraSourceVar is empty, this is used for "backwards
+%           compatibility;" for example in the "RC" project, DLC had
+%           already been used to get "VidStreams" for Paw presence
+%           likelihood. So the 'Front' camera source was set here as the
+%           VidStreamSource. In the previous examples, VidStreamSource
+%           should match to each of the different VidStreams to be parsed,
+%           so it will have many more elements.
+%
+%     * This should be filled out more in the future ...
+%
+%     * VarType: Important for video scoring. Note that all values of
+%                 nigeLab.default.Event('Names') will be automatically
+%                 pre-appended as an array of ones(1,numel(Names)) to the
+%                 start of VarType. This specifies parsing for video
+%                 scoring, among other things.
+%     * VarsToScore: Elements of VarType should match the names here, which
+%                    are metadata that are scored manually from videos.
+%                    Event (timestamps) are specified in
+%                    nigeLab.defaults.Event('Name') and will be
+%                    automatically added.
+%
 %  paramVal = nigeLab.defaults.Video('paramName');
 %
 % By: MAECI 2018 collaboration (MM, FB, SB)
@@ -97,18 +161,22 @@ pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','&MovieID'}; % KUMC: "RC
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 
 % Information about video scoring
-pars.user = 'MM'; % Who did the scoring?
-pars.vars = {'Trial','Reach','Grasp','Support','Pellets','PelletPresent','Outcome','Forelimb'}; % Variables to score
-pars.varType = [0,1,1,1,2,3,4,5]; % must have same number of elements as VARS (Variable "Types" for behaviorData table)
-                              % options: 
-                              % -> 0: Trial "onset" guess 
-                              % -> 1: Timestamps 
-                              % -> 2: Counts (0 - 9) 
-                              % -> 3: No (0) or Yes (1)
-                              % -> 4: Unsuccessful (0) or Successful (1)
-                              % -> 5: Left (0) or Right (1)
+% pars.OutcomeEvent = [];
+pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
+pars.User = 'MM'; % Who did the scoring?
+pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
+                            % a given scoring "trial." It is useful to
+                            % start at an earlier frame, because the
+                            % VideoReader object is faster at reading the
+                            % "next" frame rather than going backwards, for
+                            % whatever reason (it seems).
+      
+[pars.VarsToScore,pars.VarType] = setScoringVars();
 
-%% THESE PARAMETERS STAY CONSTANT PROBABLY
+
+%% Less-likely to change these parameters
+
+
 % Paths information
 pars.File = [];
 
@@ -118,7 +186,13 @@ pars.IncludeChar = '$'; % Include data from these variables
 pars.ExcludeChar = '&'; % Exclude data from these variables
 pars.Meta = [];
 
-%% PARSE INPUT (DON'T CHANGE)
+pars.ValueShortcutFcn = @nigeLab.workflow.defaultVideoScoringShortcutFcn;
+pars.VideoScoringStringsFcn = @nigeLab.workflow.defaultVideoScoringStrings;
+pars.ForceToZeroFcn = @nigeLab.workflow.defaultForceToZeroFcn;
+pars.ScoringHotkeyFcn = @nigeLab.workflow.defaultHotkeyFcn;
+pars.ScoringHotkeyHelpFcn = @nigeLab.workflow.defaultHotkeyHelpFcn;
+
+%% Error parsing (do not change)
 pars.HasVidStreams = ...
    pars.HasVidStreams && ...
    pars.HasVideo && ...
@@ -193,10 +267,88 @@ if pars.HasVidStreams
 
 end
 
+eventType = nigeLab.defaults.Event('EventType');
+f = fieldnames(eventType);
+% Check which one is the 'manual' "key" if variables should be scored
+if (~isempty(pars.VarsToScore))
+   pars.ScoringEventFieldName = [];
+   for i = 1:numel(f)
+      if strcmpi(eventType.(f{i}),'manual')
+         pars.ScoringEventFieldName = f{i};
+         break;
+      end
+   end
+   if isempty(pars.ScoringEventFieldName)
+      error(['Parameter configuration suggests videos should be scored, ' ...
+             'but ''pars.EventType'' key is set up incorrectly.']);
+   end
+else
+   pars.ScoringEventFieldName = [];   
+end
+
+
+
+
+% Check that number of elements of VarsToScore matches number of elements
+% of VarType.
+if numel(pars.VarsToScore) ~= numel(pars.VarType)
+   error('Dimension mismatch for pars.VarsToScore (%d) and pars.VarType (%d).',...
+      numel(pars.VarsToScore), numel(pars.VarType));
+end
+
 if nargin > 0
    if isfield(pars,name)
       pars = pars.(name);
    end
 end
+
+   % Helper function to isolate this part of parameters
+   function [VarsToScore,VarType] = setScoringVars()
+      % SETSCORINGVARS  Variables for video scoring are set here
+      %
+      %  [VarsToScore,VarType] = setScoringVars();
+      
+      % varsToScore = []; % Must be left empty if no videos to score
+      varsToScore = {... % KUMC: "RC" project (MM)
+         'Pellets';           % 1)
+         'PelletPresent';     % 2)
+         'Stereotyped';       % 3)
+         'Outcome';           % 4)
+         'Forelimb';          % 5)
+      };
+
+      % varType = []; % Must be left empty if no videos to score
+      varType = [2 3 3 4 5];      % Should have same number as VarsToScore
+                                  % NOTE: VarType will be added to by any
+                                  %       Event variable that is 
+                                  
+      [VarsToScore,VarType] = prependEventVars(varsToScore,varType);
+      
+   end
+
+   % Helper function that does the prepending
+   function [toScore,type] = prependEventVars(vToScore,vType)
+      % PREPENDEVENTVARS Pre-append VarType and VarsToScore based on values
+      %     in nigeLab.defaults.Event('Name'); and
+      %     nigeLab.defaults.Event('Fields').
+      
+      vName = nigeLab.defaults.Event('Name');
+      vField = nigeLab.defaults.Event('Fields');
+      evType = nigeLab.defaults.Event('EventType');
+      
+      fnames = fieldnames(evType);
+      for ii = 1:numel(fnames)
+         if strcmpi(evType.(fnames{ii}),'manual')
+            vn = vName(ismember(lower(vField),lower(fnames{ii})));
+            vToScore = [vn; vToScore]; %#ok<*AGROW>
+            vType = [ones(1,numel(vn)), vType];
+         end
+      end
+      
+      % Assign output
+      toScore = vToScore;
+      type = vType;
+   end
+   
                               
 end

@@ -25,11 +25,11 @@ if ~isstruct(blockObj.Scoring)
    blockObj.Scoring = struct;
 end
 
-if ~isfield(blockObj,fieldName)
-   blockObj.(fieldName) = table;
+if ~isfield(blockObj.Scoring,fieldName)
+   blockObj.Scoring.(fieldName) = table;
 end
 
 %% Assign using hashed row names
-blockObj.(fieldName)(info.Properties.RowNames,:) = info;
+blockObj.Scoring.(fieldName)(info.Properties.RowNames,:) = info;
 
 end

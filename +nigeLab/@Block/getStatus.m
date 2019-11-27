@@ -1,16 +1,16 @@
-function status = getStatus(blockObj,operation,channel)
+function status = getStatus(blockObj,field,channel)
 %% GETSTATUS  Returns the operations performed on the block to date
 %
 %  status = GETSTATUS(blockObj);
-%  status = GETSTATUS(blockObj,operation);
-%  status = GETSTATUS(blockObj,operation,channel);
+%  status = GETSTATUS(blockObj,field);
+%  status = GETSTATUS(blockObj,field,channel);
 %
 %  --------
 %   INPUTS
 %  --------
 %  blockObj       :     nigeLab.Block class object.
 %
-%  operation      :     (Char vector) Name of processing stage:
+%    field        :     (Char vector) Name of processing stage:
 %                       -> 'Raw'          || Has raw data been extracted
 %                       -> 'Dig'          || Were digital streams parsed
 %                       -> 'Filt'         || Has bandpass filter been done
@@ -55,10 +55,41 @@ switch nargin
       end
       
    case 2 % If one input given
-      status = parseStatus(blockObj,operation);
+      
+      status = parseStatus(blockObj,field);
+      if isfield(blockObj.Pars,'Video') && status
+         if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
+            switch field
+               case blockObj.Pars.Video.ScoringEventFieldname
+                  if ~isstruct(blockObj.Scoring)
+                     blockObj.Scoring = struct;
+                  end
+                  if ~isfield(blockObj.Scoring,'Status')
+                     blockObj.Scoring.Status = struct;
+                  end
+                  if ~isfield(blockObj.Scoring.Status,'Video')
+                     blockObj.Scoring.Status.Video = [];
+                  end
+                  if ~isfield(blockObj.Scoring,'Video')
+                     status = false; 
+                     return;
+                  end
+                  
+                  if isempty(blockObj.Scoring.Video)
+                     status = false;
+                     return;
+                  end
+                  
+                  status = strcmpi(blockObj.Scoring.Video.Status{...
+                     size(blockObj.Scoring.Video,1)},'Complete');
+               otherwise
+                  % do nothing
+            end
+         end
+      end
       
    case 3 % If channel is given
-      status = parseStatus(blockObj,operation);
+      status = parseStatus(blockObj,field);
       status = ~any(~status(channel));
       
    otherwise

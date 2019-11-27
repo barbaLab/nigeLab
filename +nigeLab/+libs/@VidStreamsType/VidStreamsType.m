@@ -2,12 +2,12 @@ classdef VidStreamsType < handle
    % VIDSTREAMSTYPE  Handle class for managing blockObj.Streams.VidStreams
    
    properties (GetAccess = public, SetAccess = private)
-      at  % Struct with each row containing 'info' and 'data'
+      at  % Struct 
 %       --> info  % 'nigeLab.utils.signal' class object
 %       --> data  % Empty on init. Becomes a matfile when Stream is linked
 %       --> t     % Times corresponding to video frames
 
-      v     % VideosFieldObj associated with this Stream
+      v     % nigeLab.libs.VideosFieldType class object: handles Video
       fname % Filename
    end
 
@@ -16,6 +16,27 @@ classdef VidStreamsType < handle
       % Class constructor
       function obj = VidStreamsType(videosFieldObj,vidStreamSignals)
          % VIDSTREAMSTYPE Constructor for object to manage VidStreams
+         %
+         %  obj = ...
+         %   nigeLab.libs.VidStreamsType(videosFieldObj,vidStreamSignals);
+         %
+         %  inputs:
+         %  videosFieldObj -- nigeLab.libs.VideosFieldType class object
+         %                       + if provided as an array, then
+         %                         obj is returned as an array where each
+         %                         array element has a 1:1 correspondence
+         %                         with an element of videosFieldObj
+         %                         represented as the 'obj.v' property.
+         %
+         %  vidStreamSignals -- nigeLab.utils.signal class object (scalar
+         %                          or array). This value is set as the
+         %                          'obj.at' property for each element of
+         %                          the returned obj array. For example, if
+         %                          vidStreamSignals is an array, and
+         %                          videosFieldObj is an array, then it
+         %                          means each returned element of obj
+         %                          corresponds to a video with all the
+         %                          streams in vidStreamSignals.
          
          % Empty object initialization
          if isnumeric(videosFieldObj) 
@@ -37,6 +58,8 @@ classdef VidStreamsType < handle
             return;
          end
          
+         % Set the 'v' property, which is a wrapper for interacting with
+         % the actual Video file
          obj.v = videosFieldObj;
          obj.at = struct('info',cell(numel(vidStreamSignals),1),...
             'data',cell(numel(vidStreamSignals),1),...

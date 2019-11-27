@@ -36,9 +36,11 @@ classdef VideosFieldType
          %  obj = VideosFieldType(dim1); % Empty column array 
          %  obj = VideosFieldType([dim1,dim2,...dimK]) % Empty matrix
          
-         if nargin < 1
+         if nargin < 2
             if isstruct(F) % If no params input, use defaults
                params = nigeLab.defaults.Video();
+               params.Vars = nigeLab.defaults.Event('VarsToScore');
+               params.VarType = nigeLab.defaults.Event('VarType');
             else
                if isnumeric(F) % Allows array initialization
                   dims = F;
@@ -104,14 +106,35 @@ classdef VideosFieldType
          t = linspace(0,obj.Duration,obj.NFrames);
       end
       
+      % Return "vid_F" dir struct for all objects in array
+      function vid_F = getVid_F(varargin)
+         % GETVID_F  Return "dir" struct for all objects in array
+         if numel(varargin{1}) > 1
+            vid_F = [];
+            for i = 1:numel(obj)
+               vid_F = [vid_F; getVid_F(varargin{1}(i))]; %#ok<*AGROW>
+            end
+            return;
+         elseif numel(varargin) > 1
+            vid_F = [];
+            for i = 1:numel(varargin)
+               vid_F = [vid_F; getVid_F(varargin{i})];
+            end
+            return;
+         end
+         
+         vid_F = varargin{1}.F;
+         
+      end
+      
       % Get VideoReader object
       function V = getVideoReader(obj)
          % GETVIDEOREADER  Returns video reader object
          
          % UserData field struct
-         u = struct('user',obj.pars.user,...
-            'vars',obj.pars.vars,...
-            'varType',obj.pars.varType,...
+         u = struct('user',obj.pars.User,...
+            'varsToScore',obj.pars.VarsToScore,...
+            'varType',obj.pars.VarType,...
             'meta',obj.meta);
          
          V = VideoReader(getFile(obj),'UserData',u);
