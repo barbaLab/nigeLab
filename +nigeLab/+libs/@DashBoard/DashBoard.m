@@ -188,7 +188,13 @@ classdef DashBoard < handle
             AnNode = uiw.widget.CheckboxTreeNode('Name',AnNames{ii},'Parent',Tree.Root);
             set(AnNode,'UserData',[ii]);
             Metas = [tankObj.Animals(ii).Blocks.Meta];
-            BlNames = {Metas.RecID};
+            if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
+                BlNames = {Metas.RecID};
+            else
+                warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
+                BlNames = {tankObj.Animals(ii).Blocks.Name};
+            end
+            
             for jj=1:numel(BlNames)
                BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);
                set(BlNode,'UserData',[ii,jj])
@@ -485,6 +491,22 @@ classdef DashBoard < handle
       % This function wraps any of the "do" methods of Block, allowing them
       % to be added to a job queue for parallel and/or remote processing
       function qOperations(obj,operation,target,idx)
+         % QOPERATIONS  Wrapper for "do" methods of Block, for adding to
+         %              jobs to a queue for parallel and/or remote
+         %              processing.
+         %
+         %  nigeLab.DashBoard.qOperations(operation,target);
+         %  nigeLab.DashBoard.qOperations(operation,target,idx);
+         %
+         %  inputs:
+         %  operation  --  "do" method function handle
+         %  target  --  ULTIMATELY, A BLOCK OR ARRAY OF BLOCKS. Can be
+         %                 passed as: Tank, Animal, Block or Block array.
+         %  idx  --  (Optional) Indexing into subset of tanks or blocks to
+         %              use. Should be set as a two-element column vector,
+         %              where the first index references ??? and second
+         %              index references ??? 
+         
          % Set indexing to assign to UserData property of Jobs, so that on
          % job completion the corresponding "jobIsRunning" property array
          % element can be updated appropriately.
@@ -582,7 +604,12 @@ classdef DashBoard < handle
                      'UserData',idx,...
                      'Tag',tagStr); %#ok<*PROPLC>
                  
-                 BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
+                     BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 else
+                     warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
+                     BlName = strrep(target.Name,'_','.');
+                 end
                  BlName = BlName(1:min(end,25));
                  barName = sprintf('%s %s',BlName,operation(3:end));
                  bar = obj.remoteMonitor.addBar(barName,job,idx);
@@ -607,7 +634,12 @@ classdef DashBoard < handle
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
                      operation,target.Name);
                  
-                 BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
+                     BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
+                 else
+                     warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
+                     BlName = strrep(target.Name,'_','.');
+                 end
                  BlName = BlName(1:min(end,25));
                  barName = sprintf('%s %s',BlName,operation(3:end));
                  bar = obj.remoteMonitor.addBar(barName,[],idx);
