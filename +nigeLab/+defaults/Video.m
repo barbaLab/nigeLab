@@ -81,6 +81,8 @@ pars = struct;
 pars.HasVideo = true;
 pars.HasVidStreams = true;
 
+% % % -- For Video Scoring -- % % %
+
 % Stream Names: Most-flexible naming
 % pars.VidStreamName = []; % For "no video streams" case
 pars.VidStreamName = {'Paw_Likelihood'}; % KUMC: "RC"
@@ -172,6 +174,9 @@ pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
                             % whatever reason (it seems).
       
 [pars.VarsToScore,pars.VarType] = setScoringVars();
+
+% % % -- For Video Alignment -- % % %
+
 
 
 %% Less-likely to change these parameters

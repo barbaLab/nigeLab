@@ -23,7 +23,7 @@ data = cell(nFile,1);
 
 % Make meta "header" first
 fname{1} = nigeLab.utils.getUNCPath(fullfile(f_out,sprintf(f_str,'Header')));
-data{1} = nigeLab.utils.initEventData(1,sum(iMetadata),2);
+data{1} = nigeLab.utils.initEventData(1,sum(iMetadata),2); % "type" == 2
 data{1}(1,5:end) = behaviorData.Properties.UserData(iMetadata);
 
 % make "Trial" (special Event type)

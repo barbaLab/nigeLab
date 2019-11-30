@@ -1,16 +1,34 @@
-function fig = alignVideoManual(blockObj,digStreams,vidStreams)
+function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 % ALIGNVIDEOMANUAL  Manually obtain offset between video and neural record,
 %                    using specific streams from the digital record that
 %                    are overlayed on top of streams parsed from the video
 %                    record.
 %
 %  blockObj.alignVideoManual();
-%  blockObj.alignVideoManual(digStreams,vidStreams);
+%  blockObj.alignVideoManual(digStreamName,vidStreamName);
 %
 %  --------
 %   INPUTS
 %  --------
-%  varargin       :     (Optional) 'NAME', value input argument pairs.
+%  digStreamName  :  Stream field 'custom_channel_name' 
+%                     --> Given as struct array, where field elements are
+%                          (for example):
+%                       digStreamInfo(k).field = 'DigIO' or 'AnalogIO'
+%                       digStreamInfo(k).name =  'Beam';
+%                       --> 'name' matches 'custom_channel_name' field
+%
+%  vidStreamName  :  Name field of 'signal' for blockObj.Videos.at(k),
+%                    where the k-th field has the name corresponding to
+%                    that element of "vidStreamName"
+%                       --> e.g. 'Paw_Likelihood'
+%                       Should only use one Video Stream Name so it can
+%                       only be a single character array, not a cell array.
+%                       * Will be plotted as a marker stream representing
+%                       data synchronized with the video record, which can
+%                       be "dragged" to properly overlay with the digital
+%                       record while visually ensuring that the new
+%                       synchronization makes sense by watching the video
+%                       at key transitions in both sets of streams. *
 %
 %  --------
 %   OUTPUT
@@ -30,35 +48,34 @@ function fig = alignVideoManual(blockObj,digStreams,vidStreams)
 %                                   version, which had a different name as
 %                                   well.
 
-% DEFAULTS
-FNAME = nan;   % Full filename of the beam break file.
-DEF_DIR = 'P:\Extracted_Data_To_Move\Rat\TDTRat'; % Default UI prompt dir
-% DEF_DIR = 'C:\RC_Video_Scoring';
-
-VID_DIR = 'C:\RC_Video_Scoring'; % MUST point to where the videos are
-ALT_VID_DIR = 'K:\Rat\Video\BilateralReach\RC';
-VID_TYPE = '.avi';
-
-GUESS_ID = '_Guess';
-BEAM_ID = '_Beam';
-PRESS_ID = '_Pres';
-PAW_ID = '_Paw';
-OUT_ID = '_VideoAlignment';
-
-% PARSE INPUT
-if isnan(FNAME)
-   [FNAME,DIR] = uigetfile(['*' BEAM_ID '.mat'],...
-      'Select Beam Break File',...
-      DEF_DIR);
-   
-   if FNAME == 0
-      error('No Beam Break file selected. Video alignment canceled.');
-   end
-   
-else
-   [DIR,FNAME,EXT] = fileparts(FNAME);
-   FNAME = [FNAME EXT];
+if nargin < 3
+   vidStreamName = [];
 end
+
+if nargin < 2
+   digStreamName = [];
+end
+
+
+% Parse digStreamName input
+if isempty(digStreamName)
+   
+end
+
+
+% Parse vidStreamName input
+opts = getName(blockObj.Videos,'vidstreams');
+if ~iscell(opts)
+   opts = {opts};
+end
+if isempty(vidStreamName)
+   vidStreamName = nigeLab.utils.uidropdownbox('Select Vid Stream',...
+      'Video Stream to Use',opts);
+end
+strIdx = find(ismember(opts,vidStreamName),1,'first');
+
+
+
 
 % PARSE FILE NAMES
 Name = strsplit(FNAME,BEAM_ID);

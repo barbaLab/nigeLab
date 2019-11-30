@@ -1,8 +1,8 @@
 classdef nigelPanel < handle
-   %% NIGELPANEL Helper object for nigeLab GUI.
+%% NIGELPANEL Helper object for nigeLab GUI.
 % It builds a panel with a titlebox and a subtitle. The inside panel can
 % also be made scrollable.
-% Tipacal use:
+% Typical use:
 % 
 % F = figure;
 % p = nigeLab.libs.nigelPanel(F,...
