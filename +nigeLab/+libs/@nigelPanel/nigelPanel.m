@@ -51,12 +51,24 @@ classdef nigelPanel < handle
       Parent % Handle to Parent container. Must be a class that is a valid parent for matlab.ui.container.Panel
       Tag    % Short identifier that can be used to get this object from an array of nigelPanels
       Visible = true;
-      InnerPosition;
-      Position; % 4-element numeric vector: [x,y,width,height]
-      String % Char array for string. Currently unused ...?
-      Substr % Char array that is a sub-string. Currently unused ...?
-      pCols
-      tCols
+      BorderType       % default: 'None'
+      Position         % Position of "outer" panel (4-element numeric vector: [x,y,width,height])
+      InnerPosition    % Position for inner "non-scroll" region
+      String      % Char array for string in obj.textBox.ann
+      Substr      % Char array that is a sub-string. currently unused ...?
+      Color       % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
+      Scrollable  % ('on' or 'off' (default))
+      FontName          % Default: 'DroidSans'
+      TitleFontSize     % Default: 13
+      TitleFontWeight   % Default: 'bold'
+      TitleBarPosition  % Location of title bar (can be 'top' or 'bot' or a [px py width height] vector)
+      TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
+      TitleStringY  % Y-coordinate of middle of Title String (default: 0.5)
+   end
+   
+   properties (SetAccess = private, GetAccess = public)
+      panel;      % Handle to the uipanel that is the nigelPanel basically ("inner scroll region")
+      titleBox    % Struct for titleBox with fields: 'axes', 'r1', 'r2', and 'ann'
    end
    
    properties(SetObservable)
@@ -66,146 +78,62 @@ classdef nigelPanel < handle
    
    properties (Access = private)
       OutPanel;   % Handle to the uipanel that is an "outer" container
-      ChildName 
-      panel;      % Handle to the uipanel that is the nigelPanel basically
-      axes
-      titleBox
+      ChildName   % Cell array of names corresponding to elements of Children
    end
    
    methods
-      % Class constructor for nigeLab.libs.nigelPanel object
-      function obj = nigelPanel(parent,varargin)
-         % NIGELPANEL  Class constructor for nigelPanel, a standardized
-         %             custom graphics container for nigeLab.
-         %
-         %  obj = nigelPanel(parent);
-         %  obj = nigelPanel(parent,'Name1',value1,...,'NameK',valueK);
-         %
-         %  inputs:
-         %  parent  --  Container for nigelPanel object. Any class that is
-         %              a valid parent for matlab.ui.container.Panel is
-         %              acceptable here.
-         %  varargin  --  'Name', value input argument pairs that
-         %                 correspond mostly to properties of
-         %                 matlab.ui.container.Panel. Valid 'Name' values
-         %                 include:
-         %                 --> 'TitleBarColor' (see: 
-         %                      nigeLab.defaults.nigelColors)
-         %                 --> 'PanelColor' (see: 
-         %                      nigeLab.defaults.nigelColors)
-         %                 --> 'TitleColor' (see: 
-         %                      nigeLab.defaults.nigelColors)
-         %                 --> 'Position'
-         %                 --> 'String'
-         %                 --> 'Substr' 
-         %                 --> 'Tag' (default is 'nigelPanel')
-         %                 --> 'Units' ('normalized' or 'pixels')
-         %                 --> 'Scrollable' ('off' (default) or 'on')
-         
-         addlistener(obj,'Units','PostSet',@obj.UnitsChanged);
-
-         Pars.TitleBarColor = [67 129 193]./255;   % to be loaded from colorscheme in the future
-         Pars.PanelColor = [218 219 219]./255;   % to be loaded from colorscheme in the future
-         Pars.TitleColor = [255 186 73]./255;
-         Pars.Position  = [0.1 0.1 0.3 0.91];
-         Pars.String = '';
-         Pars.Substr = '';
-         Pars.Tag = 'nigelPanel';
-         Pars.Units = 'normalized';
-         Pars.Scrollable = 'off';
-         Pars = nigeLab.utils.getopt(Pars,varargin{:});
-         
-         obj.pCols = Pars.PanelColor;
-         obj.tCols = Pars.TitleBarColor;
-         obj.String = Pars.String;
-         obj.Substr = Pars.Substr;
-         obj.Tag = Pars.Tag;
-         
-         p = uipanel(parent,...
-             'BackgroundColor', Pars.PanelColor,...
-             'Units',Pars.Units,...
-             'Position',Pars.Position,...
-             'BorderType','none');
-          
-         p.BackgroundColor = Pars.PanelColor;
-
-        % What is "a"? Looks like a "narrow vertical axes" that is on the
-        % left-side of the uipanel p, so maybe it is a scroll bar. Except
-        % TitleH is hard-coded to 0.055, so TitleH * ParentH would give a
-        % value that is only 5.5% of parent height. So it's a tiny box in
-        % the lower-left corner? I've changed it so it starts out as
-        % normalized and is less confusing. [thought process of MM for FB
-        % benefit]
+     % Class constructor for nigeLab.libs.nigelPanel object
+     function obj = nigelPanel(parent,varargin)
+        % NIGELPANEL  Class constructor for nigelPanel, a standardized
+        %             custom graphics container for nigeLab.
         %
-        % "a" is an axes that lets us produce "nice curves" on the title
-        % box at the top of each nigelPanel.
-        a = axes(p,...
-           'Color','none',...
-           'Units','normalized',... 
-           'Position',[0 0.945 1 0.055]);
-
-        Apos = a.Position;
-        a.XAxis.Visible='off';
-        a.YAxis.Visible='off';
-        
-        titleBox.r1 = rectangle(a,...
-           'Position',[0 0.5 1 0.5],...
-           'Curvature',[0 0],...
-           'FaceColor', parent.Color,...
-           'EdgeColor', parent.Color);
-        
-        titleBox.r2 = rectangle(a,...
-           'Position',[0 0 1 1],...
-           'Curvature',[0.05 0.55],...
-           'FaceColor', Pars.TitleBarColor,...
-           'EdgeColor', Pars.TitleBarColor);
-        
-        titleBox.ann = text(a,0.1,0.5,...
-           Pars.String,...
-           'Units','normalized',...
-           'VerticalAlignment','middle',...
-           'Color',Pars.TitleColor,...
-           'FontSize',13,...
-           'FontWeight','bold',...
-           'FontName','DroidSans');
-        
-        obj.Parent = parent;
-        obj.Tag = Pars.Tag;
-        obj.InnerPosition = [0 0 1 1];
-        obj.titleBox = titleBox;
-        obj.OutPanel = p;
-        obj.axes = a;
-        obj.Units = Pars.Units;
-        if strcmp(Pars.Scrollable,'on')
-            p2 =  uipanel(...
-                'BackgroundColor', Pars.PanelColor,...
-                'Units',Pars.Units,...
-                'Position',[.01 .01 .98 (.98 - a.Position(4))],...
-                'BorderType','none');
-            p2.Parent = p;
-            jscrollpane=obj.attachScrollPanelTo(p2);
-            addlistener(obj,'Children','PostSet',@obj.resizeInnerPanel);
-            jscrollpane.JavaPeer.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-            jscrollpane.JavaPeer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            jscrollpane.JavaPeer.setBorder(javax.swing.BorderFactory.createEmptyBorder)
-
-            obj.panel = p2;
-            obj.InnerPosition = [0 0 1 1];
-        else
-            p2 =  uipanel(...
-                'BackgroundColor', Pars.PanelColor,...
-                'Units',Pars.Units,...
-                'Position',[.01 .01 .98 (.98 - a.Position(4))],...
-                'BorderType','none');
-            p2.Parent = p;
-%             jscrollpane=obj.attachScrollPanelTo(p2);
-%             jscrollpane.JavaPeer.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-%             jscrollpane.JavaPeer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            obj.panel = p2;
-            obj.InnerPosition = [0 0 1 1];
+        %  obj = nigelPanel(parent);
+        %  obj = nigelPanel(parent,'Name1',value1,...,'NameK',valueK);
+        %
+        %  inputs:
+        %  parent  --  Container for nigelPanel object. Any class that is
+        %              a valid parent for matlab.ui.container.Panel is
+        %              acceptable here. If no arguments are specified, or
+        %              if the first argument is a char array, then this
+        %              defaults to the current figure.
+        %  varargin  --  'Name', value input argument pairs that
+        %                 correspond mostly to properties of
+        %                 matlab.ui.container.Panel. Valid 'Name' values
+        %                 include:
+        %                 --> 'TitleBarColor' (see: 
+        %                      nigeLab.defaults.nigelColors)
+        %                 --> 'PanelColor' (see: 
+        %                      nigeLab.defaults.nigelColors)
+        %                 --> 'TitleColor' (see: 
+        %                      nigeLab.defaults.nigelColors)
+        %                 --> 'Position'
+        %                 --> 'String'
+        %                 --> 'Substr' 
+        %                 --> 'Tag' (default is 'nigelPanel')
+        %                 --> 'Units' ('normalized' or 'pixels')
+        %                 --> 'Scrollable' ('off' (default) or 'on')
+         
+        % Configure Parent property
+        if nargin < 1
+           parent = gcf;
+        elseif ischar(parent)
+           varargin = [parent, varargin];
+           parent = gcf;
         end
+         
+        if isa(parent,'nigeLab.libs.nigelPanel')
+           parent = parent.panel;
+        end
+        obj.Parent = parent;
+         
         
-      end
+        obj.setProps(varargin{:});
+        
+        obj.buildOuterPanel;  % Make "outer frame" for if there is scroll bar
+        obj.buildTitleBox;    % Makes "nice header box"
+        obj.buildInnerPanel;  % Make scrollbar and "inner frame" container        
+        addlistener(obj,'Units','PostSet',@obj.UnitsChanged);
+   end
       
       % Returns the class, which is just obj.Tag
       function cl = class(obj)
@@ -346,12 +274,162 @@ classdef nigelPanel < handle
          end
 
       end
-      
    end
    
    methods (Access=private)
       % Method for accessing Java-based Scrollbar, provided by Yair Altman
       [hScrollPanel, hPanel] = attachScrollPanelTo(~,hObject)
+      
+      % Build "inner panel" container
+      function buildInnerPanel(obj)
+         % BUILDINNERPANEL  Builds the "inner panel" container that is
+         %                  useful for border reference when there is a
+         %                  scroll bar in the nigelPanel.
+         %
+         %  obj.buildInnerPanel;
+         
+         pos = obj.InnerPosition + ...
+              [0.01,...  % x offset
+               0.01,...  % y offset
+               -0.02,... % width offset
+               -(0.02 + obj.titleBox.axes.Position(4))]; % height offset
+        obj.panel =  uipanel(obj.OutPanel,...
+                'BackgroundColor', obj.Color.Panel,...
+                'Units',obj.Units,...
+                'Position',pos,...
+                'BorderType',obj.BorderType);
+        if strcmp(obj.Scrollable,'on')
+           jscrollpane=obj.attachScrollPanelTo(obj.panel);
+           addlistener(obj,'Children','PostSet',@obj.resizeInnerPanel);
+           jscrollpane.JavaPeer.setVerticalScrollBarPolicy(javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+           jscrollpane.JavaPeer.setHorizontalScrollBarPolicy(javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+           jscrollpane.JavaPeer.setBorder(javax.swing.BorderFactory.createEmptyBorder)
+        end
+      end
+      
+      % Build "outer panel" container
+      function buildOuterPanel(obj)
+         % BUILDOUTERPANEL  Build "outer panel" that houses an "inner
+         %                  panel" as well as a potential scroll bar that
+         %                  changes the contents "viewed" in "inner panel"
+         %
+         %  obj.buildOuterPanel;
+         
+         obj.OutPanel = uipanel(obj.Parent,...
+             'BackgroundColor', obj.Color.Panel,...
+             'Units',obj.Units,...
+             'Position',obj.Position,...
+             'BorderType',obj.BorderType);
+      end
+      
+      % Build graphics for "nice header box"
+      function buildTitleBox(obj)
+         if isempty(obj.titleBox)
+           obj.titleBox = struct;
+           obj.titleBox.axes = axes(obj.OutPanel,... % formerly "a"
+              'Color','none',...
+              'Units','normalized',... 
+              'Position',obj.TitleBarPosition);
+           obj.titleBox.axes.XAxis.Visible='off';
+           obj.titleBox.axes.YAxis.Visible='off';
+
+           % Produces the "flat right-half"
+           obj.titleBox.r1 = rectangle(obj.titleBox.axes,...
+              'Position',[0 0.5 1 0.5],...
+              'Curvature',[0 0],...
+              'FaceColor', obj.Color.Parent,...
+              'EdgeColor', obj.Color.Parent);
+
+           % Produces the "rounded left-half"
+           obj.titleBox.r2 = rectangle(obj.titleBox.axes,...
+              'Position',[0 0 1 1],...
+              'Curvature',[0.05 0.55],...
+              'FaceColor', obj.Color.TitleBar,...
+              'EdgeColor', obj.Color.TitleBar);
+
+           % Annotation text
+           obj.titleBox.ann = text(obj.titleBox.axes,...
+              obj.TitleStringX,obj.TitleStringY,...
+              obj.String,...
+              'Units','normalized',...
+              'VerticalAlignment','middle',...
+              'Color',obj.Color.TitleText,...
+              'FontSize',obj.TitleFontSize,...
+              'FontWeight',obj.TitleFontWeight,...
+              'FontName',obj.FontName);
+         end
+      end
+      
+      % Set all properties in the constructor based on 'Name', value pairs
+      function setProps(obj,varargin)
+         % SETPROPS  Set all properties in constructor based on 'Name',
+         %           value input argument pairs.
+         
+         Pars.TitleBarColor = nigeLab.defaults.nigelColors('primary'); 
+         Pars.PanelColor = nigeLab.defaults.nigelColors('surface');
+         Pars.TitleColor = nigeLab.defaults.nigelColors('onprimary');
+         Pars.Position  = [0.1 0.1 0.3 0.91];
+         Pars.InnerPosition =  [0 0 1 1];
+         Pars.String = '';
+         Pars.Substr = '';
+         Pars.BorderType = 'none';
+         Pars.Tag = 'nigelPanel';
+         Pars.Units = 'normalized';
+         Pars.Scrollable = 'off';
+         Pars.FontName = 'DroidSans';
+         Pars.TitleFontSize = 13;
+         Pars.TitleFontWeight = 'bold';
+         Pars.TitleBarPosition = [0 0.945 1 0.055];
+         Pars.TitleStringX = 0.1;
+         Pars.TitleStringY = 0.5;
+         Pars = nigeLab.utils.getopt(Pars,varargin{:});
+         
+         % Parse Color struct property
+         obj.Color = struct;
+         obj.Color.Panel = Pars.PanelColor;
+         obj.Color.TitleText = Pars.TitleColor;
+         obj.Color.TitleBar = Pars.TitleBarColor;
+         if isa(obj.Parent,'nigeLab.libs.nigelPanel')
+            obj.Color.Parent = obj.Parent.Color.Panel;
+         elseif isprop(obj.Parent,'Color')
+            obj.Color.Parent = obj.Parent.Color;
+         elseif isprop(obj.Parent,'BackgroundColor')
+            obj.Color.Parent = obj.Parent.BackgroundColor;
+         else
+            error('Cannot parse parent background color for parent class (%s)',...
+               class(obj.Parent));
+         end
+         
+         % Assign other parameters
+         obj.Position = Pars.Position;
+         obj.InnerPosition = Pars.InnerPosition;
+         obj.String = Pars.String;
+         obj.Substr = Pars.Substr;
+         obj.BorderType = Pars.BorderType;
+         obj.Tag = Pars.Tag;
+         obj.Units = Pars.Units;
+         obj.Scrollable = lower(Pars.Scrollable);
+         obj.FontName = Pars.FontName;
+         obj.TitleFontSize = Pars.TitleFontSize;
+         obj.TitleFontWeight = Pars.TitleFontWeight;
+         if ischar(Pars.TitleBarPosition)
+            switch lower(Pars.TitleBarPosition)
+               case 'top'
+                  obj.TitleBarPosition = [0 0.945 1 0.055];
+               case {'bot','bottom'}
+                  obj.TitleBarPosition = [0 0 1 0.055];
+               otherwise 
+                  error('Invalid position: %s. (should be ''top'' or ''bot'')',...
+                     Pars.TitleBarPosition);
+            end
+         else
+            obj.TitleBarPosition = Pars.TitleBarPosition;
+         end
+         obj.TitleStringX = Pars.TitleStringX;
+         obj.TitleStringY = Pars.TitleStringY;
+         
+         
+      end
    end
 end
 
