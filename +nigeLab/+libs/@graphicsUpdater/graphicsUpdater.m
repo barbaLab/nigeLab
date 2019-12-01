@@ -74,6 +74,9 @@ classdef graphicsUpdater < handle
          %  obj = nigeLab.libs.graphicsUpdater(blockObj);
          
          % This is really the key thing to set on construction
+         if ~isa(blockObj,'nigeLab.Block')
+            error('First input argument must be class nigeLab.Block');
+         end
          obj.Block = blockObj;
          
          % This function can be changed for ad hoc setups. The parameter
@@ -91,7 +94,7 @@ classdef graphicsUpdater < handle
       % Add listeners for events from different objects tied to UI
       function addListeners(obj,vidInfo_obj,varargin)
          % Define parent handle on constructor
-         obj.parent = vidInfo_obj.parent;
+         obj.parent = vidInfo_obj.Panel.Parent;
          
          % Add listeners for event notifications from video object
          obj.lh = [obj.lh; addlistener(vidInfo_obj,...

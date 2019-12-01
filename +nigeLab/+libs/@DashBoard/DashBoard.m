@@ -2,8 +2,8 @@ classdef DashBoard < handle
    %DASHBOARD
    
    properties
-      nigelGui
-      Children
+      nigelGui  % matlab.ui.Figure handle to user interface figure
+      Children  % Cell array of nigelPanels
       Tank
       remoteMonitor
    end
@@ -15,12 +15,21 @@ classdef DashBoard < handle
    end
    
    methods
-          function obj = DashBoard(tankObj)
-        
-         %% Defaults Values
+         function obj = DashBoard(tankObj)
+         % DASHBOARD  Class constructor for "DashBoard" UI that provides
+         %            visual indicator of processing status for Tank,
+         %            Animal, and Block objects, as well as a graphical
+         %            interface to run extraction methods and visualize
+         %            their current progress during remote execution.
+         %
+         %  tankObj = nigeLab.Tank();
+         %  obj = nigeLab.libs.DashBoard(tankObj);
+            
+         %% Default Values
          bCol = nigeLab.defaults.nigelColors('background');
          PBCol = nigeLab.defaults.nigelColors('surface'); % Panel background colors
          onPBcol = nigeLab.defaults.nigelColors('onsurface');
+         
          %% Init
          obj.Tank = tankObj;
          
@@ -33,6 +42,7 @@ classdef DashBoard < handle
          loadPanels(obj)
          obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
          addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
+         
          %% Create Tank Tree
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
@@ -130,7 +140,11 @@ classdef DashBoard < handle
       % Method to create all the custom uipanels (nigelPanels) that
       % populate most of the GUI interface.
       function loadPanels(obj)
-         %% Create Panels
+         % LOADPANELS  Method to create all custom uipanels (nigelPanels)
+         %             that populate most of the GUI interface.
+         %
+         %  obj = nigeLab.libs.Dashboard(tankObj);
+         %  obj.loadPanels;   (From method of obj; make appropriate panels)
          
          %% Overview Panel
          % Panel where animals, blocks and the tank are visualized
@@ -150,7 +164,8 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Stats';
          Position = [.35, .45, .43 ,.47];
-         obj.Children{2} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{2} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+            'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
@@ -161,7 +176,8 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Queue';
          Position = [.35, .01, .43 , .43];
-         obj.Children{3} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{3} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+            'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
@@ -172,7 +188,8 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Parameters';
          Position = [.79 , .01, .2, 0.91];
-         obj.Children{4} = nigeLab.libs.nigelPanel(obj.nigelGui,'String',str,'Tag',Tag,'Position',Position,...
+         obj.Children{4} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+            'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));

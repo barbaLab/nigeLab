@@ -1,4 +1,4 @@
-function [y,lab] = uiMakeLabels(panel,labels,varargin)
+function [x,y,w,h,lab] = uiMakeLabels(panel,labels,varargin)
 %% UIMAKELABELS  Make labels at equally spaced increments along left of panel
 %
 %  y = UIMAKELABELS(panel,labels);
@@ -42,10 +42,10 @@ BOT = 0.025;
 
 LEFT = 0.025;
 
-BACKGROUND_COL = 'k';
-FOREGROUND_COL = 'w';
-FONTSIZE = 14;
-FONTNAME = 'Arial';
+BACKGROUND_COL = nigeLab.defaults.nigelColors('surface');
+FOREGROUND_COL = nigeLab.defaults.nigelColors('onsurface');
+FONTSIZE = 12;
+FONTNAME = 'DroidSans';
 
 %% PARSE VARARGIN
 for iV = 1:2:numel(varargin)
@@ -70,7 +70,7 @@ for ii = 1:n
             'FontSize',FONTSIZE,...
             'BackgroundColor',BACKGROUND_COL,...
             'ForegroundColor',FOREGROUND_COL,...
-            'Position',[x, y(ii), w, h],...
+            'Position',[x, y(ii), w, h/2],...
             'String',labels{ii});
 end
 

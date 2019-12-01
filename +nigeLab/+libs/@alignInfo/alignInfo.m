@@ -43,8 +43,8 @@ classdef alignInfo < handle
       zoomFlag = false;          % Is the time-series axis zoomed in?
       
       
-      % Graphics
-      AlignmentPanel
+      AlignmentPanel % Container for graphics
+      Block          % nigeLab.Block object handle
    end
    
 %% Events
@@ -59,13 +59,38 @@ classdef alignInfo < handle
    methods (Access = public)
       % Construct the object for keeping track of which "button press" (or
       % trial) we are currently looking at
-      function obj = alignInfo(figH,dat_F)
-         % Parse parent (must be figure)
-         if isa(figH,'matlab.ui.Figure')
-            obj.parent = figH;
-         else
-            error('parentFig argument must be a figure handle.');
+      function obj = alignInfo(blockObj,nigelPanelObj)
+         % ALIGNINFO  Constructor for handle object that keeps track of
+         %            synchronization information between video record and
+         %            digital (neural) streams record.
+         %
+         %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
+         
+         if ~isa(obj.Block,'nigeLab.Block')
+            error('First input argument must be of class nigeLab.Block');
          end
+         obj.Block = blockObj;
+         
+         if nargin < 2
+            fig = gcf;
+            nigelPanelObj = nigeLab.libs.nigelPanel(fig,...
+               'String',strrep(blockObj.Name,'_','\_'),...
+               'Tag','dispPanel',...
+               'Units','normalized',...
+               'Position',[0 0 1 1],...
+               'Scrollable','off',...
+               'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+               'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+               'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+         end    
+         
+         if isa(nigelPanelObj,'nigeLab.libs.nigelPanel')
+            obj.parent = nigelPanelObj;
+         else
+            error('2nd input argument must be of class nigeLab.libs.nigelPanel');
+         end
+         
+         
          obj.parseInputFiles(dat_F);
          
          obj.guessAlignment;

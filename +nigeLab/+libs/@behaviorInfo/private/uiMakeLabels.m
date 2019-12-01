@@ -48,8 +48,8 @@ BOT = 0.025;
 
 LEFT = 0.025;
 
-BACKGROUND_COL = 'k';
-FOREGROUND_COL = 'w';
+BACKGROUND_COL = nigeLab.defaults.nigelColors('surface');
+FOREGROUND_COL = nigeLab.defaults.nigelColors('onsurface');
 FONTSIZE = 14;
 FONTNAME = 'Arial';
 

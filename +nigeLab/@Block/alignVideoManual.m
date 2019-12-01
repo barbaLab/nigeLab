@@ -48,6 +48,7 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 %                                   version, which had a different name as
 %                                   well.
 
+%% Parse inputs
 if nargin < 3
    vidStreamName = [];
 end
@@ -56,10 +57,25 @@ if nargin < 2
    digStreamName = [];
 end
 
-
 % Parse digStreamName input
 if isempty(digStreamName)
-   
+   [title_str,prompt_str,opts] = nigeLab.utils.getDropDownRadioStreams(blockObj);
+   str = 'Yes';
+   digInfo = struct('name',[],'field',[],'idx',[]);
+   k = 0;
+   while strcmp(str,'Yes')
+      k = k + 1;
+      [digInfo(k).name,digInfo(k).field,digInfo(k).idx] = ...
+         nigeLab.utils.uidropdownradiobox(...
+            title_str,...
+            prompt_str,...
+            opts,true);
+      str = nigeLab.utils.uidropdownbox({'Selection Option Window';...
+         'Select More Streams?'},...
+         'Add Streams?',{'No','Yes'},true);
+      opts{digInfo(k).idx(1,1),1} = setdiff(opts{digInfo(k).idx(1,1),1},...
+         digInfo(k).name);
+   end
 end
 
 
@@ -74,61 +90,11 @@ if isempty(vidStreamName)
 end
 strIdx = find(ismember(opts,vidStreamName),1,'first');
 
-
-
-
-% PARSE FILE NAMES
-Name = strsplit(FNAME,BEAM_ID);
-Name = Name{1};
-
-% PARSE VIDEO FILES / LOCATION
-% Check in several places for the video files...
-vid_F = dir(fullfile(VID_DIR,[Name '*' VID_TYPE]));
-
-if isempty(vid_F)
-   fprintf(1,'No videos in\n->\t%s\n',VID_DIR);
-   
-   fprintf(1,'Checking location with _Beam.mat...');
-   % Check for videos in same location as other files
-   vid_F = dir(fullfile(DIR,[Name '*' VID_TYPE]));
-   
-   if isempty(vid_F) % Maybe they are in some other, unspecified directory?
-      fprintf(1,'unsuccessful.\n');
-      VID_DIR = inputdlg({['Bad video directory. ' ...
-         'Specify VID_DIR here (change variable for next time).']},...
-         'Invalid VID_DIR path',1,{ALT_VID_DIR});
-      if isempty(VID_DIR)
-         error('No valid video directory specified. Script canceled.');
-      else
-         VID_DIR = VID_DIR{1};
-      end
-      vid_F = dir(fullfile(VID_DIR,[Name '*' VID_TYPE]));
-      
-      if isempty(vid_F) % If there are still no files something else wrong
-         disp('No video file located!');
-         error('Please check VID_DIR or missing video for that session.');
-      end
-   else
-      fprintf(1,'successful!\n');
-   end
-end
-
-% MAKE STRUCT OF FILE LOCATIONS
-
-% All potential data streams or data files
-dat_F = struct('streams',struct(...
-   'beam',struct('folder',DIR,'name',[Name BEAM_ID '.mat']),...
-   'press',struct('folder',DIR,'name',[Name PRESS_ID '.mat']),...
-   'paw',struct('folder',DIR,'name',[Name PAW_ID '.mat'])),...
-   'scalars',struct(...
-   'guess',struct('folder',DIR,'name',[Name GUESS_ID '.mat']),...
-   'alignLag',struct('folder',DIR,'name',[Name OUT_ID '.mat'])));
-
-
+%% Build graphics
 
 % CONSTRUCT UI
 fig=figure('Name','Bilateral Reach Scoring',...
-   'Color','k',...
+   'Color',nigeLab.defaults.nigelColors('background'),...
    'NumberTitle','off',...
    'MenuBar','none',...
    'ToolBar','none',...
@@ -137,17 +103,22 @@ fig=figure('Name','Bilateral Reach Scoring',...
    'UserData',struct('flag',false,'h',[]));
 
 % Panel for displaying information text
-dispPanel = uipanel(fig,'Units','Normalized',...
-   'BackgroundColor','k',...
-   'Position',[0 0.25 1 0.75]);
-
+backgroundPanel = nigeLab.libs.nigelPanel(fig,...
+            'String',strrep(blockObj.Name,'_','\_'),...
+            'Tag','dispPanel',...
+            'Units','normalized',...
+            'Position',[0 0.25 1 0.75],...
+            'Scrollable','off',...
+            'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+            'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
 
 % CONSTRUCT CUSTOM CLASS OBJECTS
 % Make video alignment information object
-alignInfoObj = alignInfo(fig,dat_F);
+alignInfoObj = nigeLab.libs.alignInfo(blockObj,backgroundPanel);
 
 % Make video frame object to track video frames
-vidInfoObj = vidInfo(fig,dispPanel,vid_F);
+vidInfoObj = vidInfo(fig,backgroundPanel,vid_F);
 vidInfoObj.setOffset(alignInfoObj.alignLag);
 
 % Make listener object to integrate class information
@@ -168,8 +139,16 @@ graphicsUpdateObj.addGraphics(graphics);
 % SET HOTKEY AND MOUSE MOVEMENT FUNCTIONS
 set(fig,'KeyPressFcn',{@hotKey,vidInfoObj,alignInfoObj});
 set(fig,'WindowButtonMotionFcn',{@trackCursor,alignInfoObj});
- 
+set(fig,'DeleteFcn',...
+   {@deleteFigCB,alignInfoObj,vidInfoObj,graphicsUpdateObj});
+
 % Function for tracking cursor
+   function deleteFigCB(~,~,a,v,g)
+      delete(a);
+      delete(v);
+      delete(g);
+   end
+
    function trackCursor(src,~,a)
       a.setCursorPos(src.CurrentPoint(1,1));  
    end
