@@ -489,8 +489,8 @@ classdef nigelPanel < handle
          % Set colors for titleBox elements
          obj.TitleBar.r1.FaceColor = obj.Color.Parent;
          obj.TitleBar.r1.EdgeColor = obj.Color.Parent;
-         obj.TitleBar.r1.FaceColor = obj.Color.TitleBar;
-         obj.TitleBar.r1.EdgeColor = obj.Color.TitleBar;
+         obj.TitleBar.r2.FaceColor = obj.Color.TitleBar;
+         obj.TitleBar.r2.EdgeColor = obj.Color.TitleBar;
          obj.TitleBar.ann.Color = obj.Color.TitleText;
          
          % Set colors for "Inner Panel"

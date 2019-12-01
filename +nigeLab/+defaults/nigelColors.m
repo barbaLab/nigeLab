@@ -22,29 +22,34 @@ switch nargin
       end
       if iscell(input),Col=nigeLab.defaults.nigelColors(input{1});return;end
       switch input
-         case {'primary',1}
+         case {'primary','g','green',1}
             Col = [30, 185, 128]./255;   % green
-         case {'secondary',2}
+         case {'secondary','dg','darkgreen',2}
             Col = [4, 93, 86]./255;      % dark green
-         case {'tertiary',3}
+         case {'tertiary','o','orange',3}
             Col = [255, 104, 89]./255;   % orange
-         case {'quaternary',4}
+         case {'quaternary','y','yellow',4}
             Col = [255, 207, 68]./255;   % yellow
-         case {'onprimary',1.1}
-            Col = [0, 0, 0]./255;
-         case {'onsecondary',2.1}
-            Col = [255, 255, 255]./255;
+         case {'onprimary','k','black',1.1}
+            Col = [0, 0, 0]./255; % black
+         case {'onsecondary','w','white',2.1} 
+            Col = [255, 255, 255]./255; % white
          case {'ontertiary',3.1}
-            Col = [0, 0, 0]./255;
+            Col = [0, 0, 0]./255; % black
          case {'onquaternary',4.1}
-            Col = [0, 0, 0]./255;
+            Col = [0, 0, 0]./255; % black
          case {'background','bg',0}
-            Col = [18, 18, 18]./255;
-         case {'surface','sfc',0.1}
-            Col = [55, 56, 58]./255;
+            Col = [18, 18, 18]./255; % nearly black
+         case {'surface','sfc','gray','grey',0.1}
+            Col = [55, 56, 58]./255; % grey-ish
          case {'onsurface','onsfc',0.2}
-            Col = [255, 255, 255]./255;
-            
+            Col = [255, 255, 255]./255; % white
+         case {'red','r'}
+            Col = [240, 25, 25]./255; % red
+         case {'magenta','m'}
+            Col = [240, 25, 240]./255; % magenta
+         case {'blue','b'}
+            Col = [25, 25, 240]./255; % blue
       end
    case 2
       switch source

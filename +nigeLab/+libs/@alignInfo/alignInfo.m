@@ -1,5 +1,10 @@
 classdef alignInfo < handle
-%% ALIGNINFO  Class to update HUD & track alignment information
+% ALIGNINFO  Constructor for handle object that keeps track of
+%            synchronization information between video record and
+%            digital (neural) streams record.
+%
+%  obj = nigeLab.libs.alignInfo(blockObj);
+%  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
 
 %% Properties 
    properties(SetAccess = private, GetAccess = public)
@@ -64,6 +69,7 @@ classdef alignInfo < handle
          %            synchronization information between video record and
          %            digital (neural) streams record.
          %
+         %  obj = nigeLab.libs.alignInfo(blockObj);
          %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
          
          if ~isa(obj.Block,'nigeLab.Block')
@@ -75,7 +81,7 @@ classdef alignInfo < handle
             fig = gcf;
             nigelPanelObj = nigeLab.libs.nigelPanel(fig,...
                'String',strrep(blockObj.Name,'_','\_'),...
-               'Tag','dispPanel',...
+               'Tag','alignPanel',...
                'Units','normalized',...
                'Position',[0 0 1 1],...
                'Scrollable','off',...
@@ -89,9 +95,6 @@ classdef alignInfo < handle
          else
             error('2nd input argument must be of class nigeLab.libs.nigelPanel');
          end
-         
-         
-         obj.parseInputFiles(dat_F);
          
          obj.guessAlignment;
          obj.buildStreamsGraphics;
@@ -138,16 +141,35 @@ classdef alignInfo < handle
       
       % Set new neural time
       function setNeuTime(obj,t)
+         % SETNEUTIME  Set new value of neural time
+         %
+         %  obj.setNeuTime(t);  Sets obj.tNeu to t
+         %  --> Does not change frame
+         %  --> Does not recompute video offset
+         
          obj.tNeu = t;
       end
       
       % Set new video time
       function setVidTime(obj,t)
+         % SETVIDTIME  Set video time.
+         %  
+         %  obj.setVidTime(t);  Updates obj.tVid to t
+         %  --> Does not change the video frame
+         %  --> Does not recompute video offset
+         
          obj.tVid = t;
       end
       
       % Set new neural offset
       function setNewOffset(obj,x)
+         % SETNEWOFFSET  Sets new neural offset, using the value in x and
+         %               the current neural time marker XData. The
+         %
+         %  obj.setNewOffset(x);   x could be, for example, some new value
+         %                          of the time we think the offset should
+         %                          be moved to.
+         
          align_offset = x - obj.curNeuT.XData(1);
          align_offset = obj.alignLag - align_offset;
          
@@ -156,6 +178,10 @@ classdef alignInfo < handle
 
       % Save the output file
       function saveAlignment(obj)
+         % SAVEALIGNMENT  Save the alignment lag (output)
+         %
+         %  obj.saveAlignment;
+         
          VideoStart = obj.alignLag;
          fname = fullfile(obj.scalars.alignLag.folder,...
                           obj.scalars.alignLag.name);
@@ -167,6 +193,12 @@ classdef alignInfo < handle
       
       % Zoom out on beam break/paw probability time series (top axis)
       function zoomOut(obj)
+         % ZOOMOUT  Make the axes x-limits larger, to effectively zoom out
+         %          the streams so that it's easier to look at the general
+         %          trend of matching transitions for streams through time.
+         %
+         %  obj.zoomOut;
+         
          set(obj.ax,'XLim',obj.axLim);
          obj.curAxLim = obj.axLim;
          set(obj.paw.h,'LineWidth',1);
@@ -178,6 +210,13 @@ classdef alignInfo < handle
       
       % Zoom in on beam break/paw probability time series (top axis)
       function zoomIn(obj)
+         % ZOOMIN  Make the axes x-limits smaller, to effectively "zoom" on
+         %         the streams so that transitions from LOW TO HIGH or HIGH
+         %         TO LOW are clearer with respect to the marker for the
+         %         current frame.
+         %
+         %  obj.zoomIn;
+         
          obj.curAxLim = [obj.tVid - obj.zoomOffset,...
                          obj.tVid + obj.zoomOffset];
          set(obj.ax,'XLim',obj.curAxLim);
@@ -190,6 +229,11 @@ classdef alignInfo < handle
       
       % Update the current cursor X-position in figure frame
       function setCursorPos(obj,x)
+         % SETCURSORPOS  Update the current cursor X-position in figure
+         %               frame.
+         %
+         %  obj.setCursorPos(x);  Move the cursor X-position to value in x
+         
          obj.cursorX = x * diff(obj.ax.XLim) + obj.ax.XLim(1);
          if obj.moveStreamFlag
             new_align_offset = obj.computeOffset(obj.curOffsetPt,obj.cursorX);
@@ -201,6 +245,15 @@ classdef alignInfo < handle
       
       % Create graphics objects associated with this class
       function graphics = getGraphics(obj)
+         % GETGRAPHICS  Return a struct where fieldnames match graphics
+         %              labels from other "Info" objects so that
+         %              "graphicsUpdater" class can parse interactions with
+         %              the correct objects.
+         %
+         %  graphics = obj.getGraphics;
+         %
+         %  --> 'vidTime_line'     :  obj.vidTime_line
+         %  --> 'alignment_panel'  :  obj.AlignmentPanel
          
          % Pass everything to listener object in graphics struct
          graphics = struct('vidTime_line',obj.vidTime_line,...
@@ -212,6 +265,11 @@ classdef alignInfo < handle
    methods (Access = private)
       % Get best of offset using cross-correlation of time series
       function guessAlignment(obj)
+         % GUESSALIGNMENT  Compute "best guess" offset using
+         %                 cross-correlation of time-series.
+         %
+         %  obj.guessAlignment;
+         
          % If guess already exists, skip this part
          if ~isnan(obj.alignLag)
             disp('Skipping computation');
@@ -240,6 +298,13 @@ classdef alignInfo < handle
       % Make all the graphics for tracking relative position of neural
       % (beam/press) and video (paw probability) time series
       function buildStreamsGraphics(obj)
+         % BUILDSTREAMGRAPHICS  Make all graphics for tracking relative
+         %                      position of neural-sync'd streams (e.g.
+         %                      BEAM BREAK or BUTTON PRESS) with video
+         %                      (e.g. PAW PROBABILITY) time series.
+         %
+         %  obj.buildStreamsGraphics;
+         
          % Make panel to contain graphics
          obj.AlignmentPanel = uipanel(obj.parent,'Units','Normalized',...
             'BackgroundColor','k',...
@@ -252,7 +317,7 @@ classdef alignInfo < handle
               'XColor','w',...
               'YLim',[-0.2 1.2],...
               'YTick',[],...
-              'ButtonDownFcn',@obj.clickAxes);
+              'ButtonDownFcn',@(~,~)obj.clickAxes);
          
          % Make current position indicators for neural and video times
          x = zeros(1,2); % Vid starts at zero
@@ -266,7 +331,7 @@ classdef alignInfo < handle
             'MarkerEdgeColor',[0.3 0.3 0.3],...
             'MarkerFaceColor',[0.3 0.3 0.3],...
             'Color',[0.3 0.3 0.3],...
-            'ButtonDownFcn',@obj.clickAxes);         
+            'ButtonDownFcn',@(~,~)obj.clickAxes);         
          
          
          % Plot paw probability time-series from DeepLabCut
@@ -275,7 +340,7 @@ classdef alignInfo < handle
             obj.paw.data,...
             'Color','b',...
             'DisplayName','paw',...
-            'ButtonDownFcn',@obj.clickAxes);
+            'ButtonDownFcn',@(~,~)obj.clickAxes);
          
          % Make beam break plot
          obj.beam.h = plot(obj.ax,...
@@ -285,7 +350,7 @@ classdef alignInfo < handle
             'Tag','beam',...
             'UserData',[0.8 0.2 0.2],...
             'DisplayName','beam',...
-            'ButtonDownFcn',@obj.clickSeries);
+            'ButtonDownFcn',@(src,~)obj.clickSeries);
          
          % Check for button presses and add if present
          if isstruct(obj.press)
@@ -318,6 +383,10 @@ classdef alignInfo < handle
       
       % Extend or shrink axes x-limits as appropriate
       function resetAxesLimits(obj)
+         % RESETAXESLIMITS  Extend or shrink axes x-limits as appropriate
+         %
+         %  obj.resetAxesLimits;
+         
          obj.axLim = nan(1,2);
          obj.axLim(1) = obj.xStart;
          obj.axLim(2) = max(obj.beam.t(end),obj.paw.t(end));
@@ -329,7 +398,11 @@ classdef alignInfo < handle
       end
       
       % ButtonDownFcn for top axes and children
-      function clickAxes(obj,~,~)
+      function clickAxes(obj)
+         % CLICKAXES  ButtonDownFcn for the alignment axes and its children
+         %
+         %  ax.ButtonDownFcn = @(~,~)obj.clickAxes;
+         
          obj.cp = obj.ax.CurrentPoint(1,1);
          
          % If FLAG is enabled
@@ -351,7 +424,10 @@ classdef alignInfo < handle
       end
       
       % ButtonDownFcn for neural sync time series (beam/press)
-      function clickSeries(obj,src,~)
+      function clickSeries(obj,src)
+         % CLICKSERIES  ButtonDownFcn callback for clicking on the neural
+         %              sync time series (e.g. BEAM BREAKS or BUTTON PRESS)
+         
          if ~obj.moveStreamFlag
             obj.moveStreamFlag = true;
             obj.curOffsetPt = obj.cursorX;
@@ -370,13 +446,35 @@ classdef alignInfo < handle
       
       % Compute the relative change in alignment and update alignment Lag
       function new_align_offset = computeOffset(obj,init_pt,moved_pt)
+         % COMPUTEOFFSET  Get the relative change in alignment and update
+         %                the alignment Lag
+         %
+         %  new_align_offset = obj.computeOffset(init_pt,moved_pt);
+         %
+         %  init_pt  :  Initial point ("in memory") of where the stream
+         %                 used to be.
+         %
+         %  moved_pt :  New updated point of where the stream has been
+         %                 moved to. 
+         %
+         %  The difference (delta = init_pt - moved_pt) is equivalent to a
+         %  "change in alignment offset"; therefore, the new alignment
+         %  (obj.alignLag) is equal to the previous obj.alignLag + delta.
+         
          align_offset_delta = init_pt - moved_pt;
          new_align_offset = obj.alignLag + align_offset_delta;
          
       end
       
-      % Set the trial hand and emit a notification about the event
+      % Set the alignment and emit a notification about the event
       function setAlignment(obj,align_offset)
+         % SETALIGNMENT  Set alignment and emit notification about it
+         %
+         %  obj.setAlignment(align_offset);
+         %
+         %  --> Align offset is the "VideoStart" where a positive value
+         %        denotes that the video started AFTER the neural recording
+         
          obj.alignLag = align_offset;
          obj.updateStreamTime;
          notify(obj,'moveOffset');
@@ -384,6 +482,16 @@ classdef alignInfo < handle
       
       % Updates stream times and graphic object times associated with
       function updateStreamTime(obj)
+         % UPDATESTREAMTIME  Update stream times and graphic object times
+         %                   associated with those streams.
+         %
+         %  obj.updateStreamTime;
+         %
+         %  Move the "beam" and "press" streams (for example), relative to
+         %  the VIDEO. These are streams that are locked into the NEURAL
+         %  record; moving them relative to the current frame denotes that
+         %  we have changed the offset by some amount.
+         
          % Moves the beam and press streams, relative to VIDEO
          obj.beam.t = obj.beam.t0 - obj.alignLag;
          obj.beam.h.XData = obj.beam.t;
@@ -394,7 +502,6 @@ classdef alignInfo < handle
             
          end
       end
-      
       
    end
 

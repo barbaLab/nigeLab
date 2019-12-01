@@ -110,7 +110,7 @@ classdef graphicsUpdater < handle
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
                      'closeReq',@obj.closeCB)];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
-                     'saveFile',@obj.saveFileCB)];
+                     'saveFile',@(~,~)obj.saveFileCB)];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
                      'newTrial',@(o,e) obj.newTrialBehaviorCB(o,e,vidInfo_obj))];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
@@ -124,7 +124,7 @@ classdef graphicsUpdater < handle
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
                      'zoomChanged',@obj.zoomChangedAlignCB)];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
-                     'saveFile',@obj.saveFileCB)];
+                     'saveFile',@(~,~)obj.saveFileCB)];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
                      'moveOffset',@(o,e) obj.moveOffsetAlignCB(o,e,vidInfo_obj))];
                   obj.lh = [obj.lh; addlistener(varargin{iV},...
@@ -267,7 +267,11 @@ classdef graphicsUpdater < handle
       
       %% Functions for alignInfo class:
       % Change color of the animal name display
-      function saveFileCB(obj,~,~) 
+      function saveFileCB(obj) 
+         % SAVEFILECB  Callback for when SAVEFILE event is issued. 
+         %
+         %  obj.saveFileCB
+         
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.graphicsUpdater',...
@@ -275,7 +279,17 @@ classdef graphicsUpdater < handle
             fprintf(1,'-->\tsaveFile event triggered: %s\n',s);
          end
          
-         set(obj.animalName_display,'Color',[0.1 0.7 0.1]);
+         if ~isempty(obj.animalName_display)
+            obj.animalName_display.Color.TitleText = ...
+               nigeLab.defaults.nigelColors('primary');
+            obj.animalName_display.Color.TitleBar = ...
+               nigeLab.defaults.nigelColors('background');
+         end
+         obj.hud_panel.Color.TitleBar = ...
+               nigeLab.defaults.nigelColors('primary');
+         obj.hud_panel.Color.TitleText = ...
+               nigeLab.defaults.nigelColors('background');
+         
          if obj.curState
             str = questdlg('Save successful. Exit?','Close Prompt',...
                'Yes','No','Yes');
@@ -546,14 +560,26 @@ classdef graphicsUpdater < handle
          end
          
          if tr == n
-            obj.animalName_display.Color = 'y';
-            obj.trialTracker_label.Color = 'y';
-            obj.successTracker_label.Color = 'y';
+            obj.hud_panel.Color.TitleBar = ...
+               nigeLab.defaults.nigelColors('background');
+            obj.hud_panel.Color.TitleText = ...
+               nigeLab.defaults.nigelColors('yellow');
+            
+            obj.trialTracker_label.Color =  ...
+               nigeLab.defaults.nigelColors('yellow');
+            obj.successTracker_label.Color =  ...
+               nigeLab.defaults.nigelColors('yellow');
             obj.curState = true;
          else
-            obj.animalName_display.Color = 'r';
-            obj.trialTracker_label.Color = 'w';
-            obj.successTracker_label.Color = 'w';
+            obj.hud_panel.Color.TitleBar = ...
+               nigeLab.defaults.nigelColors('surface');
+            obj.hud_panel.Color.TitleText =  ...
+               nigeLab.defaults.nigelColors('red');
+            
+            obj.trialTracker_label.Color =  ...
+               nigeLab.defaults.nigelColors('white');
+            obj.successTracker_label.Color =  ...
+               nigeLab.defaults.nigelColors('white');
             obj.curState = false;
          end
          
