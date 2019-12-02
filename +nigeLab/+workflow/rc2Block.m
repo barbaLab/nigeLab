@@ -90,22 +90,25 @@ for iF = 1:numel(F)
 end
 
 % After 'Header' has been made
-if exist('tmpVidStart','var')~=0
-   for i = 1:numel(fname)
-      data = X{i};
-      if i > 1 % For everything but 'Header'
-         data(:,4) = data(:,4) - tmpVidStart; % Remove video offset from times
-      end
-      out = nigeLab.libs.DiskData('Event',fname{i},data);
-   end
-   
-   out_name =  nigeLab.utils.getUNCPath(fullfile(block_out,...
-      p.ScoredEvents.Folder,...
-      sprintf(p.ScoredEvents.File,'Header')));
-   out = nigeLab.libs.DiskData('Event',out_name,'access','w');
-   out.data(1,4) = tmpVidStart;
-   lockData(out);
+if exist('tmpVidStart','var')==0
+   tmpVidStart = 0;
 end
+
+for i = 1:numel(fname)
+   data = X{i};
+   if i > 1 % For everything but 'Header'
+      data(:,4) = data(:,4) - tmpVidStart; % Remove video offset from times
+   end
+   out = nigeLab.libs.DiskData('Event',fname{i},data);
+end
+   
+out_name =  nigeLab.utils.getUNCPath(fullfile(block_out,...
+   p.ScoredEvents.Folder,...
+   sprintf(p.ScoredEvents.File,'Header')));
+out = nigeLab.libs.DiskData('Event',out_name,'access','w');
+out.data(1,4) = tmpVidStart;
+lockData(out);
+
 
 %% Move filtered and raw streams
 % Raw

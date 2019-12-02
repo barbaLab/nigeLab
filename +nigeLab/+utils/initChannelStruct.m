@@ -53,7 +53,7 @@ end
 
 %%
 switch lower(FieldType)
-   case 'channels'
+   case {'ch','chan','channel','channels'}
       channel_struct_ = struct( ...
          'name', cell(1,N),...
          'native_channel_name', cell(1,N), ...
@@ -75,7 +75,8 @@ switch lower(FieldType)
          'chNum',cell(1,N),...
          'chStr',cell(1,N),...
          'fs',cell(1,N));
-   case 'streams'
+      
+   case {'strm','stream','streams'}
       channel_struct_ = struct( ...
          'name', cell(1,N),...
          'native_channel_name', cell(1,N), ...
@@ -84,19 +85,28 @@ switch lower(FieldType)
          'port_prefix', cell(1,N), ...
          'signal', cell(1,N),...
          'data', cell(1,N),...
-         'fs', cell(1,N));      
-   case 'events'
+         'fs', cell(1,N));    
+      
+   case {'evt','event','events'}
       channel_struct_ = struct(...
          'name',cell(1,N),...
          'data',cell(1,N),...
          'status',cell(1,N)...
          )';
       
-   case 'videos'
-      %
+   case {'sub','substreams','substream'}
+      channel_struct_ = struct( ...
+         'name', cell(1,N),...
+         'data', cell(1,N),...
+         'fs', cell(1,N));    
       
-   case 'meta'
-      %
+   case {'vid','video','videos'}
+      channel_struct_ = struct;
+      return;
+      
+   case {'meta','metadata'}
+      channel_struct_ = struct;
+      return;
       
    otherwise
       error('Invalid FieldType: %s\n',FieldType);
@@ -134,9 +144,26 @@ end
       %                  to the corresponding field of channel_struct_
       
       fn = fieldnames(struct_in);
+      fn_reduced = fieldnames(channel_struct_);
+      tmp = nigeLab.utils.fixNamingConvention(struct_in);
+      fn_ = fieldnames(tmp);
+      fn_reduced_ = nigeLab.utils.fixNamingConvention(fieldnames(channel_struct_));
+      
       for i = 1:numel(fn)
-         if ismember(fn{i},fieldnames(channel_struct_))
+         if ismember(fn{i},fn_reduced) % If it's a member, assign it
             channel_struct_.(fn{i}) = struct_in.(fn{i});
+            
+         else % If not, check for match agnostic to capitalization
+            i_match = find(ismember(lower(fn_reduced),lower(fn{i})),1,'first');
+            if numel(i_match) == 1
+               channel_struct_.(fn_reduced{i_match}) = struct_in.(fn{i});
+               
+            else % If still no, fix naming convention and check for match
+               i_match = find(ismember(fn_reduced_,fn_{i}),1,'first');
+               if numel(i_match) == 1
+                  channel_struct_.(fn_reduced{i_match}) = struct_in.(fn{i});
+               end % If still no, then it is not a field to match
+            end            
          end
       end
    end

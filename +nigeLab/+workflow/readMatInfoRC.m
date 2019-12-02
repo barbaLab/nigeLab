@@ -177,13 +177,13 @@ end
                   'ml',cell(1,n),...
                   'icms',cell(1,n),...
                   'area',cell(1,n),...
-                  'fs',24414.0625);
+                  'fs',24414.0625); % Known TDT FS
          case 'Streams'
             c = nigeLab.utils.initChannelStruct(FieldType,n,...
                   'port_name',{'Board Digital Inputs'},...
                   'port_prefix',{'DIN'},...
                   'signal',nigeLab.utils.signal('DigIn'),...
-                  'fs',24414.0625);
+                  'fs',24414.0625); % Known TDT FS
          otherwise
             error('Unrecognized FieldType: %s',FieldType);
       end
@@ -198,6 +198,7 @@ end
       for i = 1:numel(names)    
          c(i).native_channel_name = sprintf('DIN-%02g',i);
          c(i).custom_channel_name = names{i};
+         c(i).name = names{i};
       end
 
    end
