@@ -50,6 +50,9 @@ switch nargin
             Col = [240, 25, 240]./255; % magenta
          case {'blue','b'}
             Col = [25, 25, 240]./255; % blue
+         otherwise
+            Col = [0, 0, 0]./255;
+            warning('%s is not a recognized nigelColors option.',input);
       end
    case 2
       switch source
