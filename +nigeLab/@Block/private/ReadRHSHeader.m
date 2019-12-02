@@ -180,6 +180,7 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).port_number = signal_group;
          new_channel(1).native_channel_name = nigeLab.utils.fread_QString(FID);
          new_channel(1).custom_channel_name = nigeLab.utils.fread_QString(FID);
+         new_channel(1).name = new_channel(1).custom_channel_name;
          new_channel(1).native_order = fread(FID, 1, 'int16');
          new_channel(1).custom_order = fread(FID, 1, 'int16');
          signal_type = fread(FID, 1, 'int16');
@@ -199,6 +200,7 @@ for signal_group = 1:number_of_signal_groups
          if (channel_enabled)
             switch (signal_type)
                case 0
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Raw');
                   raw_channels(raw_index) = new_channel;
                   spike_triggers(raw_index) = new_trigger_channel;
@@ -208,22 +210,30 @@ for signal_group = 1:number_of_signal_groups
                case 2
                   % supply voltage; not used in RHS2000 system
                case 3
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Adc');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_adc_index = board_adc_index + 1;
                case 4
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Dac');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_dac_index = board_dac_index + 1;
                case 5
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigIn');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_in_index = board_dig_in_index + 1;
                case 6
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigOut');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_out_index = board_dig_out_index + 1;

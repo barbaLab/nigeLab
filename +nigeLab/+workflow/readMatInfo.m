@@ -5,7 +5,7 @@ function header = readMatInfo(path)
 
 tmp=load(path);
 header = struct();
-% acqsys = ... % need to define acquisition system, at a minimum
+acqsys = 'TDT'; % need to define acquisition system, at a minimum
 
 %% RAW_CHANNELS STRUCT IS MANDATORY!
 header.raw_channels          = tmp.info;
