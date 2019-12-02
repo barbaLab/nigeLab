@@ -6,10 +6,12 @@ function flag = linkField(blockObj,fieldIndex)
 %  flag = LINKFIELD(b,fieldName);  % fieldName is a char array matching
 %                                    an element of blockObj.Fields
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
+%  Used to "link" all the pointers contained in blockObj (e.g.
+%  blockObj.Channels.Raw or blockObj.Events.DigIO) to the appropriate data
+%  stored on the disk, and update the status to reflect whether the file
+%  exists in the correct format.
 %
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+%  flag returns true if something was not linked correctly.
 
 %%
 flag = false;

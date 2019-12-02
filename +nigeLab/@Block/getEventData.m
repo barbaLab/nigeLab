@@ -25,6 +25,9 @@ function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,ma
 %                    -> 'SpikeFeatures'
 %                    -> 'Artifact'
 %
+%                    NOTE: If this is left empty, it defaults to
+%                    blockObj.Pars.Video.ScoringEventFieldName.
+%
 %   prop      :     Name of event data field (char):
 %                    -> 'value' (def) // code for quantifying different
 %                                    events. for example an event could
@@ -73,11 +76,14 @@ function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,ma
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE INPUT
-if nargin < 2 % type was not provided
+if nargin < 2 % field was not provided
    field = 'Spikes';
+elseif isempty(field)
+   blockObj.updateParams('Video');
+   field = blockObj.Pars.Video.ScoringEventFieldName;
 end
 
-if nargin < 3 % field was not provided
+if nargin < 3 % prop was not provided
    prop = 'value';
 else
    prop = lower(prop);

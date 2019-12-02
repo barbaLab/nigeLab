@@ -7,9 +7,13 @@ classdef alignInfo < handle
 %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
 
 %% Properties 
+   properties(SetAccess = immutable, GetAccess = public)
+      Block       % nigeLab.Block object handle
+      Panel       % nigeLab.libs.nigelPanel object
+      Figure      % Handle to figure containing streams plots
+   end
+
    properties(SetAccess = private, GetAccess = public)
-      % Graphics objects
-      parent      % Parent figure object
       ax          % Axes to plot streams on
       
       tVid        % Current video time
@@ -17,22 +21,20 @@ classdef alignInfo < handle
       
       vidTime_line     % Line indicating current video time
       
-      % Data streams
+
       beam     % Beam break times   
       paw      % Paw guesses from DLC
       press    % Button press times (may not exist)
       
-      % Input files
+
       streams % File struct for data streams
       scalars % File struct for scalar values
-      
-      % Scalars
+
       alignLag = nan;   % Best guess or current alignment lag offset
       guess = nan;      % Alignment guess value
       cp                % Current point on axes
       
-      % Graphics info
-      curAxLim
+      curAxLim    % Axes limits for current axes
    end
    
    properties(SetAccess = private, GetAccess = private)
@@ -45,11 +47,7 @@ classdef alignInfo < handle
       cursorX                    % Current cursor X position on figure
       curOffsetPt                % Last-clicked position for dragging line
       xStart = -10;              % (seconds) - lowest x-point to plot
-      zoomFlag = false;          % Is the time-series axis zoomed in?
-      
-      
-      AlignmentPanel % Container for graphics
-      Block          % nigeLab.Block object handle
+      zoomFlag = false;          % Is the time-series axis zoomed in?      
    end
    
 %% Events
@@ -62,8 +60,7 @@ classdef alignInfo < handle
    
 %% Methods
    methods (Access = public)
-      % Construct the object for keeping track of which "button press" (or
-      % trial) we are currently looking at
+      % Construct alignInfo object that tracks offset between vid and neu
       function obj = alignInfo(blockObj,nigelPanelObj)
          % ALIGNINFO  Constructor for handle object that keeps track of
          %            synchronization information between video record and
@@ -88,56 +85,42 @@ classdef alignInfo < handle
                'PanelColor',nigeLab.defaults.nigelColors('surface'),...
                'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
                'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-         end    
-         
-         if isa(nigelPanelObj,'nigeLab.libs.nigelPanel')
-            obj.parent = nigelPanelObj;
-         else
-            error('2nd input argument must be of class nigeLab.libs.nigelPanel');
+         elseif ~isa(nigelPanelObj,'nigeLab.libs.nigelPanel')
+            error('Second input argument must be of class nigeLab.libs.nigelPanel');
          end
+         
+         obj.Panel = nigelPanelObj;
+         
+         if ~isa(obj.Panel.Parent,'matlab.ui.Figure')
+            error(['Must be a "top-level" nigelPanel ' ...
+                   '(nigelPanelObj.Parent must be a figure handle).']);
+         end
+         
+         obj.Figure = obj.Panel.Parent;
+         obj.Figure.WindowButtonMotionFcn = @(src,~)obj.setCursorPos;
          
          obj.guessAlignment;
          obj.buildStreamsGraphics;
          
       end
       
-      % Load the digital stream data (alignments like beam,press break)
-      function parseInputFiles(obj,F)
-         % Initialize data streams as NaN for checks later
-         obj.press = nan;
-         obj.paw = nan;
-         obj.beam = nan;
+      % Create graphics objects associated with this class
+      function graphics = getGraphics(obj)
+         % GETGRAPHICS  Return a struct where fieldnames match graphics
+         %              labels from other "Info" objects so that
+         %              "graphicsUpdater" class can parse interactions with
+         %              the correct objects.
+         %
+         %  graphics = obj.getGraphics;
+         %
+         %  --> 'vidTime_line'     :  obj.vidTime_line
+         %  --> 'alignment_panel'  :  obj.AlignmentPanel
          
-         % Store file info structs as properties
-         obj.streams = F.streams;
-         obj.scalars = F.scalars;
-         
-         % Parse streams
-         s = fieldnames(F.streams);
-         s = s(ismember(s,properties(obj)));
-         for ii = 1:numel(s)
-            f = F.streams.(s{ii});
-            obj.(s{ii}) = loadStream(f);
-         end
-         
-         % Parse scalars
-         s = fieldnames(F.scalars);
-         s = s(ismember(s,properties(obj)));
-         for ii = 1:numel(s)
-            f = F.scalars.(s{ii});
-            obj.(s{ii}) = loadScalar(f);
-         end
-         
-         % Update if appropriate scalar values are found
-         if ~isnan(obj.alignLag)
-            disp('Found previous alignment lag.');
-            obj.setAlignment(obj.alignLag);
-         elseif isnan(obj.alignLag) && ~isnan(obj.guess)
-            disp('Found alignment lag guess.');
-            obj.setAlignment(obj.guess);         
-         end
-         
+         % Pass everything to listener object in graphics struct
+         graphics = struct('vidTime_line',obj.vidTime_line,...
+            'alignment_panel',obj.AlignmentPanel);
       end
+      
       
       % Set new neural time
       function setNeuTime(obj,t)
@@ -227,74 +210,10 @@ classdef alignInfo < handle
          notify(obj,'zoomChanged');
       end
       
-      % Update the current cursor X-position in figure frame
-      function setCursorPos(obj,x)
-         % SETCURSORPOS  Update the current cursor X-position in figure
-         %               frame.
-         %
-         %  obj.setCursorPos(x);  Move the cursor X-position to value in x
-         
-         obj.cursorX = x * diff(obj.ax.XLim) + obj.ax.XLim(1);
-         if obj.moveStreamFlag
-            new_align_offset = obj.computeOffset(obj.curOffsetPt,obj.cursorX);
-            obj.curOffsetPt = obj.cursorX;
-            obj.setAlignment(new_align_offset); % update the shadow positions
-            
-         end
-      end
-      
-      % Create graphics objects associated with this class
-      function graphics = getGraphics(obj)
-         % GETGRAPHICS  Return a struct where fieldnames match graphics
-         %              labels from other "Info" objects so that
-         %              "graphicsUpdater" class can parse interactions with
-         %              the correct objects.
-         %
-         %  graphics = obj.getGraphics;
-         %
-         %  --> 'vidTime_line'     :  obj.vidTime_line
-         %  --> 'alignment_panel'  :  obj.AlignmentPanel
-         
-         % Pass everything to listener object in graphics struct
-         graphics = struct('vidTime_line',obj.vidTime_line,...
-            'alignment_panel',obj.AlignmentPanel);
-      end
       
    end
    
    methods (Access = private)
-      % Get best of offset using cross-correlation of time series
-      function guessAlignment(obj)
-         % GUESSALIGNMENT  Compute "best guess" offset using
-         %                 cross-correlation of time-series.
-         %
-         %  obj.guessAlignment;
-         
-         % If guess already exists, skip this part
-         if ~isnan(obj.alignLag)
-            disp('Skipping computation');
-            return;
-         end
-         
-         % Upsample by 16 because of weird FS used by TDT...
-         ds_fac = round((double(obj.beam.fs) * 16) / obj.FS);
-         x = resample(double(obj.beam.data),16,ds_fac);
-         
-         % Resample DLC paw data to approx. same FS
-         y = resample(obj.paw.data,obj.FS,round(obj.paw.fs));
-         
-         % Guess the lag based on cross correlation between 2 streams
-         tic;
-         fprintf(1,'Please wait, making best alignment offset guess (usually 1-2 mins)...');
-         [R,lag] = getR(x,y);
-         setAlignment(obj,parseR(R,lag));
-         alignGuess = obj.alignLag;
-         save(fullfile(obj.scalars.guess.folder,...
-                       obj.scalars.guess.name),'alignGuess','-v7.3');
-         fprintf(1,'complete.\n');
-         toc;
-      end
-      
       % Make all the graphics for tracking relative position of neural
       % (beam/press) and video (paw probability) time series
       function buildStreamsGraphics(obj)
@@ -381,22 +300,6 @@ classdef alignInfo < handle
          
       end
       
-      % Extend or shrink axes x-limits as appropriate
-      function resetAxesLimits(obj)
-         % RESETAXESLIMITS  Extend or shrink axes x-limits as appropriate
-         %
-         %  obj.resetAxesLimits;
-         
-         obj.axLim = nan(1,2);
-         obj.axLim(1) = obj.xStart;
-         obj.axLim(2) = max(obj.beam.t(end),obj.paw.t(end));
-         if ~obj.zoomFlag
-            set(obj.ax,'XLim',obj.axLim);
-            obj.curAxLim = obj.axLim;
-            notify(obj,'zoomChanged');
-         end
-      end
-      
       % ButtonDownFcn for top axes and children
       function clickAxes(obj)
          % CLICKAXES  ButtonDownFcn for the alignment axes and its children
@@ -466,6 +369,23 @@ classdef alignInfo < handle
          
       end
       
+      % Extend or shrink axes x-limits as appropriate
+      function resetAxesLimits(obj)
+         % RESETAXESLIMITS  Extend or shrink axes x-limits as appropriate
+         %
+         %  obj.resetAxesLimits;
+         
+         obj.axLim = nan(1,2);
+         obj.axLim(1) = obj.xStart;
+         obj.axLim(2) = max(obj.beam.t(end),obj.paw.t(end));
+         if ~obj.zoomFlag
+            set(obj.ax,'XLim',obj.axLim);
+            obj.curAxLim = obj.axLim;
+            notify(obj,'zoomChanged');
+         end
+      end
+      
+      
       % Set the alignment and emit a notification about the event
       function setAlignment(obj,align_offset)
          % SETALIGNMENT  Set alignment and emit notification about it
@@ -478,6 +398,29 @@ classdef alignInfo < handle
          obj.alignLag = align_offset;
          obj.updateStreamTime;
          notify(obj,'moveOffset');
+      end
+      
+      % Update the current cursor X-position in figure frame
+      function setCursorPos(obj,src)
+         % SETCURSORPOS  Update the current cursor X-position based on
+         %               mouse cursor movement in current figure frame.
+         %
+         %  fig.WindowButtonMotionFcn = @(src,~)obj.setCursorPos;  
+         %
+         %  alignInfoObj is not associated with a figure handle explicitly;
+         %  therefore, this method can be set as a callback for any figure
+         %  it is "attached" to 
+         
+         x = src.CurrentPoint(1,1);
+         obj.cursorX = x * diff(obj.ax.XLim) + obj.ax.XLim(1);
+         if obj.moveStreamFlag
+            % If the moveStreamFlag is HIGH, then compute a new offset and
+            % set the alignment using the current cursor position.
+            new_align_offset = obj.computeOffset(obj.curOffsetPt,obj.cursorX);
+            obj.curOffsetPt = obj.cursorX;
+            obj.setAlignment(new_align_offset); % update the shadow positions
+            
+         end
       end
       
       % Updates stream times and graphic object times associated with

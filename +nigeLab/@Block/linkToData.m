@@ -2,12 +2,12 @@ function flag = linkToData(blockObj,suppressWarning)
 %% LINKTODATA  Connect the data saved on the disk to the structure
 %
 %  b = nigeLab.Block;
-%  flag = linkToData(b); % linkToData(b,true) % suppress warnings
+%  flag = linkToData(b); 
+%  linkToData(b,true) % suppress warnings
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+% flag returns true if something was not "linked" correctly. Using the flag
+% returned by nigeLab.Block.linkField, this method issues warnings if not
+% all the files are found during the "link" process.
 
 %% DEFAULTS
 flag = false;

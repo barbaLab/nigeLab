@@ -85,6 +85,11 @@ pars.HasVidStreams = true;
 
 % Stream Names: Most-flexible naming
 % pars.VidStreamName = []; % For "no video streams" case
+
+% IMPORTANT: DO NOT GIVE THESE REDUNDANT NAMES WITH OTHER "STREAMS" (e.g.
+% make sure they have _Likelihood or _X on the end. Otherwise it messes up
+% some of the convenient built-in parsing for methods like
+% blockObj.getStream etc)
 pars.VidStreamName = {'Paw_Likelihood'}; % KUMC: "RC"
 % pars.VidStreamName = {{'D1_Likelihood','D1_X','D1_Y','D1_Z',...
 %                        'D2_Likelihood','D2_X','D2_Y','D2_Z',...
@@ -144,6 +149,8 @@ pars.CameraSourceVar = []; % KUMC: "RC"
 % pars.CameraKey = struct('Index',{1;1;1;1;1;1;2},... % KUMC: "Murphy"
 %    'Source',{'Left-A';'Left-B';'Left-C';'Right-A';'Right-B';'Right-C';'Top-A'});
 pars.CameraKey = struct('Index',1,'Source','Front'); % KUMC: "RC"
+% pars.VideoEventCamera = 'Top-A'; % KUMC: "Murphy"
+pars.VideoEventCamera = 'Front';
 
 % pars.VidStreamSource = [];  % If pars.CameraSourceVar is non-empty
 pars.VidStreamSource = {'Front'}; % KUMC: "RC"
@@ -176,8 +183,7 @@ pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
 [pars.VarsToScore,pars.VarType] = setScoringVars();
 
 % % % -- For Video Alignment -- % % %
-
-
+pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
 
 %% Less-likely to change these parameters
 

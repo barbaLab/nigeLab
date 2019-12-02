@@ -62,9 +62,6 @@ classdef Block < matlab.mixin.Copyable
    %                  data if CAR channels are present.
    %
    %     analyzeRMS - Get RMS for all channels of a desired type of stream.
-   %
-   % Started by: Max Murphy  v1.0  06/13/2018  Original version (R2017b)
-   % Expanded by: MAECI 2018 collaboration (Federico Barban & Max Murphy)
    
    %% PROPERTIES
    % Public properties that can be modified externally
@@ -80,12 +77,12 @@ classdef Block < matlab.mixin.Copyable
       
       Graphics   % Struct for associated graphics objects
       
-      Pars
+      Pars % Parameters struct
    end
    
    % Public properties that can be modified externally but don't show up in
    % the list of fields that you see in the Matlab editor
-   properties (SetAccess = public, Hidden = true)
+   properties (SetAccess = public, Hidden = true, GetAccess = public)
       UserData % Allow UserData property to exist
    end
    
@@ -380,14 +377,17 @@ classdef Block < matlab.mixin.Copyable
    methods (Access = public)
       % Scoring videos
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
-      fig = alignVideo(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
+      fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
       fieldIdx = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
+      offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo);
       
       addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
       info = getScoringMetadata(blockObj,fieldName,hashID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
+      flag = doEventDetection(blockObj,behaviorData,vidOffset) % Detect "Trials" for candidate behavioral Events
+      flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)  % Create "Header" for behavioral Events
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
       flag = doReReference(blockObj)    % Do virtual common-average re-reference
       flag = doSD(blockObj)             % Do spike detection for extracellular field
@@ -397,6 +397,9 @@ classdef Block < matlab.mixin.Copyable
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
 
+      % Methods for streams info
+      stream = getStream(blockObj,streamName,source); % Returns stream data corresponding to streamName
+      
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
       flag = setChannelMask(blockObj,includedChannelIndices) % Set "mask" to look at

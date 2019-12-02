@@ -7,7 +7,9 @@ function flag = setEventData(blockObj,fieldName,propName,eventName,value,rowIdx,
 %  blockObj.SETEVENTDATA('fieldName','propName','eventName',value,rowIdx,colIdx);
 %
 %  Inputs-
-%  fieldName : Char array as the name of the "Events" Field
+%  fieldName : Char array as the name of the "Events" Field. If specified
+%              as empty array ([]), defaults to 
+%              blockObj.Pars.Video.ScoringEventFieldName
 %  eventName : Char array element of 'name' field of Events.(fieldName)
 %  propName : Char array as the name of the "Event" DiskData property:
 %        --> 'type', 'value', 'tag', 'ts', 'snippet', or 'data'
@@ -28,6 +30,11 @@ end
 
 if nargin < 6
    rowIdx = ':';
+end
+
+if isempty(fieldName)
+   blockObj.updateParams('Video');
+   fieldName = blockObj.Pars.Video.ScoringEventFieldName;
 end
 
 if numel(blockObj) > 1

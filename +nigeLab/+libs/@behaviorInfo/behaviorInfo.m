@@ -619,6 +619,7 @@ classdef behaviorInfo < handle
          % OFFSET  Gets the video offset (seconds) for each video
          
          offset = getEventData(obj.Block,obj.fieldName,'ts','Header');
+         offset(isnan(offset)) = 0; % Set any "NaN" offset to zero
       end
       
       % Quick reference for Outcome
