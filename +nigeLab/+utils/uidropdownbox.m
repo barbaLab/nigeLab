@@ -49,7 +49,7 @@ if ~iscell(opts)
 end
 
 if ~iscell(title_str)
-   title_str = {title_str};
+   title_str = repmat({title_str},2,1);
 elseif numel(title_str) < 2
    title_str = [title_str; title_str];
 end
