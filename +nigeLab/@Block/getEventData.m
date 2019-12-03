@@ -180,8 +180,40 @@ if ~any(strncmpi({'Spikes','SpikeFeatures','Clusters','Sorted'},field,7))
    idx = blockObj.getEventsIndex(field,ch);
    
    % Note that .data is STRUCT field; .data.data would be DiskData "data"
-   tmp = blockObj.Events.(field)(idx).data;
-   eventData = tmp.(propName); 
+   eventData = [];
+   if isfield(blockObj.Events,field)
+      if numel(blockObj.Events.(field)) >= idx
+         if isfield(blockObj.Events.(field)(idx),'data')
+            if isa(blockObj.Events.(field)(idx).data,'nigeLab.libs.DiskData')
+               if size(blockObj.Events.(field)(idx).data,2)>=5 % Then it exists and has been initialized correctly
+                  tmp = blockObj.Events.(field)(idx).data;
+                  eventData = tmp.(propName); 
+               else
+                  warning(['DiskData for Events.%s(%g) exists, but is ' ...
+                           'not initialized correctly (too small -- ' ...
+                           'only %g columns).'],field,idx,...
+                           size(blockObj.Events.(field)(idx).data,2));
+                  return;
+               end
+            else
+               warning(['Events.%s(%g) exists, but is not a DiskData ' ...
+                        '(current class is %g).'],field,idx,...
+                        class(blockObj.Events.(field)(idx).data));
+               return;
+            end
+         else
+            warning('''data'' is not a field of Events.%s(%g) yet.',...
+               field,idx);
+            return;
+         end
+      else
+         warning('Events.%s(%g) exceeds array dimensions.',field,idx);
+         return;
+      end
+   else
+      warning('%s is not a field of Block.Events.',field);
+      return;
+   end      
    
    % If a value to match is given, then 
    if ~isnan(matchValue(1))
