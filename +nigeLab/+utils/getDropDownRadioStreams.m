@@ -36,6 +36,6 @@ end
 
 % For Streams Fields that don't have any elements, remove them from the
 % options so the interface doesn't throw warnings.
-opts(rmvec) = [];
+opts(rmvec,:) = [];
 
 end
