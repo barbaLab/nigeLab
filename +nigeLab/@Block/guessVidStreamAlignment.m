@@ -38,10 +38,21 @@ if vidStreamInfo.idx == 0
    offset = 0;
    return;
 end
+
+curAlign = getEventData(blockObj,[],'ts','Header');
+if ~isnan(curAlign)
+   str = nigeLab.utils.uidropdownbox('Overwrite alignment with new guess?',...
+      'Overwrite alignment with new guess?',{'No','Yes'},true);
+   if strcmp(str,'No')
+      offset = curAlign;
+      return;
+   end
+end
+
 blockObj.updateParams('Video');
 
 %% Get streams to correlate
-dig = blockObj.Streams.(digStreamInfo.field)(digStreamInfo.idx);
+dig = blockObj.Streams.(digStreamInfo.field)(digStreamInfo.idx(2));
 vid = blockObj.Videos(vidStreamInfo.vidIdx).at(vidStreamInfo.idx);
 fs = blockObj.Pars.Video.Alignment_FS.(blockObj.RecSystem.Name);
 
@@ -49,19 +60,19 @@ switch blockObj.RecSystem.Name
    case 'TDT'
       % Upsample by 16 because TDT uses multiples of 5 for FS stuff
       ds_fac = round((double(dig.fs) * 16) /fs);
-      x = resample(double(dig.data),16,ds_fac);
+      x = resample(double(dig.data.data),16,ds_fac);
    otherwise
       % Intan recordings sample rates are 20kHz, 30kHz etc.
       ds_fac = round(dig.fs / fs);
-      x = decimate(double(dig.data),ds_fac);
+      x = decimate(double(dig.data.data),ds_fac);
 end
-y = resample(vid.data,fs,round(vid.fs));
+y = resample(double(vid.diskdata.data),fs,round(vid.fs));
 
 % Guess the lag based on cross correlation between 2 streams
 tic;
 fprintf(1,'Please wait, making best alignment offset guess (usually 1-2 mins)...');
 [R,lag] = nigeLab.utils.getR(x,y);
-offset = nigeLab.utils.parseR(R,lag);
+offset = nigeLab.utils.parseR(R,lag,fs);
 setEventData(blockObj,[],'ts','Header',offset);
 fprintf(1,'complete.\n');
 toc;
