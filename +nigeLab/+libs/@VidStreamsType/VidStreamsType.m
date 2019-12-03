@@ -160,7 +160,7 @@ classdef VidStreamsType < handle
       end
       
       % Returns the VidStream corresponding to streamName
-      function stream = getStream(obj,streamName,source,stream)
+      function stream = getStream(obj,streamName,source,scaleOpts,stream)
          % GETSTREAM  Return a struct with the fields 'name', 'data' and
          %              'fs' that corresponds to the video stream named
          %              'streamName'. If obj is an array, then 'data' is
@@ -172,12 +172,17 @@ classdef VidStreamsType < handle
          %
          %  streamName  --  Name of stream
          %  source  --  Signal "source" (camera angle)
+         %  scaleOpts  --  Struct with scaling options for stream
          %  stream  --  Typically not specified; provided by recursive
          %                 method call so that streams can be concatenated
-         %                 together.
+         %                 together.  
+         
+         if nargin < 5
+            stream = nigeLab.utils.initChannelStruct('substreams',1);
+         end
          
          if nargin < 4
-            stream = nigeLab.utils.initChannelStruct('substreams',1);
+            scaleOpts = nigeLab.utils.initScaleOpts();
          end
          
          if nargin < 3
@@ -186,7 +191,7 @@ classdef VidStreamsType < handle
          
          if numel(obj) > 1
             for i = 1:numel(obj)
-               stream = obj(i).getStream(streamName,source,stream);
+               stream = obj(i).getStream(streamName,source,scaleOpts,stream);
             end
             return;
          end
@@ -198,9 +203,13 @@ classdef VidStreamsType < handle
          else
             idx = find(idx,1,'first');
          end
+         % Return stream in standardized "substream" format
+         stream = nigeLab.utils.initChannelStruct('substream',1);
          stream.name = streamName;
          stream.data = [stream.data, obj.at(idx).diskdata.data];
          stream.fs = obj.at(idx).fs;
+         stream.t = (0:(numel(stream.data)-1))/stream.fs;
+         stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
       end
       
       % Set the UNC Path for this object

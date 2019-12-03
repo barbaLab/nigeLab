@@ -1,4 +1,4 @@
-function stream = getStream(blockObj,streamName,source)
+function stream = getStream(blockObj,streamName,source,scaleOpts)
 % GETSTREAM  Returns stream struct field corresponding to streamName
 %
 %  stream = blockObj.getStream('streamName'); 
@@ -8,6 +8,15 @@ function stream = getStream(blockObj,streamName,source)
 %
 %  source      :  (Optional) -- If it's a Video, specify the camera angle
 %                          (source); e.g. 'Front' etc.
+%
+%  scaleOpts   :  (Optional) -- Struct with fields:
+%                          --> 'do_scale'  (set false to skip scaling)
+%                          --> 'range'     ('normalized' or 'fixed_scale')
+%                          --> 'fixed_min' (fixed/known min. value)
+%                          --> 'fixed_range' (only used if range is
+%                                               'fixed_scale'; flat value
+%                                               that range should be scaled
+%                                               to). 
 
 if nargin < 2
    error('Must supply at least two arguments.');
@@ -15,6 +24,14 @@ end
 
 if ~iscell(streamName)
    streamName = {streamName};
+end
+
+if nargin < 4
+   scaleOpts = nigeLab.utils.initScaleOpts();
+elseif isempty(scaleOpts)
+   scaleOpts = nigeLab.utils.initScaleOpts();
+elseif ~isstruct(scaleOpts)
+   scaleOpts = nigeLab.utils.initScaleOpts();
 end
 
 if nargin < 3
@@ -58,7 +75,6 @@ end
 iStream = ismember(name,streamName);
 if sum(iStream) < 1 % No stream in blockObj.Streams; check blockObj.Videos
    stream_ = [];
-   fprintf(1,'No stream named %s in %s\n',streamName{1},blockObj.Name);
 elseif sum(iStream) > 1
    error('Multiple streams with the same name.');
 else
@@ -66,12 +82,22 @@ else
 end
 
 if isempty(stream_) && ~isempty(source)
-   stream = getStream(blockObj.Videos,streamName{1},source);
+   stream = getStream(blockObj.Videos,streamName{1},source,scaleOpts);
+   
 elseif ~isempty(stream_)
    stream_.data = double(stream_.data.data);
+   % Return stream in standardized "substream" format
    stream = nigeLab.utils.initChannelStruct('substream',stream_);
+   stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
+   stream.t = (0:(numel(stream.data)-1))/stream.fs;
+   
 else
    stream = []; % Return empty stream because can't find anything
+   fprintf(1,'No stream named %s in %s\n',streamName{1},blockObj.Name);
 end
+
+   
+
+   
 
 end
