@@ -63,11 +63,13 @@ for iF = 1:numel(F)
    if ismember(dtype,{'Beam','Press','Paw'})
       in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'data');
       data = in.data;
-      save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
       if strcmpi(dtype,'Paw')
          save(nigeLab.utils.getUNCPath(fullfile(block_out,p.VidStreams.Folder,...
             sprintf(p.VidStreams.File,'Front-Paw_Likelihood-Marker',1,'mat'))),'data','-v7.3');
+      else
+         save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
       end
+      
    elseif strcmpi(dtype,'Scoring')
       in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'behaviorData');
       if ~isfield(in,'behaviorData')

@@ -19,7 +19,7 @@ function header = readMatInfoRC(channelInfoFile)
 
 %% Check that input is valid
 acqsys = 'TDT';
-digFields = {'Paw','Beam'};
+digFields = {'Beam'};
 if exist(channelInfoFile,'file')==0
    error('Bad filename: %s',channelInfoFile);
 else
@@ -183,7 +183,7 @@ end
                   'port_name',{'Board Digital Inputs'},...
                   'port_prefix',{'DIN'},...
                   'signal',nigeLab.utils.signal('DigIn'),...
-                  'fs',24414.0625); % Known TDT FS
+                  'fs',24414.0625/2); % From TDT FS
          otherwise
             error('Unrecognized FieldType: %s',FieldType);
       end
