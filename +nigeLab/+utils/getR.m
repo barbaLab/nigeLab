@@ -1,7 +1,8 @@
-function [R,lag] = getR(x,y,varargin)
+function [R,lag] = getR(x,y,wLen)
 %% GETR  Get covariance matrix of two one-dimensional time-series.
 %
-%  R = GETR(x,y,'NAME',value,...);
+%  R = nigeLab.utils.getR(x,y);
+%  R = nigeLab.utils.getR(x,y,wLen);
 %
 %  --------
 %   INPUTS
@@ -10,8 +11,7 @@ function [R,lag] = getR(x,y,varargin)
 %
 %     y        :     Time-series vector (2).
 %
-%  varargin    :     (Optional) 'NAME', value input argument pairs
-%                    -> 'N' (def: 15000) // Window length
+%    wLen      :     (Optional) window length (samples) default: 5000
 %
 %  --------
 %   OUTPUT
@@ -23,20 +23,17 @@ function [R,lag] = getR(x,y,varargin)
 % By: Max Murphy  v1.0  08/20/2018  Original version (R2017b)
 
 %% DEFAULTS
-N = 5000;
-
-%% PARSE VARARGIN
-for iV = 1:2:numel(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
+if nargin < 3
+   wLen = 5000;
 end
 
 %% GET CORRELATION ON SERIES OF WINDOWS
-M = min(numel(x),numel(y)) - N + 1;
+M = min(numel(x),numel(y)) - wLen + 1;
 
-R = nan(2*N-1,M);
+R = nan(2*wLen-1,M);
 
 for iM = 1:M
-   vec = iM:(iM+N-1);
+   vec = iM:(iM+wLen-1);
    [R(:,iM),lag] = xcorr(x(vec) - mean(x(vec)),y(vec) - mean(y(vec)));
 end
 
