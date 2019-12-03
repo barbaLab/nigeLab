@@ -18,7 +18,7 @@ classdef graphicsUpdater < handle
       tNeu                 % Current neural time (TDT recording)
       
       % Video properties
-      curVidIdx = 1        % Current video index
+      curVid            % Current video index
       videoFile_list       % 'dir' struct of videos
       videoFile            % VideoReader file object
       
@@ -111,7 +111,7 @@ classdef graphicsUpdater < handle
          obj.Parent = vidInfoObj.Panel.Parent; % Set parent Figure handle
          obj.addListeners(vidInfoObj,varargin{:});
          
-         obj.setVideo;
+         obj.initAllGraphics(); % Update and initialize all graphics
       end
       
       % Add listeners for events from different objects tied to UI
@@ -141,8 +141,6 @@ classdef graphicsUpdater < handle
                obj.lh = [obj.lh; addlistener(target,...
                   'frameChanged',@obj.frameChangedVidCB)];
                obj.lh = [obj.lh; addlistener(target,...
-                  'vidChanged',@obj.vidChangedVidCB)];
-               obj.lh = [obj.lh; addlistener(target,...
                   'timesChanged',@obj.timesChangedVidCB)];
 
                % Add listeners to vidInfo object from graphicsUpdater
@@ -152,6 +150,11 @@ classdef graphicsUpdater < handle
                   'trialChanged',@target.trialChangedCB)];
                obj.lh = [obj.lh; addlistener(obj,...
                   'offsetChanged',@target.offsetChangedCB)];
+               obj.lh = [obj.lh; addlistener(obj,...
+                  'vidChanged',@target.vidChangedCB)];
+               
+               % Update video index
+               obj.curVid = target.cur;
 
             case 'nigeLab.libs.behaviorInfo'
                % Add listeners for events from behaviorInfo object
@@ -165,6 +168,10 @@ classdef graphicsUpdater < handle
                   'scoredValueChanged',@obj.scoredValueChangedBehaviorCB)];
                obj.lh = [obj.lh; addlistener(target,...
                   'countIsZero',@obj.updateBehaviorZeroCaseCB)];
+               
+               % Update variable values and variable names
+               obj.varVal = target.varVal;
+               obj.varName = target.VarName;
 
             case 'nigeLab.libs.alignInfo'
                % Add listeners for events from alignInfoObj
@@ -180,7 +187,10 @@ classdef graphicsUpdater < handle
                % Add listeners to alignInfoObj from  graphicsUpdater
                obj.lh = [obj.lh; addlistener(obj, ...
                   'timesChanged',@target.timesChangedCB)];
-
+               
+               % Update offset
+               obj.offset = target.offset;
+               
             otherwise
                fprintf(1,'%s is not a class supported by nigeLab.libs.graphicsUpdater.\n',...
                   class(target));
@@ -369,12 +379,10 @@ classdef graphicsUpdater < handle
       function setVideo(obj,idx)
          % SETVIDEO  Set the current VideoReader object
          %
-         %  obj.setVideo; Uses value in obj.curVidIdx to set video
-         %  obj.setVideo(idx);  Update obj.curVidIdx and set video
+         %  obj.setVideo; Uses value in obj.curVid to set video
+         %  obj.setVideo(idx);  Update obj.curVid and set video
          
-         if nargin > 1
-            obj.curVidIdx = idx;
-         end
+         obj.curVid = idx;
          
          % Get rid of the old VideoReader (if there is one)
          if ~isempty(obj.videoFile)
@@ -383,42 +391,13 @@ classdef graphicsUpdater < handle
             end
          end
          
-         obj.videoFile = getVideoReader(obj.Block.Videos(obj.curVidIdx).v);
+         obj.videoFile = getVideoReader(obj.Block.Videos(obj.curVid).v);
+         
+         % Issue 'vidChanged' notification, which is listened for by the
+         % vidInfo object.
          notify(obj,'vidChanged');
       end
-      
-      % Change any graphics associated with a different video
-      function vidChangedVidCB(obj,src,~)
-         % VIDCHANGEDVIDCB  Callback for when vidInfo object issues the
-         %                  'vidChanged' event notification.
-         %
-         %  addlistener(vidInfoObj,'vidChanged',@obj.vidChangedVidCB);
-         
-         if obj.verbose
-            s = nigeLab.utils.getNigeLink(...
-               'nigeLab.libs.graphicsUpdater',...
-               'vidChangedVidCB');
-            fprintf(1,'-->\tvidChanged event triggered: %s\n',s);
-         end
-         
-         % Set the video reader and index
-         obj.setVideo(src.vidListIdx);
-         
-         % Update metadata about new video
-         FPS = obj.Block.Videos(obj.curVidIdx).v.FS;
-         nFrames = obj.Block.Videos(obj.curVidIdx).v.NFrames;
-         src.setVideoInfo(FPS,nFrames);
-         
-         % Update the image (in case dimensions are different)
-         obj.updateImageObject();
-         
-         % Re-initialize video time to zero
-         src.setFrame(1,true); % Force to "frame 1"
-         obj.updateZoom;
-         
-      end
-      
-      
+          
       %% Functions for alignInfo class:
       % Change color of the animal name display
       function saveFileCB(obj) 
@@ -881,7 +860,9 @@ classdef graphicsUpdater < handle
       end
    end
    
+   % Private methods only used by this class
    methods (Access = private)
+      % Method to find properties based on their attribute values
       function cl_out = findAttrValue(obj,attrName,attrValue)
          % FINDATTRVALUE  Find properties given an attribute value
          %
@@ -917,6 +898,20 @@ classdef graphicsUpdater < handle
             end
          end
          cl_out = cl_array(1:ii);
+      end
+      
+      % Method to update relevant properties and update graphics. Should
+      % only be called ONCE, from the constructor.
+      function initAllGraphics(obj)
+         % INITALLGRAPHICS  Called ONCE from the constructor ONLY
+         %
+         %  obj.initAllGraphics();
+         
+         % Set the current video 
+         obj.setVideo(obj.curVid);
+         
+         % Any other graphics initializations should happen below:
+         
       end
    end
 end

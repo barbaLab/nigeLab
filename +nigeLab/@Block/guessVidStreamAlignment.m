@@ -21,7 +21,7 @@ if nargin < 3
    if isempty(blockObj.UserData)
       error('If UserData property is not set, must provide all 3 args.');
    end
-   digStreamInfo = blockObj.UserData.digStreams(1);
+   digStreamInfo = blockObj.UserData.digStreamInfo(1);
 else
    digStreamInfo = digStreamInfo(1); % Only use first array element
 end
@@ -30,21 +30,22 @@ if nargin < 2
    if isempty(blockObj.UserData)
       error('If UserData property is not set, must provide all 3 args.');
    end
-   vidStreamInfo = blockObj.UserData.vidStreams;
+   vidStreamInfo = blockObj.UserData.vidStreamInfo;
 end
 
 if vidStreamInfo.idx == 0
    warning(1,'-->\tNo vidStream selected (idx == 0).\n');
-   offset = 0;
+   offset = zeros(size(blockObj.Videos));
    return;
 end
 
 curAlign = getEventData(blockObj,[],'ts','Header');
-if ~isnan(curAlign)
+if any(~isnan(curAlign))
    str = nigeLab.utils.uidropdownbox('Overwrite alignment with new guess?',...
       'Overwrite alignment with new guess?',{'No','Yes'},true);
    if strcmp(str,'No')
       offset = curAlign;
+      offset(isnan(curAlign)) = 0; % "zero out" any NaN possibilities
       return;
    end
 end
@@ -52,21 +53,22 @@ end
 blockObj.updateParams('Video');
 
 %% Get streams to correlate
-dig = blockObj.Streams.(digStreamInfo.field)(digStreamInfo.idx(2));
-vid = blockObj.Videos(vidStreamInfo.vidIdx).at(vidStreamInfo.idx);
+dig = blockObj.getStream(digStreamInfo.name);
+vid = getStream(blockObj.Videos,vidStreamInfo.name,...
+                  blockObj.Pars.Video.VideoEventCamera);
 fs = blockObj.Pars.Video.Alignment_FS.(blockObj.RecSystem.Name);
 
 switch blockObj.RecSystem.Name
    case 'TDT'
       % Upsample by 16 because TDT uses multiples of 5 for FS stuff
       ds_fac = round((double(dig.fs) * 16) /fs);
-      x = resample(double(dig.data.data),16,ds_fac);
+      x = resample(double(dig.data),16,ds_fac);
    otherwise
       % Intan recordings sample rates are 20kHz, 30kHz etc.
       ds_fac = round(dig.fs / fs);
-      x = decimate(double(dig.data.data),ds_fac);
+      x = decimate(double(dig.data),ds_fac);
 end
-y = resample(double(vid.diskdata.data),fs,round(vid.fs));
+y = resample(double(vid.data),fs,round(vid.fs));
 
 % Guess the lag based on cross correlation between 2 streams
 tic;

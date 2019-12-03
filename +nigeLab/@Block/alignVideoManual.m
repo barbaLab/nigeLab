@@ -1,11 +1,12 @@
-function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
+function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamInfo)
 % ALIGNVIDEOMANUAL  Manually obtain offset between video and neural record,
 %                    using specific streams from the digital record that
 %                    are overlayed on top of streams parsed from the video
 %                    record.
 %
 %  blockObj.alignVideoManual();
-%  blockObj.alignVideoManual(digStreamName,vidStreamName);
+%  blockObj.alignVideoManual(digStreamName);
+%  blockObj.alignVideoManual(digStreamName,vidStreamInfo);
 %
 %  --------
 %   INPUTS
@@ -17,18 +18,8 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 %                       digStreamInfo(k).name =  'Beam';
 %                       --> 'name' matches 'custom_channel_name' field
 %
-%  vidStreamName  :  Name field of 'signal' for blockObj.Videos.at(k),
-%                    where the k-th field has the name corresponding to
-%                    that element of "vidStreamName"
-%                       --> e.g. 'Paw_Likelihood'
-%                       Should only use one Video Stream Name so it can
-%                       only be a single character array, not a cell array.
-%                       * Will be plotted as a marker stream representing
-%                       data synchronized with the video record, which can
-%                       be "dragged" to properly overlay with the digital
-%                       record while visually ensuring that the new
-%                       synchronization makes sense by watching the video
-%                       at key transitions in both sets of streams. *
+%  vidStreamInfo  :  Same as digStreamInfo, but for a single vidStream of
+%                    interest (optional).
 %
 %  --------
 %   OUTPUT
@@ -46,68 +37,23 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 
 %% Parse inputs
 if nargin < 3
-   vidStreamName = [];
+   vidStreamInfo = [];
 end
 
 if nargin < 2
    digStreamInfo = [];
 end
 
-% Parse digStreamName input
-if isempty(digStreamInfo)
-   [title_str,prompt_str,opts] = nigeLab.utils.getDropDownRadioStreams(blockObj);
-   str = 'Yes';
-   digInfo = struct('name',[],'field',[],'idx',[]);
-   k = 0;
-   while strcmp(str,'Yes')
-      k = k + 1;
-      [digInfo(k).name,digInfo(k).field,digInfo(k).idx] = ...
-         nigeLab.utils.uidropdownradiobox(...
-            title_str,...
-            prompt_str,...
-            opts,...
-            false);
-      if isnan(digInfo(k).idx(1))
-         break;
-      end
-      opts{digInfo(k).idx(1,1),1} = setdiff(opts{digInfo(k).idx(1,1),1},...
-         digInfo(k).name);
-      if isempty(opts{digInfo(k).idx(1,1),1})
-         break;
-      end
-      str = nigeLab.utils.uidropdownbox({'Selection Option Window';...
-         'Select More Streams?'},...
-         {'Add More Digital Streams?';'(Synchronized)'},{'No','Yes'},false);
-      
-   end
-end
-
-% Parse vidStreamName input
-opts = getName(blockObj.Videos,'vidstreams');
-if ~iscell(opts)
-   opts = {opts};
-end
-% 'none' is default response for uidropdownbox; if we don't want to use a
-% video stream for alignment, then select 'none' and only drag the digital
-% record to match up to the frames of interest (e.g. watch video until
-% first LED goes on, then drag LED high signal so that it transitions to
-% high for the first time at the same time as the current video time
-% marker)
-opts = ['none', opts];
-if isempty(vidStreamName)
-   vidStreamName = nigeLab.utils.uidropdownbox('Select Vid Stream',...
-      {'Video Stream to Use';'(Non-Synchronized)'},opts);
-end
-% Subtract 1 from strIdx to account for 'none' being added
-strIdx = find(ismember(opts,vidStreamName),1,'first')-1;
+% Get the info for digital and video streams to synchronize
+digStreamInfo = getDigStreamInfo(blockObj,digStreamInfo);
+vidStreamInfo = getVidStreamInfo(blockObj,vidStreamInfo);
 
 % Assign stream info to blockObj so it is passed to alignInfo object
 blockObj.UserData = struct(...
-   'digStreams',digInfo,...
-   'vidStreams',struct('name',opts{strIdx+1},'idx',strIdx,'vidIdx',1));
+   'digStreamInfo',digStreamInfo,...
+   'vidStreamInfo',vidStreamInfo);
 
 %% Build graphics
-
 % Make figure to put everything in
 fig=figure('Name','Manual Video Alignment Interface',...
    'Color',nigeLab.defaults.nigelColors('background'),...
@@ -160,6 +106,90 @@ set(fig,'DeleteFcn',{@deleteFigCB,alignInfoObj,vidInfoObj,graphicsUpdateObj});
       delete(a);
       delete(v);
       delete(g);
+   end
+
+% Function for selecting digital streams to use
+   function digStreamInfo = getDigStreamInfo(blockObj,d)
+      % GETDIGSTREAMINFO  Returns structs with info for the digital streams 
+      %                   to use in the alignment interface.
+      %
+      %  digStreamInfo = getDigStreamInfo(blockObj,d);
+      
+      % Parse digStreamInfo input
+      if ~isempty(d)
+         digStreamInfo = d;
+         return;
+      end
+      
+      % Make dropdown radio box
+      [title_str,prompt_str,opts] = ...
+         nigeLab.utils.getDropDownRadioStreams(blockObj);
+      str = 'Yes';
+      d = struct('name',[],'field',[],'idx',[]);
+      k = 0;
+      % Allow user to select multiple streams
+      while strcmp(str,'Yes')
+         k = k + 1;
+         [d(k).name,d(k).field,d(k).idx] = ...
+            nigeLab.utils.uidropdownradiobox(...
+               title_str,...
+               prompt_str,...
+               opts,...
+               false);
+         if isnan(d(k).idx(1))
+            break;
+         end
+         opts{d(k).idx(1,1),1} = setdiff(opts{d(k).idx(1,1),1},...
+            d(k).name);
+         if isempty(opts{d(k).idx(1,1),1})
+            break;
+         end
+         % Second dropdownbox (simple) allows you to keep adding streams
+         str = nigeLab.utils.uidropdownbox({'Selection Option Window';...
+            'Select More Streams?'},...
+            {'Add More Digital Streams?';'(Synchronized)'},{'No','Yes'},...
+            false);
+
+      end
+      digStreamInfo = d;
+   end
+
+% Function for selecting video streams to use
+   function vidStreamInfo = getVidStreamInfo(blockObj,v)
+      % GETVIDSTREAMINFO  Returns structs with info for the video streams
+      %                   to use
+      %
+      %  vidStreamInfo = getVidStreamInfo(blockObj,v);
+
+      if ~isempty(v)
+         vidStreamInfo = v;
+         return;
+      end
+      
+      % Parse vidStreamName input
+      opts = getName(blockObj.Videos,'vidstreams');
+      if ~iscell(opts)
+         opts = {opts};
+      end
+      % 'none' is default response for uidropdownbox; if we don't want to use a
+      % video stream for alignment, then select 'none' and only drag the digital
+      % record to match up to the frames of interest (e.g. watch video until
+      % first LED goes on, then drag LED high signal so that it transitions to
+      % high for the first time at the same time as the current video time
+      % marker)
+      opts = ['none', opts];
+      vStrName = nigeLab.utils.uidropdownbox('Select Vid Stream',...
+         {'Video Stream to Use';'(Non-Synchronized)'},opts);
+      % Subtract 1 from strIdx to account for 'none' being added
+      strIdx = find(ismember(opts,vStrName),1,'first')-1;
+      if strIdx == 0
+         vidStreamInfo = [];
+      end
+      
+      vidStreamInfo = struct;
+      vidStreamInfo.name = opts{strIdx+1};
+      vidStreamInfo.idx = strIdx;
+
    end
 
 % Function for hotkeys

@@ -40,8 +40,8 @@ switch nargin
             Col = [0, 0, 0]./255; % black
          case {'background','bg',0}
             Col = [18, 18, 18]./255; % nearly black
-         case {'surface','sfc','gray','grey',0.1}
-            Col = [55, 56, 58]./255; % grey-ish
+         case {'surface','sfc','dark_gray','dark_grey','dark',0.1}
+            Col = [55, 56, 58]./255; % dark grey
          case {'onsurface','onsfc',0.2}
             Col = [255, 255, 255]./255; % white
          case {'red','r'}
@@ -50,6 +50,8 @@ switch nargin
             Col = [240, 25, 240]./255; % magenta
          case {'blue','b'}
             Col = [25, 25, 240]./255; % blue
+         case {'light_grey','light_gray','light'}
+            Col = [220, 220, 220]./255; % light grey
          otherwise
             Col = [0, 0, 0]./255;
             warning('%s is not a recognized nigelColors option.',input);

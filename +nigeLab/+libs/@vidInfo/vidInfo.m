@@ -26,12 +26,12 @@ classdef vidInfo < handle
       
       vidPanel        % Container for video
       
-      vidListIdx = 0    % Index of current video in use (from array)
+      cur = 1           % Index of current video in use (from array)
       frame = 0;        % Frame currently viewed
       playTimer         % Video playback timer
       
-      videoStart = 0  % Video offset from neural data (seconds)
-      vid_F           % Struct from 'dir' of videos associated with object
+      offset = 0  % Video offset from neural data (seconds)
+      vid_F       % Struct from 'dir' of videos associated with object
       
       f     % field name for scoring events ('ScoredEvents' by default)
    end
@@ -282,12 +282,12 @@ classdef vidInfo < handle
          
          % If the given video index value is the same as the current video 
          % index, don't update anything
-         if val == obj.vidListIdx % obj.vidListIdx is initialized to zero
+         if val == obj.cur % obj.cur is initialized to zero
             return;
          end
          
-         % Update value of vidListIdx and issue 'vidChanged' notification
-         obj.vidListIdx = val;
+         % Update value of cur and issue 'vidChanged' notification
+         obj.cur = val;
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
@@ -396,10 +396,10 @@ classdef vidInfo < handle
          end
          
          % Update offset value
-         obj.videoStart = new_offset;
+         obj.offset = new_offset;
          
          % Also update the actual offset between tNeu and tVid
-         obj.tNeu = obj.tVid + new_offset(max(obj.vidListIdx,1));
+         obj.tNeu = obj.tVid + new_offset(max(obj.cur,1));
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
@@ -410,19 +410,21 @@ classdef vidInfo < handle
       end
       
       % Add information about a new video file
-      function setVideoInfo(obj,frameRate,nFrames)
+      function setVideoInfo(obj)
          % SETVIDEOINFO  Add information about new video file
          %
-         %  obj.setVideoInfo(frameRate,nFrames); 
-         %
-         %  inputs:
-         %  frameRate  --  Frames per second of video recording
-         %  nFrames  --  Total number of frames in video recording
-         
-         obj.FPS = frameRate; 
-         obj.maxFrame = nFrames;
+         %  obj.setVideoInfo(); 
+
+         obj.FPS = obj.Block.Videos(obj.cur).v.FS;
+         obj.maxFrame = obj.Block.Videos(obj.cur).v.NFrames;
 
          obj.TimerPeriod = 2*round(1000/obj.FPS)/1000;
+         if ~isempty(obj.playTimer)
+            if isvalid(obj.playTimer)
+               delete(obj.playTimer);
+            end
+         end
+         
          obj.playTimer = timer('TimerFcn',@(~,~)obj.advanceFrame, ...
                                'ExecutionMode','fixedRate');
          setFrame(obj);
@@ -458,8 +460,8 @@ classdef vidInfo < handle
          
          % Update private obj.tVid property
          obj.tVid = newVidTime;
-         % Update videoStart property
-         obj.videoStart(max(obj.vidListIdx,1)) = obj.tNeu - obj.tVid;
+         % Update offset property
+         obj.offset(max(obj.cur,1)) = obj.tNeu - obj.tVid;
          
       end
       
@@ -504,6 +506,34 @@ classdef vidInfo < handle
          
          obj.setFrameFromTime(src.tVid);
          
+      end
+      
+      % Change any graphics associated with a different video
+      function vidChangedCB(obj,src,~)
+         % VIDCHANGEDCB  Callback for when graphics object issues the
+         %               'vidChanged' event notification.
+         %
+         %  addlistener(graphicsUpdaterObj,'vidChanged',...
+         %     @obj.vidChangedCB);
+         
+         if obj.verbose
+            s = nigeLab.utils.getNigeLink(...
+               'nigeLab.libs.graphicsUpdater',...
+               'vidChangedVidCB');
+            fprintf(1,'-->\tvidChanged event triggered: %s\n',s);
+         end
+         
+         % Set the video reader and index
+         src.setVideo(obj.cur);
+         
+         % Update metadata about new video
+         obj.setVideoInfo();
+         
+         % Update the image (in case dimensions are different)
+         src.updateImageObject();
+
+         src.updateZoom;
+         notify(obj,'vidChanged');
       end
    end
    
@@ -626,7 +656,7 @@ classdef vidInfo < handle
          %
          %  neuTime = obj.toNeuTime(vid_t);  vid_t: Video timestamp
          
-         neuTime = vid_t + obj.videoStart(obj.vidListIdx);
+         neuTime = vid_t + obj.offset(obj.cur);
       end
       
       % Get "video time" from corresponding neural timestamp
@@ -635,7 +665,7 @@ classdef vidInfo < handle
          %
          %  vidTime = obj.toVidTime(neu_t);  neu_t: Neural timestamp
          
-         vidTime = neu_t - obj.videoStart(obj.vidListIdx);
+         vidTime = neu_t - obj.offset(obj.cur);
       end  
 
    end
@@ -650,11 +680,11 @@ classdef vidInfo < handle
          %  obj.updateTime;  Uses obj.frame, obj.FPS to set video time
          %                   (obj.tVid); after setting obj.tVid, updates
          %                   neural time (obj.tNeu) with known offset
-         %                   between video and neural data (obj.videoStart)
+         %                   between video and neural data (obj.offset)
          
          % obj.frame should be set prior to "updateTime"
          obj.tVid = obj.frame / obj.FPS;
-         obj.tNeu = obj.tVid + obj.videoStart;
+         obj.tNeu = obj.tVid + obj.offset;
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...

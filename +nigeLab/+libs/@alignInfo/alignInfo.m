@@ -34,10 +34,10 @@ classdef alignInfo < handle
       FS = 125;                  % Resampled rate for correlation
       VID_FS = 30000/1001;       % Frame-rate of video
       currentVid = 1;            % If there is a list of videos
-      axLim                      % Stores "outer" axes ranges
+      axLim = [0 1000];          % Stores "outer" axes ranges
       zoomOffset = 4;            % # Seconds to buffer zoom window
       moveStreamFlag = false;    % Flag for moving objects on top axes
-      cursorX                    % Current cursor X position on figure
+      cursorX                    % "Locked" cursor time point to reference
       curOffsetPt                % Last-clicked position for dragging line
       xStart = -10;              % (seconds) - lowest x-point to plot
       zoomFlag = false;          % Is the time-series axis zoomed in?      
@@ -92,10 +92,9 @@ classdef alignInfo < handle
          obj.Figure = obj.Panel.Parent;
          obj.Figure.WindowButtonMotionFcn = @obj.setCursorPos;
 
-%          blockObj.guessVidStreamAlignment;
-         obj.initGraphicsHandles;
+         obj.initGraphicsHandles();
          obj.buildStreamsGraphics;
-         
+         obj.initOffset();
       end
       
       % Create graphics objects associated with this class
@@ -205,7 +204,7 @@ classdef alignInfo < handle
    end
    
    % "CALLBACK" methods (for event listeners)
-   methods (Access = public)
+   methods (Access = public)      
       % Callback for when time changes on graphicsUpdater object
       function timesChangedCB(obj,src,~)
          % TIMESCHANGEDCB  Callback that is requested whenever there is a
@@ -329,15 +328,17 @@ classdef alignInfo < handle
          %              sync time series (e.g. BEAM BREAKS or BUTTON PRESS)
          
          if ~obj.moveStreamFlag
+            % Toggle to "dragging" the data stream graphic object
             obj.moveStreamFlag = true;
             obj.curOffsetPt = obj.cursorX;
-            src.Color = [0.5 0.5 0.5];
-            src.LineStyle = '-.';
-            src.LineWidth = 1;
+            src.Color = nigeLab.defaults.nigelColors('light');
+            src.LineStyle = '--';
+            src.LineWidth = 2.5;
          else
+            % "Release" the data stream graphic object
             src.Color = src.UserData;
             src.LineStyle = '-';
-            src.LineWidth = 2;
+            src.LineWidth = 1.5;
             obj.resetAxesLimits;
             obj.moveStreamFlag = false;
          end
@@ -367,18 +368,26 @@ classdef alignInfo < handle
       end
       
       % Initialize struct for main graphics reference
-      function initGraphicsHandles(obj)
+      function initGraphicsHandles(obj,digStreamInfo,vidStreamInfo)
          % INITGRAPHICSHANDLES  Initialize struct for main graphics ref
          %
          %  obj.initGraphicsHandles;
          %
          %  Initializes obj.dig and obj.vid structs
          
+         if nargin < 3
+            vidStreamInfo = obj.Block.UserData.vidStreamInfo;
+         end
+         
+         if nargin < 2
+            digStreamInfo = obj.Block.UserData.digStreamInfo;
+         end
+         
          obj.dig = struct;
          obj.vid = struct;
          
          % First, deal with digital streams
-         ds = obj.Block.UserData.digStreams;
+         ds = digStreamInfo;
          n = numel(ds);
          obj.dig = struct('name',cell(1,n),...
             'data',cell(1,n),...
@@ -397,7 +406,7 @@ classdef alignInfo < handle
             obj.dig(i).h = gobjects(1);
          end
          
-         vs = obj.Block.UserData.vidStreams;
+         vs = vidStreamInfo;
          if isempty(vs)
             % If empty, initialize "empty" matching fields
             obj.vid.name = '';
@@ -415,6 +424,36 @@ classdef alignInfo < handle
          obj.vid.t0 = s.t;
          obj.vid.fs = s.fs;
          obj.vid.h = gobjects(1);
+      end
+      
+      % Initialize offset depending on contents of diskfile
+      function initOffset(obj,forcedOffset)
+         % INITOFFSET  Initialize offset depending on contents of diskfile
+         %
+         %  obj.initOffset();  Check diskfile and use current offset value
+         %                     or else make "best guess" and use that.
+         %
+         %  obj.initOffset(forcedOffset); Uses scalar or vector
+         %                                forcedOffset for obj.offset
+         %                                instead.
+         
+         if nargin > 1
+            obj.offset = forcedOffset;
+            return;
+         end
+         
+         curOffset = getEventData(obj.Block,[],'ts','Header');
+         if any(~isnan(curOffset))
+            % Suppress NaN values if at least one offset is set already
+            curOffset(isnan(curOffset)) = 0; 
+         else
+            % Otherwise, everything was NaN
+            curOffset = obj.Block.guessVidStreamAlignment(...
+               obj.Block.UserData.digStreamInfo,...
+               obj.Block.UserData.vidStreamInfo);
+         end
+         obj.offset = curOffset;
+         obj.updateStreamTime;   % Reflect the updated offset
       end
       
       % Extend or shrink axes x-limits as appropriate
