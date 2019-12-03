@@ -61,7 +61,7 @@ classdef vidInfo < handle
 %% Events
    events
       frameChanged  % Emitted AFTER any frame changes
-      timesUpdated  % Emitted AFTER any video/neural times are updated
+      timesChanged  % Emitted AFTER any video/neural times are updated
       vidChanged    % Emitted AFTER video is changed
       offsetChanged % Emitted AFTER offset is changed
    end
@@ -116,6 +116,17 @@ classdef vidInfo < handle
          obj.buildVidSelectionList;
       end
        
+      % Clean up TIMERS (no VIDEOREADER associated with VIDINFO)
+      function delete(obj)
+         % DELETE  Ensure TIMER is deleted on vidInfo object destruction
+         
+         if ~isempty(obj.playTimer)
+            if isvalid(obj.playTimer)
+               delete(obj.playTimer);
+            end
+         end
+      end
+      
       % Play or pause the video
       function playPauseVid(obj)
          % PLAYPAUSEVID  Toggle between stopping and starting the "play
@@ -131,11 +142,18 @@ classdef vidInfo < handle
       end
       
       % Function that runs while video is playing from timer object
-      function advanceFrame(obj,~,~) 
-         % ADVANCEFRAME Increment the current frame by 1
+      function advanceFrame(obj,n) 
+         % ADVANCEFRAME Increment the current frame by n frames
+         %
+         %  obj.advanceFrame;    Advance frame index by 1 frame
+         %  obj.advanceFrame(n); Advance frame index by n frames
+         
+         if nargin < 2
+            n = 1;
+         end
          
          %executed at each timer period, when playing the video
-         newFrame = obj.frame + 1;
+         newFrame = obj.frame + n;
          obj.setFrame(newFrame);
       end
       
@@ -143,7 +161,12 @@ classdef vidInfo < handle
       function retreatFrame(obj,n)
          % RETREATFRAME  Go backwards n frames
          %
-         %  obj.retreatFrame(n);
+         %  obj.retreatFrame;     Rewind frame index by 1 frame
+         %  obj.retreatFrame(n);  Rewind frame index by n frames
+         
+         if nargin < 2
+            n = 1;
+         end
          
          newFrame = obj.frame - n;
          obj.setFrame(newFrame);
@@ -400,7 +423,7 @@ classdef vidInfo < handle
          obj.maxFrame = nFrames;
 
          obj.TimerPeriod = 2*round(1000/obj.FPS)/1000;
-         obj.playTimer = timer('TimerFcn',@obj.advanceFrame, ...
+         obj.playTimer = timer('TimerFcn',@(~,~)obj.advanceFrame, ...
                                'ExecutionMode','fixedRate');
          setFrame(obj);
       end
@@ -437,6 +460,49 @@ classdef vidInfo < handle
          obj.tVid = newVidTime;
          % Update videoStart property
          obj.videoStart(max(obj.vidListIdx,1)) = obj.tNeu - obj.tVid;
+         
+      end
+      
+   end
+   
+   % "CALLBACK" methods assigned as event listeners
+   methods (Access = public)
+      % Callback function for 'axesClick' notification from graphics
+      function axesClickCB(obj,src,~)
+         % AXESCLICKCB  Callback that listens for 'axesClick'
+         %
+         %  addlistener(graphicsUpdaterObj,...
+         %       'axesClick',@obj.axesClickCB);
+         %
+         %  src  -- graphicsUpdaterObj
+         
+         obj.setFrameFromTime(src.timeAtClickedPoint);
+      end
+      
+      % Callback function for 'offsetChanged' notification from graphics
+      function offsetChangedCB(obj,src,~)
+         % OFFSETCHANGEDCB  Callback that listens for 'offsetChanged'
+         %                  notification from nigeLab.libs.graphicsUpdater
+         %                  object. When it hears this event, it updates
+         %                  the offset between video and neural time.
+         
+         obj.setOffset(src.offset);
+      end
+      
+      % Callback function for 'trialChanged' notification from graphics
+      function trialChangedCB(obj,src,~)
+         % TRIALCHANGEDCB  Callback function executed on 'trialChanged'
+         %                 event notification issued by 'graphicsUpdater'
+         %                 object (src).
+         %
+         %  addlistener(graphicsUpdaterObj,'trialChanged',...
+         %     @vidInfoObj.trialChangedCB);
+         %
+         %  src  --  nigeLab.libs.graphicsUpdater object. 
+         %
+         %  Uses src.tVid to update the current frame from the video time.
+         
+         obj.setFrameFromTime(src.tVid);
          
       end
    end
@@ -593,9 +659,9 @@ classdef vidInfo < handle
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
                'updateTime');
-            fprintf(1,'-->\ttimesUpdated event issued: %s\n',s);
+            fprintf(1,'-->\ttimesChanged event issued: %s\n',s);
          end 
-         notify(obj,'timesUpdated');
+         notify(obj,'timesChanged');
       end
    end
    

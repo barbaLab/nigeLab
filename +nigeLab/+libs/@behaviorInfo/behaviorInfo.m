@@ -42,7 +42,7 @@ classdef behaviorInfo < handle
       
       N       % Total number of trials
       
-      VideoStart = 0; % Default to 0 offset
+      offset = 0; % Default to 0 offset
       
    end
    
@@ -80,13 +80,12 @@ classdef behaviorInfo < handle
    
    %% Events
    events % These correspond to different scoring events
-      update      % When a value is modified during scoring
-      newTrial    % Switch to a new trial
-      load        % When a behavior file is loaded
+      scoredValueChanged      % When a value is modified during scoring
+      trialChanged            % Switch to a new trial
       saveFile    % When file is saved
       closeReq    % When UI is requested to close
       countIsZero % No pellets are on platform, or pellet not present
-      nSuccessChanged % # successful trials changed
+      nSuccessChanged         % # successful trials changed
    end
    
    %% Methods
@@ -451,9 +450,9 @@ classdef behaviorInfo < handle
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.behaviorInfo',...
                'setTrial');
-            fprintf(1,'-->\tnewTrial event issued: %s\n',s);
+            fprintf(1,'-->\ttrialChanged event issued: %s\n',s);
          end 
-         notify(obj,'newTrial');
+         notify(obj,'trialChanged');
 
       end
       
@@ -471,6 +470,12 @@ classdef behaviorInfo < handle
       % Set all associated values
       function setValueAll(obj,idx,val)
          % SETVALUEALL  Set all associated values of behavior
+         %
+         %  obj.setValueAll(idx,val);
+         %  
+         %  idx  --  Trial index to set.
+         %  val  --  New values to update obj.varVal (the current trial's
+         %              values for each variable to be scored).
          
          vec = (1:obj.N).';
          obj.varVal(idx) = val;
@@ -479,9 +484,9 @@ classdef behaviorInfo < handle
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.behaviorInfo',...
                'setValueAll');
-            fprintf(1,'-->\tupdate event issued: %s\n',s);
+            fprintf(1,'-->\tscoredValueChanged event issued: %s\n',s);
          end
-         notify(obj,'update'); % Update first to display it
+         notify(obj,'scoredValueChanged'); % Update first to display it
          if strcmpi(obj.getCurVarType,'Meta')
             colIdx = find(obj.idx,1,'first')+1;
             val = repmat(val,numel(vec),1);
@@ -867,7 +872,11 @@ classdef behaviorInfo < handle
       
       % Get key "Events" properties for quick reference
       function parseEventProperties(obj)
-         obj.VideoStart = obj.Offset;
+         % PARSEEVENTPROPERTIES  Get key "Events" properties for quick ref
+         %
+         %  obj.parseEventProperties;
+         
+         obj.offset = obj.Offset(); % note that obj.Offset is a METHOD
          obj.N = numel(obj.Trial);
          obj.varVal = obj.getCurrentTrialData;
       end

@@ -398,7 +398,7 @@ classdef Block < matlab.mixin.Copyable
       flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
 
       % Methods for streams info
-      stream = getStream(blockObj,streamName,source); % Returns stream data corresponding to streamName
+      stream = getStream(blockObj,streamName,source,scaleOpts); % Returns stream data corresponding to streamName
       
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier

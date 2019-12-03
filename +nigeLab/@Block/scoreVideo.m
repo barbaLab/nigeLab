@@ -54,30 +54,11 @@ behaviorInfoObj = nigeLab.libs.behaviorInfo(blockObj,infoPanel); % "Event"
 vidInfoObj = nigeLab.libs.vidInfo(blockObj,dispPanel); % "Video"
  
 %% BUILD GRAPHICAL ELEMENTS      
-graphicsUpdateObj = nigeLab.libs.graphicsUpdater(blockObj);
-
-% Once the graphicsUpdateObj has been constructed, set the current video
-% (which issues an event notification that triggers subsequent updates)
-vidInfoObj.setCurrentVideo(1); 
-
-% Get "graphics" children structs from vidInfoObj and behaviorInfoObj, then
-% add listeners to all the fields of those structs using 'addGraphics' to
-% first add them to the graphicsUpdateObj then 'addListeners' to add event
-% listeners to the updated graphics
-graphics = getGraphics(vidInfoObj);
-graphicsUpdateObj.addGraphics(graphics);
-graphics = getGraphics(behaviorInfoObj);
-graphicsUpdateObj.addGraphics(graphics);
-graphicsUpdateObj.addListeners(vidInfoObj,behaviorInfoObj);
+graphicsUpdateObj = nigeLab.libs.graphicsUpdater(blockObj,...
+                     vidInfoObj,behaviorInfoObj);
                      
-% Initialize hotkeys for navigating through movie
-set(fig,'WindowKeyPressFcn',...
-   {@hotKey,vidInfoObj,behaviorInfoObj});
-
-% Update everything to make sure it looks correct
-vidInfoObj.setOffset(behaviorInfoObj.VideoStart);
-notify(vidInfoObj,'vidChanged');
-behaviorInfoObj.setTrial(nan,behaviorInfoObj.cur,true);
+% Assign figure interaction functions
+set(fig,'WindowKeyPressFcn',{@hotKey,vidInfoObj,behaviorInfoObj});
 set(fig,'CloseRequestFcn',{@closeUI,behaviorInfoObj,vidInfoObj,graphicsUpdateObj});
 
 %% Print instructions to command window to help user

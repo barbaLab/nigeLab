@@ -19,20 +19,13 @@ classdef alignInfo < handle
       tVid        % Current video time
       tNeu        % Current neural time
       
+      dig      % Struct for "digital" reference (graphics handles go here)
+      vid      % Struct for "video" reference (graphics handle go here)
+      
       vidTime_line     % Line indicating current video time
-      
 
-      beam     % Beam break times   
-      paw      % Paw guesses from DLC
-      press    % Button press times (may not exist)
-      
-
-      streams % File struct for data streams
-      scalars % File struct for scalar values
-
-      alignLag = nan;   % Best guess or current alignment lag offset
-      guess = nan;      % Alignment guess value
-      cp                % Current point on axes
+      offset = 0;     % Current alignment lag offset
+      timeAtClickedPoint      % Time corresponding to clicked point on axes
       
       curAxLim    % Axes limits for current axes
    end
@@ -52,10 +45,10 @@ classdef alignInfo < handle
    
 %% Events
    events % These correspond to different scoring events
-      moveOffset  % Alignment has been dragged/moved in some way
-      saveFile    % Output file has been saved
-      axesClick   % Skip to current clicked point in axes (in video)
-      zoomChanged % Axes zoom has been altered
+      offsetChanged  % Alignment has been dragged/moved in some way
+      saveFile       % Output file has been saved
+      axesClick      % Skip to current clicked point in axes (in video)
+      zoomChanged    % Axes zoom has been altered
    end
    
 %% Methods
@@ -69,7 +62,7 @@ classdef alignInfo < handle
          %  obj = nigeLab.libs.alignInfo(blockObj);
          %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
          
-         if ~isa(obj.Block,'nigeLab.Block')
+         if ~isa(blockObj,'nigeLab.Block')
             error('First input argument must be of class nigeLab.Block');
          end
          obj.Block = blockObj;
@@ -97,9 +90,10 @@ classdef alignInfo < handle
          end
          
          obj.Figure = obj.Panel.Parent;
-         obj.Figure.WindowButtonMotionFcn = @(src,~)obj.setCursorPos;
-         
-         obj.guessAlignment;
+         obj.Figure.WindowButtonMotionFcn = @obj.setCursorPos;
+
+%          blockObj.guessVidStreamAlignment;
+         obj.initGraphicsHandles;
          obj.buildStreamsGraphics;
          
       end
@@ -117,10 +111,11 @@ classdef alignInfo < handle
          %  --> 'alignment_panel'  :  obj.AlignmentPanel
          
          % Pass everything to listener object in graphics struct
-         graphics = struct('vidTime_line',obj.vidTime_line,...
-            'alignment_panel',obj.AlignmentPanel);
+         graphics = struct(...
+            'vidTime_line',obj.vidTime_line,...
+            'alignment_panel',obj.Panel,...
+            'stream_axes',obj.ax);
       end
-      
       
       % Set new neural time
       function setNeuTime(obj,t)
@@ -154,7 +149,7 @@ classdef alignInfo < handle
          %                          be moved to.
          
          align_offset = x - obj.curNeuT.XData(1);
-         align_offset = obj.alignLag - align_offset;
+         align_offset = obj.offset - align_offset;
          
          obj.setAlignment(align_offset);
       end
@@ -165,12 +160,7 @@ classdef alignInfo < handle
          %
          %  obj.saveAlignment;
          
-         VideoStart = obj.alignLag;
-         fname = fullfile(obj.scalars.alignLag.folder,...
-                          obj.scalars.alignLag.name);
-         fprintf(1,'Please wait, saving %s...',fname);
-         save(fname,'VideoStart','-v7.3');
-         fprintf(1,'complete.\n');
+         setEventData(obj.Block,[],'ts','Header',obj.offset);
          notify(obj,'saveFile');
       end
       
@@ -184,8 +174,9 @@ classdef alignInfo < handle
          
          set(obj.ax,'XLim',obj.axLim);
          obj.curAxLim = obj.axLim;
-         set(obj.paw.h,'LineWidth',1);
-         set(obj.beam.h,'LineWidth',1);
+         for i = 1:numel(obj.dig)
+            set(obj.dig(i).h,'LineWidth',1);
+         end
          set(obj.vidTime_line,'LineStyle','none');
          obj.zoomFlag = false;
          notify(obj,'zoomChanged');
@@ -204,13 +195,30 @@ classdef alignInfo < handle
                          obj.tVid + obj.zoomOffset];
          set(obj.ax,'XLim',obj.curAxLim);
          obj.zoomFlag = true;
-         set(obj.paw.h,'LineWidth',2);
-         set(obj.beam.h,'LineWidth',2);
+         for i = 1:numel(obj.dig)
+            set(obj.dig(i).h,'LineWidth',2);
+         end
          set(obj.vidTime_line,'LineStyle',':');
          notify(obj,'zoomChanged');
       end
       
-      
+   end
+   
+   % "CALLBACK" methods (for event listeners)
+   methods (Access = public)
+      % Callback for when time changes on graphicsUpdater object
+      function timesChangedCB(obj,src,~)
+         % TIMESCHANGEDCB  Callback that is requested whenever there is a
+         %                 'timesChanged' event notification from src (in
+         %                 this case, nigeLab.libs.graphicsUpdater class
+         %                 object). 
+         %
+         %  addlistener(graphicsUpdaterObj,'timesChanged',...
+         %              @alignInfoObj.timesChangedCB);
+                  
+         obj.setVidTime(src.tVid);
+         obj.setNeuTime(src.tNeu);
+      end
    end
    
    methods (Access = private)
@@ -222,103 +230,92 @@ classdef alignInfo < handle
          %                      BEAM BREAK or BUTTON PRESS) with video
          %                      (e.g. PAW PROBABILITY) time series.
          %
-         %  obj.buildStreamsGraphics;
-         
-         % Make panel to contain graphics
-         obj.AlignmentPanel = uipanel(obj.parent,'Units','Normalized',...
-            'BackgroundColor','k',...
-            'Position',[0 0 1 0.25]);
+         %  obj.buildStreamsGraphics(nigelPanelObj);
          
          % Make axes for graphics objects
-         obj.ax = axes(obj.AlignmentPanel,'Units','Normalized',...
+         obj.ax = axes('Units','Normalized',...
               'Position',[0 0 1 1],...
               'NextPlot','add',...
               'XColor','w',...
               'YLim',[-0.2 1.2],...
               'YTick',[],...
+              'Tag','Streams',...
               'ButtonDownFcn',@(~,~)obj.clickAxes);
+         obj.Panel.nestObj(obj.ax,'Streams');
          
          % Make current position indicators for neural and video times
          x = zeros(1,2); % Vid starts at zero
          y = [0 1.1]; % Make slightly taller
          obj.vidTime_line = line(obj.ax,x,y,...
+            'DisplayName','Current Frame',...
+            'Tag','Frame',...
             'LineWidth',2.5,...
             'LineStyle','none',...
             'Marker','v',...
             'MarkerIndices',2,... % Only show top marker
             'MarkerSize',16,...
-            'MarkerEdgeColor',[0.3 0.3 0.3],...
-            'MarkerFaceColor',[0.3 0.3 0.3],...
-            'Color',[0.3 0.3 0.3],...
+            'MarkerEdgeColor',nigeLab.defaults.nigelColors('b'),...
+            'MarkerFaceColor',nigeLab.defaults.nigelColors('b'),...
+            'Color',nigeLab.defaults.nigelColors('b'),...
             'ButtonDownFcn',@(~,~)obj.clickAxes);         
          
          
-         % Plot paw probability time-series from DeepLabCut
-         obj.paw.h = plot(obj.ax,...
-            obj.paw.t,...
-            obj.paw.data,...
-            'Color','b',...
-            'DisplayName','paw',...
-            'ButtonDownFcn',@(~,~)obj.clickAxes);
-         
-         % Make beam break plot
-         obj.beam.h = plot(obj.ax,...
-            obj.beam.t,...
-            obj.beam.data,...
-            'Color',[0.8 0.2 0.2],...
-            'Tag','beam',...
-            'UserData',[0.8 0.2 0.2],...
-            'DisplayName','beam',...
-            'ButtonDownFcn',@(src,~)obj.clickSeries);
-         
-         % Check for button presses and add if present
-         if isstruct(obj.press)
-            obj.press.h = plot(obj.ax,...
-               obj.press.t,...
-               obj.press.data,...
-               'Tag','press',...
-               'DisplayName','press',...
-               'LineWidth',1.5,...
-               'Color',[0 0.75 0],...
-               'UserData',[0 0.75 0],...
-               'ButtonDownFcn',@obj.clickSeries);
-            legend(obj.ax,{'Vid-Time';'Paw';'Beam';'Press'},...
-               'Location','northoutside',...
-               'Orientation','horizontal',...
-               'FontName','Arial',...
-               'FontSize',14);
-         else
-            legend(obj.ax,{'Vid-Time';'Paw';'Beam'},...
-               'Location','northoutside',...
-               'Orientation','horizontal',...
-               'FontName','Arial',...
-               'FontSize',14);
+         % Plot video stream (if it's present)
+         if ~isempty(obj.vid.h)
+            obj.vid.h = plot(obj.ax,...
+               obj.vid.t,...
+               obj.vid.data,...
+               'Color',nigeLab.defaults.nigelColors(1),...
+               'DisplayName',obj.vid.name,...
+               'Tag',obj.vid.name,...
+               'ButtonDownFcn',@obj.clickAxes);
          end
-                 
+
+         % Plot any digital streams
+         for i = 1:numel(obj.dig)
+            obj.dig(i).h = plot(obj.ax,...
+               obj.dig(i).t,...
+               obj.dig(i).data,...
+               'Tag',obj.dig(i).name,...
+               'DisplayName',obj.dig(i).name,...
+               'LineWidth',1.5,...
+               'Color',nigeLab.defaults.nigelColors(i+1),...
+               'UserData',nigeLab.defaults.nigelColors(i+1),...
+               'ButtonDownFcn',@obj.clickSeries);
+         end
+         
+         if isempty(obj.vid.h)
+            txt = ['Frame', {obj.dig.name}];
+         else
+            txt = ['Frame', obj.vid.name, {obj.dig.name}];
+         end
+         legend(obj.ax,txt,...
+            'Location','northoutside',...
+            'Orientation','horizontal',...
+            'FontName','Arial',...
+            'FontSize',14);
+   
          % Get the max. axis limits
          obj.resetAxesLimits;
          
       end
       
       % ButtonDownFcn for top axes and children
-      function clickAxes(obj)
+      function clickAxes(obj,~,~)
          % CLICKAXES  ButtonDownFcn for the alignment axes and its children
          %
          %  ax.ButtonDownFcn = @(~,~)obj.clickAxes;
          
-         obj.cp = obj.ax.CurrentPoint(1,1);
+         obj.timeAtClickedPoint = obj.ax.CurrentPoint(1,1);
          
          % If FLAG is enabled
          if obj.moveStreamFlag
             % Place the (dragged) neural (beam/press) streams with cursor
             obj.resetAxesLimits;
-            obj.beam.h.Color = obj.beam.h.UserData;
-            obj.beam.h.LineWidth = 2;
-            obj.beam.h.LineStyle = '-';
-            if isstruct(obj.press)
-               obj.press.h.Color = obj.press.h.UserData;
-               obj.press.h.LineWidth = 2;
-               obj.press.h.LineStyle = '-';
+            for i = 1:numel(obj.dig)
+               obj.dig(i).h.Color = obj.dig.h.UserData;
+               obj.dig(i).h.LineWidth = 2;
+               obj.dig(i).h.LineStyle = '-';
             end
             obj.moveStreamFlag = false;            
          else % Otherwise, allows to skip to point in video
@@ -327,7 +324,7 @@ classdef alignInfo < handle
       end
       
       % ButtonDownFcn for neural sync time series (beam/press)
-      function clickSeries(obj,src)
+      function clickSeries(obj,src,~)
          % CLICKSERIES  ButtonDownFcn callback for clicking on the neural
          %              sync time series (e.g. BEAM BREAKS or BUTTON PRESS)
          
@@ -362,11 +359,62 @@ classdef alignInfo < handle
          %
          %  The difference (delta = init_pt - moved_pt) is equivalent to a
          %  "change in alignment offset"; therefore, the new alignment
-         %  (obj.alignLag) is equal to the previous obj.alignLag + delta.
+         %  (obj.offset) is equal to the previous obj.offset + delta.
          
          align_offset_delta = init_pt - moved_pt;
-         new_align_offset = obj.alignLag + align_offset_delta;
+         new_align_offset = obj.offset + align_offset_delta;
          
+      end
+      
+      % Initialize struct for main graphics reference
+      function initGraphicsHandles(obj)
+         % INITGRAPHICSHANDLES  Initialize struct for main graphics ref
+         %
+         %  obj.initGraphicsHandles;
+         %
+         %  Initializes obj.dig and obj.vid structs
+         
+         obj.dig = struct;
+         obj.vid = struct;
+         
+         % First, deal with digital streams
+         ds = obj.Block.UserData.digStreams;
+         n = numel(ds);
+         obj.dig = struct('name',cell(1,n),...
+            'data',cell(1,n),...
+            't',cell(1,n),...
+            't0',cell(1,n),...
+            'fs',cell(1,n),...
+            'h',cell(1,n));
+         
+         for i = 1:n
+            tmp = obj.Block.getStream(ds(i).name);
+            obj.dig(i).name = tmp.name;
+            obj.dig(i).data = tmp.data;
+            obj.dig(i).fs = tmp.fs;
+            obj.dig(i).t = tmp.t;
+            obj.dig(i).t0 = tmp.t;
+            obj.dig(i).h = gobjects(1);
+         end
+         
+         vs = obj.Block.UserData.vidStreams;
+         if isempty(vs)
+            % If empty, initialize "empty" matching fields
+            obj.vid.name = '';
+            obj.vid.data = nan;
+            obj.vid.t = nan;
+            obj.vid.fs = 1;
+            obj.vid.h = [];
+            return;
+         end
+         s = getStream(obj.Block.Videos,vs.name,...
+               obj.Block.Pars.Video.VideoEventCamera);
+         obj.vid.name = s.name(1:3);
+         obj.vid.data = s.data;
+         obj.vid.t = s.t;
+         obj.vid.t0 = s.t;
+         obj.vid.fs = s.fs;
+         obj.vid.h = gobjects(1);
       end
       
       % Extend or shrink axes x-limits as appropriate
@@ -376,15 +424,20 @@ classdef alignInfo < handle
          %  obj.resetAxesLimits;
          
          obj.axLim = nan(1,2);
-         obj.axLim(1) = obj.xStart;
-         obj.axLim(2) = max(obj.beam.t(end),obj.paw.t(end));
+         obj.axLim(1) = 0;
+         obj.axLim(2) = -inf;
+         for i = 1:numel(obj.dig)
+            obj.axLim(2) = max(obj.axLim(2),obj.dig(i).t(end));
+         end
+         if ~isempty(obj.vid.h)
+            obj.axLim(2) = max(obj.axLim(2),obj.vid.t(end));
+         end
          if ~obj.zoomFlag
             set(obj.ax,'XLim',obj.axLim);
             obj.curAxLim = obj.axLim;
             notify(obj,'zoomChanged');
          end
       end
-      
       
       % Set the alignment and emit a notification about the event
       function setAlignment(obj,align_offset)
@@ -395,17 +448,17 @@ classdef alignInfo < handle
          %  --> Align offset is the "VideoStart" where a positive value
          %        denotes that the video started AFTER the neural recording
          
-         obj.alignLag = align_offset;
+         obj.offset = align_offset;
          obj.updateStreamTime;
-         notify(obj,'moveOffset');
+         notify(obj,'offsetChanged');
       end
       
       % Update the current cursor X-position in figure frame
-      function setCursorPos(obj,src)
+      function setCursorPos(obj,src,~)
          % SETCURSORPOS  Update the current cursor X-position based on
          %               mouse cursor movement in current figure frame.
          %
-         %  fig.WindowButtonMotionFcn = @(src,~)obj.setCursorPos;  
+         %  fig.WindowButtonMotionFcn = @obj.setCursorPos;  
          %
          %  alignInfoObj is not associated with a figure handle explicitly;
          %  therefore, this method can be set as a callback for any figure
@@ -436,14 +489,11 @@ classdef alignInfo < handle
          %  we have changed the offset by some amount.
          
          % Moves the beam and press streams, relative to VIDEO
-         obj.beam.t = obj.beam.t0 - obj.alignLag;
-         obj.beam.h.XData = obj.beam.t;
-         
-         if isstruct(obj.press)
-            obj.press.t = obj.press.t0 - obj.alignLag;
-            obj.press.h.XData = obj.press.t;
-            
+         for i = 1:numel(obj.dig)
+            obj.dig(i).t = obj.dig(i).t0 - obj.offset;
+            obj.dig(i).h.XData = obj.dig(i).t;
          end
+
       end
       
    end

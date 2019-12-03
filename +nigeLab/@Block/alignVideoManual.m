@@ -10,7 +10,7 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 %  --------
 %   INPUTS
 %  --------
-%  digStreamName  :  Stream field 'custom_channel_name' 
+%  digStreamInfo  :  Stream field 'custom_channel_name' 
 %                     --> Given as struct array, where field elements are
 %                          (for example):
 %                       digStreamInfo(k).field = 'DigIO' or 'AnalogIO'
@@ -33,20 +33,16 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamName)
 %  --------
 %   OUTPUT
 %  --------
-%  Saves a file in OUT_DIR that contains "VideoStart" variable, which is a
-%  scalar that relates the relative time of the neural data to the onset of
-%  the video (i.e. if the neural recording was started, then video started
-%  30 seconds later, VideoStart would have a value of +30).
+%    fig          :  Figure handle that can be used to block subsequent
+%                    execution using waitfor(fig). This is the handle to
+%                    the figure that contains all the alignment interface.
 %
-% By: Max Murphy  v2.1  08/29/2018  Changed alignment method from toggling
-%                                   using the "o" key to just click and
-%                                   drag the red (beam break) trace and
-%                                   line it up however looks best against
-%                                   the blue one.
-%
-%                 v2.0  08/17/2018  Made a lot of changes from previous
-%                                   version, which had a different name as
-%                                   well.
+%  After completing alignVideoManual, the offset between video and neural
+%  data will be saved automatically. It is returned as a time in seconds, 
+%  where a positive value denotes that the video starts after the neural 
+%  record. The value of offset is automatically saved as the 'ts' property 
+%  of a special 'Header' file located with the other 'ScoredEvents' files 
+%  in the block hierarchy.
 
 %% Parse inputs
 if nargin < 3
@@ -54,11 +50,11 @@ if nargin < 3
 end
 
 if nargin < 2
-   digStreamName = [];
+   digStreamInfo = [];
 end
 
 % Parse digStreamName input
-if isempty(digStreamName)
+if isempty(digStreamInfo)
    [title_str,prompt_str,opts] = nigeLab.utils.getDropDownRadioStreams(blockObj);
    str = 'Yes';
    digInfo = struct('name',[],'field',[],'idx',[]);
@@ -69,31 +65,51 @@ if isempty(digStreamName)
          nigeLab.utils.uidropdownradiobox(...
             title_str,...
             prompt_str,...
-            opts,true);
-      str = nigeLab.utils.uidropdownbox({'Selection Option Window';...
-         'Select More Streams?'},...
-         'Add Streams?',{'No','Yes'},true);
+            opts,...
+            false);
+      if isnan(digInfo(k).idx(1))
+         break;
+      end
       opts{digInfo(k).idx(1,1),1} = setdiff(opts{digInfo(k).idx(1,1),1},...
          digInfo(k).name);
+      if isempty(opts{digInfo(k).idx(1,1),1})
+         break;
+      end
+      str = nigeLab.utils.uidropdownbox({'Selection Option Window';...
+         'Select More Streams?'},...
+         {'Add More Digital Streams?';'(Synchronized)'},{'No','Yes'},false);
+      
    end
 end
-
 
 % Parse vidStreamName input
 opts = getName(blockObj.Videos,'vidstreams');
 if ~iscell(opts)
    opts = {opts};
 end
+% 'none' is default response for uidropdownbox; if we don't want to use a
+% video stream for alignment, then select 'none' and only drag the digital
+% record to match up to the frames of interest (e.g. watch video until
+% first LED goes on, then drag LED high signal so that it transitions to
+% high for the first time at the same time as the current video time
+% marker)
+opts = ['none', opts];
 if isempty(vidStreamName)
    vidStreamName = nigeLab.utils.uidropdownbox('Select Vid Stream',...
-      'Video Stream to Use',opts);
+      {'Video Stream to Use';'(Non-Synchronized)'},opts);
 end
-strIdx = find(ismember(opts,vidStreamName),1,'first');
+% Subtract 1 from strIdx to account for 'none' being added
+strIdx = find(ismember(opts,vidStreamName),1,'first')-1;
+
+% Assign stream info to blockObj so it is passed to alignInfo object
+blockObj.UserData = struct(...
+   'digStreams',digInfo,...
+   'vidStreams',struct('name',opts{strIdx+1},'idx',strIdx,'vidIdx',1));
 
 %% Build graphics
 
 % Make figure to put everything in
-fig=figure('Name','Bilateral Reach Scoring',...
+fig=figure('Name','Manual Video Alignment Interface',...
    'Color',nigeLab.defaults.nigelColors('background'),...
    'NumberTitle','off',...
    'MenuBar','none',...
@@ -114,7 +130,7 @@ vidPanel = nigeLab.libs.nigelPanel(fig,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-vidInfoObj = vidInfo(blockObj,vidPanel);
+vidInfoObj = nigeLab.libs.vidInfo(blockObj,vidPanel);
          
 % 2) infoPanel for containing the alignInfoObj
 alignPanel = nigeLab.libs.nigelPanel(fig,...
@@ -128,43 +144,26 @@ alignPanel = nigeLab.libs.nigelPanel(fig,...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
 alignInfoObj = nigeLab.libs.alignInfo(blockObj,alignPanel);
 
-
-vidInfoObj.setOffset(alignInfoObj.alignLag);
-
 % Make listener object to integrate class information
-graphicsUpdateObj = graphicsUpdater(blockObj);
-graphicsUpdateObj.addListeners(vidInfoObj,alignInfoObj);
+graphicsUpdateObj = nigeLab.libs.graphicsUpdater(blockObj,...
+   vidInfoObj,alignInfoObj);
 
-% Construct video selection interface and load video
-graphics = vidInfoObj.getGraphics;
-graphicsUpdateObj.addGraphics(graphics);
-vidInfoObj.buildVidSelectionList;
-
-% Add associated graphics objects to listener
-graphics = alignInfoObj.getGraphics;
-graphicsUpdateObj.addGraphics(graphics);
-graphics = vidInfoObj.getGraphics;
-graphicsUpdateObj.addGraphics(graphics);
-
-% SET HOTKEY AND MOUSE MOVEMENT FUNCTIONS
+% Add figure interactive functions
 set(fig,'KeyPressFcn',{@hotKey,vidInfoObj,alignInfoObj});
-set(fig,'WindowButtonMotionFcn',{@trackCursor,alignInfoObj});
-set(fig,'DeleteFcn',...
-   {@deleteFigCB,alignInfoObj,vidInfoObj,graphicsUpdateObj});
+set(fig,'DeleteFcn',{@deleteFigCB,alignInfoObj,vidInfoObj,graphicsUpdateObj});
 
 % Function for tracking cursor
    function deleteFigCB(~,~,a,v,g)
+      % DELETEFIGCB  Ensure that alignInfo, videoInfo, and graphicsUpdater
+      %              are all destroyed on Figure destruction.
+      
       delete(a);
       delete(v);
       delete(g);
    end
 
-   function trackCursor(src,~,a)
-      a.setCursorPos(src.CurrentPoint(1,1));  
-   end
-
 % Function for hotkeys
-   function hotKey(~,evt,v,a)
+   function hotKey(src,evt,v,a)
       switch evt.Key     
          case 's' % Press 'alt' and 's' at the same time to save
             if strcmpi(evt.Modifier,'alt')
@@ -172,16 +171,16 @@ set(fig,'DeleteFcn',...
             end
             
          case 'a' % Press 'a' to go back one frame
-            v.retreatFrame(1);
+            v.retreatFrame;
             
          case 'leftarrow' % Press 'leftarrow' key to go back 5 frames
             v.retreatFrame(5);
             
          case 'd' % Press 'd' to go forward one frame
-            v.advanceFrame(nan,nan);
+            v.advanceFrame;
             
-         case 'rightarrow' % Press 'rightarrow' key to go forward one frame
-            v.advanceFrame(nan,nan);
+         case 'rightarrow' % Press 'rightarrow' key to go forward 5 framse
+            v.advanceFrame(5);
             
          case  'subtract' % Press numpad '-' key to zoom out on time series
             a.zoomOut;
@@ -191,6 +190,9 @@ set(fig,'DeleteFcn',...
             
          case 'space' % Press 'spacebar' key to play or pause video
             v.playPauseVid;
+            
+         case 'escape'
+            close(src);
       end
    end
 end
