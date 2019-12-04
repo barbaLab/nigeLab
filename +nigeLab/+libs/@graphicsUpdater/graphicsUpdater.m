@@ -326,52 +326,31 @@ classdef graphicsUpdater < handle
          % FRAMECHANGEDVIDCB  Callback any time that a video frame is
          %                    changed. Source (src) is nigeLab.libs.vidInfo
          %                    object. 
-         
-         if obj.verbose
-            s = nigeLab.utils.getNigeLink(...
-               'nigeLab.libs.graphicsUpdater',...
-               'frameChangedVidCB');
-            fprintf(1,'-->\tframeChanged event triggered: %s\n',s);
-            fprintf(1,'\t-->\tsource class: %s\n',class(src));
-         end
-         neu_t = src.getTime('neu');
-         vid_t = src.getTime('vid');
+  
+         set(obj.image_display,'CData',obj.videoFile.read(src.frame));        
+      end
+      
+      % Update associated times when video info times are changed
+      function timesChangedVidCB(obj,src,~)         
+         obj.tVid = src.getTime('vid');
+         obj.tNeu = src.getTime('neu');
          
          set(obj.neuTime_display,'String',...
-            sprintf('Neural Time: %0.3f',neu_t));
+            sprintf('Neural Time: %0.3f',obj.tNeu));
          set(obj.vidTime_display,'String',...
-            sprintf('Video Time: %0.3f',vid_t));
-         set(obj.image_display,'CData',...
-            obj.videoFile.read(src.frame));
-         
-         obj.tNeu = neu_t;
-         obj.tVid = vid_t;
+            sprintf('Video Time: %0.3f',obj.tVid));
          
          % If vidTime_line is not empty, that means there is the alignment
          % axis plot so we should update that too:
          if ~isempty(obj.vidTime_line)
-            set(obj.vidTime_line,'XData',ones(1,2) * vid_t);
+            set(obj.vidTime_line,'XData',ones(1,2) * obj.tVid);
             
             % Fix axis limits
-            if (vid_t >= obj.xLim(2)) || (vid_t <= obj.xLim(1))
+            if (obj.tVid >= obj.xLim(2)) || (obj.tVid <= obj.xLim(1))
                obj.updateZoom;
                set(obj.stream_axes,'XLim',obj.xLim);
             end
          end
-         
-      end
-      
-      % Update associated times when video info times are changed
-      function timesChangedVidCB(obj,src,~)
-         if obj.verbose
-            s = nigeLab.utils.getNigeLink(...
-               'nigeLab.libs.graphicsUpdater',...
-               'timesChangedVidCB');
-            fprintf(1,'-->\ttimesChanged event triggered: %s\n',s);
-         end 
-         
-         obj.tVid = src.getTime('vid');
-         obj.tNeu = src.getTime('neu');
          notify(obj,'timesChanged');
       end
       
@@ -392,9 +371,6 @@ classdef graphicsUpdater < handle
          end
          
          obj.videoFile = getVideoReader(obj.Block.Videos(obj.curVid).v);
-         
-         % Issue 'vidChanged' notification, which is listened for by the
-         % vidInfo object.
          notify(obj,'vidChanged');
       end
           
@@ -911,7 +887,7 @@ classdef graphicsUpdater < handle
          obj.setVideo(obj.curVid);
          
          % Any other graphics initializations should happen below:
-         
+         notify(obj,'offsetChanged');
       end
    end
 end

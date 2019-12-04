@@ -83,8 +83,11 @@ end
 
 if isempty(stream_) && ~isempty(source)
    stream = getStream(blockObj.Videos,streamName{1},source,scaleOpts);
-   
 elseif ~isempty(stream_)
+   if isempty(stream_.data)
+      stream = [];
+      return;
+   end
    stream_.data = double(stream_.data.data);
    % Return stream in standardized "substream" format
    stream = nigeLab.utils.initChannelStruct('substream',stream_);

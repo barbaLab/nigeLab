@@ -396,8 +396,13 @@ classdef alignInfo < handle
             'fs',cell(1,n),...
             'h',cell(1,n));
          
+         keepvec = true(size(obj.dig));
          for i = 1:n
             tmp = obj.Block.getStream(ds(i).name);
+            if isempty(tmp)
+               keepvec(i) = false;
+               continue;
+            end
             obj.dig(i).name = tmp.name;
             obj.dig(i).data = tmp.data;
             obj.dig(i).fs = tmp.fs;
@@ -405,10 +410,18 @@ classdef alignInfo < handle
             obj.dig(i).t0 = tmp.t;
             obj.dig(i).h = gobjects(1);
          end
+         obj.dig = obj.dig(keepvec);
          
          vs = vidStreamInfo;
          if isempty(vs)
             % If empty, initialize "empty" matching fields
+            obj.vid.name = '';
+            obj.vid.data = nan;
+            obj.vid.t = nan;
+            obj.vid.fs = 1;
+            obj.vid.h = [];
+            return;
+         elseif strcmpi(vs.name,'none')
             obj.vid.name = '';
             obj.vid.data = nan;
             obj.vid.t = nan;
@@ -503,6 +516,9 @@ classdef alignInfo < handle
          %  therefore, this method can be set as a callback for any figure
          %  it is "attached" to 
          
+         if isempty(obj.ax)
+            return;
+         end
          x = src.CurrentPoint(1,1);
          obj.cursorX = x * diff(obj.ax.XLim) + obj.ax.XLim(1);
          if obj.moveStreamFlag

@@ -193,6 +193,9 @@ classdef VidStreamsType < handle
             for i = 1:numel(obj)
                stream = obj(i).getStream(streamName,source,scaleOpts,stream);
             end
+            if isempty(stream.data)
+               stream = [];
+            end
             return;
          end
          
@@ -204,8 +207,10 @@ classdef VidStreamsType < handle
             idx = find(idx,1,'first');
          end
          % Return stream in standardized "substream" format
-         stream = nigeLab.utils.initChannelStruct('substream',1);
          stream.name = streamName;
+         if isempty(obj.at(idx).diskdata)
+            return;
+         end
          stream.data = [stream.data, obj.at(idx).diskdata.data];
          stream.fs = obj.at(idx).fs;
          stream.t = (0:(numel(stream.data)-1))/stream.fs;

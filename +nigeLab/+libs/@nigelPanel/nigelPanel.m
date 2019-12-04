@@ -56,15 +56,7 @@ classdef nigelPanel < handle
       InnerPosition    % Position for inner "non-scroll" region
       Substr      % Char array that is a sub-string. currently unused ...?
       Scrollable  % ('on' or 'off' (default))
-      FontName          % Default: 'DroidSans'
-      MinTitleBarHeightPixels % Default: 20
-      TitleFontSize     % Default: 13
-      TitleFontWeight   % Default: 'bold'
-      TitleAlignment    % Default: 'left'
-      TitleBarLocation  % Location of title bar (can be 'top' or 'bot')
-      TitleBarPosition  % Coordinate [px py width height] vector for titleBox position
-      TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
-      TitleStringY  % Y-coordinate of middle of Title String (default: 0.5)
+      
       DeleteFcn  % Function handle to execute on object deletion
    end
    
@@ -78,6 +70,16 @@ classdef nigelPanel < handle
       Color       % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
       String      % Char array for string in obj.textBox.ann
       Units       % 'Normalized' or 'Pixels'
+      FontName          % Default: 'DroidSans'
+      MinTitleBarHeightPixels % Default: 20
+      TitleFontSize     % Default: 13
+      TitleFontWeight   % Default: 'bold'
+      TitleVerticalAlignment % Default: 'middle'
+      TitleAlignment    % Default: 'left'
+      TitleBarLocation  % Location of title bar (can be 'top' or 'bot')
+      TitleBarPosition  % Coordinate [px py width height] vector for titleBox position
+      TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
+      TitleStringY  % Y-coordinate of middle of Title String (default: 0.5)
    end
    
    properties (Access = private)
@@ -136,7 +138,7 @@ classdef nigelPanel < handle
          obj.initProps(varargin{:});
 
          obj.buildOuterPanel;  % Make "outer frame" for if there is scroll bar
-         obj.buildTitleBox;    % Makes "nice header box"
+         obj.buildTitleBar;    % Makes "nice header box"
          obj.buildInnerPanel;  % Make scrollbar and "inner frame" container        
          obj.buildListeners;   % Make event listeners
       end
@@ -388,16 +390,17 @@ classdef nigelPanel < handle
       end
       
       % Build graphics for "nice header box"
-      function buildTitleBox(obj)
-         % BUILDTITLEBOX  Build graphics for "nice header box"
+      function buildTitleBar(obj)
+         % BUILDTITLEBAR  Build graphics for "nice header box"
          %
-         %  obj.buildTitleBox; 
+         %  obj.buildTitleBar; 
          
          if isempty(obj.TitleBar)
            obj.TitleBar = struct;
            obj.TitleBar.axes = axes(obj.OutPanel,... % formerly "a"
               'Color','none',...
               'Units','normalized',... 
+              'Clipping','off',...
               'Position',obj.TitleBarPosition,...
               'XColor','none',...
               'YColor','none');
@@ -421,13 +424,15 @@ classdef nigelPanel < handle
               obj.TitleStringX,obj.TitleStringY,...
               obj.String,...
               'Units','normalized',...
-              'VerticalAlignment','middle',...
+              'VerticalAlignment',obj.TitleVerticalAlignment,...
               'HorizontalAlignment',obj.TitleAlignment,...
+              'Clipping','off',...
               'Color',obj.Color.TitleText,...
               'FontSize',obj.TitleFontSize,...
               'FontWeight',obj.TitleFontWeight,...
               'FontName',obj.FontName);
          end
+         obj.fixTitleHeight;
       end
       
       % "Fix" child properties so they are the same as nigelPanel (e.g.
@@ -507,9 +512,9 @@ classdef nigelPanel < handle
             case {'bot','bottom'}
                innerPosition = obj.InnerPosition + ...
                   [0.01,...  % x offset
-                   0.01 + obj.TitleBar.axes.Position(4),...  % y offset
+                   0.02 + obj.TitleBar.axes.Position(4),...  % y offset
                   -0.02,... % width offset
-                  -(0.02 + obj.TitleBar.axes.Position(4))]; % height offset
+                  -(0.03 + obj.TitleBar.axes.Position(4))]; % height offset
             otherwise
                innerPosition = obj.InnerPosition + ...
                   [0.01,...  % x offset
@@ -576,7 +581,7 @@ classdef nigelPanel < handle
          obj.Units = Pars.Units;
          obj.Scrollable = lower(Pars.Scrollable);
          obj.FontName = Pars.FontName;
-         obj.MinTitleBarHeightPixels = Pars.MinTItleBarHeightPixels;
+         obj.MinTitleBarHeightPixels = Pars.MinTitleBarHeightPixels;
          obj.TitleBar = Pars.TitleBar; % If want to manually set TitleBar
          obj.TitleAlignment = Pars.TitleAlignment;
          obj.TitleFontSize = Pars.TitleFontSize;
@@ -584,13 +589,15 @@ classdef nigelPanel < handle
          obj.TitleBarLocation = Pars.TitleBarLocation;
          switch lower(obj.TitleBarLocation)
             case 'top'
+               obj.TitleVerticalAlignment = 'middle';
                obj.TitleBarPosition = Pars.TitleBarPosition(1,:);
             case {'bot','bottom'}
+               obj.TitleVerticalAlignment = 'top';
                obj.TitleBarPosition = Pars.TitleBarPosition(2,:);
             otherwise 
+               obj.TitleVerticalAlignment = 'middle';
                obj.TitleBarPosition = Pars.TitleBarPosition(1,:); 
          end
-         obj.fixTitleBarHeight;
          obj.TitleStringX = Pars.TitleStringX;
          obj.TitleStringY = Pars.TitleStringY;
          obj.DeleteFcn = Pars.DeleteFcn;
@@ -718,17 +725,20 @@ classdef nigelPanel < handle
                h.fixTitleHeight;
             case 'TitleBarPosition'
                h.TitleBar.ax.Position = h.TitleBarPosition;
+               h.fixTitleHeight;
             case 'TitleStringX'
                h.TitleBar.ann.Position(1) = h.TitleStringX;
             case 'TitleStringY'
                h.TitleBar.ann.Position(2) = h.TitleStringY;
             case 'FontName'
                h.TitleBar.ann.FontName = h.FontName;
-               h.fixChildProperties(obj.Children,'FontName');
+               h.fixProperties(h.Children,'FontName');
             case 'TitleFontWeight'
                h.TitleBar.ann.FontWeight = h.TitleFontWeight;
             case 'TitleAlignment'
                h.TitleBar.ann.HorizontalAlignment = h.TitleAlignment;
+            case 'TitleVerticalAlignment'
+               h.TitleBar.ann.VerticalAlignment = h.TitleVerticalAlignment;
             otherwise
                % do nothing
          end
