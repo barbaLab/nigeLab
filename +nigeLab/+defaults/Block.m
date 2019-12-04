@@ -137,7 +137,7 @@ Fields =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'VidStreams';     % 13
-%    'Stim';           % 14 - hard-coded for extraction in RHS
+   'Stim';           % 14 - hard-coded for extraction in RHS
 %    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
@@ -160,7 +160,7 @@ FieldType = { ...
    'Streams';  % 11
    'Events';   % 12
    'Videos';  % 13
-%    'Events';   % 14
+   'Events';   % 14
 %    'Channels'; % 15
    'Meta';     % 16
 %    'Meta';     % 17
@@ -183,7 +183,7 @@ OldNames       =  { ...
    {'*ANA*'};                       % 11
    {'*Press.mat';'*Beam.mat'};      % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
-%    {'*STIM*'};                      % 14
+   {'*STIM*'};                      % 14
 %    {'*DC*'};                        % 15
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
@@ -206,7 +206,7 @@ FolderNames     = {  ...
    'Digital';           % 11
    'Digital';           % 12
    'Video';             % 13 - for streams parsed from Video
-%    'StimData';          % 14
+   'StimData';          % 14
 %    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
@@ -229,7 +229,7 @@ FileNames =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'VidStream';          % 13 - for streams parsed from Videos
-%   'Stim';           % 14 - hard-coded for extraction in RHS
+   'Stim';           % 14 - hard-coded for extraction in RHS
 %   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
@@ -252,7 +252,7 @@ FileType = { ...
    'Hybrid';   % 11
    'Event';    % 12
    'Hybrid';   % 13
-%    'Event';    % 14
+   'Event';    % 14
 %    'Hybrid';   % 15
    'Hybrid';   % 16
 %    'Other';    % 17

@@ -11,7 +11,9 @@ function flag = linkField(blockObj,fieldIndex)
 %  stored on the disk, and update the status to reflect whether the file
 %  exists in the correct format.
 %
-%  flag returns true if something was not linked correctly.
+%  flag returns true if something was not linked correctly. This is
+%  assigned to an array element of 'warningRef' that is then used to issue
+%  command window warnings to the user.
 
 %%
 flag = false;
@@ -49,12 +51,13 @@ switch blockObj.FieldType{fieldIndex}
       switch lower(field)
          case 'notes'
             flag = blockObj.linkNotes;
-            blockObj.updateStatus(field,true);
+            blockObj.updateStatus(field,flag);
          case 'probes'
             flag = blockObj.linkProbe;
-            blockObj.updateStatus(field,true);
+            % blockObj.updateStatus called in linkProbe method
          case 'time'
             flag = blockObj.linkTime;
+            % blockObj.updateStatus is called in linkTime method
          otherwise
             warning('Parsing is not configured for FieldType: %s',...
                blockObj.FieldType{fieldIndex});

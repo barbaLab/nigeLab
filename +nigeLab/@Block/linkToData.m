@@ -22,7 +22,8 @@ N = numel(blockObj.Fields);
 warningRef = false(1,N);
 warningFold = false(1,N);
 for fieldIndex = 1:N
-   if exist(blockObj.Paths.(blockObj.Fields{fieldIndex}).dir,'dir')==0
+   pcur = parseFolder(blockObj,fieldIndex);
+   if exist(pcur,'dir')==0
       warningFold(fieldIndex) = true;
       warningRef(fieldIndex) = true;
    else
@@ -31,21 +32,23 @@ for fieldIndex = 1:N
 end
 
 %% GIVE USER WARNINGS
-
+% Notify user about potential missing folders:
 if any(warningFold)
    warningIdx = find(warningFold);
    nigeLab.utils.cprintf('UnterminatedStrings',...
-      'Some folders are missing. \n'); 
+                         'Some folders are missing. \n'); 
    nigeLab.utils.cprintf('text',...
-      '\t-> Rebuilding folder tree ... %.3d%%',0);
+                         '\t-> Rebuilding folder tree ... %.3d%%',0);
    for ii = 1:numel(warningIdx)
-       [~,~,~]=mkdir(blockObj.Paths.(blockObj.Fields{warningIdx(ii)}).dir);
-       fprintf(1,'\b\b\b\b%.3d%%',...
-           round(100*ii/sum(warningFold)));
+      pcur = parseFolder(blockObj,fieldIndex);
+      [~,~,~] = mkdir(pcur);
+      fprintf(1,'\b\b\b\b%.3d%%',round(100*ii/sum(warningFold)));
    end
    fprintf(1,'\n');
 end
 
+% If any element of a given "Field" is missing, warn user that there is a
+% missing data file for that particular "Field":
 if any(warningRef) && ~suppressWarning
    warningIdx = find(warningRef);
    nigeLab.utils.cprintf('UnterminatedStrings',...
@@ -60,5 +63,18 @@ end
 
 blockObj.save;
 flag = true;
+
+% Local function to return folder path
+   function [pcur,p] = parseFolder(blockObj,idx)
+      % PARSEFOLDER  Local function to return correct folder location
+      %
+      %  [pcur,p] = parseFolder(blockObj,fieldIndex);
+      
+      % Existing name of folder, from "Paths:"
+      p = blockObj.Paths.(blockObj.Fields{idx}).dir;
+      % Current path, depending on local or remote status:
+      pcur = nigeLab.utils.getUNCPath(p); 
+   end
+
 end
 
