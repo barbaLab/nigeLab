@@ -1,5 +1,5 @@
 function status = getStatus(blockObj,field,channel)
-%% GETSTATUS  Returns the operations performed on the block to date
+% GETSTATUS  Returns the operations performed on the block to date
 %
 %  status = GETSTATUS(blockObj);
 %  status = GETSTATUS(blockObj,field);
@@ -32,8 +32,6 @@ function status = getStatus(blockObj,field,channel)
 %   status        :     Returns false if stage is incomplete, or true if
 %                          it's complete. If stage is invalid, Status is
 %                          returned as empty.
-%
-% By: FB & MM 2018 MAECI collaboration
 
 %%
 switch nargin
@@ -97,25 +95,51 @@ switch nargin
 end
 
    function status = parseStatus(blockObj,stage)
-      %% PARSESTATUS  Check that it is a valid stage and return the output
+      % PARSESTATUS  Check that it is a valid stage and return the output
+      %
+      %  status = parseStatus(blockObj,stage);
+      %
+      %  stage  --  Char array or cell of char arrays
+      
+      % Ensure that stage is a cell so that checks return correct number of
+      % elements (one per "word")
       if ~iscell(stage)
          stage = {stage};
       end
       opInd=ismember(blockObj.Fields,stage);
       
+      % If "stage" doesn't belong, throw an error.
       if sum(opInd) < numel(stage)
-         warning('No computation stage with that name (%s).',stage{:});
+         warning('No Field with that name (%s).',stage{:});
          status = false;
+         
+      % Otherwise, if there are too many matches, that is also not good.
       elseif (sum(opInd) > numel(stage))
          warning('Stage name is ambiguous (%s).',stage{:});
          status = false;
+         
       else
          status = false(size(stage));
-         if numel(stage) == 1 % If only one stage, return all channel status
-            status = blockObj.Status.(stage{1});
+         % If only one stage, return all channel status
+         if numel(stage) == 1 
+            status = blockObj.Status.(stage{:});
+            
          else
-            for ii = 1:numel(stage) % Otherwise, just get whether stages are complete
-               status(ii) = any(blockObj.Status.(stage{ii}));
+            % Otherwise, just get whether stages are complete
+            maskExists = ~isempty(blockObj.Mask);
+            for ii = 1:numel(stage) 
+               channelStage = strcmp(blockObj.getFieldType(stage{ii}),...
+                                     'Channels');
+               flags = blockObj.Status.(stage{ii});
+               % If this is a 'Channels' FieldType Stage AND there is a
+               % Channel Mask specified, then require ALL elements to be
+               % true; otherwise, just require 'Any' element to be true
+               if channelStage && maskExists
+                  status(ii) = all(flags(blockObj.Mask));
+               else
+                  status(ii) = any(flags);
+               end
+               
             end
          end
       end
