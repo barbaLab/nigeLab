@@ -57,8 +57,10 @@ classdef nigelPanel < handle
       Substr      % Char array that is a sub-string. currently unused ...?
       Scrollable  % ('on' or 'off' (default))
       FontName          % Default: 'DroidSans'
+      MinTitleBarHeightPixels % Default: 20
       TitleFontSize     % Default: 13
       TitleFontWeight   % Default: 'bold'
+      TitleAlignment    % Default: 'left'
       TitleBarLocation  % Location of title bar (can be 'top' or 'bot')
       TitleBarPosition  % Coordinate [px py width height] vector for titleBox position
       TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
@@ -72,10 +74,10 @@ classdef nigelPanel < handle
    end
    
    properties(SetObservable)
-      Children  % Cell Array of nigeLab.libs.nigelPanel objects
+      Children    % Cell Array of nigeLab.libs.nigelPanel objects
       Color       % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
       String      % Char array for string in obj.textBox.ann
-      Units     % 'Normalized' or 'Pixels'
+      Units       % 'Normalized' or 'Pixels'
    end
    
    properties (Access = private)
@@ -131,7 +133,7 @@ classdef nigelPanel < handle
          end
          obj.Parent = parent; 
 
-         obj.setProps(varargin{:});
+         obj.initProps(varargin{:});
 
          obj.buildOuterPanel;  % Make "outer frame" for if there is scroll bar
          obj.buildTitleBox;    % Makes "nice header box"
@@ -166,28 +168,6 @@ classdef nigelPanel < handle
          delete(obj);         
       end
       
-      % Method to "nest" child objects into this panel
-      function nestObj(this,Obj,name)
-         % NESTOBJ  Sets this nigelPanel as the parent of Obj and adds Obj
-         %           to cell array of nigelPanel.Children, along with an
-         %           associated name char array into cell array property
-         %           nigelPanel.ChildName.
-         %
-         %  this = nigeLab.libs.nigelPanel;
-         %  this.nestObj(graphicsObj,nameOfGraphicsObj);
-         %
-         %  e.g.
-         %  ax = axes();
-         %  this.nestObj(ax,'Information Axes');
-         
-         if nargin < 3
-            name = '';
-         end
-         set(Obj, 'Parent', this.Panel);
-         this.Children{end+1} = Obj;
-         this.ChildName{end+1} = name;
-      end
-      
       % Return handle to child object corresponding to 'name'
       function c = getChild(obj,name)
          % GETCHILD  Return handle to child object corresponding to 'name'
@@ -212,6 +192,36 @@ classdef nigelPanel < handle
          end
       end
       
+      % Returns the pixel position for "panel"
+      function pos = getPixelPosition(obj)
+         % GETPIXELPOSITION  Returns the pixel position of "panel" object
+         
+         pos = getpixelposition(obj.Panel);
+      end
+      
+      % Method to "nest" child objects into this panel
+      function nestObj(obj,c,name)
+         % NESTOBJ  Sets this nigelPanel as the parent of Obj and adds Obj
+         %           to cell array of nigelPanel.Children, along with an
+         %           associated name char array into cell array property
+         %           nigelPanel.ChildName.
+         %
+         %  obj = nigeLab.libs.nigelPanel;
+         %  obj.nestObj(graphicsObj,'nameOfGraphicsObj');
+         %
+         %  e.g.
+         %  ax = axes();
+         %  obj.nestObj(ax,'Information Axes');
+         
+         if nargin < 3
+            name = '';
+         end
+         set(c, 'Parent', obj.Panel);
+         obj.Children{end+1} = c;
+         obj.ChildName{end+1} = name;
+         obj.fixProperties(c,'FontName');
+      end
+      
       % Remove the child object corresponding to 'name'
       function removeChild(obj,name)
          % REMOVECHILD  Remove the child object corresponding to
@@ -234,32 +244,6 @@ classdef nigelPanel < handle
             end
             obj.ChildName(idx) = [];
             obj.Children(idx) = [];
-         end
-      end
-      
-      % Returns the pixel position for "panel"
-      function pos = getPixelPosition(obj)
-         % GETPIXELPOSITION  Returns the pixel position of "panel" object
-         
-         pos = getpixelposition(obj.Panel);
-      end
-      
-      % Callback executed when Units property is changed
-      function UnitsChanged(obj, ~, Event)
-         % UNITSCHANGED  Callback that is executed when Units property is
-         %               changed. Makes sure that the panels will behave
-         %               properly if the Units property is toggled even
-         %               after the Constructor.
-         
-         switch Event.AffectedObject.Units
-            case 'normalized'
-               set(obj.OutPanel,'Units','normalized');
-               obj.InnerPosition = [0 0 1 1];
-               obj.Position = obj.OutPanel.Position;
-            case 'pixels'
-               set(obj.OutPanel,'Units','pixels');
-               obj.InnerPosition = getpixelposition(obj.Panel);
-               obj.Position = obj.OutPanel.Position;
          end
       end
       
@@ -378,13 +362,13 @@ classdef nigelPanel < handle
          %  * 'Color' property (PostSet)
          %  * 'String' property (PostSet)
          
-         obj.lh = [];
-         obj.lh = [obj.lh; ...
-                  addlistener(obj,'Units','PostSet',@obj.UnitsChanged)];
-         obj.lh = [obj.lh; ...
-                  addlistener(obj,'Color','PostSet',@(~,~)obj.setColors)];
-         obj.lh = [obj.lh; ...
-                  addlistener(obj,'String','PostSet',@(~,~)obj.setTitle)];
+         % Get a list of all "SetObservable == true" properties
+         setObservablePropList = obj.findAttrValue('SetObservable');
+
+         for i = 1:numel(setObservablePropList)
+            obj.lh = [obj.lh; addlistener(obj,setObservablePropList{i},...
+               'PostSet',@obj.handlePropEvents)];
+         end
       end
       
       % Build "outer panel" container
@@ -438,11 +422,71 @@ classdef nigelPanel < handle
               obj.String,...
               'Units','normalized',...
               'VerticalAlignment','middle',...
+              'HorizontalAlignment',obj.TitleAlignment,...
               'Color',obj.Color.TitleText,...
               'FontSize',obj.TitleFontSize,...
               'FontWeight',obj.TitleFontWeight,...
               'FontName',obj.FontName);
          end
+      end
+      
+      % "Fix" child properties so they are the same as nigelPanel (e.g.
+      % 'FontName' etc.)
+      function fixProperties(obj,c,propName)
+         % FIXCHILDPROPERTIES  "Fix" child properties
+         %
+         %  obj.fixProperties(c);  Match all child properties to nigelPanel
+         %                         properties (from list)
+         %
+         %  obj.fixProperties(c,propName);  Match child property for object 
+         %                                  or array of objects.
+         
+         if nargin < 2
+            c = obj.Children;
+         end
+         
+         if nargin < 3
+            propName = {'FontName','FontSize','Tag'};
+         end
+         
+         if numel(c) > 1
+            for i = 1:numel(c)
+               obj.fixProperties(c(i),propName);
+            end
+            return;
+         end
+         
+         if iscell(propName) && (numel(propName) > 1)
+            for i = 1:numel(propName)
+               obj.fixProperties(c,propName{i});
+            end
+            return;
+         end
+         
+         if isprop(c,propName)
+            switch propName
+               case 'FontSize'
+                  c.FontSize = obj.FontSize - 2;  % Make it smaller
+               otherwise
+                  c.(propName) = obj.(propName);
+            end
+         end
+         
+      end
+      
+      % "Fix" title bar height so that it cannot be "shorter" than a
+      % minimum pixel height
+      function fixTitleHeight(obj)
+         % FIXTITLEHEIGHT  "Fix" title bar height based on
+         %                 obj.MinTitleBarHeightPixels
+         %
+         %  obj.fixTitleHeight;
+         
+         % Parse TitleBarPosition Height from MinTitleBarHeight
+         pos = obj.getPixelPosition;
+         minNormHeight = obj.MinTitleBarHeightPixels / pos(4);
+         obj.TitleBarPosition(4) = max(minNormHeight,...
+                                       obj.TitleBarPosition(4));
       end
       
       % Returns position of "inner panel" based on "titleBox" location
@@ -473,35 +517,11 @@ classdef nigelPanel < handle
                   -0.02,... % width offset
                   -(0.02 + obj.TitleBar.axes.Position(4))]; % height offset
          end
-            
-         
-         
-      end
-      
-      % Set colors for all graphics objects
-      function setColors(obj)
-         % SETCOLORS  Set colors for all graphics objects
-         %
-         %  obj.setColors; Updates titleBox, OuterPanel, and panel
-         %
-         %  --> Uses current value of obj.Color struct property
-         
-         % Set colors for titleBox elements
-         obj.TitleBar.r1.FaceColor = obj.Color.Parent;
-         obj.TitleBar.r1.EdgeColor = obj.Color.Parent;
-         obj.TitleBar.r2.FaceColor = obj.Color.TitleBar;
-         obj.TitleBar.r2.EdgeColor = obj.Color.TitleBar;
-         obj.TitleBar.ann.Color = obj.Color.TitleText;
-         
-         % Set colors for "Inner Panel"
-         obj.Panel.BackgroundColor = obj.Color.Panel;
-         
-         % Set colors for "Outer Panel"
-         obj.OutPanel.BackgroundColor = obj.Color.Panel;
+
       end
       
       % Set all properties in the constructor based on 'Name', value pairs
-      function setProps(obj,varargin)
+      function initProps(obj,varargin)
          % SETPROPS  Set all properties in constructor based on 'Name',
          %           value input argument pairs.
          
@@ -518,8 +538,10 @@ classdef nigelPanel < handle
          Pars.Units = 'normalized';
          Pars.Scrollable = 'off';
          Pars.FontName = 'DroidSans';
+         Pars.MinTitleBarHeightPixels = 20;
          Pars.TitleFontSize = 13;
          Pars.TitleFontWeight = 'bold';
+         Pars.TitleAlignment = 'left';
          Pars.TitleBarLocation = 'top';
          Pars.TitleBarPosition = [0.000 0.945 1.000 0.055; ... % top
                                   0.000 0.000 1.000 0.055];    % bottom
@@ -554,22 +576,55 @@ classdef nigelPanel < handle
          obj.Units = Pars.Units;
          obj.Scrollable = lower(Pars.Scrollable);
          obj.FontName = Pars.FontName;
+         obj.MinTitleBarHeightPixels = Pars.MinTItleBarHeightPixels;
          obj.TitleBar = Pars.TitleBar; % If want to manually set TitleBar
+         obj.TitleAlignment = Pars.TitleAlignment;
          obj.TitleFontSize = Pars.TitleFontSize;
          obj.TitleFontWeight = Pars.TitleFontWeight;
          obj.TitleBarLocation = Pars.TitleBarLocation;
          switch lower(obj.TitleBarLocation)
             case 'top'
-               obj.TitleBarPosition = [0 0.945 1 0.055];
+               obj.TitleBarPosition = Pars.TitleBarPosition(1,:);
             case {'bot','bottom'}
                obj.TitleBarPosition = Pars.TitleBarPosition(2,:);
             otherwise 
                obj.TitleBarPosition = Pars.TitleBarPosition(1,:); 
          end
+         obj.fixTitleBarHeight;
          obj.TitleStringX = Pars.TitleStringX;
          obj.TitleStringY = Pars.TitleStringY;
          obj.DeleteFcn = Pars.DeleteFcn;
          
+         % Create listeners for all setObservable properties
+         obj.buildListeners;
+      end
+   end
+   
+   % Private "CALLBACK" methods for property-listeners. Any methods here
+   % should only take "obj" as an argument, and would typically update
+   % graphics elements using some property value (from a property that has
+   % the Attribute SetObservable == true)
+   methods (Access = private)
+      % Set colors for all graphics objects
+      function setColors(obj)
+         % SETCOLORS  Set colors for all graphics objects
+         %
+         %  obj.setColors; Updates titleBox, OuterPanel, and panel
+         %
+         %  --> Uses current value of obj.Color struct property
+         
+         % Set colors for titleBox elements
+         obj.TitleBar.r1.FaceColor = obj.Color.Parent;
+         obj.TitleBar.r1.EdgeColor = obj.Color.Parent;
+         obj.TitleBar.r2.FaceColor = obj.Color.TitleBar;
+         obj.TitleBar.r2.EdgeColor = obj.Color.TitleBar;
+         obj.TitleBar.ann.Color = obj.Color.TitleText;
+         
+         % Set colors for "Inner Panel"
+         obj.Panel.BackgroundColor = obj.Color.Panel;
+         
+         % Set colors for "Outer Panel"
+         obj.OutPanel.BackgroundColor = obj.Color.Panel;
       end
       
       % Set the current annotation title (in titleBox)
@@ -579,6 +634,104 @@ classdef nigelPanel < handle
          %  obj.setTitle;  Uses current value of obj.String
          
          obj.TitleBar.ann.String = obj.String;
+      end
+      
+      % Callback executed when Units property is changed
+      function UnitsChanged(obj)
+         % UNITSCHANGED  Callback that is executed when Units property is
+         %               changed. Makes sure that the panels will behave
+         %               properly if the Units property is toggled even
+         %               after the Constructor.
+         
+         switch obj.Units
+            case 'normalized'
+               set(obj.OutPanel,'Units','normalized');
+               obj.InnerPosition = [0 0 1 1];
+               obj.Position = obj.OutPanel.Position;
+            case 'pixels'
+               set(obj.OutPanel,'Units','pixels');
+               obj.InnerPosition = getpixelposition(obj.Panel);
+               obj.Position = obj.OutPanel.Position;
+         end
+      end
+      
+   end
+   
+   % Private Static method to handle property change events
+   methods (Access = private, Static = true)  
+      % Method to find properties based on their attribute values
+      function propList = findAttrValue(attrName,attrValue)
+         % FINDATTRVALUE  Find properties given an attribute value
+         %
+         %  cl_out = nigeLab.libs.nigelPanel.findAttrValue(attrName);
+         %  cl_out = nigeLab.libs.nigelPanel.findAttrValue(attrName,...
+         %                                                 attrValue);
+         %
+         %  attrName : e.g. 'SetAccess' etc (property attributes)
+         %  attrValue : (optional) e.g. 'private' or 'public' etc
+         %
+         %  Adapted from TheMathworks getting-information-about-properties
+         
+         % Get class metadata and second input arg if not specified
+         if nargin < 2
+            attrValue = '';
+         end
+         mc = meta.class.fromName('nigeLab.libs.nigelPanel');
+         
+         % Initialize outputs
+         propListCounter = 0; 
+         nProp = numel(mc.PropertyList);
+         propList = cell(1,nProp);
+         
+         % Check each property
+         for  c = 1:nProp
+            mp = mc.PropertyList(c);
+            if isempty (findprop(mp,attrName))
+               error('Not a valid attribute name')
+            end
+            val = mp.(attrName);
+            if val
+               if islogical(val) || strcmp(attrValue,val)
+                  propListCounter = propListCounter + 1;
+                  propList(propListCounter) = {mp.Name};
+               end
+            end
+         end
+         propList = propList(1:propListCounter);
+      end
+      
+      % Method to handle property changes in general
+      function handlePropEvents(metaProp,evt)
+         % HANDLEPROPEVENTS  Static function to handle property changes
+         %
+         %  nigeLab.libs.nigelPanel.handlePropEvents(metaProp,evt);
+         
+         h = evt.AffectedObject;
+         switch metaProp.Name
+            case 'Color'
+               h.setColors;
+            case 'String'
+               h.setTitle;
+            case 'Units'
+               h.UnitsChanged;
+            case 'MinTitleBarHeightPixels'
+               h.fixTitleHeight;
+            case 'TitleBarPosition'
+               h.TitleBar.ax.Position = h.TitleBarPosition;
+            case 'TitleStringX'
+               h.TitleBar.ann.Position(1) = h.TitleStringX;
+            case 'TitleStringY'
+               h.TitleBar.ann.Position(2) = h.TitleStringY;
+            case 'FontName'
+               h.TitleBar.ann.FontName = h.FontName;
+               h.fixChildProperties(obj.Children,'FontName');
+            case 'TitleFontWeight'
+               h.TitleBar.ann.FontWeight = h.TitleFontWeight;
+            case 'TitleAlignment'
+               h.TitleBar.ann.HorizontalAlignment = h.TitleAlignment;
+            otherwise
+               % do nothing
+         end
       end
    end
 end
