@@ -1,69 +1,84 @@
 classdef Block < matlab.mixin.Copyable
-   %% BLOCK    Creates datastore for an electrophysiology recording.
-   %
-   %  blockObj = BLOCK();
-   %  blockObj = BLOCK('NAME','VALUE',...);
-   %
-   %  ex:
-   %  blockObj = BLOCK('DIR','P:\Your\Recording\Directory\Here');
-   %
-   %  BLOCK Properties:
-   %     Name - Name of recording BLOCK.
-   %
-   %     Graphics - Struct that contains pointers to graphics files.
-   %
-   %     Status - Completion status for each element of BLOCK/FIELDS.
-   %
-   %     Channels - Struct that contains data fields.
-   %                 -> blockObj.Channels(7).Raw(1:10) First 10 samples of
-   %                                                    channel 7 from the
-   %                                                    raw waveform.
-   %                 -> blockObj.Channels(1).Spikes.peak_train  Spike
-   %                                                           peak_train
-   %                                                           for chan 1.
-   %
-   %     Meta - Struct containing metadata info about recording BLOCK.
-   %
-   %  BLOCK Methods:
-   %     Block - Class constructor. Call as blockObj = BLOCK(varargin)
-   %
-   %     doRawExtraction - Convert from raw data binaries to BLOCK format.
-   %
-   %     doUnitFilter - Apply bandpass filter for unit activity.
-   %
-   %     doReReference - Apply common average re-reference for de-noising.
-   %
-   %     doSD - Run spike detection and feature extraction.
-   %
-   %     doLFPExtraction - Use cascaded lowpass filter to decimate raw data
-   %                       to a rate more suitable for LFP analyses.
-   %
-   %     doVidInfoExtraction - Get video metadata if there are related
-   %                           behavioral videos associated with a
-   %                           recording.
-   %
-   %     doVidSyncExtraction - Get time-series of "digital HIGH" times
-   %                           based on detection of ON/OFF state of a
-   %                           video element, such as a flashing LED.
-   %
-   %     doBehaviorSync - Get synchronization signal from digital inputs.
-   %
-   %     plotWaves -    Make a preview of the filtered waveform for all
-   %                    channels, and include any sorted, clustered, or
-   %                    detected spikes for those channels as highlighted
-   %                    marks at the appropriate time stamp.
-   %
-   %     plotSpikes -   Display all spikes for a particular channel as a
-   %                    SPIKEIMAGE object.
-   %
-   %     linkToData - Link block object to existing data structure.
-   %
-   %     clearSpace - Remove extracted RAW data, and extracted FILTERED
-   %                  data if CAR channels are present.
-   %
-   %     analyzeRMS - Get RMS for all channels of a desired type of stream.
+% BLOCK    Creates datastore for an electrophysiology recording.
+%
+%  blockObj = nigeLab.Block();
+%     --> select Block path information from UI
+%  blockObj = nigeLab.Block(blockPath); 
+%     --> blockPath can be set as [] or char array with location
+%  blockObj = nigeLab.Block(blockPath,animalPath);
+%     --> animalPath can be [] or char array with location
+%  blockObj = nigeLab.Block(__,'PropName1',propVal1,...);
+%     --> allows specification of properties in constructor
+%
+%  ex:
+%  blockObj = nigeLab.Block([],'P:\Your\Recording\Directory\Here');
+%
+%  BLOCK Properties:
+%     Name - Name of recording BLOCK.
+%
+%     Animal - "Parent" nigeLab.Animal object
+%
+%     Graphics - Struct that contains pointers to graphics files.
+%
+%     Status - Completion status for each element of BLOCK/FIELDS.
+%
+%     Channels - Struct that contains data fields.
+%                 -> blockObj.Channels(7).Raw(1:10) First 10 samples of
+%                                                    channel 7 from the
+%                                                    raw waveform.
+%                 -> blockObj.Channels(1).Spikes.peak_train  Spike
+%                                                           peak_train
+%                                                           for chan 1.
+%
+%     Meta - Struct containing metadata info about recording BLOCK.
+%
+%  BLOCK Methods:
+%     Block - Class constructor. Call as blockObj = BLOCK(varargin)
+%
+%     doRawExtraction - Convert from raw data binaries to BLOCK format.
+%
+%     doUnitFilter - Apply bandpass filter for unit activity.
+%
+%     doReReference - Apply common average re-reference for de-noising.
+%
+%     doSD - Run spike detection and feature extraction.
+%
+%     doLFPExtraction - Use cascaded lowpass filter to decimate raw data
+%                       to a rate more suitable for LFP analyses.
+%
+%     doVidInfoExtraction - Get video metadata if there are related
+%                           behavioral videos associated with a
+%                           recording.
+%
+%     doVidSyncExtraction - Get time-series of "digital HIGH" times
+%                           based on detection of ON/OFF state of a
+%                           video element, such as a flashing LED.
+%
+%     doBehaviorSync - Get synchronization signal from digital inputs.
+%
+%     plotWaves -    Make a preview of the filtered waveform for all
+%                    channels, and include any sorted, clustered, or
+%                    detected spikes for those channels as highlighted
+%                    marks at the appropriate time stamp.
+%
+%     plotSpikes -   Display all spikes for a particular channel as a
+%                    SPIKEIMAGE object.
+%
+%     linkToData - Link block object to existing data structure.
+%
+%     clearSpace - Remove extracted RAW data, and extracted FILTERED
+%                  data if CAR channels are present.
+%
+%     analyzeRMS - Get RMS for all channels of a desired type of stream.
+%
+%     Empty - Create an Empty BLOCK object or array
    
    %% PROPERTIES
+   % Public properties that are SetObservable
+   properties (Access = public, SetObservable = true)
+      Animal nigeLab.Animal  % nigeLab.Animal "Parent" object
+   end
+   
    % Public properties that can be modified externally
    properties (SetAccess = public, GetAccess = public)
       Name     % Name of the recording block
@@ -195,17 +210,46 @@ classdef Block < matlab.mixin.Copyable
    % BLOCK class constructor
    methods (Access = public)
       % BLOCK class constructor
-      function blockObj = Block(varargin)
-         %% BLOCK Create a datastore object based on CPL data structure
+      function blockObj = Block(blockPath,animalPath,varargin)
+         % BLOCK    Creates datastore for an electrophysiology recording.
          %
-         %  blockObj = BLOCK;
-         %  blockObj = BLOCK('NAME',Value,...);
+         %  blockObj = nigeLab.Block();
+         %     --> select Block path information from UI
+         %  blockObj = nigeLab.Block(blockPath); 
+         %     --> blockPath can be set as [] or char array with location
+         %  blockObj = nigeLab.Block(blockPath,animalPath);
+         %     --> animalPath can be [] or char array with location
+         %  blockObj = nigeLab.Block(__,'PropName1',propVal1,...);
+         %     --> allows specification of properties in constructor
          %
-         % By: Max Murphy  v1.0  08/25/2017
-         %     F. Barban   v2.0  11/2018
-         %     MM, FB      v3.0  11/2019
+         %  ex:
+         %  blockObj = nigeLab.Block([],'P:\Your\Rec\Directory\Here');
          
-         %% PARSE VARARGIN
+         % Parse Inputs
+         if nargin < 1
+            blockObj.RecFile = [];
+         else
+            if isempty(blockPath)
+               blockObj.RecFile = [];
+            elseif isnumeric(blockPath)
+               % Create empty object array and return
+               dims = blockPath;
+               blockObj = repmat(blockObj,dims);
+               return;
+            elseif ischar(blockPath)
+               blockObj.RecFile = blockPath;
+            else
+               error(['nigeLab:' mfilename ':badInputType1'],...
+                  'Bad blockPath input type: %s',class(blockPath));
+            end
+         end
+         
+         if nargin < 2
+            blockObj.AnimalLoc = [];
+         else
+            blockObj.AnimalLoc = animalPath;
+         end
+         
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue;
@@ -216,7 +260,7 @@ classdef Block < matlab.mixin.Copyable
             end            
          end
          
-         %% LOAD DEFAULT BLOCK PARAMETERS
+         % Load default parameters
          [pars,blockObj.Fields] = nigeLab.defaults.Block;
          allNames = fieldnames(pars);
          allNames = reshape(allNames,1,numel(allNames));
@@ -227,7 +271,7 @@ classdef Block < matlab.mixin.Copyable
             end
          end
          
-         %% LOOK FOR BLOCK DIRECTORY
+         % Look for "Block" directory
          if isempty(blockObj.RecFile)
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
@@ -241,11 +285,32 @@ classdef Block < matlab.mixin.Copyable
             end
          end
          blockObj.RecFile =nigeLab.utils.getUNCPath(blockObj.RecFile);
-         %% INITIALIZE BLOCK OBJECT
          if ~blockObj.init()
             error('Block object construction unsuccessful.');
          end
          
+      end
+   end
+   
+   % "PUBLIC" methods
+   methods (Access = public)
+      % Add "Parent" Animal to this Block
+      function setAnimal(blockObj,animalObj)
+         % SETANIMAL  Sets the "Parent" nigeLab.Animal to this Block
+         %
+         %  blockObj.setAnimal(animalObj);
+         
+         if ~isa(animalObj,'nigeLab.Animal')
+            error(['nigeLab:' mfilename ':badInputType1'],...
+               'Bad animalObj input type: %s',class(animalObj));
+         end
+         
+         if ~isscalar(animalObj)
+            error(['nigeLab:' mfilename ':badInputType2'],...
+               'animalObj must be scalar.');
+         end
+         
+         blockObj.Animal = animalObj;
       end
    end
    
@@ -495,12 +560,37 @@ classdef Block < matlab.mixin.Copyable
    
    % Static methods for multiple animals
    methods (Static)
-       function obj = loadobj(obj)
-           if obj.ManyAnimals
-               for bl=obj.ManyAnimalsLinkedBlocks
-                   bl.reload();
-               end
-           end
-       end
+      % Method to instantiate "Empty" Blocks from constructor
+      function blockObj = Empty(n)
+         % EMPTY  Creates "empty" block or block array
+         %
+         %  blockObj = nigeLab.Block.Empty();  % Makes a scalar
+         %  blockObj = nigeLab.Block.Empty(n); % Make n-element array Block
+         
+         if nargin < 1
+            n = 1;
+         else
+            n = nanmax(n,1);
+         end
+         
+         blockObj = nigeLab.Block(n);
+      end
+      
+      % Overloaded method for loading objects (for many blocks case)
+      function obj = loadobj(obj)
+         % LOADOBJ  Overloaded method called when loading BLOCK.
+         %
+         %  Has to be called when there ManyAnimals is true because the
+         %  BLOCKS are removed from parent objects in that case during
+         %  saving.
+         %
+         %  blockObj = loadobj(blockObj);
+         
+        if obj.ManyAnimals
+            for bl=obj.ManyAnimalsLinkedBlocks
+                bl.reload();
+            end
+        end
+      end
    end
 end

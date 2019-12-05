@@ -1,40 +1,56 @@
 classdef Tank < handle
-%% TANK  Class to handle each nigeLab.Animal for a whole experiment
+% TANK  Construct Tank Class object
 %
-%  tankObj = TANK;
-%  tankObj = TANK('NAME','VALUE',...);   
+%  tankObj = nigeLab.Tank();
+%     --> prompts for locations using UI
+%
+%  tankObj = nigeLab.Tank(tankSavePath);
+%     --> tankPath can be [] or char array with location
+%
+%  tankObj = nigeLab.Tank(tankSavePath
+%  tankObj = nigeLab.Tank(__,'PropName',propValue,...);
+%     --> specify property name, value pairs on construction
 %
 %  ex: 
-%  tankObj = TANK('RecDir','P:\Your\Recording\Directory\Here');
+%  tankObj = nigeLab.Tank('R:\My\Tank','P:\My\Tank');
+%  --> RecDir is in a different location than SaveLoc (for
+%      example, if data was just collected but not extracted)
 %
+%  tankObj = nigeLab.Tank('P:\My\Tank','P:\My');
+%  --> RecDir == SaveLoc (for example, if data was previously
+%      extracted, but saved Tank wasn't kept or something. Note
+%      that SaveLoc is the "parent" folder of RecDir in this case)
+%         
 %  TANK Properties:
 %     Name - Name of experimental TANK.
+%     
+%     Animals - Array of handles to "Children" nigeLab.Animals objects
+%
+%     Paths - Struct with detailed path specifications of saved files
+%
+%     RecDir - Path to the TANK (file hierarchy; char array)
+%
+%     SaveLoc - Top-level folder of the TANK (file hierarchy; char array)
+%
+%     Pars - Parameters struct
+%
+%     BlockNameVars - Metadata varaibles parsed from BLOCK names
 %
 %  TANK Methods:
 %     Tank - TANK Class object constructor.
 %
-%     convert - Convert raw data files to Matlab BLOCK hierarchical format.
-%
-%     createMetadata - Creates metadata file in Processed TANK parent
-%                      folder.
-%
 %     list - List Block objects in the TANK.
 %
-%     tankGet - Get a specific property from the TANK object.
-%
-%     tankSet - Set a property of the TANK object. Returns a boolean
-%               flag as true if property is set successfully.
-%
-% By: Max Murphy  v1.0  06/14/2018
+%     Empty - Create an Empty TANK object or array
 
    %% PUBLIC PROPERTIES
    properties (GetAccess = public, SetAccess = public)
-      Name	% Name of experiment (TANK)
-      Animals                 % Children (ANIMAL)
+      Name                    % Name of experiment (TANK)
+      Animals nigeLab.Animal  % Handle array to Children
    end
    
    properties (SetAccess = private, GetAccess = public)
-       Paths         % Detailed paths specifications for all the saved files
+       Paths  % Detailed paths specifications for all the saved files
    end
    
    %% PRIVATE PROPERTIES
@@ -61,31 +77,57 @@ classdef Tank < handle
    
    %% PUBLIC METHODS
    methods (Access = public)
-      function tankObj = Tank(varargin)
-         %% TANK  Construct Tank Class object
+      % Class constructor
+      function tankObj = Tank(tankRecPath,tankSavePath,varargin)
+         % TANK  Construct Tank Class object
          %
-         %  tankObj = TANK;
-         %  tankObj = TANK('NAME',Value,...);
+         %  tankObj = nigeLab.Tank();
+         %     --> prompts for locations using UI
+         %
+         %  tankObj = nigeLab.Tank(tankSavePath);
+         %     --> tankPath can be [] or char array with location
+         %
+         %  tankObj = nigeLab.Tank(tankSavePath
+         %  tankObj = nigeLab.Tank(__,'PropName',propValue,...);
+         %     --> specify property name, value pairs on construction
          %
          %  ex: 
-         %  tankObj = TANK('RecDir','P:\Your\Block\Directory\Here');
+         %  tankObj = nigeLab.Tank('R:\My\Tank','P:\My\Tank');
+         %  --> RecDir is in a different location than SaveLoc (for
+         %      example, if data was just collected but not extracted)
          %
-         %  List of 'NAME', Value input argument pairs:
-         %
-         %  -> 'RecDir' : (def: none) Specify as string with full directory of
-         %              recording BLOCK. Specifying this will skip the UI
-         %              selection portion, so it's useful if you are
-         %              looping the expression.
-         %
-         % By: Max Murphy  v1.0  06/14/2018
+         %  tankObj = nigeLab.Tank('P:\My\Tank','P:\My');
+         %  --> RecDir == SaveLoc (for example, if data was previously
+         %      extracted, but saved Tank wasn't kept or something. Note
+         %      that SaveLoc is the "parent" folder of RecDir in this case)
          
-         %% LOAD OTHER PRIVATE DEFAULT SETTINGS
-%          tankObj = def_params(tankObj);
+         if nargin < 1
+            tankObj.RecDir = [];
+         else
+            if isempty(tankRecPath) || ischar(tankRecPath)
+               tankObj.RecDir = tankRecPath;
+            elseif isnumeric(tankRecPath)
+               dims = tankRecPath;
+               tankObj = repmat(tankObj,dims);
+               return;
+            else
+               error(['nigeLab:' mfilename ':badInputType1'],...
+                  'Bad tankRecPath input type: %s',class(tankRecPath));
+            end
+         end
+         
+         if nargin < 2
+            tankObj.SaveLoc = [];
+         else
+            tankObj.SaveLoc = tankSavePath;
+         end
+         
+         % Load default settings
          tankObj.updateParams('Tank');
          tankObj.updateParams('all');
          
-         %% PARSE VARARGIN
-         for iV = 1:2:numel(varargin) % Can specify properties on construct
+         % Can specify properties on construct
+         for iV = 1:2:numel(varargin) 
             if ~ischar(varargin{iV})
                continue
             end
@@ -96,7 +138,7 @@ classdef Tank < handle
             tankObj.(varargin{iV}) = varargin{iV+1};
          end
          
-         %% LOOK FOR BLOCK DIRECTORY
+         % Look for TANK directory
          if isempty(tankObj.RecDir)
             tankObj.RecDir = uigetdir(tankObj.Pars.DefaultTankLoc,...
                                    'Select TANK folder');
@@ -109,77 +151,128 @@ classdef Tank < handle
             end
          end
          tankObj.RecDir = nigeLab.utils.getUNCPath(tankObj.RecDir);
-         %% INITIALIZE TANK OBJECT
          if ~tankObj.init
             error('Could not initialize TANK object.');
          end
          
       end
       
-      function addAnimal(tankObj,AnimalFolder)
-         %% ADDANIMAL   Method to add animal to nigeLab.Tank Animals property
-          if nargin<2
-              AnimalFolder=[];
-          end
-          if isempty(AnimalFolder)
-            AnimalFolder = uigetdir(tankObj.RecDir,...
-                                   'Select animal folder');
-            if AnimalFolder == 0
-               error('No animal selected. Object not created.');
+      % Method to add animals to Tank
+      function addAnimal(tankObj,animalPath)
+         % ADDANIMAL  Method to add animal to nigeLab.Tank Animals property
+         %
+         %  tankObj.addAnimal();
+         %     --> Allows selection of animals from UI
+         %  tankObj.addAnimal('AnimalFolder'); 
+         %     --> Adds animal corresponding to 'AnimalFolder'
+         %  tankObj.addAnimal({'aFolder1','aFolder2',...});
+         %     --> Adds multiple animals from cell array of folder chars
+         %  tankObj.addAnimal(animalObj);
+         %     --> Adds animalObj directly, which could be a scalar
+         %         animalObj or an array.
+         
+         % Check inputs
+         if nargin<2
+            animalPath=[];
+         end
+         
+         if iscell(animalPath)
+            for i = 1:numel(animalPath)
+               tankObj.addAnimal(animalPath{i});
+            end
+            return;
+         end
+         
+         if isa(animalPath,'nigeLab.Animal')
+            if numel(animalPath) > 1
+               animalObj = reshape(animalPath,1,numel(animalPath));
+            else
+               animalObj = animalPath;
             end
          else
-            if exist(AnimalFolder,'dir')==0
-               error('%s is not a valid block directory.',AnimalFolder);
+            % Parse AnimalFolder from UI
+            if isempty(animalPath)
+               animalPath = uigetdir(tankObj.RecDir,...
+                  'Select animal folder');
+               if animalPath == 0
+                  error(['nigeLab:' mfilename ':NoAnimalSelection'],...
+                     'No ANIMAL selected. Object not created.');
+               end
+            else
+               if exist(animalPath,'dir')==0
+                  error(['nigeLab:', mfilename ':invalidAnimalPath'],...
+                     '%s is not a valid ANIMAL directory.',animalPath);
+               end
             end
+
+            animalObj = nigeLab.Animal(animalPath,tankObj.Paths.SaveLoc);
          end
-          
-         newAnimal= nigeLab.Animal('RecDir',AnimalFolder,...
-             'TankLoc',tankObj.Paths.SaveLoc);
-         tankObj.Animals = [tankObj.Animals newAnimal];
+         animalObj.setTank(tankObj); % Set "parent" tank
+         tankObj.Animals = [tankObj.Animals animalObj];
       end
       
+      % Method used for saving TANK object
       function save(tankObj)
-         %% SAVE  Method to save a nigeLab.Tank class object
-          A=tankObj.Animals;
-          for ii=1:numel(A)
-              A(ii).save;
-          end
+         % SAVE  Method to save a nigeLab.Tank class object
+         % 
+         %  tankObj.save;  Saves 'tankObj' in [TankName]_Tank.mat
+         
+         A=tankObj.Animals;
+         for ii=1:numel(A)
+            A(ii).save;
+         end
          save(fullfile([tankObj.Paths.SaveLoc '_Tank.mat']),'tankObj','-v7');
          tankObj.Animals = A;
-
       end
       
+      % Overloaded method that is called when TANK is saved
       function tankObj = saveobj(tankObj)
-         tankObj.Animals = [];         
+         % SAVEOBJ  Method that is called when TANK is saved
+         
+         tankObj.Animals = nigeLab.Animal.Empty();         
       end
       
+      % Returns the status of a operation/animal for each unique pairing
       function Status = getStatus(tankObj,operation)
+         % GETSTATUS  Return the status for each Animal for a given
+         %            operation. If anything is missing for that
+         %            Animal/Operation pairing, then the corresponding
+         %            status element (for that animal) is returned as
+         %            false.
+         %
+         %  Status = tankObj.getStatus(); Returns status for ALL operations
+         %  Status = tankObj.getStatus(operation); Returns specific
+         %                                         operation status
+         
          if nargin <2
             tmp = tankObj.list;
             Status = tmp.Status;
          else
-            if ~iscell(operation),operation={operation};end
+            % Ensure operation is a cell
+            if ~iscell(operation)
+               operation={operation};
+            end
+            % Check status from each animal
+            Status = false(numel(tankObj.Animals),numel(operation));
             for aa =1:numel(tankObj.Animals)
                tmp =  tankObj.Animals(aa).getStatus(operation);
-               if numel(operation)==1,tmp=all(tmp,2);end
+               if numel(operation)==1
+                  tmp=all(tmp,2); 
+               end
                Status(aa,:) = all(tmp,1);
             end
          end
       end
-      
-      % Extraction methods
+
       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
       flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
       
-      % Utility
-      linkToData(tankObj)
-      blockList = list(tankObj)       % List Blocks in TANK
-%       out = tankGet(tankObj,prop)     % Get a specific TANK property
-%       flag = tankSet(tankObj,prop)    % Set a specific TANK property      
-      flag = updatePaths(tankObj,SaveLoc)
-      N = getNumBlocks(tankObj) % Get the total number of blocks in TANK
+      linkToData(tankObj)           % Link TANK to data files on DISK
+      blockList = list(tankObj)     % List Blocks in TANK    
+      flag = updatePaths(tankObj,SaveLoc)    % Update PATHS to files
+      N = getNumBlocks(tankObj) % Get total number of blocks in TANK
       runFun(tankObj,f) % Run function f on all child blocks in tank
       
    end
@@ -197,7 +290,31 @@ classdef Tank < handle
    end
 
    methods (Static)
+      % Method to create Empty TANK object or array
+      function tankObj = Empty(n)
+         % EMPTY  Creates "empty" block or block array
+         %
+         %  tankObj = nigeLab.Tank.Empty();  % Makes a scalar Tank object
+         %  tankObj = nigeLab.Tank.Empty(n); % Make n-element array Tank
+         
+         if nargin < 1
+            n = 1;
+         else
+            n = nanmax(n,1);
+         end
+         
+         tankObj = nigeLab.Tank(n);
+      end
+      
+      % Method that is called when loading a TANK
       function tankObj = loadobj(tankObj)
+         % LOADOBJ  Overloaded method called when loading a TANK
+         %
+         %  tankObj = loadObj(tankObj);
+         
+         % Have to re-load all the child animals/blocks since they were
+         % removed in order to save it properly (during MultiAnimals
+         % methods)
          BL = dir(fullfile(tankObj.Paths.SaveLoc,'*_Animal.mat'));
          load(fullfile(BL(1).folder,BL(1).name),'animalObj');
             tankObj.Animals = animalObj;
