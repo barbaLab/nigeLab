@@ -1,10 +1,8 @@
 function flag = getSaveLocation(animalObj,tankLoc)
-%% GETSAVELOCATION   Set the save location for processed TANK
+% GETSAVELOCATION   Set the save location for processed TANK
 %
 %  flag = blockObj.GETSAVELOCATION;
 %  flag = blockObj.GETSAVELOCATION('save/path/here');
-%
-% By: Max Murphy  v1.0  06/15/2018  Original version (R2017b)
 
 %% Reporter flag for whether this was executed properly
 flag = false;
@@ -20,7 +18,8 @@ end
 tmp = nigeLab.utils.getUNCPath(tmp);
 %% Abort if cancel was clicked, otherwise set it
 if tmp == 0
-   disp('Save location selection canceled manually.');
+   error(['nigeLab:' mfilename ':selectionCanceled'],...
+          'No ANIMAL input path selected. Object not created.');
 else
    % Make sure it's a valid directory, as it could be provided through
    % second input argument:

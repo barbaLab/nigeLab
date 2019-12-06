@@ -72,6 +72,9 @@ end
 % at this point paramType should be a simple string
 Pars = nigeLab.defaults.(paramType)();
 F = fields(Pars);
+if isempty(animalObj.Pars)
+   animalObj.Pars = struct;
+end
 for ii=1:numel(F)   % populate Pars struct preserving values
     animalObj.Pars.(F{ii}) =  Pars.(F{ii});
 end

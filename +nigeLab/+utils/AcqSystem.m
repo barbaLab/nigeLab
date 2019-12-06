@@ -18,7 +18,7 @@ classdef AcqSystem
          
          sys = upper(systemName);
          if ~ismember(sys,nigeLab.utils.AcqSystem.validOptions)
-            error('Invalid systemName (see AcqSystem.validOptions): %s',...
+            error('Invalid systemName : %s  (see AcqSystem.validOptions)',...
                systemName);
          end
          

@@ -1,10 +1,16 @@
-function UNCPath = getUNCPath(p)
+function UNCPath = getUNCPath(varargin)
 % GETUNCPATH  Returns UNC-formatted path of the input path
 %
-% UNCPath = getUNCPath(p)
+%  UNCPath = nigeLab.utils.getUNCPath(p)
+%  UNCPath = nigeLab.utils.getUNCPath(p1,p2,...,pk)
 %
-%  p  --  Char array of a mapped path of interest (e.g. 'C:\...');
-%  UNCPath  --  Char array corresponding to "p" but with the universal
+%  -- Input --
+%  p  ::  Char array of a mapped path of interest (e.g. 'C:\...');
+%           --> Can also be provided as multiple inputs, with similar 
+%               functionality to Matlab fullfile()
+%
+%  -- Output --
+%  UNCPath  ::  Char array corresponding to "p" but with the universal
 %                 naming convention (UNC) applied.
 %
 %  Makes use of 'GetFullPath' package provided by Jan Simon via the Matlab
@@ -16,6 +22,14 @@ function UNCPath = getUNCPath(p)
 %  MATLAB Central File Exchange. Retrieved December 4, 2019. 
 
 %% Check inputs
+if nargin < 1
+   p = [];
+elseif nargin == 1
+   p = fullfile(varargin{1});
+else
+   p = fullfile(varargin{:});
+end
+
 if isempty(p)
    UNCPath=p;
    return;

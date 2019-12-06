@@ -34,29 +34,33 @@ classdef Animal < matlab.mixin.Copyable
 %     Empty - Create an Empty ANIMAL object or array
    
    %% PUBLIC PROPERTIES
-   properties (GetAccess = public, SetAccess = public,SetObservable)
-      Name                 % Animal identification code
-      Tank   nigeLab.Tank  % Parent (nigeLab.Tank object)
-      Blocks nigeLab.Block % Children (nigeLab.Block objects)
-      Probes               % Electrode configuration structure
+   properties (GetAccess = public, SetAccess = public, SetObservable)
+      Name     char          % Animal identification code
+      Tank     nigeLab.Tank  % Parent (nigeLab.Tank object)
+      Probes   struct        % Electrode configuration structure
+      Blocks   nigeLab.Block % Children (nigeLab.Block objects)
+   end
+   
+   properties (GetAccess = public, SetAccess = private, SetObservable)
+      Mask     double        % Channel "Mask" vector (for all recordings)
    end
    
    %% HIDDEN OR PRIVATE PROPERTIES
    properties (SetAccess = private, GetAccess = public)
-       Paths         % Path to Animal folder
+      Paths   struct      % Path to Animal folder
    end
       
    properties (GetAccess = public, SetAccess = private, Hidden = true)
-      Pars              % parameters struct for templates from nigeLab.defaults
+      Pars           struct      % parameters struct for templates from nigeLab.defaults
       
-      TankLoc           % directory for saving Animal
-      RecDir            % directory with raw binary data in intan format
-      ExtractFlag       % flag status of extraction for each block
+      TankLoc        char        % directory for saving Animal
+      RecDir         char        % directory with raw binary data in intan format
+      ExtractFlag    logical     % flag status of extraction for each block
    end
    
    properties  (SetAccess = private, GetAccess = private) 
-       RecLocDefault     % Default location of raw binary recording
-       TankLocDefault  % Default location of BLOCK
+       RecLocDefault    char     % Default location of raw binary recording
+       TankLocDefault   char     % Default location of BLOCK
    end
    
    %% PUBLIC METHODS
@@ -84,10 +88,10 @@ classdef Animal < matlab.mixin.Copyable
          
          % Parse input arguments
          if nargin < 1
-            animalObj.RecDir = [];
+            animalObj.RecDir = '';
          else
             if isempty(animalPath)
-               animalObj.RecDir = [];
+               animalObj.RecDir = '';
             elseif isnumeric(animalPath)
                % Create empty Animal array and return
                dims = animalPath;
@@ -102,9 +106,9 @@ classdef Animal < matlab.mixin.Copyable
          end
          
          if nargin < 2
-            animalObj.TankLoc = [];
+            animalObj.TankLoc = '';
          else
-            animalObj.TankLoc = tankPath;
+            animalObj.TankLoc = nigeLab.utils.getUNCPath(tankPath);
          end
          
          % Can specify properties on construct
@@ -124,11 +128,13 @@ classdef Animal < matlab.mixin.Copyable
             animalObj.RecDir = uigetdir(animalObj.Pars.DefaultRecLoc,...
                'Select directory with the recordings (Blocks)');
             if animalObj.RecDir == 0
-               error('No animal selected. Object not created.');
+               error(['nigeLab:' mfilename ':selectionCanceled'],...
+                  'No ANIMAL input path selected. Object not created.');
             end
          else
             if exist(animalObj.RecDir,'dir')==0
-               error('%s is not a valid block directory.',animalObj.RecDir);
+               error(['nigeLab:' mfilename ':invalidPath'],...
+                  '%s is not a valid ANIMAL directory.',animalObj.RecDir);
             end
          end
          
@@ -138,11 +144,17 @@ classdef Animal < matlab.mixin.Copyable
       end
       
       % Add Blocks to Animal object
-      function addBlock(animalObj,blockPath)
+      function addBlock(animalObj,blockPath,idx)
          % ADDBLOCK  Add Block "Children" to Blocks property
          %
          %  animalObj.addBlock('blockPath'); 
          %  --> Adds block located at 'BlockPath'
+         %
+         %  animalObj.addBlock(blockObj);
+         %  --> Adds the block directly to 'Blocks'
+         %
+         %  animalObj.addBlock(blockObj,idx);
+         %  --> Adds the block to the array element indexed by idx
 
          if nargin < 2
             blockPath = [];
@@ -156,7 +168,7 @@ classdef Animal < matlab.mixin.Copyable
          switch class(blockPath)
             case 'char'
                % Create the Children Block objects
-               blockObj = nigeLab.Block(blockPath,animalObj.Paths.SaveLoc);
+               blockObj = nigeLab.Block(blockPath);
                
             case 'nigeLab.Block'
                % Load them directly as Children
@@ -176,31 +188,37 @@ classdef Animal < matlab.mixin.Copyable
                   'Bad blockPath input type: %s',class(blockPath));
          end
          blockObj.setAnimal(animalObj);
-         animalObj.Blocks = [animalObj.Blocks blockObj];
+         if nargin < 3
+            animalObj.Blocks = [animalObj.Blocks blockObj];
+         else
+            S = substruct('()',{1,idx});
+            animalObj.Blocks = builtin('subsasgn',animalObj.Blocks,...
+                                          S,blockObj);
+         end
       end
       
       % Returns Status for each Operation/Block pairing
-      function Status = getStatus(animalObj,Operation)
-         % GETSTATUS  Returns Status for each Operation/Block pairing
+      function flag = getStatus(animalObj,opField)
+         % GETSTATUS  Returns Status Flag for each Operation/Block pairing
          %
-         %  Status = animalObj.getStatus();
-         %     --> Return status for each operation (Field) of each Block
+         %  flag = animalObj.getStatus();
+         %     --> Return true for any Fields element associated with a 
+         %         "doOperation", when that "doOperation" has been
+         %         completed for the corresponding element of
+         %         animalObj.Blocks. 
+         %        * if animalObj.Blocks is an array of 4 nigeLab.Block
+         %          objects, and there are 9 "doOperation" Fields, then
+         %          flag will return as a logical [4 x 9] matrix
          %
-         %  Status = animalObj.getStatus(Operation);
-         %     --> Return status for specific Operation (of each Block)
+         %  flag = animalObj.getStatus(opField);
+         %     --> Return status for specific "Operation" Fields (for each
+         %         element of animalObj.Blocks)
          
-         if nargin <2
-            % Note that "getStatus" only returns a subset of Fields:
-            Status(1,:) = animalObj.Blocks(1).getStatus();
-            for ii=2:numel(animalObj.Blocks)
-               Status(ii,:) = animalObj.Blocks(ii).getStatus();
-            end
-         else
-            Status(1,:) = animalObj.Blocks(1).getStatus(Operation);
-            for ii=2:numel(animalObj.Blocks)
-               Status(ii,:) = animalObj.Blocks(ii).getStatus(Operation);
-            end
+         if nargin < 2
+            opField = [];
          end
+         
+         flag = getStatus(animalObj.Blocks,opField);
       end
       
       % Save Animal object
@@ -209,12 +227,39 @@ classdef Animal < matlab.mixin.Copyable
          %
          %  animalObj.save(); Saves 'animalObj' in [AnimalName]_Animal.mat
          
-         % Save each BLOCK as well
-         for ii=1:numel(animalObj.Blocks)
-            animalObj.Blocks(ii).save;
+         % Make sure array isn't saved to same file
+         if numel(animalObj) > 1
+            for i = 1:numel(animalObj)
+               animalObj(i).save;
+            end
+            return;
          end
-         save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),...
-            'animalObj','-v7');
+         
+         % Save each BLOCK as well. Create a copy here, since
+         % animalObj.Blocks is destroyed when the call to
+         % save(..'animalObj'..) is made. If there are multiple animals,
+         % this causes the copy to be "updated" and the "correct" copy is
+         % then assigned to animalObj.Blocks after the save. 
+
+         for b = animalObj.Blocks
+            b.save;
+         end
+         
+         % Save animalObj
+         animalObj.updateParams('Animal');
+         animalFile = nigeLab.utils.getUNCPath(...
+                     fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
+         save(animalFile,'animalObj','-v7');
+         
+         % Save "nigelAnimal" file for convenience of identifying this
+         % folder as an "ANIMAL" folder in the future
+         animalIDFile = nigeLab.utils.getUNCPath(...
+                     fullfile(animalObj.Paths.SaveLoc,...
+                              animalObj.Pars.FolderIdentifier));
+         
+         fid = fopen(animalIDFile,'w+');
+         fwrite(fid,['ANIMAL|' animalObj.Name]);
+         fclose(fid);
       end
       
       % Set "Parent" Tank object
@@ -236,12 +281,13 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.Tank = tankObj;
       end
       
-      % Overloaded function that is called when ANIMAL is being saved.
-      function animalobj = saveobj(animalobj)
-         % SAVEOBJ  Used when ANIMAL is being saved.
-         
-         animalobj.Blocks = nigeLab.Block.Empty();         
-      end
+%       % Overloaded function that is called when ANIMAL is being saved.
+%       function animalobj = saveobj(animalobj)
+%          % SAVEOBJ  Used when ANIMAL is being saved. Writes the returned
+%          %          value to the matfile.
+%          
+%          animalobj.Blocks(:) = [];      
+%       end
    end
    
    % PUBLIC methods (to go in Contents.m)
@@ -310,25 +356,42 @@ classdef Animal < matlab.mixin.Copyable
             n = 1;
          else
             n = nanmax(n,1);
+            if isscalar(n)
+               n = [1, n];
+            end
          end
          
          animalObj = nigeLab.Animal(n);
       end
       
-      function animalObj = loadobj(animalObj)
+      function b = loadobj(a)
          % LOADOBJ  Method to load ANIMAL objects
          %
-         %  animalObj = animalObj.loadObj;
+         %  b = loadObj(a);
          %
-         %  --> Why is this Static?
+         %  Just makes sure that a is correct, and returns it on loading as
+         %  b to avoid infinite recursion.
          
-         BL = dir(fullfile(animalObj.Paths.SaveLoc,'*_Block.mat'));
-         load(fullfile(BL(1).folder,BL(1).name),'blockObj');
-            animalObj.Blocks = blockObj;
-         for ii=2:numel(BL)
-            load(fullfile(BL(ii).folder,BL(ii).name),'blockObj');
-            animalObj.Blocks(ii) = blockObj;
+         if ~isfield(a.Paths,'SaveLoc')
+            b = a;
+            return;
          end
+         
+         BL = dir(fullfile(a.Paths.SaveLoc,'*_Block.mat'));
+         if isempty(a.Blocks)
+            a.Blocks = nigeLab.Block.Empty([1,numel(BL)]);
+
+            for ii=1:numel(BL)
+               in = load(fullfile(BL(ii).folder,BL(ii).name));
+               a.addBlock(in.blockObj,ii);
+            end
+            b = a;
+            return;
+         else
+            b = a;
+            return;
+         end
+         
       end
       
       
