@@ -18,7 +18,7 @@ REQUIRED_FIELD_NAMES = {'DigIO','ScoredEvents','Raw','CAR','Spikes','Clusters'};
 blockObj.checkCompatibility(REQUIRED_FIELD_NAMES);
 
 %% Get properties of interest
-p = blockObj.BlockPars;
+p = blockObj.PathExpr;
 recFile = blockObj.RecFile;
 animalLoc = blockObj.AnimalLoc;
 

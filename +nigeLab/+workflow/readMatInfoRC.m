@@ -23,7 +23,7 @@ digFields = {'Beam'};
 if exist(channelInfoFile,'file')==0
    error('Bad filename: %s',channelInfoFile);
 else
-   [path,fname,ext] = fileparts(channelInfoFile);
+   [pathName,fname,ext] = fileparts(channelInfoFile);
 end
 in = load(channelInfoFile);
 if ~ismember('info',fieldnames(in))
@@ -33,7 +33,7 @@ else
    ChannelInfo = in.info;
    data_present = true;
    fnameEpoc = strrep(fname,'_ChannelInfo','_EpocSnipInfo');
-   epocSnipInfoFile = fullfile(path,[fnameEpoc ext]);
+   epocSnipInfoFile = fullfile(pathName,[fnameEpoc ext]);
    
    if exist(epocSnipInfoFile,'file')~=0
       in = load(epocSnipInfoFile,'block');
@@ -78,7 +78,7 @@ num_analogIO_channels = 0;
 probes = [1;2];
 num_probes = 2;
 
-N = getNumSamples(path,blockName);
+N = getNumSamples(pathName,blockName);
 num_raw_samples = N;
 num_analogIO_samples = 0;
 num_digIO_samples = N;
@@ -97,7 +97,7 @@ for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    header.(fieldOut{:}) = fieldOutVal;
 end
 
-fChannelMask = fullfile(path,[blockName '_ChannelMask.mat']);
+fChannelMask = fullfile(pathName,[blockName '_ChannelMask.mat']);
 if exist(fChannelMask,'file')~=0
    in = load(fChannelMask,'ChannelMask');
    if isfield(in,'ChannelMask')
