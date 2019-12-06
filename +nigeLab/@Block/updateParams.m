@@ -1,5 +1,5 @@
 function [flag,p] = updateParams(blockObj,paramType)
-%% UPDATEPARAMS   Update the parameters struct property for paramType
+% UPDATEPARAMS   Update the parameters struct property for paramType
 %
 %  flag = updateParams(blockObj);
 %  flag = updateParams(blockObj,paramType);
@@ -42,7 +42,7 @@ if nargin < 2 % if not supplied, select from list...
    paramType = tmp{idx};
 elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
 
-    paramType = tmp;
+   paramType = tmp;
    flag = blockObj.updateParams(paramType);
    return;
 elseif iscell(paramType) % Use recursion to run if cell array is given
@@ -56,7 +56,7 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
    return;
 elseif any(ismember(paramType,ConstructProps))
      ... Right now no action is required here
-      [pars,~] = nigeLab.defaults.(paramType)();
+   pars = nigeLab.defaults.(paramType)();
    allNames = fieldnames(pars);
    allNames = reshape(allNames,1,numel(allNames));
    for name_ = allNames
@@ -80,10 +80,11 @@ else
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-propString = [paramType 'Pars'];
+if isempty(blockObj.Pars)
+   blockObj.Pars = struct;
+end
 blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 
-blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
 flag = true;
 if nargout > 1
    p = blockObj.Pars.(paramType);

@@ -33,12 +33,48 @@ function status = getStatus(blockObj,field,channel)
 %                          it's complete. If stage is invalid, Status is
 %                          returned as empty.
 
-%%
+% Handle array of block objects
+if ~isscalar(blockObj)
+   switch nargin
+      case 1
+         status = cell(size(blockObj));
+         for i = 1:numel(blockObj)
+            status{i} = blockObj(i).getStatus;
+         end
+      case 2
+         switch blockObj.getFieldType(field)
+            case 'Channels'
+               if iscell(field)
+                  status = false(numel(blockObj),numel(field));
+               else
+                  status = false(numel(blockObj),blockObj(1).NumChannels);
+               end
+               for i = 1:numel(blockObj)
+                  status(i,:) = blockObj(i).getStatus(field);
+               end
+            otherwise
+               
+         end
+      case 3
+         if iscell(field)
+            status = false(numel(blockObj),numel(field));
+         else
+            status = false(numel(blockObj),1);
+         end
+         for i = 1:numel(blockObj)
+            status(i,:) = blockObj(i).getStatus(field,channel);
+         end
+      otherwise
+         error(['nigeLab:' mfilename ':tooManyInputArgs'],...
+            'Too many input arguments (%d; max: 3).',nargin);
+   end
+   
+   return;
+end
+
+%% Behavior depends on total number of inputs
 switch nargin
-   case 0
-      error('Not enough input arguments provided.');
-      
-   case 1 % If no input provided
+   case 1 % Only blockObj is given (1 input)
       f = fieldnames(blockObj.Status);
       stat = false(size(f));
       for i = 1:numel(f)
@@ -52,9 +88,17 @@ switch nargin
          status={'none'};
       end
       
-   case 2 % If one input given
+   case 2 % field is given (2 inputs, including blockObj)
       
       status = parseStatus(blockObj,field);
+      if iscell(field)
+         if numel(field)==1
+            field = field{:};
+         else
+            return;
+         end
+         return;
+      end
       if isfield(blockObj.Pars,'Video') && status
          if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
             switch field
@@ -86,12 +130,13 @@ switch nargin
          end
       end
       
-   case 3 % If channel is given
+   case 3 % If channel is given (3 inputs, including blockObj)
       status = parseStatus(blockObj,field);
       status = ~any(~status(channel));
       
    otherwise
-      error('Too many input arguments (%d; max: 3).',nargin);
+      error(['nigeLab:' mfilename ':tooManyInputArgs'],...
+         'Too many input arguments (%d; max: 3).',nargin);
 end
 
    function status = parseStatus(blockObj,stage)
@@ -119,14 +164,19 @@ end
          status = false;
          
       else
-         status = false(size(stage));
+         maskExists = ~isempty(blockObj.Mask);
          % If only one stage, return all channel status
          if numel(stage) == 1 
             status = blockObj.Status.(stage{:});
-            
+            if maskExists
+               vec = 1:numel(status);
+               % Masked channels are automatically true
+               status(setdiff(vec,blockObj.Mask)) = true;
+            end
          else
+            status = false(size(stage));
+            status = reshape(status,1,numel(status));
             % Otherwise, just get whether stages are complete
-            maskExists = ~isempty(blockObj.Mask);
             for ii = 1:numel(stage) 
                channelStage = strcmp(blockObj.getFieldType(stage{ii}),...
                                      'Channels');

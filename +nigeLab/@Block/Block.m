@@ -76,23 +76,23 @@ classdef Block < matlab.mixin.Copyable
    %% PROPERTIES
    % Public properties that are SetObservable
    properties (Access = public, SetObservable = true)
-      Animal nigeLab.Animal  % nigeLab.Animal "Parent" object
+      Name     char        % Name of the recording block
+      Animal   nigeLab.Animal  % nigeLab.Animal "Parent" object
    end
    
    % Public properties that can be modified externally
    properties (SetAccess = public, GetAccess = public)
-      Name     % Name of the recording block
-      Meta     % Metadata about the recording
+      Meta     struct      % Metadata struct with info about the recording
       
 
-      Channels   % Struct array of neurophysiological stream data
-      Events     % Struct array of asynchronous events
-      Streams    % Struct array of non-electrode data streams
-      Videos     % Struct array of videos associated with recording
+      Channels struct                             % Struct array of neurophysiological stream data
+      Events   struct                             % Struct array of asynchronous events
+      Streams  struct                             % Struct array of non-electrode data streams
+      Videos   nigeLab.libs.VidStreamsType        % Array of nigeLab.libs.VidStreamsType
       
-      Graphics   % Struct for associated graphics objects
+      Graphics struct  % Struct for associated graphics objects
       
-      Pars % Parameters struct
+      Pars     struct  % Parameters struct
    end
    
    % Public properties that can be modified externally but don't show up in
@@ -104,62 +104,37 @@ classdef Block < matlab.mixin.Copyable
    % Properties that can be obtained externally, but must be set by a
    % method of the class object.
    properties (SetAccess = private, GetAccess = public)
-      Scoring     % Metadata about any scoring done
-      SampleRate  % Recording sample rate
-      Samples     % Total number of samples in original record
-      Time        % Points to Time File
+      Scoring     struct   % Metadata about any scoring done
+      SampleRate  double   % Recording sample rate
+      Samples     double   % Total number of samples in original record
+      Time        char     % Points to Time File
       
-      RMS         % RMS noise table for different waveforms
-      Fields      % List of property field names
+      RMS         table    % RMS noise table for different waveforms
+      Fields      cell     % List of property field names
       
-      Mask        % Vector of indices of included elements of Channels
+      Mask        double   % Vector of indices of included elements of Channels
       
       NumProbes         = 0   % Number of electrode arrays
       NumChannels       = 0   % Number of electrodes on all arrays
       
       
-      Status      % Completion status for each element of BLOCK/FIELDS
-      Paths       % Detailed paths specifications for all the saved files
-      Probes      % Probe configurations associated with saved recording
-      Notes       % Notes from text file
+      Status      struct  % Completion status for each element of BLOCK/FIELDS
+      PathExpr    struct  % Path expressions for creating file hierarchy
+      Paths       struct  % Detailed paths specifications for all the saved files
+      Probes      struct  % Probe configurations associated with saved recording
+      Notes       struct  % Notes from text file
       
-      RecSystem   % 'RHS', 'RHD', or 'TDT' (must be one of those)
-      RecType     % Intan / TDT / other
-      FileExt     % .rhd, .rhs, or other
+      RecSystem  nigeLab.utils.AcqSystem  % 'RHS', 'RHD', or 'TDT' (must be one of those)
+      RecType    char                     % Intan / TDT / other
+      FileExt    char                     % .rhd, .rhs, or other
    end
    
    % Properties that can be obtained externally, but must be set by a
    % method of the class object, and don't populate in the editor window or
    % in the tab-completion window
-   properties (SetAccess = private, GetAccess = public, Hidden = true)
-      Date              % Date of recording
-      Month             % Month of recording
-      Day               % Day of recording
-      
+   properties (SetAccess = private, GetAccess = public, Hidden = true)      
       FieldType         % Indicates types for each element of Field
       FileType          % Indicates DiskData file type for each Field
-      
-      NumADCchannels    = 0   % Number of ADC channels
-      NumDACChannels    = 0   % Number of DAC channels
-      NumDigInChannels  = 0   % Number of digital input channels
-      NumDigOutChannels = 0   % Number of digital output channels
-      NumAnalogIO
-      NumDigIO
-      
-      BlockPars         % Parameters struct for block construction
-      EventPars         % Parameters struct for events
-      ExperimentPars    % Parameters struct for experimental notes
-      FiltPars          % Parameters struct for unit bandpass filter
-      LFPPars           % Parameters struct for LFP extraction & analyses
-      PlotPars          % Parameters struct for graphical plots
-      ProbePars         % Parameters struct for parsing probe layout info
-      QueuePars         % Parameters struct for queueing jobs to server
-      SDPars            % Parameters struct for spike detection
-      SortPars          % Parameters for nigeLab.Sort interface
-      SPCPars           % Parameters for super paramagnetic clustreing
-      SyncPars          % Parameters struct for digital sync stream
-      TDTPars           % Parameters struct for parsing TDT info
-      VideoPars         % Parameters struct for associating videos
       
       RecFile       % Raw binary recording file
       AnimalLoc     % Saving path for extracted/processed data
@@ -169,35 +144,37 @@ classdef Block < matlab.mixin.Copyable
    % Properties that must be both set and accessed by methods of the BLOCK
    % class only.
    properties (SetAccess = private, GetAccess = private)      
-      ForceSaveLoc      % Flag to force make non-existent directory      
-      RecLocDefault     % Default location of raw binary recording
-      AnimalLocDefault  % Default location of BLOCK
-      ChannelID         % Unique channel ID for BLOCK
-      Verbose = true;   % Whether to report list of files and fields.
+      ForceSaveLoc            logical     % Flag to force make non-existent directory      
+      RecLocDefault           char        % Default location of raw binary recording
+      AnimalLocDefault        char        % Default location of BLOCK
+      ChannelID                           % Unique channel ID for BLOCK
+      Verbose = true;                     % Whether to report list of files and fields.
       
-      Delimiter        % Delimiter for name metadata for dynamic variables
-      DynamicVarExp    % Expression for parsing BLOCK names from raw file
-      IncludeChar      % Character indicating included name elements
-      DiscardChar      % Character indicating discarded name elements
+      FolderIdentifier        char        % ID '.nigelBlock' to denote a folder is a BLOCK
+      Delimiter               char        % Delimiter for name metadata for dynamic variables
+      DynamicVarExp           char        % Expression for parsing BLOCK names from raw file
+      IncludeChar             char        % Character indicating included name elements
+      DiscardChar             char        % Character indicating discarded name elements
       
-      ManyAnimalsChar  % Character indicating the presence of many animals in the recording
-      ManyAnimals = false; % flag for many animals contained in one block
-      ManyAnimalsLinkedBlocks % Pointer to the splitted blocks. 
+      ManyAnimalsChar         char                 % Character indicating the presence of many animals in the recording
+      ManyAnimals = false;                         % Flag indicating that multiple animals were used in the same recording Block
+      ManyAnimalsLinkedBlocks    nigeLab.Block     % [1 x nLinkedBlock] array of nigeLab.Block objects ("pointers")
 %                 In conjuction with the multianimals flag keeps track of
 %                 where the data is temporary saved.
       
-      NamingConvention % How to parse dynamic name variables for Block
-      DCAmpDataSaved    % Flag indicating whether DC amplifier data saved
+      NamingConvention        cell        % How to parse dynamic name variables for Block
+      DCAmpDataSaved          logical     % Flag indicating whether DC amplifier data saved
       
-      MatFileWorkflow     % Struct with fields below:
-                          % --> ReadFcn     function handle to external 
-                          %                 matfile header loading function
-                          % --> ConvertFcn  function handle to "convert" 
-                          %                 old (pre-extracted) blocks to 
-                          %                 nigeLab format
-                          % --> ExtractFcn  function handle to use for
-                          %                 'do' extraction methods
-      ViableFieldTypes  % List of 'Viable' possible field types
+      MatFileWorkflow         struct      % Struct with fields below:
+%                            --> ReadFcn     function handle to external 
+%                                            matfile header loading function
+%                            --> ConvertFcn  function handle to "convert" 
+%                                            old (pre-extracted) blocks to 
+%                                            nigeLab format
+%                            --> ExtractFcn  function handle to use for
+%                                            'do' extraction methods
+                          
+      ViableFieldTypes       cell         % List of 'Viable' possible field types
 
    end
 
@@ -280,7 +257,14 @@ classdef Block < matlab.mixin.Copyable
             end
             blockObj.RecFile =(fullfile(path,file));
          else
-            if exist(blockObj.RecFile,'file')==0
+            if isdir(blockObj.RecFile)
+               if isempty(blockObj.AnimalLoc)
+                  tmp = strsplit(blockObj.RecFile,filesep);
+                  tmp = strjoin(tmp(1:(end-1)),filesep);
+                  tmp = nigeLab.utils.getUNCPath(tmp);
+                  blockObj.AnimalLoc = tmp;
+               end
+            elseif exist(blockObj.RecFile,'file')==0
                error('%s is not a valid block file.',blockObj.RecFile);
             end
          end
@@ -310,11 +294,18 @@ classdef Block < matlab.mixin.Copyable
                'animalObj must be scalar.');
          end
          
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               blockObj(i).setAnimal(animalObj);
+            end
+            return;
+         end
+         
          blockObj.Animal = animalObj;
       end
    end
    
-   % OVERLOADED methods
+   % OVERLOADED or OVERRIDDEN methods
    methods (Access = public)
       % Overloaded SAVE method to save a BLOCK matfile
       function flag = save(blockObj)
@@ -325,31 +316,67 @@ classdef Block < matlab.mixin.Copyable
          %
          %  flag returns true if the save did not throw an error.
          
-         % Handles the case of MultiAnimals. Avoids infinite save loop
-         try
-             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
-             for bl = blockObj.ManyAnimalsLinkedBlocks % save multianimals if present
-                 if blockObj.ManyAnimals
-                     bl.ManyAnimalsLinkedBlocks=[];
-                     bl.save();
-                 end
-             end
-         catch
-             flag = false;
-             return;
+         % Make sure array isn't saved to same file
+         if numel(blockObj) > 1
+            flag = false(size(blockObj));
+            for i = 1:numel(blockObj)
+               flag(i) = blockObj(i).save;
+            end
+            return;
          end
-         flag = true;
+         
+         flag = false;
+         
+         blockObj.updateParams('Block');
+         % Handles the case of MultiAnimals. Avoids infinite save loop
+
+          % Save blockObj
+          blockFile = nigeLab.utils.getUNCPath(...
+             [blockObj.Paths.SaveLoc.dir '_Block.mat']);
+          save(blockFile,'blockObj','-v7');
+
+          % Save "nigelBlock" file for convenience of identifying this
+          % folder as a "BLOCK" folder in the future
+          blockIDFile = nigeLab.utils.getUNCPath(blockObj.Paths.SaveLoc.dir,...
+                                                blockObj.FolderIdentifier);
+
+          fid = fopen(blockIDFile,'w+');
+          fwrite(fid,['BLOCK|' blockObj.Name]);
+          fclose(fid);
+
+          % save multianimals if present
+          if blockObj.ManyAnimals
+             for bl = blockObj.ManyAnimalsLinkedBlocks 
+                  bl.ManyAnimalsLinkedBlocks(:) = [];
+                  bl.ManyAnimals = false;
+                  bl.save();
+             end
+          end
+          
+          flag = true;
+
       end
       
       % Overloaded RELOAD method for loading a BLOCK matfile
       function reload(blockObj)
          % RELOAD  Load block (related to multi-animal stuff?)
+         %
+         %  blockObj.reload;
          
-          obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
-          ff=fieldnames(obj.blockObj);
-          for f=1:numel(ff)
-              blockObj.(ff{f}) = obj.blockObj.(ff{f});
-          end
+         % Probably it's that blockObj.Paths.SaveLoc.dir is different from
+         % the identical value of the child Block. But in that case, why
+         % don't we just make a copy of the child Block?
+         c = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),...
+            'blockObj');
+%          ff=fieldnames(c.blockObj);
+%          for f=1:numel(ff)
+%             blockObj.(ff{f}) = c.blockObj.(ff{f});
+%          end
+         if ~isa(c.blockObj,'nigeLab.Block')
+            error(['nigeLab:' mfilename ':badChildBlockType'],...
+               'Bad child Block type: %s',class(c.blockObj));
+         end
+         blockObj = copy(c.blockObj);
       end
       
       % Overloaded SUBSREF method for indexing shortcuts on BLOCK
@@ -360,13 +387,43 @@ classdef Block < matlab.mixin.Copyable
          %
          %  s: Struct returned by SUBSTRUCT function
          
+         Shrt = nigeLab.defaults.Shortcuts();
          switch s(1).type
             case '.'
-
-               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-
-               
+               idx = find(ismember(Shrt(:,1),s(1).subs),1,'first');
+               if ~isempty(idx)
+                  varargout = {};
+                  iRow = blockObj.subs2idx(s(2).subs{1},blockObj.NumChannels); 
+                  iCol = blockObj.subs2idx(s(2).subs{2},blockObj.Samples);
+                  
+                  out = nan(numel(s(2).subs{1}),numel(s(2).subs{2}));
+                  expr = sprintf('blockObj.%s;',Shrt{idx,2});
+                  
+                  for i = 1:numel(iRow)
+                     tmp = eval(sprintf(expr,iRow(i)));
+                     out(i,:) = tmp(iCol);
+                  end                  
+                  
+                  varargout{1} = out;
+                  return;
+               else
+                  [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+                  return;
+               end
             case '()'
+               
+%                if numel(blockObj)>1
+%                   % Don't use shortcuts on multi-block calls
+%                   [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+%                   return;
+%                elseif ~isfield(blockObj.Channels,'name')
+%                   [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+%                   return;
+%                end
+               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+               return;
+               
+            case '{}'
                if isscalar(blockObj) && ~isnumeric(s(1).subs{1})
                   s(1).subs=[{1} s(1).subs];
                end
@@ -374,18 +431,34 @@ classdef Block < matlab.mixin.Copyable
                   nargsi=numel(s(1).subs);
                   nargo = 1;
                   
-                  if nargsi > 0
-                  Out = sprintf('blockObj(%d)',s.subs{1});
+                  
+                  iAll = 1:blockObj.NumChannels;
+                  if nargsi == 1
+                     if isnumeric(s.subs{1})
+                        Out = sprintf('blockObj.Channels(%d).Raw;\n',s.subs{1});
+                     elseif ismember(s.subs{1},Shrt(:,1))
+                        Out = sprintf('blockObj.Channels(%d).%s;\n',iAll,s.subs{1});
+                     else
+                        Out = sprintf('blockObj.Channels(%d).Raw;\n',iAll);                        
+                     end
                   end
-                  if nargsi > 1
-                  end
+                  
+%                   if nargsi == 2
+%                      if isnumeric(s.subs{1
+%                   end
+                  
                   if nargsi > 2
-                     Shrt = nigeLab.defaults.Shortcuts();
+                     
                      
                      if ischar( s(1).subs{2} )
                         longCommand = sprintf(Shrt{strcmp(Shrt(:,1),s(1).subs{2}),2},s(1).subs{3});
                      
                      elseif isnumeric( s(1).subs{1} )
+                        if s(1).subs{1} > size(Shrt,1)
+                           warning('Possible reference error.');
+                           varargout{1} = builtin('subsref',blockObj,s);
+                           return;
+                        end
                         longCommand = sprintf(Shrt{s(1).subs{1},2},s(1).subs{2});
                      end
                      
@@ -398,7 +471,14 @@ classdef Block < matlab.mixin.Copyable
                      Out = sprintf('%s(%s)',Out,indx);
                   end
                   
-                  [varargout{1:nargo}] = eval(Out);
+                  if size(Out,1) > 1
+                     varargout = cell(1,size(Out,1));
+                     for i = 1:size(Out,1)
+                        varargout{i} = eval(Out(i,:));
+                     end
+                  else
+                     [varargout{1:nargo}] = eval(Out);
+                  end
                   
                   
 %                elseif length(s) == 2 && strcmp(s(2).type,'.')
@@ -408,11 +488,9 @@ classdef Block < matlab.mixin.Copyable
 %                % Implement obj(indices).PropertyName(indices)
 %                ...
                else
-               % Use built-in for any other expression
-               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
+                  % Use built-in for any other expression
+                  [varargout{1:nargout}] = builtin('subsref',blockObj,s);
                end
-            case '{}'
-              warning('{} indexing not supported')
             otherwise
                error('Not a valid indexing expression')
          end
@@ -421,6 +499,13 @@ classdef Block < matlab.mixin.Copyable
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
+         %
+         %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
+         %
+         %  s  --  struct from SUBSTRUCT method for indexing
+         %  indexingContext  --  matlab.mixin.util.IndexingContext Context
+         %                       in which the result applies.
+         
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
          if sum(dot) < 2
             if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
@@ -511,6 +596,7 @@ classdef Block < matlab.mixin.Copyable
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
+      header = parseHeader(blockObj)      % Parse header depending on structure
       
       % Methods for parsing Fields info:
       fileType = getFileType(blockObj,field) % Get file type corresponding to field  
@@ -539,14 +625,14 @@ classdef Block < matlab.mixin.Copyable
       flag = rhs2Block(blockObj,recFile,saveLoc) % Convert *.rhs to BLOCK
       
       flag = genPaths(blockObj,tankPath,useRemote) % Generate paths property struct
-      flag = findCorrectPath(blockObj,paths)   % Find correct Animal path
+%       flag = findCorrectPath(blockObj,paths)   % (DEPRECATED)
       flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
       paths = getFolderTree(blockObj,paths,useRemote) % returns a populated path struct
       
       clearSpace(blockObj,ask,usrchoice)     % Clear space on disk      
 
       flag = init(blockObj) % Initializes the BLOCK object
-      flag = initChannels(blockObj);   % Initialize Channels property
+      flag = initChannels(blockObj,header);   % Initialize Channels property
       flag = initEvents(blockObj);     % Initialize Events property 
       flag = initStreams(blockObj);    % Initialize Streams property
       flag = initVideos(blockObj);     % Initialize Videos property
@@ -555,6 +641,8 @@ classdef Block < matlab.mixin.Copyable
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       
+      parseRecType(blockObj)              % Parse the recording type
+      header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end
    
@@ -571,13 +659,16 @@ classdef Block < matlab.mixin.Copyable
             n = 1;
          else
             n = nanmax(n,1);
+            if isscalar(n)
+               n = [1, n];
+            end
          end
          
          blockObj = nigeLab.Block(n);
       end
       
       % Overloaded method for loading objects (for many blocks case)
-      function obj = loadobj(obj)
+      function b = loadobj(a)
          % LOADOBJ  Overloaded method called when loading BLOCK.
          %
          %  Has to be called when there ManyAnimals is true because the
@@ -586,11 +677,36 @@ classdef Block < matlab.mixin.Copyable
          %
          %  blockObj = loadobj(blockObj);
          
-        if obj.ManyAnimals
-            for bl=obj.ManyAnimalsLinkedBlocks
-                bl.reload();
+         if ~a.ManyAnimals
+            b = a;
+            return;
+         end
+
+         % blockObj has "pointer" to 'ManyAnimalsLinkedBlocks' but until
+         % they are "reloaded" the "pointer" is bad (references bl in
+         % the wrong place, essentially?)
+         for bl=a.ManyAnimalsLinkedBlocks
+            bl.reload();
+         end
+         b = a;
+      end
+      
+      % Static method for converting subs to index
+      function idx = subs2idx(subs,n)
+         % SUBS2IDX  Converts subscripts to indices
+         
+         if ischar(subs)
+            switch subs
+               case ':'
+                  idx = 1:n;
+               case 'end'
+                  idx = n;
+               otherwise
+                  idx = [];
             end
-        end
+         else
+            idx = subs;
+         end
       end
    end
 end

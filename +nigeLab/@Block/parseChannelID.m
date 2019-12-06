@@ -1,5 +1,5 @@
 function channelID = parseChannelID(blockObj)
-%% PARSECHANNELID    Get unique channel/probe combination for identifier
+% PARSECHANNELID    Get unique channel/probe combination for identifier
 %
 %  channelID = PARSECHANNELID(blockObj);
 %
@@ -15,8 +15,6 @@ function channelID = parseChannelID(blockObj)
 %                       the Channels struct property of blockObj. The first
 %                       column is the Channels.probe and second column is
 %                       Channels.native_order.
-%
-% By: Max Murphy   v1.0 2019/01/08   Original version (R2017a)
 
 %%
 channelID = nan(blockObj.NumChannels,2);

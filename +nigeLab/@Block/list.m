@@ -1,5 +1,5 @@
 function L = list(blockObj)
-%% LIST  Give list of current files associated with field.
+% LIST  Give list of current files associated with field.
 %
 %  L = blockObj.LIST;
 %
@@ -12,10 +12,6 @@ function L = list(blockObj)
 %   OUTPUT
 %  --------
 %     L     :     Table with information about blockObj.
-%
-% By: Max Murphy  v1.0  06/13/2018 Original Version (R2017a)
-%                 v1.1  06/14/2018 Added flag output
-%                 v1.2  ?? ?? ???? Assume modified by FB ? 
 
 %% PARSE DATE AND TIME INFO
 Format = '';
