@@ -1,10 +1,8 @@
 function [pars,Fields] = Block(name)
-%% defaults.Block  Sets default parameters for BLOCK object
+% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = nigeLab.defaults.Block();
 %  pars = nigeLab.defaults.Block('parName');
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Modify all properties here
 % NOTE: Capitalization is important here, as some of the properties are
@@ -15,7 +13,7 @@ function [pars,Fields] = Block(name)
 % structure:
 pars             = struct;
 
-pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
+% pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
 % If you have pre-extracted data, the workflow can be customized here
 % pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
 pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
@@ -32,7 +30,7 @@ pars.AnimalLocDefault = 'C:\MyRepos\shared\pkg\dev\newFormat\RC-05';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
-
+pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % Bookkeeping for tags to be appended to different FieldTypes. The total
 % number of fields of TAG determines the valid entries for FieldTypes.
 TAG = struct;
@@ -279,6 +277,14 @@ elseif numel(FileType)~=N
 end
 pars.FileType = FileType;
 pars.FieldType = FieldType;
+pars.Fields = Fields;
+
+iFields = ismember(Fields,fieldnames(pars));
+if any(iFields)
+   error(['nigeLab:' mfilename ':badFieldsName'],...
+      'Bad Fields name: %s\n',Fields{iFields});
+end
+
 
 % Check that FieldType is viable
 pars.ViableFieldTypes = fieldnames(TAG);
@@ -336,12 +342,12 @@ end
 %% MAKE DIRECTORY PARAMETERS STRUCT
 % Concatenate identifier for each file-type:
 Del = pars.Delimiter;
-pars.BlockPars = struct;
+pars.PathExpr = struct;
 for ii=1:numel(Fields)
-   pars.BlockPars.(Fields{ii}).Folder     = FolderNames{ii};
-   pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
-   pars.BlockPars.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
-   pars.BlockPars.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
+   pars.PathExpr.(Fields{ii}).Folder     = FolderNames{ii};
+   pars.PathExpr.(Fields{ii}).OldFile    = OldNames{ii};
+   pars.PathExpr.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
+   pars.PathExpr.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end
 
 if nargin > 0
