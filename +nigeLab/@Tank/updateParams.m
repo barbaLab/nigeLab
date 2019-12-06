@@ -48,7 +48,16 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
 %          flag(i) = tankObj.updateParams(paramType{i});
 %       end
 %       return;      
-% ;) Max do you like it?
+% ;) Max do you like it? -- Isn't this less efficient? You have to load the
+%                           full paramType array into memory each time, so
+%                           you end up taking up a block that is 
+%                           N+(N/2)*(N-1). The other way, you take a single
+%                           array element each time, resulting in the
+%                           initial N elements (from the first instance),
+%                           then only N more elements (each loop element).
+%                           So I believe your way is less efficient :P
+%
+%                             But I'm not a computer scientist -- MM
         N = numel(paramType);
         if N==0, flag = true; return; end % ends recursion
         paramType = paramType(:); % just in case it wasn't a vector for some reason;
@@ -71,6 +80,9 @@ end
 % at this point paramType should be a simple string
 Pars = nigeLab.defaults.(paramType)();
 F = fields(Pars);
+if isempty(tankObj.Pars)
+   tankObj.Pars = struct;
+end
 for ii=1:numel(F)   % populate Pars struct preserving values
     tankObj.Pars.(F{ii}) =  Pars.(F{ii});
 end
