@@ -171,7 +171,7 @@ classdef nigelPanel < handle
       end
       
       % Return handle to child object corresponding to 'name'
-      function c = getChild(obj,name)
+      function varargout = getChild(obj,name)
          % GETCHILD  Return handle to child object corresponding to 'name'
          %
          %  c = obj.getChild('ChildName');
@@ -185,12 +185,15 @@ classdef nigelPanel < handle
          %  nigeLab.libs.nigelPanel/NESTOBJ
          
          idx = ismember(obj.ChildName,name);
-         if isempty(idx)
+         if sum(idx)==0
             warning('No member of %s property ChildName: %s',...
                obj.class,name);
-            c = [];
+            varargout = {[]};
+         elseif sum(idx)>1
+            warning('Ambiguous ChildName: %s',name);
+            varargout = obj.ChildName{idx};
          else
-            c = obj.Children{idx};
+            varargout = obj.Children(idx);
          end
       end
       
