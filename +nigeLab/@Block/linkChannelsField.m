@@ -14,8 +14,10 @@ function flag = linkChannelsField(blockObj,field,fType)
 %%
 flag = false;
 updateFlag = false(1,blockObj.NumChannels);
+   str = ['Linking <a href="matlab:doc nigelab.Block\Channels">Channels</a> field: ',field];
+blockObj.reportProgress(str,0);
 
-fprintf(1,'\nLinking Channels field: %s ...000%%\n',field);
+% fprintf(1,'\nLinking Channels field: %s ...000%%\n',field);
 counter = 0;
 
 for iCh = blockObj.Mask
@@ -38,7 +40,8 @@ for iCh = blockObj.Mask
    
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+%    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+blockObj.reportProgress(str,pct);
 end
 blockObj.updateStatus(field,updateFlag);
 

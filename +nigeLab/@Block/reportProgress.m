@@ -1,8 +1,16 @@
 function str = reportProgress(blockObj, string, pct ) %#ok<INUSL>
-%%
+%% Utility function to report progress on block operations. 
+% TODO move to utils maybe?
+% It uses the notification string specified in defualts.Notification, where
+% you can specify what metadata it should be printed on screen along with
+% the *string* input and the percentage.
+% Supports some html markup in the *string* input:
+% <a> tag to define hyprlinks
+% <strong> tag to bold
+% TODO find a way to use cprinf to incorporate colorized output
 
 pars = nigeLab.defaults.Notifications;
-
+pct = round(pct);
 if ~nigeLab.utils.checkForWorker % serial execution on localhost
     metas = cell(1, numel(pars.NotifyString.Vars));
     for ii=1:numel(pars.NotifyString.Vars),metas{ii} = eval(pars.NotifyString.Vars{ii});end
@@ -11,22 +19,20 @@ if ~nigeLab.utils.checkForWorker % serial execution on localhost
         if nargout == 1,return;end
         
         if ~floor(mod(pct,pars.MinIncrement)) % only increment counter by a certain amount defined in defaults.
-           
-            lastDisplText = getLastDispText(numel(str)+3);
+           tmpstr = regexprep(str,'<.*?>','');
+            lastDisplText = getLastDispText(numel(tmpstr));
             
             lastDisplText = regexprep(lastDisplText,'>> ','');
             strtIndx = regexp(lastDisplText,[eval(pars.NotifyString.Vars{1})]);
             lastDisplText = lastDisplText(strtIndx:end);
-            nextDisplText = regexprep(lastDisplText,'\d*%',sprintf('%.3d%%%%\n',pct));
-            nextDisplText = regexprep(nextDisplText,'\n*','\\n');
-            nextDisplText = regexprep(nextDisplText,'\r','\\r');
-            nextDisplText = regexprep(nextDisplText,'\t','\\t');
-            nextDisplText = regexprep(nextDisplText,'\v','\\v');
+            nextDisplText = regexprep(str,'\d*%',sprintf('%.3d%%%%\n',pct));
+            nextDisplText = regexprep(nextDisplText,'\\','\\\\');
 
-            stringMatch = regexp(lastDisplText,string,'ONCE');
+            stringMatch = regexp(lastDisplText,regexprep(string,'<.*?>',''),'ONCE');
             if ~isempty(stringMatch)
                 try
-                fprintf(1,[repmat('\b',1,length(lastDisplText)) nextDisplText]);
+                    tmpstr = regexprep(sprintf(nextDisplText),'<.*?>','');
+                    fprintf(1,[repmat('\b',1,length(tmpstr)) nextDisplText]);
                 catch
                     fprintf(1,'\n');
                     fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
@@ -36,11 +42,13 @@ if ~nigeLab.utils.checkForWorker % serial execution on localhost
                 
                 fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
                     string,floor(pct));                                     % variable part of the message
+            fprintf(1,'\n');
             end
             
         end
     
 else % we are in worker environment
+    string = regexprep(sprintf(string),'<.*?>','');
     job = getCurrentJob;
     metas = cell(1, numel(pars.TagString.Vars));
     for ii=1:numel(pars.TagString.Vars),metas{ii} = eval(pars.TagString.Vars{ii});end
@@ -59,5 +67,5 @@ cmdWin_comps=get(cmdWin,'Components');
 subcomps=get(cmdWin_comps(1),'Components');
 text_container=get(subcomps(1),'Components');
 output_string=get(text_container(1),'text');
-txt = output_string(end-nChars:end);
+txt = output_string(end-min(end-1,nChars):end);
 end

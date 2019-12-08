@@ -34,7 +34,7 @@ splitStr = regexp(blockObj.DynamicVarExp,regExpStr,'match');
 % Find which delimited elements correspond to variables that should be 
 % included by looking at the leading character from the defaults.Block
 % template string:
-incVarIdx = find(cellfun(@(x) x(1)=='$',splitStr));
+incVarIdx = find(cellfun(@(x) x(1)==blockObj.IncludeChar,splitStr));
 incVarIdx = reshape(incVarIdx,1,numel(incVarIdx));
 
 % Find which set of variables (the total number available from the name, or

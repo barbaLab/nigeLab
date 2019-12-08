@@ -406,28 +406,28 @@ fclose(fid);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % DiskData makes it easy to access data stored in matfies.
 % Assigning each file to the right channel
-infoNames = fieldnames(Files);
-for f = 1:numel(fields)
-    idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
-    switch blockObj.FieldType{idx}
-        case 'Channels'
-            ChIdx = 1:numel(Files.(infoNames{f}));
-        case 'Streams'
-            sigTypes = {blockObj.Streams.signal_type};
-            ChIdx = find(strcmp(sigTypes,infoNames{f}));
-        case 'Meta'
-            ChIdx = 1:numel(Files.(infoNames{f}));
-        case 'Events'
-            ChIdx = 1:numel(Files.(infoNames{f}));
-    end
-    for iCh = 1:numel(Files.(infoNames{f}))
-        
-        blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(infoNames{f}) = lockData(Files.(infoNames{f}){iCh});
-    end
-   reportProgress(blockObj,'Linking data',pct);
+% infoNames = fieldnames(Files);
+% for f = 1:numel(fields)
+%     idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
+%     switch blockObj.FieldType{idx}
+%         case 'Channels'
+%             ChIdx = 1:numel(Files.(infoNames{f}));
+%         case 'Streams'
+%             sigTypes = {blockObj.Streams.signal_type};
+%             ChIdx = find(strcmp(sigTypes,infoNames{f}));
+%         case 'Meta'
+%             ChIdx = 1:numel(Files.(infoNames{f}));
+%         case 'Events'
+%             ChIdx = 1:numel(Files.(infoNames{f}));
+%     end
+%     for iCh = 1:numel(Files.(infoNames{f}))
+%         
+%         blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(infoNames{f}) = lockData(Files.(infoNames{f}){iCh});
+%     end
+%    reportProgress(blockObj,'Linking data',pct);
 %    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
 %    notify(blockObj,channelCompleteEvent,evtData);
-end
+% end
 blockObj.linkToData;  
 
 % % % % % % % % % % % % % % % % % % % % % %

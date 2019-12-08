@@ -83,7 +83,8 @@ classdef Block < matlab.mixin.Copyable
    end
    
    properties (SetAccess = public, Hidden = true)
-      UserData % Allow UserData property to exist
+      UserData      % Allow UserData property to exist
+      
    end
    
    properties (SetAccess = private, GetAccess = public)
@@ -156,9 +157,9 @@ classdef Block < matlab.mixin.Copyable
       IncludeChar      % Character indicating included name elements
       DiscardChar      % Character indicating discarded name elements
       
-      ManyAnimalsChar  % Character indicating the presence of many animals in the recording
-      ManyAnimals = false; % flag for many animals contained in one block
-      ManyAnimalsLinkedBlocks % Pointer to the splitted blocks. 
+      MultiAnimalsChar  % Character indicating the presence of many animals in the recording
+      MultiAnimals = 0; % flag for many animals contained in one block
+      MultiAnimalsLinkedBlocks % Pointer to the splitted blocks. 
 %                 In conjuction with the multianimals flag keeps track of
 %                 where the data is temporary saved.
       
@@ -227,29 +228,46 @@ classdef Block < matlab.mixin.Copyable
          end
          
       end
+      
       function flag = save(blockObj)
          %% SAVE  Overload save of BLOCK
-         
+
          % Handles the case of MultiAnimals. Avoids infinite save loop
          try
-             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
-             for bl = blockObj.ManyAnimalsLinkedBlocks % save multianimals if present
-                 if blockObj.ManyAnimals
-                     bl.ManyAnimalsLinkedBlocks=[];
+             for bl = blockObj.MultiAnimalsLinkedBlocks % save multianimals if present
                      bl.save();
-                 end
              end
+             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
          catch
              flag = false;
              return;
          end
          flag = true;
+
       end
       
-      function reload(blockObj)
+%       function flag = delete(blockObj)
+%          try
+% 
+%              blockObj.MultiAnimalsLinkedBlocks = [];   
+%              builtin('delete',blockObj);
+%              flag = true;
+%          catch
+%              flag = false;
+%          end
+%       end
+      
+      function reload(blockObj,field)
+          if nargin < 2 
+              field = 'all';
+          elseif ~iscell(field)
+              field = {field};
+          end
           obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
           ff=fieldnames(obj.blockObj);
-          for f=1:numel(ff)
+          if strcmpi(field,'all'),field = ff;end
+          indx = find(ismember(ff,field))';
+          for f=indx
               blockObj.(ff{f}) = obj.blockObj.(ff{f});
           end
       end
@@ -446,12 +464,12 @@ classdef Block < matlab.mixin.Copyable
    end
    
    methods (Static)
-       function obj = loadobj(obj)
-           if obj.ManyAnimals
-               for bl=obj.ManyAnimalsLinkedBlocks
-                   bl.reload();
-               end
-           end
-       end
+%        function obj = loadobj(obj)
+% %            if obj.MultiAnimals
+% %                for bl=obj.MultiAnimalsLinkedBlocks
+% %                    bl.reload();
+% %                end
+% %            end
+%        end
    end
 end

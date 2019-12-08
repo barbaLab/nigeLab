@@ -28,7 +28,7 @@ classdef Tank < handle
 % By: Max Murphy  v1.0  06/14/2018
 
    %% PUBLIC PROPERTIES
-   properties (GetAccess = public, SetAccess = public)
+   properties (GetAccess = public, SetAccess = public,SetObservable)
       Name	% Name of experiment (TANK)
       Animals                 % Children (ANIMAL)
    end
@@ -58,7 +58,7 @@ classdef Tank < handle
       ExtractFlag             % Flag to indicate if extraction is needed
       ParallelFlag            % Flag to run things via parallel architecture
    end
-   
+  
    %% PUBLIC METHODS
    methods (Access = public)
       function tankObj = Tank(varargin)
@@ -114,6 +114,9 @@ classdef Tank < handle
             error('Could not initialize TANK object.');
          end
          
+         addlistener(tankObj,'Animals','PostSet',@(~,~) CheckAnimalsForClones(tankObj));
+         
+          
       end
       
       function addAnimal(tankObj,AnimalFolder)
@@ -136,6 +139,10 @@ classdef Tank < handle
          newAnimal= nigeLab.Animal('RecDir',AnimalFolder,...
              'TankLoc',tankObj.Paths.SaveLoc);
          tankObj.Animals = [tankObj.Animals newAnimal];
+         
+         addlistener(newAnimal,'ObjectBeingDestroyed',@(h,~) AssignNULL(tankObj,find(tankObj.Animals == h))); %#ok<FNDSB>
+          
+         
       end
       
       function save(tankObj)
@@ -194,20 +201,54 @@ classdef Tank < handle
 %       LocalConvert(tankObj)
 %       SlowConvert(tankObj)
       clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
+      
+      removeAnimal(tankObj,ind) % remove the animalObj at index ind
    end
 
    methods (Static)
       function tankObj = loadobj(tankObj)
-         BL = dir(fullfile(tankObj.Paths.SaveLoc,'*_Animal.mat'));
-         load(fullfile(BL(1).folder,BL(1).name),'animalObj');
+         AN = dir(fullfile(tankObj.Paths.SaveLoc,'*_Animal.mat'));
+         load(fullfile(AN(1).folder,AN(1).name),'animalObj');
             tankObj.Animals = animalObj;
-         for ii=2:numel(BL)
-            load(fullfile(BL(ii).folder,BL(ii).name),'animalObj');
+         for ii=2:numel(AN)
+            load(fullfile(AN(ii).folder,AN(ii).name),'animalObj');
             tankObj.Animals(ii) = animalObj;
+            
+            addlistener(animalObj,'ObjectBeingDestroyed',@(h,~) AssignNULL(tankObj,find(tankObj.Animals == h))); %#ok<FNDSB>
          end
+          
+          addlistener(tankObj,'Animals','PostSet',@(~,~) CheckAnimalsForClones(tankObj));
+                   
       end
       
       
    end
    
+end
+
+%% Some helper functions
+
+function CheckAnimalsForClones(tankObj)
+if isempty(tankObj.Animals),return;end
+
+% look for animals with the same name
+tmp = cellfun(@(s) strcmp(s,{tankObj.Animals.Name}),{tankObj.Animals.Name},'UniformOutput',false);
+Xcorr = logical(triu(cat(1,tmp{:}))-eye(length(tmp)));
+ii=1;
+if ~any(Xcorr),return;end
+while ~isempty(Xcorr(:))
+    % pop first row
+    XcR = Xcorr(1,:);Xcorr(1,:) = [];    
+    An = tankObj.Animals(ii);
+    if ~any(XcR),continue;
+    elseif all(An == tankObj.Animals(XcR)),tankObj.Animals(XcR)=[];end
+    
+    An.Blocks = [An.Blocks,tankObj.Animals(XcR).Blocks];
+    tankObj.Animals(XcR)=[];
+    ii=ii+1;
+end
+end
+
+function AssignNULL(tankObj,ind)
+tankObj.Animals(ind) = [];
 end
