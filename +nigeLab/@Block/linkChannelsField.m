@@ -1,10 +1,10 @@
-function flag = linkChannelsField(blockObj,field,fType)
+function flag = linkChannelsField(blockObj,field,fileType)
 %% LINKCHANNELSFIELD  Connect the data saved on the disk to Channels
 %
 %  b = nigeLab.Block;
-%  field = 'Spikes';    % field = 'Raw'
-%  fType = 'MatFile';   % field = 'Hybrid'
-%  flag = LINKCHANNELSFIELD(b,field,fType);
+%  field = 'Spikes';       % field = 'Raw'
+%  fileType = 'Event';   % filetype = 'Hybrid'
+%  flag = LINKCHANNELSFIELD(b,field,fileType);
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
@@ -13,16 +13,19 @@ function flag = linkChannelsField(blockObj,field,fType)
 
 %%
 flag = false;
+% updateFlag is for the total number of channels
 updateFlag = false(1,blockObj.NumChannels);
 
-fprintf(1,'\nLinking Channels field: %s ...000%%\n',field);
+nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 counter = 0;
 
+% Only iterate on the channels we care about (don't update status for
+% others, either). 
 for iCh = blockObj.Mask
    
    % Get file name
-   pNum  = num2str(blockObj.ChannelID(iCh,1));
-   chNum = num2str(blockObj.ChannelID(iCh,2),'%03g');
+   pNum  = num2str(blockObj.Channels(iCh).port_number);
+   chNum = num2str(blockObj.Channels(iCh).native_order,'%03g');
    fName = sprintf(strrep(blockObj.Paths.(field).file,'\','/'), ...
       pNum,chNum);
    fName = fullfile(fName);
@@ -32,17 +35,19 @@ for iCh = blockObj.Mask
       flag = true;
    else
       updateFlag(iCh) = true;
-      switch fType
-         case 'Event'
-            try
+      switch fileType
+         case 'Event' % If it's a 'spikes' file
+            try % Channels can also have channel events
                blockObj.Channels(iCh).(field) = ...
-                  nigeLab.libs.DiskData(fType,fName);
+                  nigeLab.libs.DiskData(fileType,fName);
             catch % If spikes exist but in "bad format", fix that
                updateFlag(iCh) = blockObj.checkSpikeFile(fName);
             end
          otherwise
+            % Each element of Channels will have different kinds of data
+            % (e.g. 'Raw', 'Filt', etc...)
             blockObj.Channels(iCh).(field) = ...
-               nigeLab.libs.DiskData(fType,fName);
+               nigeLab.libs.DiskData(fileType,fName);
       end
    end
    
@@ -50,6 +55,8 @@ for iCh = blockObj.Mask
    pct = 100 * (counter / numel(blockObj.Mask));
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
+% Only update status of unmasked channels. The other ones shouldn't matter
+% when are looking at 'doAction dependencies' later.
 blockObj.updateStatus(field,updateFlag);
 
 end

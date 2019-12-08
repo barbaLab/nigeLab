@@ -16,7 +16,7 @@ blockObj.updateParams('Experiment');
 blockObj.Paths.Notes.name = fullfile(sprintf(strrep(...
    blockObj.Paths.Notes.file,'\','/'),'Experiment.txt'));
 
-fprintf(1,'\nLinking NOTES...000%%\n');
+nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Notes'),'Notes');
 if exist(blockObj.Paths.Notes.name,'file')==0
    copyfile(fullfile(notes.Folder,notes.File),...
       blockObj.Paths.Notes.name,'f');

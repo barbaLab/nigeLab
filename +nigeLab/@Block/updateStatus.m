@@ -35,7 +35,7 @@ function opOut = updateStatus(blockObj,operation,value,channel)
 % By: Max Murphy  & Fred Barban MAECI 2018 collaboration
 
 %% DEFAULTS
-N_CHAR_COMPARE = 4;
+N_CHAR_COMPARE = 7;
 
 %% PARSE INPUT FOR MULTIPLE COMMANDS
 if nargin > 2
@@ -66,7 +66,7 @@ switch nargin
       error('Not enough input arguments.');
       
    case 1 % If no input just return all the possible operations
-      opOut=allPossibleOperations;
+      opOut=allPossibleOperations(1:end);
       return;
       
    case 2 % If only 1 input, 'init' command resets status of all
@@ -77,21 +77,24 @@ switch nargin
       if strncmpi('init',operation,N_CHAR_COMPARE)
          blockObj.Status = struct; % Change this to a struct
          for i = 1:numel(allPossibleOperations)
-            switch blockObj.FieldType{i}
-               case 'Channels'
-                  blockObj.Status.(allPossibleOperations{i}) = ...
-                     false(1,blockObj.NumChannels);
-               otherwise
-                  strNumCh = ['Num' allPossibleOperations{i}];
-                  if isprop(blockObj,strNumCh)
-                     n = blockObj.(strNumCh);
-                  else
-                     n = 1;
-                  end
-                  blockObj.Status.(allPossibleOperations{i}) = ...
-                     false(1,n);
-            end
-         end
+             switch blockObj.FieldType{i}
+                 case 'Channels'
+                     n = blockObj.NumChannels;
+                 case 'Streams'
+                     n = numel(blockObj.Streams.(allPossibleOperations{i}));
+                 case 'Videos'
+                     n = numel(blockObj.Videos);
+                 otherwise
+                     strNumCh = ['Num' allPossibleOperations{i}];
+                     if isprop(blockObj,strNumCh)
+                         n = blockObj.(strNumCh);
+                     else
+                         n = 1;
+                     end                     
+             end
+             blockObj.Status.(allPossibleOperations{i}) = ...
+                 false(1,n);
+         end      
          blockObj.Fields = allPossibleOperations;
       else
          error('''operation'' input argument is not valid (%s)',operation);
@@ -106,6 +109,7 @@ switch nargin
       if ~isempty(idx)
          opOut = allPossibleOperations{idx};
          blockObj.Status.(opOut) = value;
+         % If it hadn't been parsed into Fields property, add it
          if ~ismember(opOut,blockObj.Fields)
             blockObj.Fields = [blockObj.Fields; opOut];
          end
@@ -131,6 +135,5 @@ switch nargin
    otherwise
       error('Too many input arguments (%d; max: 4).',nargin);
 end
-
 
 end

@@ -64,7 +64,7 @@ for iCh = blockObj.Mask
    if ~floor(mod(pc,5)) % only increment counter by 5%
       fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
    end
-   blockObj.notifyUser('doReReference','Get Reference',iCh,max(blockObj.Mask));
+%    blockObj.notifyUser('doReReference','Get Reference',iCh,max(blockObj.Mask));
 end
 fprintf(1,'\b\b\b\bDone.\n');
 

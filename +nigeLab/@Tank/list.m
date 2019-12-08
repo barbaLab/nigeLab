@@ -43,7 +43,7 @@ GatherFunction = { @(an) an.Name;
                    @(an) getAnimalDate(an)
                    @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.FileExt})];
                    @(an) numel(an.Blocks);
-                   @(an) unique(cat(1,an.Blocks.NumChannels));
+                   @(an) {unique(cat(1,an.Blocks.NumChannels))};
                    @(an) getAnimalStatus(an);
     };
 

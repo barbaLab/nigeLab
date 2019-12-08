@@ -57,6 +57,12 @@ if ~blockObj.initChannels
    return;
 end
 
+%% INITIALIZE VIDEOS STRUCT
+if ~blockObj.initVideos
+   warning('Could not initialize Videos structure properly.');
+   return;
+end
+
 %% INITIALIZE STREAMS STRUCT
 if ~blockObj.initStreams
    warning('Could not initialize Streams structure headers properly.');
@@ -68,6 +74,7 @@ if ~blockObj.initEvents
    warning('Could not initialize Events structure properly.');
    return;
 end
+
 blockObj.updateStatus('init');
 
 % Prior to link to data, check if a function handle for conversion has been
@@ -76,11 +83,12 @@ if ~isempty(blockObj.MatFileWorkflow.ConvertFcn)
    % Give the opportunity to cancel 
    % (function handle can just be configured to [] once Block has been 
    %  "converted" the first time)
-   printWarningLoop(3);
+   warningParams = struct('n',3,...
+      'warning_string', '-->\tCONVERSION in ');
+   h = nigeLab.utils.printWarningLoop(warningParams);
+   waitfor(h);
    % If not canceled yet, run conversion
-   blockObj.MatFileWorkflow.ConvertFcn(blockObj.RecFile,...
-      blockObj.AnimalLoc,...
-      blockObj.BlockPars);
+   blockObj.MatFileWorkflow.ConvertFcn(blockObj);
 end
 
 
@@ -90,6 +98,7 @@ if ~flag
    nigeLab.utils.cprintf('UnterminatedStrings',...
       'Could not successfully link %s to data.',blockObj.Name);
 end
+   
    
    function printWarningLoop(nsec)
       % PRINTWARNINGLOOP  Warning function to count down before conversion

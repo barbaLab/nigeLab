@@ -35,6 +35,7 @@ function editArray = uiMakeEditArray(container,y,varargin)
 H = 0.150;
 W = 0.475;
 X = 0.500;
+TAG = repmat({''},numel(y),1);
 
 %% PARSE VARARGIN
 for iV = 1:2:numel(varargin)
@@ -52,6 +53,7 @@ for ii = 1:numel(y)
       'FontSize',14,...
       'Enable','off',...
       'String','N/A',...
+      'Tag',TAG{ii},...
       'UserData',ii);
    
 end

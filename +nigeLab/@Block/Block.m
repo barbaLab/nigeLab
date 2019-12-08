@@ -69,12 +69,14 @@ classdef Block < matlab.mixin.Copyable
    %% PROPERTIES
    % Public properties that can be modified externally
    properties (SetAccess = public, GetAccess = public)
-      Name  % Name of the recording block
-      Meta  % Metadata about the recording
+      Name     % Name of the recording block
+      Meta     % Metadata about the recording
+      
 
       Channels   % Struct array of neurophysiological stream data
       Events     % Struct array of asynchronous events
       Streams    % Struct array of non-electrode data streams
+      Videos     % Struct array of videos associated with recording
       
       Graphics   % Struct for associated graphics objects
       
@@ -90,6 +92,7 @@ classdef Block < matlab.mixin.Copyable
    % Properties that can be obtained externally, but must be set by a
    % method of the class object.
    properties (SetAccess = private, GetAccess = public)
+      Scoring     % Metadata about any scoring done
       SampleRate  % Recording sample rate
       Samples     % Total number of samples in original record
       Time        % Points to Time File
@@ -108,6 +111,7 @@ classdef Block < matlab.mixin.Copyable
       Probes      % Probe configurations associated with saved recording
       Notes       % Notes from text file
       
+      RecSystem   % 'RHS', 'RHD', or 'TDT' (must be one of those)
       RecType     % Intan / TDT / other
       FileExt     % .rhd, .rhs, or other
    end
@@ -181,11 +185,10 @@ classdef Block < matlab.mixin.Copyable
                           %                 nigeLab format
                           % --> ExtractFcn  function handle to use for
                           %                 'do' extraction methods
+      ViableFieldTypes  % List of 'Viable' possible field types
 
    end
-   
-   % Still on the fence about incorporating Events more frequently, but it
-   % could be useful to put more things into event structures -MM 11/19/19
+
    events
       channelCompleteEvent
       processCompleteEvent
@@ -203,6 +206,7 @@ classdef Block < matlab.mixin.Copyable
          %
          % By: Max Murphy  v1.0  08/25/2017
          %     F. Barban   v2.0  11/2018
+         %     MM, FB      v3.0  11/2019
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -251,21 +255,49 @@ classdef Block < matlab.mixin.Copyable
    % OVERLOADED methods
    methods (Access = public)
       % Overloaded SAVE method to save a BLOCK matfile
-      function save(blockObj)
-         %% SAVE  Overload save of BLOCK
-         save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+      function flag = save(blockObj)
+         % SAVE  Overloaded SAVE method for BLOCK
+         %
+         %  blockObj.save;          This works
+         %  flag = save(blockObj);  This also works
+         %
+         %  flag returns true if the save did not throw an error.
+         
+         % Handles the case of MultiAnimals. Avoids infinite save loop
+         try
+             save(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'blockObj','-v7');
+             for bl = blockObj.ManyAnimalsLinkedBlocks % save multianimals if present
+                 if blockObj.ManyAnimals
+                     bl.ManyAnimalsLinkedBlocks=[];
+                     bl.save();
+                 end
+             end
+         catch
+             flag = false;
+             return;
+         end
+         flag = true;
       end
+      
       % Overloaded RELOAD method for loading a BLOCK matfile
       function reload(blockObj)
+         % RELOAD  Load block (related to multi-animal stuff?)
+         
           obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
           ff=fieldnames(obj.blockObj);
           for f=1:numel(ff)
               blockObj.(ff{f}) = obj.blockObj.(ff{f});
           end
       end
+      
       % Overloaded SUBSREF method for indexing shortcuts on BLOCK
       function varargout = subsref(blockObj,s)
-         %% SUBSREF  Overload indexing operators for BLOCK
+         % SUBSREF  Overload indexing operators for BLOCK
+         %
+         %  varargout = subsref(blockObj,s); 
+         %
+         %  s: Struct returned by SUBSTRUCT function
+         
          switch s(1).type
             case '.'
 
@@ -323,9 +355,10 @@ classdef Block < matlab.mixin.Copyable
                error('Not a valid indexing expression')
          end
       end
+      
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
-         %% NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
+         % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          dot = strcmp({s(1:min(length(s),2)).type}, '.');
          if sum(dot) < 2
             if indexingContext == matlab.mixin.util.IndexingContext.Statement &&...
@@ -344,7 +377,15 @@ classdef Block < matlab.mixin.Copyable
    end
    
    % Methods to be catalogued in CONTENTS.M
-   methods (Access = public)      
+   methods (Access = public)
+      % Scoring videos
+      fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
+      fig = alignVideo(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
+      fieldIdx = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
+      
+      addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
+      info = getScoringMetadata(blockObj,fieldName,hashID); % Retrieve row of metadata scoring
+      
       % Methods for data extraction:
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
@@ -371,8 +412,10 @@ classdef Block < matlab.mixin.Copyable
       flag = saveChannelSpikingEvents(blockObj,ch,spk,feat,art) % Save spikes for a channel
       flag = checkSpikeFile(blockObj,ch) % Check a spike file for compatibility
       
-      % Method for getting event info:
-      [data,blockIdx] = getEventData(blockObj,type,field,ch,matchValue,matchField) % Retrieve event data
+      % Method for accessing event info:
+      idx = getEventsIndex(blockObj,field,eventName);
+      [data,blockIdx] = getEventData(blockObj,field,prop,ch,matchValue,matchField) % Retrieve event data
+      flag = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
       
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
@@ -392,30 +435,23 @@ classdef Block < matlab.mixin.Copyable
       flag = linkChannelsField(blockObj,field,fType)  % Link Channels field data
       flag = linkEventsField(blockObj,field)    % Link Events field data
       flag = linkStreamsField(blockObj,field)   % Link Streams field data
+      flag = linkVideosField(blockObj,field)    % Link Videos field data
       flag = linkTime(blockObj)     % Link Time stream
       flag = linkNotes(blockObj)    % Link notes metadata
       flag = linkProbe(blockObj)    % Link probe metadata
-      
-      flag = linkRaw(blockObj)  % Link raw data
-      flag = linkFilt(blockObj) % Link filtered data
-      flag = linkStim(blockObj) % Link stimulation data
-      flag = linkLFP(blockObj)  % Link LFP data
-      flag = linkCAR(blockObj)  % Link CAR data
-      flag = linkSpikes(blockObj)   % Link Spikes data
-      flag = linkClusters(blockObj) % Link Clusters data
-      flag = linkSorted(blockObj)   % Link Sorted data
-      flag = linkADC(blockObj)      % Link ADC data
-      flag = linkDAC(blockObj)      % Link DAC data
-      flag = linkDigIO(blockObj)    % Link Digital-In and Digital-Out data
       
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
       
       % Methods for parsing Fields info:
-      fType = getFieldType(blockObj,field) % Get file type corresponding to field
+      fileType = getFileType(blockObj,field) % Get file type corresponding to field  
+      [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
+      [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
+      [fieldIdx,n] = getStreamsFieldIndex(blockObj,field,type) % Get index into Streams for a given Field
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
+      [flag,p] = updateParams(blockObj,paramType) % Update parameters
       status = getStatus(blockObj,operation,channel)  % Retrieve task/phase status
       
       % Miscellaneous utilities:
@@ -445,11 +481,23 @@ classdef Block < matlab.mixin.Copyable
       flag = initChannels(blockObj);   % Initialize Channels property
       flag = initEvents(blockObj);     % Initialize Events property 
       flag = initStreams(blockObj);    % Initialize Streams property
+      flag = initVideos(blockObj);     % Initialize Videos property
       
       meta = parseNamingMetadata(blockObj); % Get metadata struct from recording name
       channelID = parseChannelID(blockObj); % Get unique ID for a channel
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
+   end
+   
+   % Static methods for multiple animals
+   methods (Static)
+       function obj = loadobj(obj)
+           if obj.ManyAnimals
+               for bl=obj.ManyAnimalsLinkedBlocks
+                   bl.reload();
+               end
+           end
+       end
    end
 end

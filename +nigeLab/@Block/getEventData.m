@@ -1,12 +1,12 @@
-function [eventData,blockIdx] = getEventData(blockObj,type,field,ch,matchField,matchValue)
+function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,matchValue)
 %% GETEVENTDATA     Retrieve data for a given event
 %
 %  eventData = GETEVENTDATA(blockObj);
-%  eventData = GETEVENTDATA(blockObj,type);
-%  eventData = GETEVENTDATA(blockObj,type,field);
-%  eventData = GETEVENTDATA(blockObj,type,field,ch);
-%  eventData = GETEVENTDATA(blockObj,type,field,ch,matchField);
-%  eventData = GETEVENTDATA(blockObj,type,field,ch,matchField,matchValue);
+%  eventData = GETEVENTDATA(blockObj,field);
+%  eventData = GETEVENTDATA(blockObj,field,prop);
+%  eventData = GETEVENTDATA(blockObj,field,prop,ch);
+%  eventData = GETEVENTDATA(blockObj,field,prop,ch,matchProp);
+%  eventData = GETEVENTDATA(blockObj,field,prop,ch,matchProp,matchValue);
 %  [eventData,blockIdx] = GETEVENTDATA(blockObj,___);
 %
 %  --------
@@ -14,20 +14,10 @@ function [eventData,blockIdx] = getEventData(blockObj,type,field,ch,matchField,m
 %  --------
 %  blockObj    :     nigeLab.Block class object.
 %
-%   type       :     Code for classifying different Events(char)
+%   field      :     Code for classifying different Events(char)
 %                    ---- RECORDING-ASSOCIATED ----
-%                    -> 'Stim'
-%                    -> 'Sync'
-%                    -> 'User'
-%                    -> 'LPellet'
-%                    -> 'LButtonDown'
-%                    -> 'LButtonUp'
-%                    -> 'RPellet'
-%                    -> 'RButtonDown'
-%                    -> 'RButtonUp'
-%                    -> 'Beam'
-%                    -> 'Nose'
-%                    -> 'Epoch'
+%                    -> Any FIELD of blockObj.Events
+%                       --> e.g. 'ScoredEvents'; 'DigEvents'
 %                    ---- CHANNEL-ASSOCIATED ----
 %                    -> 'Sorted'
 %                    -> 'Clusters'
@@ -35,7 +25,7 @@ function [eventData,blockIdx] = getEventData(blockObj,type,field,ch,matchField,m
 %                    -> 'SpikeFeatures'
 %                    -> 'Artifact'
 %
-%   field      :     Name of event data field (char):
+%   prop      :     Name of event data field (char):
 %                    -> 'value' (def) // code for quantifying different
 %                                    events. for example an event could
 %                                    have two different values, but the
@@ -53,8 +43,9 @@ function [eventData,blockIdx] = getEventData(blockObj,type,field,ch,matchField,m
 %                    -> If type is 'Events' this is the index of the
 %                       desired Event Type. In this case, can also be given
 %                       as a char or cell array of chars.
+%                       --> e.g. 'Grasp'; 'Trial'; 'Reach'...
 %
-%  matchField  :     Name of match data field (char)
+%  matchProp   :     Name of match data property (char)
 %                    -> Must fit ismember() criterion:
 %                    --> 'value' (def)
 %                    --> 'tag'
@@ -83,13 +74,13 @@ function [eventData,blockIdx] = getEventData(blockObj,type,field,ch,matchField,m
 
 %% PARSE INPUT
 if nargin < 2 % type was not provided
-   type = 'Spikes';
+   field = 'Spikes';
 end
 
 if nargin < 3 % field was not provided
-   field = 'value';
+   prop = 'value';
 else
-   field = lower(field);
+   prop = lower(prop);
 end
 
 if nargin < 4 % ch was not provided
@@ -100,28 +91,12 @@ if nargin < 4 % ch was not provided
    else
       ch = blockObj(1).Mask;
    end
-else
-   F = {blockObj(1).Events.name};
-   if iscell(ch)
-      idx = [];
-      for iCh = 1:numel(ch)
-         tmp = [tmp, find(strcmpi(F,ch{iCh}))];  %#ok<*AGROW>
-      end
-      ch = tmp;
-   elseif ischar(ch)
-      ch = find(strcmpi(F,ch));
-   end
-   if isempty(ch)
-      warning('Invalid channel fieldname.');
-      eventData = [];
-      return;
-   end
 end
 
 if nargin < 5 % matchField was not provided
-   matchField = 'value';
+   matchProp = 'value';
 else
-   if strcmpi(matchField,'ts') || strcmpi(matchField,'snippet')
+   if strcmpi(matchProp,'ts') || strcmpi(matchProp,'snippet')
       if numel(matchValue) ~= 2
          error('For ''ts'' or ''snippet'' matches, val must be 1x2.');
       end
@@ -135,63 +110,102 @@ end
 
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
-if (numel(ch) > 1)
+if isnumeric(ch)
+   if (numel(ch) > 1)
+      eventData = cell(size(ch));
+      blockIdx = cell(size(ch));
+      for iCh = 1:numel(ch)
+         [eventData{iCh},blockIdx{iCh}] = getEventData(blockObj,...
+            field,prop,ch(iCh));
+      end
+      return;
+   end
+elseif iscell(ch)
    eventData = cell(size(ch));
    blockIdx = cell(size(ch));
    for iCh = 1:numel(ch)
       [eventData{iCh},blockIdx{iCh}] = getEventData(blockObj,...
-         type,field,ch(iCh));
+         field,prop,ch{iCh});
    end
    return;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
 if (numel(blockObj) > 1)
-   eventData = [];
-   blockIdx = [];
-   masterID = parseChannelID(blockObj(1));
-   masterIdx = matchChannelID(blockObj,masterID);
-   for iBk = 1:numel(blockObj)
-      [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),type,field,...
-         masterIdx(ch,iBk));
-      eventData = [eventData; tmpData];
-      blockIdx = [blockIdx; tmpBlockIdx.*iBk];
+   [eventData,blockIdx] = nigeLab.utils.initEmpty;
+   if isnumeric(ch)
+      masterID = parseChannelID(blockObj(1));
+      masterIdx = matchChannelID(blockObj,masterID);
+      for iBk = 1:numel(blockObj)
+         [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),field,prop,...
+            masterIdx(ch,iBk));
+         eventData = [eventData; tmpData]; %#ok<*AGROW>
+         blockIdx = [blockIdx; tmpBlockIdx.*iBk];
+      end
+   else
+      for iBk = 1:numel(blockObj)
+         [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),field,prop,ch);
+         eventData = [eventData; tmpData];
+         blockIdx = [blockIdx; tmpBlockIdx.*iBk];
+      end
    end
    return;
 end
 
 %% SHOULD ADD ERROR CHECKING HERE FOR IF THE FIELD IS UNAVAILABLE
+blockObj.checkCompatibility(field);
 % Events struct is not associated with channels, so handle differently
-if ~any(strncmpi({'Spikes','SpikeFeatures','Clusters','Sorted'},type,7)) 
-   eventData = blockObj.Events(ch).data.(field); 
+if ~any(strncmpi({'Spikes','SpikeFeatures','Clusters','Sorted'},field,7)) 
+   propName = lower(prop);
+   switch propName % Define some things to make it easier to avoid typo etc
+      case {'times','timestamps','t'}
+         propName = 'ts';
+      case {'index','id','val','group'}
+         propName = 'value';
+      case {'snip','snips','rate','lfp','aligned','x'}
+         propName = 'snippet';
+      case {'mask','label','name'}
+         propName = 'tag';
+      otherwise
+         % do nothing
+   end
+   
+   
+   idx = blockObj.getEventsIndex(field,ch);
+   
+   % Note that .data is STRUCT field; .data.data would be DiskData "data"
+   tmp = blockObj.Events.(field)(idx).data;
+   eventData = tmp.(propName); 
    
    % If a value to match is given, then 
    if ~isnan(matchValue(1))
-      dataSelector = blockObj.Events(ch).data.(matchField);
-      if strcmpi(matchField,'ts')
-         eventData = eventData((dataSelector >= matchValue(1)) &...
+      dataSelector = tmp.(matchProp);
+      if strcmpi(matchProp,'ts')
+         eventData = eventData(...
+            (dataSelector >= matchValue(1)) &...
             (dataSelector < matchValue(2)));
-      elseif strcmpi(matchField,'snippet')
+      elseif strcmpi(matchProp,'snippet')
          dataMax = max(dataSelector,[],2);
          dataMin = min(dataSelector,[],2);
-         eventData = eventData((dataMin >= matchValue(1)) & ...
+         eventData = eventData(...
+            (dataMin >= matchValue(1)) & ...
             (dataMax < matchValue(2)));
       else
-         eventData = eventData(ismember(dataSelector,matchValue));
+         eventData = eventData(ismember(dataSelector,matchValue),:);
       end
    end
    
 else % Otherwise, channel "events" (e.g. spikes etc.)
    F = fieldnames(blockObj.Channels(ch));
-   iF = strncmpi(F,type,7);
+   iF = strncmpi(F,field,7);
    if sum(iF)==1
-      eventData = retrieveChannelData(blockObj,ch,F{iF},field);
+      eventData = retrieveChannelData(blockObj,ch,F{iF},prop);
       if ~isnan(matchValue(1))
-         dataSelector = retrieveChannelData(blockObj,ch,F{iF},matchField);
-         if strcmpi(matchField,'ts')
+         dataSelector = retrieveChannelData(blockObj,ch,F{iF},matchProp);
+         if strcmpi(matchProp,'ts')
             eventData = eventData((dataSelector >= matchValue(1)) &...
                (dataSelector < matchValue(2)));
-         elseif strcmpi(matchField,'snippet')
+         elseif strcmpi(matchProp,'snippet')
             dataMax = max(dataSelector,[],2);
             dataMin = min(dataSelector,[],2);
             eventData = eventData((dataMin >= matchValue(1)) & ...
@@ -201,10 +215,10 @@ else % Otherwise, channel "events" (e.g. spikes etc.)
          end
       end
    elseif sum(iF)==0
-      warning('Event type (%s) is missing. Returning empty array.',type);
+      warning('Event type (%s) is missing. Returning empty array.',field);
       eventData = [];
    else
-      warning('Event type (%s) is ambiguous. Returning empty array.',type);
+      warning('Event type (%s) is ambiguous. Returning empty array.',field);
       eventData = [];
    end
 end

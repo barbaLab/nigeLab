@@ -4,6 +4,8 @@ function [header] = ReadTDTHeader(varargin)
 %								^ @ FB <-- LOL // MM 2019-01-07
 %
 
+acqsys = 'TDT';
+
 if nargin >0
    VERBOSE = false;
 else
@@ -107,9 +109,10 @@ for pb = 1:num_probes
       raw_channels(ind).port_name = ['Port ' probes(pb)];
       raw_channels(ind).port_prefix = probes(pb);
       raw_channels(ind).port_number = pb;
+      raw_channels(ind).signal = nigeLab.utils.signal('Raw');
       raw_channels(ind).electrode_impedance_magnitude = nan;
       raw_channels(ind).electrode_impedance_phase = nan;
-      ]raw_channels(ind).chNum,raw_channels(ind).chStr] = nigeLab.utils.getChannelNum(...
+      [raw_channels(ind).chNum,raw_channels(ind).chStr] = nigeLab.utils.getChannelNum(...
          raw_channels(ind).native_channel_name);
    end
 end

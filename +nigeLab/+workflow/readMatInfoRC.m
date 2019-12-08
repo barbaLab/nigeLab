@@ -18,6 +18,7 @@ function header = readMatInfoRC(channelInfoFile)
 %  See also READRHDHEADER, READRHSHEADER, READTDTHEADER
 
 %% Check that input is valid
+acqsys = 'TDT';
 digFields = {'Paw','Beam'};
 if exist(channelInfoFile,'file')==0
    error('Bad filename: %s',channelInfoFile);
@@ -128,10 +129,10 @@ end
          name = sprintf('%s-%03g',ab,ch);
          c(i).native_channel_name = name;
          c(i).custom_channel_name = name;
-         c(i).native_order = (p-1)*16 + ch;
+         c(i).native_order = ch;
          c(i).custom_order = c(i).native_order;
          c(i).board_stream = p;
-         c(i).chip_channel = ch;
+         c(i).chip_channel = (p-1)*16 + ch;
          c(i).port_name = sprintf('Port %s',ab);
          c(i).port_prefix = ab;
          c(i).port_number = p;
@@ -171,6 +172,7 @@ end
             c = nigeLab.utils.initChannelStruct(FieldType,n,...
                   'electrode_impedance_magnitude',nan,...
                   'electrode_impedance_phase',nan,...
+                  'signal',nigeLab.utils.signal('Raw'),...
                   'ml',cell(1,n),...
                   'icms',cell(1,n),...
                   'area',cell(1,n));
@@ -182,7 +184,7 @@ end
                   'port_number',6,...
                   'electrode_impedance_magnitude',0,...
                   'electrode_impedance_phase',0,...
-                  'signal_type',{'DigIn'});
+                  'signal',nigeLab.utils.signal('DigIn'));
          otherwise
             error('Unrecognized FieldType: %s',FieldType);
       end

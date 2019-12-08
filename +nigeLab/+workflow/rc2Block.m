@@ -1,7 +1,7 @@
-function rc2Block(recFile,animalLoc,p)
+function rc2Block(blockObj)
 %% RC2BLOCK    Convert from RC format to BLOCK format
 %
-%  RC2BLOCK(recFile,animalLoc,p);
+%  RC2BLOCK(blockObj);
 %
 %  Note: This converison function checks if files exist in each of the
 %           folders to which "converted" data is to be moved. If those
@@ -11,15 +11,16 @@ function rc2Block(recFile,animalLoc,p)
 %  --------
 %   INPUTS
 %  --------
-%  recFile  :  Full filename of "recording file" (here, '_ChannelInfo.mat'
-%                 that is known to reside in the base folder of a Block
-%                 hierarchy that is similar, but not identical, to the
-%                 nigeLab Block hierarchy). 
-%
-%  animalLoc : Full path to where the output animal folder will go
-%                 (including name of the animal).
-%
-%  p        : BlockPars Parameters property struct with path info
+%  blockObj : Current nigeLab.Block
+
+%% Check compatibility
+REQUIRED_FIELD_NAMES = {'DigIO','ScoredEvents','Raw','CAR','Spikes','Clusters'}; % Should be included in all +workflow functions
+blockObj.checkCompatibility(REQUIRED_FIELD_NAMES);
+
+%% Get properties of interest
+p = blockObj.BlockPars;
+recFile = blockObj.RecFile;
+animalLoc = blockObj.AnimalLoc;
 
 %% Parse input
 % Make sure that input file exists
@@ -33,10 +34,14 @@ if exist(animalLoc,'dir')==0
    mkdir(animalLoc);
 end
 
+
+
 nigeLab.utils.cprintf('SystemCommands','-->\tConverting %s\n',recFile);
 nigeLab.utils.cprintf('SystemCommands','\t-->\tAt: %s\n',animalLoc);
 
+
 %% Get file structure from file name basically
+
 [path,fname,~] = fileparts(recFile);
 blockName = strsplit(fname,'_');
 blockName = strjoin(blockName(1:4),'_');
@@ -48,27 +53,59 @@ end
 
 %% Move digital streams
 % Make the new '_Digital' folder and move files
-f_in = fullfile(block_in,[blockName '_Digital']);
-f_out = fullfile(block_out,p.DigIO.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_Digital']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.DigIO.Folder));
 
 F = dir(fullfile(f_in,[blockName '*.mat']));
 for iF = 1:numel(F)
    str_info = strsplit(F(iF).name(1:(end-4)),'_');
    dtype = str_info{end};
    if ismember(dtype,{'Beam','Press','Paw'})
-      in = load(fullfile(F(iF).folder,F(iF).name),'data');
+      in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'data');
       data = in.data;
       save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
-   elseif ismember(dtype,{'Scoring','VideoAlignment'})
-      copyfile(fullfile(F(iF).folder,F(iF).name),...
-         fullfile(f_out,sprintf(p.DigEvents.File,dtype)));
+      if strcmpi(dtype,'Paw')
+         save(nigeLab.utils.getUNCPath(fullfile(block_out,p.VidStreams.Folder,...
+            sprintf(p.VidStreams.File,'Front-Paw_Likelihood-Marker',1,'mat'))),'data','-v7.3');
+      end
+   elseif strcmpi(dtype,'Scoring')
+      in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'behaviorData');
+      if ~isfield(in,'behaviorData')
+         error('Weird "scoring" file. Should have behaviorData. Check configuration.');
+      else
+         [fname,data] = nigeLab.workflow.behaviorData2BlockEvents(in.behaviorData,...
+            fullfile(block_out,p.ScoredEvents.Folder),...
+            p.ScoredEvents.File);
+         for i = 1:numel(fname)
+            out = nigeLab.libs.DiskData('Event',fname{i},data{i});
+         end
+      end
+      
+   elseif strcmpi(dtype,'VideoAlignment')
+      
+      in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'VideoStart');
+      if ~isfield(in,'VideoStart')
+         error('Weird Alignment scoring file. Check configuration.');
+      end
+      tmpVidStart = in.VideoStart; % Hold until behaviorData is done
    end
+   
+end
+
+% After 'Header' has been made
+if exist('tmpVidStart','var')~=0
+   out_name =  nigeLab.utils.getUNCPath(fullfile(block_out,...
+      p.ScoredEvents.Folder,...
+      sprintf(p.ScoredEvents.File,'Header')));
+   out = nigeLab.libs.DiskData('Event',out_name,'access','w');
+   out.data(1,4) = tmpVidStart;
+   lockData(out);
 end
 
 %% Move filtered and raw streams
 % Raw
-f_in = fullfile(block_in,[blockName '_RawData']);
-f_out = fullfile(block_out,p.Raw.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_RawData']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.Raw.Folder));
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
    F = dir(fullfile(f_in,[blockName '*.mat']));
@@ -85,8 +122,8 @@ end
 
 
 % Filtered
-f_in = fullfile(block_in,[blockName '_FilteredCAR']);
-f_out = fullfile(block_out,p.CAR.Folder);
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_FilteredCAR']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,p.CAR.Folder));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
@@ -104,8 +141,8 @@ end
 
 %% Move Spikes & Clusters (those will have to be converted in a different way, later)
 % Spikes
-f_in = fullfile(block_in,[blockName '_wav-sneo_Car_Spikes']);
-f_out = fullfile(block_out,sprintf(p.Spikes.Folder,'wav-sneo_CAR'));
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_wav-sneo_Car_Spikes']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,sprintf(p.Spikes.Folder,'wav-sneo_CAR')));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)
@@ -121,8 +158,8 @@ F = dir(fullfile(f_in,[blockName '*.mat']));
 end
 
 % Clusters
-f_in = fullfile(block_in,[blockName '_wav-sneo_SPC_Car_Clusters']);
-f_out = fullfile(block_out,sprintf(p.Clusters.Folder,'wav-sneo_SPC_CAR'));
+f_in = nigeLab.utils.getUNCPath(fullfile(block_in,[blockName '_wav-sneo_SPC_Car_Clusters']));
+f_out = nigeLab.utils.getUNCPath(fullfile(block_out,sprintf(p.Clusters.Folder,'wav-sneo_SPC_CAR')));
 
 Fout = dir(fullfile(f_out,'*.mat'));
 if isempty(Fout)

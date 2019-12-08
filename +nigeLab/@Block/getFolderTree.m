@@ -84,6 +84,9 @@ end
       for iO = 1:numel(p.OldFile)
          f = strsplit(p.OldFile{iO},'.');
          f = deblank(strrep(f{1},'*',''));
+         if isempty(f)
+            continue;
+         end
          O = dir(fullfile(fieldPath.(type),p.OldFile{iO}));
          if isempty(O)
             old.(f) = O;

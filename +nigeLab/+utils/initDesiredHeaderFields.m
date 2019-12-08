@@ -101,6 +101,7 @@ switch RecType
          'filesize';
          'bytes_per_block';
          'data_file_main_version_number';
+         'acqsys'
       };
    case 'RHS'
       fieldNames = {
@@ -144,6 +145,7 @@ switch RecType
          'header_size';
          'filesize';
          'bytes_per_block';
+         'acqsys';
       };
    case 'TDT'
       fieldNames = {
@@ -172,6 +174,7 @@ switch RecType
          'info';
          'dataType';
          'fn';
+         'acqsys';
       };
    case 'RC' % MM experiment
       fieldNames = {
@@ -191,6 +194,7 @@ switch RecType
          'num_digIO_samples';
          'duration';
          'blocktime';
+         'acqsys';
       };
    otherwise
       error('Unrecognized RecType: %s',RecType);
