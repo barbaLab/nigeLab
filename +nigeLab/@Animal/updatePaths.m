@@ -9,7 +9,7 @@ end
 
 for ii=1:numel(B)
     
-    p = fullfile(animalObj.Paths.SaveLoc,B(ii).Name);
+    p.dir = fullfile(animalObj.Paths.SaveLoc,B(ii).Name);
     B(ii).updatePaths(p);
    
 end

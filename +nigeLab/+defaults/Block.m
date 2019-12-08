@@ -94,17 +94,17 @@ TAG.Videos = ... % Videos: behavioral videos
 %
 % ~/path/R18-68_0_180724_141203
 
-%% Common DynamicVarExp values
-% pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-% pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
-pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
+% pars.DynamicVarExp='~Tag $AnimalID $RecID'; % IIT
+pars.DynamicVarExp='$AnimalID $Year $Month $Day $RecID $RecDate $RecTime'; % KUMC
+% pars.DynamicVarExp='$AnimalID $RecID $RecDate $RecTime'; % iit intan
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
 
-%% Common NamingConvention values
-% pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
+pars.IncludeChar='$';
+pars.DiscardChar='~';
+% pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
+pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
-pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+% pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 pars.IncludeChar='$';
 pars.DiscardChar='~';
@@ -120,7 +120,7 @@ pars.DiscardChar='~';
 %
 % Example 
 % R18-68&&R18-69_180724_141203.rhd
-pars.ManyAnimalsChar='&&';
+pars.MultiAnimalsChar='&&';
 
 %%
 Fields =  { ...

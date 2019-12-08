@@ -51,10 +51,7 @@ diskPars.name = fullfile(paths.Time.info);
 Files.Time = nigeLab.utils.makeDiskFile(diskPars);
 
 if (num_raw_channels > 0)
-   if exist('myJob','var')~=0
-      set(myJob,'Tag',sprintf('%s: Extracting RAW info',blockObj.Name));
-   end
-   fprintf(1, '\t->Extracting RAW info...%.3d%%\n',0);
+   reportProgress(blockObj,'Raw info', 0);
    info = raw_channels;
    infoname = fullfile(paths.Raw.info);
    save(fullfile(infoname),'info','-v7.3');
@@ -68,7 +65,6 @@ if (num_raw_channels > 0)
       amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
          'class','single','size',[1 num_raw_samples],'access','w');
       fraction_done = 100 * (iCh / num_raw_channels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
    end
 end
 
@@ -76,8 +72,7 @@ end
    fprintf(1,'Matfiles created succesfully\n');
    fprintf(1,'Exporting files...\n');
    
-   fprintf(1, '\t->Extracting streams...%.3d%%\n',0)
-   
+   reportProgress(blockObj,'Raw', 0);
    %%%%%%%%%%%%%% Raw waveform
    if any(contains(header.fn,TDTNaming.WaveformName))
        for iCh=1:num_raw_channels
@@ -88,12 +83,13 @@ end
            amplifier_dataFile{iCh}.append(data);
            blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
            fraction_done = 100 * (iCh / num_raw_channels);
-           fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+           reportProgress(blockObj,'Raw', fraction_done);
        end
    end
    
    %%%%%%%%%%%% Other nonstandard streams
    if any(contains(header.fn,TDTNaming.streamsName))
+       reportProgress(blockObj,'Streams', 0);
        for iCh=1:num_raw_channels
            pNum  = num2str(raw_channels(iCh).port_number);
            chNum = raw_channels(iCh).custom_channel_name(regexp(raw_channels(iCh).custom_channel_name, '\d'));
@@ -111,7 +107,7 @@ end
                blockObj.(TDTNaming.streamsTarget{kk}) = lockData(generic_dataFile{iCh});
            end
            fraction_done = 100 * (iCh / num_raw_channels);
-           fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+           reportProgress(blockObj,'Streams', fraction_done);
        end
    end
    
@@ -131,7 +127,7 @@ end
                end % kk, evsSource
            end % ii, events
            fraction_done = 100 * (jj / numel(TDTNaming.evsVar));
-           fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done));
+           reportProgress(blockObj,'Epocs', fraction_done);
            catch er
                nigeLab.utils.cprintf('UnterminatedStrings','Block %s: epoch field %s not found!',blockObj.Name,TDTNaming.evsVar{jj});
            end % try

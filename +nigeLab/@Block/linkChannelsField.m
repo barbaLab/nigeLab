@@ -15,6 +15,8 @@ function flag = linkChannelsField(blockObj,field,fileType)
 flag = false;
 % updateFlag is for the total number of channels
 updateFlag = false(1,blockObj.NumChannels);
+   str = ['Linking <a href="matlab:doc nigelab.Block\Channels">Channels</a> field: ',field];
+blockObj.reportProgress(str,0);
 
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 counter = 0;
@@ -53,7 +55,8 @@ for iCh = blockObj.Mask
    
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+%    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+blockObj.reportProgress(str,pct);
 end
 % Only update status of unmasked channels. The other ones shouldn't matter
 % when are looking at 'doAction dependencies' later.

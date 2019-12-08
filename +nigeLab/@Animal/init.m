@@ -47,8 +47,10 @@ for bb=1:numel(Recordings)
    
    if  addBlock
       animalObj.addBlock(RecFile);
+      animalObj.MultiAnimals = any([animalObj.Blocks.MultiAnimals]);
    end
 end
+
+
 animalObj.save;
 end
-

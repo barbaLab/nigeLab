@@ -15,6 +15,11 @@ function flag = updatePaths(blockObj,SaveLoc)
 
 flag = false;
 
+% remove old block matfile
+if exist(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),'file')
+delete(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
+end
+
 if nargin == 2
    blockObj.Paths.SaveLoc = SaveLoc;
 end
@@ -61,7 +66,9 @@ end
 % copy all the info files from one folder t the new one
 for jj = 1:numel(OldFN)
 %     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-    moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'cp');
+    moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
+    d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},{'.','..'}));
+    if isempty(d),rmdir(OldP.(OldFN{jj}).dir);end
 end
 blockObj.linkToData;
 blockObj.save;

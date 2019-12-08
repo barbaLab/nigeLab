@@ -4,19 +4,23 @@ classdef Animal < matlab.mixin.Copyable
    %% PUBLIC PROPERTIES
       properties (GetAccess = public, SetAccess = public,SetObservable)
       Name         % Animal identification code
-
+      Blocks       % Children (nigeLab.Block objects)
+      Meta
       end
    
    properties (GetAccess = public, SetAccess = public)
-      Blocks       % Children (nigeLab.Block objects)
+     
       Probes       % Electrode configuration structure
    end
    
    properties (SetAccess = private, GetAccess = public)
        Paths         % Path to Animal folder
-   
    end
    
+   properties (SetAccess = public, Hidden = true)
+      UserData % Allow UserData property to exist
+
+   end
    
    properties (GetAccess = public, SetAccess = private, Hidden = true)
       Pars              % parameters struct for templates from nigeLab.defaults
@@ -24,12 +28,17 @@ classdef Animal < matlab.mixin.Copyable
       TankLoc           % directory for saving Animal
       RecDir            % directory with raw binary data in intan format
       ExtractFlag       % flag status of extraction for each block
+      MultiAnimals      % flag to signal if it's a single animal or a joined animal recording
+      MultiAnimalsLinkedAnimals
    end
    
    properties  (SetAccess = private, GetAccess = private) 
        RecLocDefault     % Default location of raw binary recording
        TankLocDefault  % Default location of BLOCK
-   end
+       end
+   
+   
+   
    %% PUBLIC METHODS
    methods (Access = public)
       function animalObj = Animal(varargin)
@@ -39,7 +48,7 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.updateParams('Animal');
          animalObj.updateParams('all');
          
-        addlistener(animalObj,'Name','PostSet',@animalObj.updateAnimalNameInChlildBlocks);
+         addlistener(animalObj,'Name','PostSet',@animalObj.updateAnimalNameInChlildBlocks);
          
          %% PARSE VARARGIN
          for iV = 1:2:numel(varargin) % Can specify properties on construct
@@ -68,6 +77,7 @@ classdef Animal < matlab.mixin.Copyable
         animalObj.RecDir = nigeLab.utils.getUNCPath(animalObj.RecDir);
          %% INITIALIZE ANIMAL OBJECT
          animalObj.init;
+         addlistener(animalObj,'Blocks','PostSet',@(~,~) CheckBlocksForClones(animalObj));
        
       end
       
@@ -77,20 +87,24 @@ classdef Animal < matlab.mixin.Copyable
          newBlock= nigeLab.Block('RecFile',BlockPath,...
              'AnimalLoc',animalObj.Paths.SaveLoc);
          animalObj.Blocks = [animalObj.Blocks newBlock];
+         
+         
+        addlistener(newBlock,'ObjectBeingDestroyed',@(h,~) AssignNULL(animalObj,find(animalObj.Blocks == h))); %#ok<FNDSB>
+          
+         
       end
       
       function save(animalObj)
-         B=animalObj.Blocks;
-         for ii=1:numel(B)
-            B(ii).save;
-         end
-         save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),'animalObj','-v7');
-         animalObj.Blocks = B;
+          
+          B=animalObj.Blocks;
+          for ii=1:numel(B)
+              B(ii).save;
+          end
+          animalObj.Blocks = []; 
+          save(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']),'animalObj','-v7');
+          animalObj.Blocks = B;
       end
-      
-      function animalobj = saveobj(animalobj)
-         animalobj.Blocks = [];         
-      end
+
       
       function Status = getStatus(animalObj,Operation)
          if nargin <2
@@ -157,13 +171,36 @@ classdef Animal < matlab.mixin.Copyable
          BL = dir(fullfile(animalObj.Paths.SaveLoc,'*_Block.mat'));
          load(fullfile(BL(1).folder,BL(1).name),'blockObj');
             animalObj.Blocks = blockObj;
+            jj = 2;
          for ii=2:numel(BL)
             load(fullfile(BL(ii).folder,BL(ii).name),'blockObj');
-            animalObj.Blocks(ii) = blockObj;
+            if blockObj.MultiAnimals == 2, continue;end
+            animalObj.Blocks(jj) = blockObj;
+            jj = jj + 1;
+            addlistener(blockObj,'ObjectBeingDestroyed',@(h,~) AssignNULL(animalObj,find(animalObj.Blocks == h))); %#ok<FNDSB>
+          
+          
          end
+         addlistener(animalObj,'Blocks','PostSet',@(~,~) CheckBlocksForClones(animalObj));
+         addlistener(animalObj,'Name','PostSet',@animalObj.updateAnimalNameInChlildBlocks);
+
       end
       
       
    end
    
+end
+
+function AssignNULL(animalObj,ind)
+animalObj.Blocks(ind) = [];
+end
+
+function CheckBlocksForClones(animalObj)
+if isempty(animalObj.Blocks),return;end
+% look for animals with the same name
+tmp = cellfun(@(s) strcmp(s,{animalObj.Blocks.Name}),{animalObj.Blocks.Name},'UniformOutput',false);
+Xcorr = any(upper(cat(1,tmp{:})-eye(size(tmp,2))),1);
+
+animalObj.Blocks(Xcorr)=[];
+
 end

@@ -11,9 +11,9 @@ pars = struct;
 
 % Only specify this field if you want to force use of a single cluster
 % pars.Cluster = 'CPLMJS'; 
-pars.UseParallel = true; % set to false to switch to serial processing mode
+pars.UseParallel = false; % set to false to switch to serial processing mode
 % pars.UseRemote = false; % set false to use local machine
-pars.UseRemote = true;
+pars.UseRemote = false;
 
 % UNC path and cluster list for Matlab Distributed Computing Toolbox
 pars.UNCPath.RecDir = '\\kumc.edu\data\research\SOM RSCH\NUDOLAB\Recorded_Data\'; 
