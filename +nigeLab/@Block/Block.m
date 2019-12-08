@@ -437,6 +437,8 @@ classdef Block < matlab.mixin.Copyable
                [varargout{1:nargout}] = builtin('subsref',blockObj,s);
                return;
                
+            % Move "shortcut" referencing onto {} indexing, since it isn't
+            % being used anyways. Simplifies everything.
             case '{}'
                if isscalar(blockObj) && ~isnumeric(s(1).subs{1})
                   s(1).subs=[{1} s(1).subs];
