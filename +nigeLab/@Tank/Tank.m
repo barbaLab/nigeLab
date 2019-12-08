@@ -245,6 +245,7 @@ classdef Tank < handle
          end
 
          % Save all Animals associated with tank
+         A = tankObj.Animals; % Since tankObj.Animals(:) = []; in saveobj
          for a = tankObj.Animals
             a.save;
          end
@@ -254,7 +255,8 @@ classdef Tank < handle
          tankFile = nigeLab.utils.getUNCPath(...
                      fullfile([tankObj.Paths.SaveLoc '_Tank.mat']));
          save(tankFile,'tankObj','-v7');
-                  
+         tankObj.Animals = A; % so pointer is still good after saving         
+         
          % Save tank "ID" for convenience of identifying this folder as a
          % "nigelTank" in the future.
          tankIDFile = nigeLab.utils.getUNCPath(...
@@ -267,13 +269,15 @@ classdef Tank < handle
          
       end
       
-%       % Overloaded method that is called when TANK is saved
-%       function tankObj = saveobj(tankObj)
-%          % SAVEOBJ  Method that is called when TANK is saved. Writes the 
-%          %          returned value to the matfile.
-%          
-%          tankObj.Animals(:) = [];         
-%       end
+      % Overloaded method that is called when TANK is saved
+      function tankObj = saveobj(tankObj)
+         % SAVEOBJ  Method that is called when TANK is saved. Writes the 
+         %          returned value to the matfile. We do it this way so
+         %          that tankObj.Animals does not save Animal objects
+         %          redundantly.
+         
+         tankObj.Animals(:) = [];         
+      end
       
       % Returns the status of a operation/animal for each unique pairing
       function Status = getStatus(tankObj,operation)

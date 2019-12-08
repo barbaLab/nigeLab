@@ -36,10 +36,13 @@ info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 
 %% PARSE ANIMAL AND RECORDING ID
 infoFields={'AnimalID'
-            'RecID'
-            };
+            'RecID'};
 for jj=1:numel(infoFields)
-   info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
+   if isfield(blockObj.Meta,infoFields{jj})
+      info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};
+   else
+      info.(infoFields{jj})='Unspecified';
+   end
 end
 
 %% PARSE RECORDING TYPE AND TOTAL NUMBER OF CHANNELS
@@ -47,7 +50,11 @@ infoFields={'RecType'
             'NumChannels'
             };
 for jj=1:numel(infoFields)
-   info.(infoFields{jj})={blockObj.(infoFields{jj})};
+   if isprop(blockObj,infoFields{jj})
+      info.(infoFields{jj})={blockObj.(infoFields{jj})};
+   else
+      info.(infoFields{jj})='Unspecified';
+   end
 end
 
 % Update RecType (for example, for Intan .rhd or .rhs; TDT will not have a

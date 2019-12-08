@@ -24,7 +24,7 @@ Recordings = dir(fullfile(animalObj.RecDir));
 Recordings = Recordings(~ismember({Recordings.name},{'.','..'}));
 
 animalObj.Blocks = nigeLab.Block.Empty([1,numel(Recordings)]);
-skipVec = false(size(Recordings));
+skipVec = false([1,numel(Recordings)]);
 for bb=1:numel(Recordings)
    if skipVec(bb)
       continue;
@@ -97,10 +97,8 @@ for bb=1:numel(Recordings)
    
    if  addBlock
       animalObj.addBlock(RecFile,bb);
-   else
-      % This works because Blocks is already nigeLab.Block class
-      animalObj.Blocks(bb) = [];
    end
+   skipVec(bb) = ~addBlock;
 end
 animalObj.Blocks(skipVec) = [];
 animalObj.save;

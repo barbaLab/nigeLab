@@ -307,6 +307,28 @@ classdef Block < matlab.mixin.Copyable
    
    % OVERLOADED or OVERRIDDEN methods
    methods (Access = public)
+      % Overloaded RELOAD method for loading a BLOCK matfile
+      function reload(blockObj)
+         % RELOAD  Load block (related to multi-animal stuff?)
+         %
+         %  blockObj.reload;
+         
+         % Probably it's that blockObj.Paths.SaveLoc.dir is different from
+         % the identical value of the child Block. But in that case, why
+         % don't we just make a copy of the child Block?
+         c = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),...
+            'blockObj');
+%          ff=fieldnames(c.blockObj);
+%          for f=1:numel(ff)
+%             blockObj.(ff{f}) = c.blockObj.(ff{f});
+%          end
+         if ~isa(c.blockObj,'nigeLab.Block')
+            error(['nigeLab:' mfilename ':badChildBlockType'],...
+               'Bad child Block type: %s',class(c.blockObj));
+         end
+         blockObj = copy(c.blockObj);
+      end
+      
       % Overloaded SAVE method to save a BLOCK matfile
       function flag = save(blockObj)
          % SAVE  Overloaded SAVE method for BLOCK
@@ -333,8 +355,10 @@ classdef Block < matlab.mixin.Copyable
           % Save blockObj
           blockFile = nigeLab.utils.getUNCPath(...
              [blockObj.Paths.SaveLoc.dir '_Block.mat']);
+          A = blockObj.Animal;
           save(blockFile,'blockObj','-v7');
-
+          blockObj.Animal = A; % Reassign after save, so pointer is valid
+          
           % Save "nigelBlock" file for convenience of identifying this
           % folder as a "BLOCK" folder in the future
           blockIDFile = nigeLab.utils.getUNCPath(blockObj.Paths.SaveLoc.dir,...
@@ -357,26 +381,9 @@ classdef Block < matlab.mixin.Copyable
 
       end
       
-      % Overloaded RELOAD method for loading a BLOCK matfile
-      function reload(blockObj)
-         % RELOAD  Load block (related to multi-animal stuff?)
-         %
-         %  blockObj.reload;
-         
-         % Probably it's that blockObj.Paths.SaveLoc.dir is different from
-         % the identical value of the child Block. But in that case, why
-         % don't we just make a copy of the child Block?
-         c = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),...
-            'blockObj');
-%          ff=fieldnames(c.blockObj);
-%          for f=1:numel(ff)
-%             blockObj.(ff{f}) = c.blockObj.(ff{f});
-%          end
-         if ~isa(c.blockObj,'nigeLab.Block')
-            error(['nigeLab:' mfilename ':badChildBlockType'],...
-               'Bad child Block type: %s',class(c.blockObj));
-         end
-         blockObj = copy(c.blockObj);
+      % Overloaded SAVEOBJ method to "unlink" Parent
+      function blockObj = saveobj(blockObj)
+         blockObj.Animal(:) = [];
       end
       
       % Overloaded SUBSREF method for indexing shortcuts on BLOCK

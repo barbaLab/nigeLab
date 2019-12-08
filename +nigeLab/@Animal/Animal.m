@@ -240,7 +240,7 @@ classdef Animal < matlab.mixin.Copyable
          % save(..'animalObj'..) is made. If there are multiple animals,
          % this causes the copy to be "updated" and the "correct" copy is
          % then assigned to animalObj.Blocks after the save. 
-
+         B = animalObj.Blocks; % Since animalObj.Blocks(:) = [] in saveobj
          for b = animalObj.Blocks
             b.save;
          end
@@ -249,7 +249,10 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.updateParams('Animal');
          animalFile = nigeLab.utils.getUNCPath(...
                      fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
+         T = animalObj.Tank;
          save(animalFile,'animalObj','-v7');
+         animalObj.Tank = T;   % Reassign after save, so pointer is valid
+         animalObj.Blocks = B; % Reassign after save, so pointer is valid
          
          % Save "nigelAnimal" file for convenience of identifying this
          % folder as an "ANIMAL" folder in the future
@@ -281,13 +284,15 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.Tank = tankObj;
       end
       
-%       % Overloaded function that is called when ANIMAL is being saved.
-%       function animalobj = saveobj(animalobj)
-%          % SAVEOBJ  Used when ANIMAL is being saved. Writes the returned
-%          %          value to the matfile.
-%          
-%          animalobj.Blocks(:) = [];      
-%       end
+      % Overloaded function that is called when ANIMAL is being saved.
+      function animalObj = saveobj(animalObj)
+         % SAVEOBJ  Used when ANIMAL is being saved. Writes the returned
+         %          value to the matfile. We do it this way so that
+         %          animalObj does not save Block objects redundantly.
+         
+         animalObj.Blocks(:) = [];     
+         animalObj.Tank(:) = [];
+      end
    end
    
    % PUBLIC methods (to go in Contents.m)

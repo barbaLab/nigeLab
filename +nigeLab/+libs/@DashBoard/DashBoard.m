@@ -1,15 +1,20 @@
 classdef DashBoard < handle
    %DASHBOARD
    
-   properties
-      nigelGui  % matlab.ui.Figure handle to user interface figure
-      Children  % Cell array of nigelPanels
-      Tank
-      remoteMonitor
+   properties(SetAccess = private, GetAccess = public, SetObservable)
+      Color          struct              % Struct referencing colors
+      nigelGui       matlab.ui.Figure    % matlab.ui.Figure handle to user interface figure
+      Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
+   end
+   
+   properties(SetAccess = private, GetAccess = public)
+      Children       cell                % Cell array of nigelPanels
+      Tank           nigeLab.Tank        % Tank associated with this DashBoard
+      remoteMonitor  nigeLab.libs.remoteMonitor  % Monitor remote progress
    end
    
    properties(Access=private)
-      job
+      job            cell         % Cell array of Matlab job objects
       jobIsRunning = false;
       
    end
@@ -26,63 +31,72 @@ classdef DashBoard < handle
          %  obj = nigeLab.libs.DashBoard(tankObj);
             
          %% Default Values
-         bCol = nigeLab.defaults.nigelColors('background');
-         PBCol = nigeLab.defaults.nigelColors('surface'); % Panel background colors
-         onPBcol = nigeLab.defaults.nigelColors('onsurface');
+         obj.Color = struct;
+         obj.Color.fig = nigeLab.defaults.nigelColors('background');
+         obj.Color.panel = nigeLab.defaults.nigelColors('surface'); 
+         obj.Color.onPanel = nigeLab.defaults.nigelColors('onsurface');
          
          %% Init
          obj.Tank = tankObj;
          
          %% Load Graphics
-         obj.nigelGui = figure('Units','Normalized',...
-            'Position',[0.1 0.1 0.8 0.8],...
-            'Color',bCol,...
-            'ToolBar','none',...
-            'MenuBar','none');
-         loadPanels(obj)
+         buildGUI(obj)
          obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
          addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
          
          %% Create Tank Tree
-         Tree = uiw.widget.Tree(...
-            'SelectionChangeFcn',@obj.treeSelectionFcn,...
-            'Units', 'normalized', ...
-            'Position',obj.Children{1}.InnerPosition,...
-            'FontName','Droid Sans',...
-            'FontSize',15,...
-            'ForegroundColor',onPBcol);
-         Tree = obj.getTankTree(Tree);
-         Tree.Position(3) = Tree.Position(3)./2;
-         obj.Children{1}.nestObj(Tree);
-         treeContextMenu = uicontextmenu('Parent',obj.nigelGui,'Callback',@obj.prova1);
+         obj.buildTree();
+         obj.Tree.Position(3) = obj.Tree.Position(3)./2;
+         obj.Children{1}.nestObj(obj.Tree,'MainTree');
+         treeContextMenu = uicontextmenu(...
+            'Parent',obj.nigelGui,...
+            'Callback',@obj.prova1);
          m = methods(obj.Tank);
          m = m(startsWith(m,'do'));
          for ii=1:numel(m)
             mitem = uimenu(treeContextMenu,'Label',m{ii});
-            mitem.Callback = {@obj.uiCMenuClick,Tree};
+            mitem.Callback = @obj.uiCMenuClick;
          end
-         set(Tree,'UIContextMenu',treeContextMenu);
+         set(obj.Tree,'UIContextMenu',treeContextMenu);
          
          % Cosmetic adjustments
-         Jobjs = Tree.getJavaObjects;
+         Jobjs = obj.Tree.getJavaObjects;
          Jobjs.JScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder)
          Jobjs.JScrollPane.setComponentOrientation(java.awt.ComponentOrientation.RIGHT_TO_LEFT);
-         set(Tree,'TreePaneBackgroundColor',PBCol,'BackgroundColor',PBCol,...
-            'TreeBackgroundColor',PBCol,'Units','normalized','SelectionType','discontiguous');
+         set(obj.Tree,...
+            'TreePaneBackgroundColor',obj.Color.panel,...
+            'BackgroundColor',obj.Color.panel,...
+            'TreeBackgroundColor',obj.Color.panel,...
+            'Units','normalized',...
+            'SelectionType','discontiguous');
          
          %% Save, New buttons
          ax = axes('Units','normalized', ...
             'Position', obj.Children{1}.InnerPosition,...
-            'Color',PBCol,'XColor','none','YColor','none','FontName','Droid Sans');
+            'Color',obj.Color.panel,...
+            'XColor','none','YColor','none',...
+            'FontName',obj.Children{1}.FontName);
          ax.Position(3) = ax.Position(3)./2;
          ax.Position(4) = ax.Position(4) .* 0.15;
          ax.Position(1) = ax.Position(1) + ax.Position(3);
-         b1 = rectangle(ax,'Position',[1 1 2 1],'Curvature',[.1 .4],...
-            'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
-         b2 = rectangle(ax,'Position',[1 2.3 2 1],'Curvature',[.1 .4],...
-            'FaceColor',nigeLab.defaults.nigelColors(2),'EdgeColor','none');
-         t1 = text(ax,2,1.5,'Add','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
-         t2 = text(ax,2,2.8,'Save','Color',nigeLab.defaults.nigelColors(2.1),'FontName','Droid Sans','HorizontalAlignment','center');
+         b1 = rectangle(ax,...
+            'Position',[1 1 2 1],...
+            'Curvature',[.1 .4],...
+            'FaceColor',nigeLab.defaults.nigelColors(2),...
+            'EdgeColor','none');
+         b2 = rectangle(ax,...
+            'Position',[1 2.3 2 1],...
+            'Curvature',[.1 .4],...
+            'FaceColor',nigeLab.defaults.nigelColors(2),...
+            'EdgeColor','none');
+         t1 = text(ax,2,1.5,'Add',...
+            'Color',nigeLab.defaults.nigelColors(2.1),...
+            'FontName','Droid Sans',...
+            'HorizontalAlignment','center');
+         t2 = text(ax,2,2.8,'Save',...
+            'Color',nigeLab.defaults.nigelColors(2.1),...
+            'FontName','Droid Sans',...
+            'HorizontalAlignment','center');
          pbaspect([1,1,1]);
          obj.Children{1}.nestObj(ax);
          %% Create recap Table
@@ -91,16 +105,24 @@ classdef DashBoard < handle
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
             'Units','normalized', ...
-            'Position',[obj.Children{2}.InnerPosition(1) obj.Children{2}.InnerPosition(4)./2+0.05 obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-0.1],...
-            'BackgroundColor',PBCol,...
+            'Position',[obj.Children{2}.InnerPosition(1)...
+                        obj.Children{2}.InnerPosition(4)./2+0.05 ...
+                        obj.Children{2}.InnerPosition(3) ...
+                        obj.Children{2}.InnerPosition(4)./2-0.1],...
+            'BackgroundColor',obj.Color.panel,...
             'FontName','Droid Sans');
          obj.Children{2}.nestObj(RecapTable);
          RecapTableMJScrollPane = RecapTable.JControl.getParent.getParent;
          RecapTableMJScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder);
          
          ax = axes('Units','normalized', ...
-            'Position', [obj.Children{2}.InnerPosition(1:2) obj.Children{2}.InnerPosition(3) obj.Children{2}.InnerPosition(4)./2-.1],...
-            'Color',PBCol,'XColor',onPBcol,'YColor',onPBcol,'FontName','Droid Sans');
+            'Position', [obj.Children{2}.InnerPosition(1:2) ...
+                         obj.Children{2}.InnerPosition(3) ...
+                         obj.Children{2}.InnerPosition(4)./2-.1],...
+            'Color',obj.Color.onPanel,...
+            'XColor',obj.Color.onPanel,...
+            'YColor',obj.Color.onPanel,...
+            'FontName','Droid Sans');
          
          % axes cosmetic adjustment
          obj.Children{2}.nestObj(ax);
@@ -114,7 +136,8 @@ classdef DashBoard < handle
          Position = [.01,.93,.98,.06];
          Btns = struct('String',  {'Home','Visualization Tools'},...
             'Callback',{''    ,''});
-         obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGui,'Position',Position,...
+         obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGui,...
+            'Position',Position,...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'StringColor',nigeLab.defaults.nigelColors('onprimary'),...
             'Buttons',Btns);
@@ -124,27 +147,36 @@ classdef DashBoard < handle
          Pan = getChildPanel(obj,'Parameters');
          Pan.nestObj(h);
          
-         
-         
          %% Set the selected node as the root node
-         Tree.SelectedNodes = Tree.Root;
-         Nodes.Nodes = Tree.Root;
-         Nodes.AddedNodes = Tree.Root;
-         treeSelectionFcn(obj,Tree,Nodes)
+         obj.Tree.SelectedNodes = obj.Tree.Root;
+         Nodes.Nodes = obj.Tree.Root;
+         Nodes.AddedNodes = obj.Tree.Root;
+         treeSelectionFcn(obj,obj.Tree,Nodes)
       end
       
    end
    
    methods(Access = private)
       
-      % Method to create all the custom uipanels (nigelPanels) that
-      % populate most of the GUI interface.
-      function loadPanels(obj)
+      % Method to create figure for UI as well as panels that serve as
+      % containers for the rest of the UI contents
+      function buildGUI(obj,fig)
          % LOADPANELS  Method to create all custom uipanels (nigelPanels)
          %             that populate most of the GUI interface.
          %
          %  obj = nigeLab.libs.Dashboard(tankObj);
-         %  obj.loadPanels;   (From method of obj; make appropriate panels)
+         %  obj.buildGUI;   (From method of obj; make appropriate panels)
+         %  obj.buildGUI(fig);  Optional: fig allows pre-specification of
+         %                                figure handle
+         
+         %% Check input
+         if nargin < 2
+            fig = figure('Units','Normalized',...
+               'Position',[0.1 0.1 0.8 0.8],...
+               'Color',obj.Color.fig,...
+               'ToolBar','none',...
+               'MenuBar','none');
+         end
          
          %% Overview Panel
          % Panel where animals, blocks and the tank are visualized
@@ -153,7 +185,7 @@ classdef DashBoard < handle
          Tag      = 'Overview';
          Position = [.01,.01,.33,.91];
          %[left bottom width height]
-         obj.Children{1} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+         obj.Children{1} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
@@ -164,7 +196,7 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Stats';
          Position = [.35, .45, .43 ,.47];
-         obj.Children{2} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+         obj.Children{2} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
@@ -176,7 +208,7 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Queue';
          Position = [.35, .01, .43 , .43];
-         obj.Children{3} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+         obj.Children{3} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
@@ -188,38 +220,77 @@ classdef DashBoard < handle
          strSub = {''};
          Tag      = 'Parameters';
          Position = [.79 , .01, .2, 0.91];
-         obj.Children{4} = nigeLab.libs.nigelPanel(obj.nigelGui,...
+         obj.Children{4} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+         
+         %% Assign
+         obj.nigelGui = fig;
 
       end
       
-      % Method to create each Tank node on the tree.
-      function Tree = getTankTree(obj,Tree)
+      % Method to create each node under "TANK" on the tree.
+      function buildTree(obj,Tree)
+         % BUILDTANKTREE  Sets properties for the initial "TANK" tree.
+         %              Node is expanded by default, while ANIMAL nodes
+         %              under the TANK are not. ANIMAL nodes can be
+         %              expanded by clicking '+' to indicate the BLOCK
+         %              objects associated with a given ANIMAL.
+         %
+         %  Tree = obj.getTankTree(Tree);
+         %
+         %  Tree  --  uiw.widget.Tree object handle. This object has the
+         %              property Tree.Root, which references directly to
+         %              the "Root" of the tree. Animal Nodes are added
+         %              directly to the "Root" of the tree (as Children).
+         %
+         %  Nodes are of class ui.widget.CheckboxTreeNode. Animal Nodes
+         %  are each added to the Root of Tree, while Block Nodes are added
+         %  as Children of each Animal Node object directly.
+         
+         if nargin < 2
+            Tree = uiw.widget.Tree(...
+               'SelectionChangeFcn',@obj.treeSelectionFcn,...
+               'Units', 'normalized', ...
+               'Position',obj.Children{1}.InnerPosition,...
+               'FontName','Droid Sans',...
+               'FontSize',15,...
+               'ForegroundColor',obj.Color.onPanel);
+         end
+         
          tankObj = obj.Tank;
          Tree.Root.Name = tankObj.Name;
-         AnNames = {tankObj.Animals.Name};
-         for ii =1:numel(AnNames)
-            AnNode = uiw.widget.CheckboxTreeNode('Name',AnNames{ii},'Parent',Tree.Root);
-            set(AnNode,'UserData',[ii]);
+         animalNames = {tankObj.Animals.Name};
+         % Add each animal to the tree
+         for ii =1:numel(animalNames)
+            animalNode = uiw.widget.CheckboxTreeNode(...
+                      'Name',animalNames{ii},...
+                      'Parent',Tree.Root,...
+                      'UserData',ii);
             Metas = [tankObj.Animals(ii).Blocks.Meta];
             if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
                 BlNames = {Metas.RecID};
             else
-                warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
+                warning(['Missing AnimalID or RecID Meta fields. ' ...
+                         'Using Block.Name instead.']);
                 BlNames = {tankObj.Animals(ii).Blocks.Name};
             end
             
-            for jj=1:numel(BlNames)
-               BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);
-               set(BlNode,'UserData',[ii,jj])
-            end
+            nigeLab.libs.DashBoard.addToNode(animalNode,BlNames);
          end
+         obj.Tree = Tree; % Assign as property of DashBoard at end
       end
       
+      % Set the "TANK" table -- the display showing processing status
       function setTankTable(obj,~)
+         % SETTANKTABLE  Creates "TANK" table, a high-level overview of
+         %               processing stats for all the contents of a given
+         %               nigeLab.Tank object.
+         %
+         %  obj.setTankTable();
+         
          tankObj = obj.Tank;
          tt = tankObj.list;
          tCell = table2cell(tt);
@@ -241,7 +312,18 @@ classdef DashBoard < handle
          plotRecapCircle(obj,Status);
       end
       
+      % Set the "ANIMAL" table -- the display showing processing status
       function setAnimalTable(obj,SelectedItems)
+         % SETANIMALTABLE  Creates "ANIMAL" table for currently-selected
+         %                 NODE, indicating the current state of processing
+         %                 for a given nigeLab.Animal object.
+         %
+         %  obj.setAnimalTable(SelectedItems);
+         %
+         %  SelectedItems  --  Subset of nodes corresponding to
+         %                     currently-selected nigeLab.Animal objects.
+         %                    --> This is an indexing array
+         
          A = obj.Tank.Animals(SelectedItems);
          
          tCell = [];
@@ -265,7 +347,20 @@ classdef DashBoard < handle
          plotRecapCircle(obj,Status);
       end
       
+      % Set the "BLOCK" table -- the display showing processing status
       function setBlockTable(obj,SelectedItems)
+         % SETBLOCKTABLE  Creates the "BLOCK" table for currently-selected
+         %                NODE, indicating the current state of processing
+         %                for a given nigeLab.Block object.
+         %
+         %  obj.setBlockTable(SelectedItems);
+         %
+         %  SelectedItems  --  Subset of nodes corresponding to
+         %                     currently-selected nigeLab.Block objects.
+         %                    --> This is an indexing matrix, where the
+         %                        first column indexes Animals and the
+         %                        second column indexes Block.
+         
          tCell = [];
          Status = [];
          for ii = 1:size(SelectedItems,1)
@@ -288,10 +383,30 @@ classdef DashBoard < handle
          plotRecapCircle(obj,Status);
       end
       
+      % Function for interfacing with the tree based on current selection
       function treeSelectionFcn(obj,Tree,Nodes)
+         % TREESELECTIONFCN  Interfaces with the Tree based on the current
+         %                   selection. Used as SELECTIONCHANGEDFCN for
+         %                   uiw.widget.Tree 'SelectionChanged' event
+         %
+         %  node = uiw.widget.Tree('Parent',obj.Tree);
+         %  node.SelectionChangedFcn = @obj.treeSelectionFcn;
+         %
+         %  obj  --  nigeLab.libs.DashBoard class object
+         %  Tree  --  "Source" object
+         %  Nodes  --  "EventData" that has field .AddedNodes, which can be
+         %             used in combination with .UserData to figure out
+         %             which Animal and Block combinations were selected.
+         
+         
          NumNewNodes = numel(Nodes.AddedNodes);
-         OldNodeType = unique(cellfun(@(x) numel(x), {Nodes.Nodes(1:end-NumNewNodes).UserData}));
+         % Get UserData indexing all OLD nodes (from previous selection)
+         OldNodeType = unique(...
+                        cellfun(@(x) numel(x), ...
+                           {Nodes.Nodes(1:(end-NumNewNodes)).UserData}));
+         % Get UserData indexing ALL nodes
          AllNodeType =  cellfun(@(x) numel(x), {Nodes.Nodes.UserData});
+         
          NodesToRemove = not(AllNodeType==OldNodeType);
          Tree.SelectedNodes(NodesToRemove) = [];
          
@@ -381,7 +496,12 @@ classdef DashBoard < handle
       end
       
       function plotRecapCircle(obj,Status)
-        %% plots the overview of the performed operations inside the Stats panel 
+        % PLOTRECAPCIRCLE  Plot overview of operations performed within the
+        %                  "Stats" panel.
+        %
+        %   obj.plotRecapCircle(Status);
+        %
+        %   Status  --  
          
          ax = obj.Children{2}.Children{2};  % what is this axes?
          cla(ax);
@@ -408,21 +528,58 @@ classdef DashBoard < handle
          ax.XAxis.TickLabelRotation = 30;
       end
       
-      function refreshStats(obj,src,evt)
-          bar = evt.bar;
-          idx = bar.UserData;
-          obj.Tank.Animals(idx(1)).Blocks(idx(2)).reload;
-          pan = obj.getChildPanel('Overview');
-          Tr = pan.Children{1};
-          Nodes.Nodes = Tr.SelectedNodes;
-          Nodes.AddedNodes = Tr.SelectedNodes;
-          obj.treeSelectionFcn(Tr, Nodes)
+      % Refresh the "Stats" table when a stage is updated
+      function refreshStats(obj,~,evt)
+         % REFRESHSTATS  Callback to refresh the "stats" table when a stage
+         %               is updated.
+         %
+         %  Example usage:
+         %  rm = nigeLab.libs.remoteMonitor;
+         %  lh = addlistener(rm,'jobCompleted',@obj.refreshStats);
+         %
+         %  obj  --  nigeLab.libs.DashBoard object
+         %  ~  --  "Source"  (unused; nigeLab.libs.remoteMonitor object)
+         %  evt  --  "EventData" associated with the remoteMonitor
+         %           'jobCompleted' event, which is a
+         %           nigeLab.evt.jobCompletedEventData custom event
+         
+         % class(bar) = 'nigeLab.libs.nigelProgress'  
+         % evt.UserData is from evt.bar
+         idx = evt.UserData;
+         obj.Tank.Animals(idx(1)).Blocks(idx(2)).reload;
+         selEvt = struct('Nodes',obj.Tree.SelectedNodes,...
+                         'AddedNodes',obj.Tree.SelectedNodes);
+         obj.treeSelectionFcn(obj.Tree, selEvt)
       end
       
-      
-      function uiCMenuClick(obj,m,~,Tree)
+      % Callback for when user clicks on tree interface
+      function uiCMenuClick(obj,m,~)
+         % UICMENUCLICK  Callback for when user clicks on tree interface
+         %               context menu.
+         %  
+         %  m.Callback = @obj.uiCMenuClick;
+         %
+         %  obj  --  nigeLab.libs.DashBoard handle 
+         %
+         %  m  --  "Source" is matlab.ui.container.Menu object handle from
+         %           parent matlab.ui.container.ContextMenu
+         %           'treeContextMenu' that is a child of obj.nigelGui
+         %
+         %  ~  -- "EventData" is currently unused
+         %
+         %  Key fields of m:
+         %  --> 'Label' :: Char array for the current 'do' method to run
+         
+         % Make a column vector of Animal Indices from any selected
+         % (highlighted) animal node
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
-         switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
+         
+         % Depending on what is in this array, we will run our extraction
+         % methods at different levels (e.g. Tank vs Animal vs Block). We
+         % can figure out what level was selected based on the number of
+         % unique "counts" of UserData
+         switch  unique(cellfun(@(x) numel(x), ...
+               {Tree.SelectedNodes.UserData}))
             case 0  % tank
                obj.qOperations(m.Label,obj.Tank)
             case 1  % animal
@@ -432,22 +589,22 @@ classdef DashBoard < handle
                end
             case 2  % block
                for ii = 1:size(SelectedItems,1)
-                  B = obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2)); %#ok<AGROW>
+                  B = obj.Tank.Animals( ...
+                     SelectedItems(ii,1)).Blocks(SelectedItems(ii,2)); 
                   obj.qOperations(m.Label,B(ii),SelectedItems(ii,:));
                end
-%                if ~obj.initJobs(B)
-%                   fprintf(1,'Jobs are still running. Aborted.\n');
-%                   return;
-%                end
-%                for ii=1:numel(B)
-%                   obj.qOperations(m.Label,B(ii),ii)
-%                end
          end
       end
       
       % Return the panel corresponding to a given tag
       % (so we don't memorize panel indices)
       function panelHandle = getChildPanel(obj,tagString)
+         % GETCHILDPANEL  Return panel handle that corresponds to tagString
+         %
+         %  panelHandle = obj.getChildPanel('nigels favorite panel');
+         %  --> panelHandle returns handle to nigelPanel with Tag property
+         %      of 'nigels favorite panel'
+         
          idx = 0;
          panelHandle = [];
          while idx < numel(obj.Children)
@@ -535,11 +692,7 @@ classdef DashBoard < handle
          % Want to split this up based on target type so that we can
          % manage Job/Task creation depending on the input target class
          switch class(target)
-            case 'nigeLab.Tank'
-%                if ~obj.initJobs(target)
-%                   return;
-%                end
-               
+            case 'nigeLab.Tank'               
                for ii = 1:numel(target.Animals)
                   for ik = 1:target.Animals(ii).getNumBlocks
                      qOperations(obj,operation,...
@@ -548,20 +701,12 @@ classdef DashBoard < handle
                   end
                end
                
-            case 'nigeLab.Animal'
-%                if ~obj.initJobs(target)
-%                   return;
-%                end
-%                
+            case 'nigeLab.Animal'              
                for ii = 1:numel(target.Blocks)
                   qOperations(obj,operation,target.Blocks(ii),[idx ii]);
                end
                
             case 'nigeLab.Block'
-%                if obj.jobIsRunning(idx)
-%                   fprintf(1,'Jobs are still running. Aborted.\n');
-%                   return;
-%                end
                
 % checking licences and parallel flags to determine where to execute the
 % computation. Three possible outcomes:
@@ -630,15 +775,13 @@ classdef DashBoard < handle
                  BlName = BlName(1:min(end,25));
                  barName = sprintf('%s %s',BlName,operation(3:end));
                  bar = obj.remoteMonitor.addBar(barName,job,idx);
-%                   obj.remoteMonitor(sprintf('%s - %s',name,operation),idx);
-%                   obj.jobIsRunning(idx) = true;
-                obj.remoteMonitor.updateStatus(bar,'Pending...')
+                 obj.remoteMonitor.updateStatus(bar,'Pending...')
 
                   job.FinishedFcn = {@(~,~,b)obj.remoteMonitor.barCompleted(b),bar};
                   
-%                 updating ststus labels
+                  % updating status labels
                   job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing...'),bar};
-                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(bar,'Running...'),bar};
+                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Running...'),bar};
 
                   createTask(job,operation,0,{target});
                   submit(job);
@@ -672,6 +815,66 @@ classdef DashBoard < handle
          end
          drawnow;
          
+      end
+   end
+   
+   methods (Access = private, Static = true)
+      % Method to add nodes to a given node
+      function addToNode(nodeObj,name)
+         % ADDTONODE  Adds nodes based on provided names to another node
+         %
+         %  nigeLab.libs.DashBoard.addToNode(nodeObj,name);
+         %
+         %  nodeObj  --  uiw.widget.CheckboxTreeNode handle object (an
+         %                 existing node on a graphical tree)
+         %
+         %  name  --  char array or cell array of char arrays, defining the
+         %              names of children nodes to add to nodeObj.
+         
+         % Check input
+         switch class(nodeObj)
+            case {'uiw.widget.Tree',...
+                  'uiw.widget.CheckboxTree'}
+               nodeObj = nodeObj.Root;
+            
+            case {'uiw.widget.TreeNode',...
+                  'uiw.widget.CheckboxTreeNode'}
+               % do nothing
+            
+            otherwise 
+               error(['nigeLab:' mfilename ':badInputType2'],...
+                  'Unexpected nodeObj input type: %s',class(nodeObj));
+         end
+ 
+         if ~iscell(name)
+            name = {name};
+         end
+         
+         % Add each block of a given animal. UserData can be used to index
+         % nodes according to some larger hierarchy.
+         if isnumeric(nodeObj.UserData)
+            parentIndex = nodeObj.UserData;
+         else
+            parentIndex = [];
+         end
+         
+         for jj=1:numel(name)
+            uiw.widget.CheckboxTreeNode(...
+               'Name',name{jj},...
+               'Parent',nodeObj,...
+               'UserData',[parentIndex, jj]);
+         end
+      end
+   end
+   
+   methods (Access = public, Static = true)
+      % Update status
+      function updateStatus(bar,str)
+         % UPDATESTATUS  Update status string
+         %
+         %  bar.updateStatus('statusText');
+         
+         bar.updateStatus(str);
       end
    end
 end

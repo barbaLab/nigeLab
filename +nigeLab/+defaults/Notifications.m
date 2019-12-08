@@ -28,7 +28,7 @@ pars.NotifyTimer = 0.5; % timer period (seconds) for remote monitor checks
 pars.UseParallel=0;
 pars.MinIncrement = 5;
 
-
+pars.FixedProgBarHeightNormUnits = 0.12; % Fixed "normalized" prog bar height
 
 
 

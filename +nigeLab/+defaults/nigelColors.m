@@ -44,12 +44,12 @@ switch nargin
             Col = [55, 56, 58]./255; % dark grey
          case {'onsurface','onsfc',0.2}
             Col = [255, 255, 255]./255; % white
-         case {'red','r'}
+         case {'r','red'}
             Col = [240, 25, 25]./255; % red
-         case {'magenta','m'}
+         case {'m','magenta'}
             Col = [240, 25, 240]./255; % magenta
-         case {'blue','b'}
-            Col = [25, 25, 240]./255; % blue
+         case {'b','blue'}
+            Col = [67 129 193]./255; % blue
          case {'light_grey','light_gray','light'}
             Col = [220, 220, 220]./255; % light grey
          otherwise
