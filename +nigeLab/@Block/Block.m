@@ -212,6 +212,11 @@ classdef Block < matlab.mixin.Copyable
                % Create empty object array and return
                dims = blockPath;
                blockObj = repmat(blockObj,dims);
+               for i = 1:dims(1)
+                  for k = 1:dims(2)
+                     blockObj(i,k) = copy(blockObj(1,1));
+                  end
+               end
                return;
             elseif ischar(blockPath)
                blockObj.RecFile = blockPath;
@@ -397,6 +402,7 @@ classdef Block < matlab.mixin.Copyable
          Shrt = nigeLab.defaults.Shortcuts();
          switch s(1).type
             case '.'
+               
                idx = find(ismember(Shrt(:,1),s(1).subs),1,'first');
                if ~isempty(idx)
                   varargout = {};
@@ -414,19 +420,20 @@ classdef Block < matlab.mixin.Copyable
                   varargout{1} = out;
                   return;
                else
+                  if numel(blockObj) > 1
+                     varargout = cell(1,nargout);
+                     for i = 1:numel(blockObj)
+                        varargout{1} = [varargout{1}; ...
+                           subsref(blockObj(i),s)];
+                     end
+                     return;
+                  end
+                  
                   [varargout{1:nargout}] = builtin('subsref',blockObj,s);
                   return;
                end
             case '()'
-               
-%                if numel(blockObj)>1
-%                   % Don't use shortcuts on multi-block calls
-%                   [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-%                   return;
-%                elseif ~isfield(blockObj.Channels,'name')
-%                   [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-%                   return;
-%                end
+
                [varargout{1:nargout}] = builtin('subsref',blockObj,s);
                return;
                
