@@ -178,6 +178,10 @@ classdef Block < matlab.mixin.Copyable
 
    end
 
+   properties (Access = private)
+      Listener             event.listener       % Scalar event.listener associated with this Block
+   end
+   
    events
       channelCompleteEvent
       processCompleteEvent
@@ -281,6 +285,23 @@ classdef Block < matlab.mixin.Copyable
          
       end
       
+      % Overloaded DELETE method for BLOCK to ensure listeners are deleted
+      % properly.
+      function delete(blockObj)
+         % DELETE  Delete blockObj.Listener and other objects that we don't
+         %           want floating around in the background after the Block
+         %           itself is deleted.
+         %
+         %  delete(blockObj);
+         
+         if isvalid(blockObj.Listener)
+            delete(blockObj.Listener)
+         end
+      end
+      
+      % Overloaded SAVE method for BLOCK to handle child objects such as
+      % listener handles, as well as to deal with splitting multi-block
+      % cases etc.
       function flag = save(blockObj)
          % SAVE  Overloaded SAVE method for BLOCK
          %
@@ -306,7 +327,9 @@ classdef Block < matlab.mixin.Copyable
           % Save blockObj
           blockFile = nigeLab.utils.getUNCPath(...
              [blockObj.Paths.SaveLoc.dir '_Block.mat']);
+          lh = blockObj.Listener;
           save(blockFile,'blockObj','-v7');
+          blockObj.Listener = lh;
           
           % Save "nigelBlock" file for convenience of identifying this
           % folder as a "BLOCK" folder in the future
@@ -330,6 +353,17 @@ classdef Block < matlab.mixin.Copyable
 
       end
 
+      % Overloaded SAVE method to ensure that additional object handles
+      % don't save with the object
+      function saveobj(blockObj)
+         % SAVEOBJ  Overloaded saveobj method to ensure that additional
+         %          object handles do not save with the object
+         %
+         %  blockObj.saveobj();
+         
+         blockObj.Listener(:) = [];
+      end
+      
       % Overloaded SUBSREF method for indexing shortcuts on BLOCK
       function varargout = subsref(blockObj,s)
          % SUBSREF  Overload indexing operators for BLOCK

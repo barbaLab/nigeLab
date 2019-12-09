@@ -67,6 +67,10 @@ classdef Tank < handle
       SaveLoc                 char     % Top folder
       Pars                    struct   % Parameters struct
    end
+   
+   properties (Access = private)
+      PropListener    event.listener  % Array of handles that listen for key event changes
+   end
   
    %% PUBLIC METHODS
    methods (Access = public)
@@ -131,6 +135,7 @@ classdef Tank < handle
          % Load default settings
          tankObj.updateParams('Tank');
          tankObj.updateParams('all');
+         tankObj.addListeners();
          
          % Can specify properties on construct
          for iV = 1:2:numel(varargin) 
@@ -164,8 +169,6 @@ classdef Tank < handle
                'Could not initialize TANK object.');
          end
          
-         addlistener(tankObj,'Animals','PostSet',@(~,~)...
-            CheckAnimalsForClones(tankObj));
       end
       
       % Method to add animals to Tank
@@ -225,6 +228,12 @@ classdef Tank < handle
          else
             tankObj.Animals(idx) = animalObj;
          end
+         for i = 1:numel(animalObj)
+            animalObj(i).Listener = addlistener(animalObj(i),...
+               'ObjectBeingDestroyed',...
+               @(animal,~)tankObj.AssignNULL(animal));
+         end
+         
       end
       
       % Overload to 'end' indexing operator
@@ -240,6 +249,19 @@ classdef Tank < handle
             otherwise
                error(['nigeLab:' mfilename ':badReference'],...
                   'Invalid subscript: end cannot be index %g',k);
+         end
+      end
+      
+      % Make sure listeners are deleted when tankObj is destroyed
+      function delete(tankObj)
+         % DELETE  Ensures listener handles are properly destroyed
+         %
+         %  delete(tankObj);
+         
+         for i = 1:numel(tankObj.PropListener)
+            if isvalid(tankObj.PropListener(i))
+               delete(tankObj.PropListener(i));
+            end
          end
       end
       
@@ -259,6 +281,7 @@ classdef Tank < handle
 
          % Save all Animals associated with tank
          A = tankObj.Animals; % Since tankObj.Animals(:) = []; in saveobj
+         pL = tankObj.PropListener;
          for a = tankObj.Animals
             a.save;
          end
@@ -268,7 +291,9 @@ classdef Tank < handle
          tankFile = nigeLab.utils.getUNCPath(...
                      fullfile([tankObj.Paths.SaveLoc '_Tank.mat']));
          save(tankFile,'tankObj','-v7');
-         tankObj.Animals = A; % so pointer is still good after saving         
+         % so pointers are still good after saving: 
+         tankObj.Animals = A;         
+         tankObj.PropListener = pL;
          
          % Save tank "ID" for convenience of identifying this folder as a
          % "nigelTank" in the future.
@@ -289,7 +314,8 @@ classdef Tank < handle
          %          that tankObj.Animals does not save Animal objects
          %          redundantly.
          
-         tankObj.Animals(:) = [];         
+         tankObj.Animals(:) = [];       
+         tankObj.PropListener(:) = [];
       end
       
       % Returns the status of a operation/animal for each unique pairing
@@ -414,6 +440,7 @@ classdef Tank < handle
    end
    
    %% PRIVATE METHODS
+   % To be added to 'Contents.m'
    methods (Access = public, Hidden = true)
       flag = init(tankObj)                 % Initializes the TANK object.
       flag = genPaths(animalObj,tankPath) % Generate paths property struct
@@ -428,16 +455,33 @@ classdef Tank < handle
       removeAnimal(tankObj,ind) % remove the animalObj at index ind
    end
    
+   % Private initialization methods
+   methods (Access = private)
+      % Add property listeners to 'Animals' 
+      function addListeners(tankObj)
+         % ADDLISTENERS  Adds property listeners to tankObj on init
+         %
+         %  tankObj.addListeners();
+         
+         obj.PropListener(1) = addlistener(tankObj,...
+            'Animals','PostSet',...
+            @(~,~)tankObj.CheckAnimalsForClones);
+            
+      end
+   end
+   
+   % Listener callbacks
    methods (Access = private)
       % Remove Animals from the array at a given index (event listener) if
       % that animal object is destroyed for some reason.
-      function AssignNULL(tankObj,ind)
+      function AssignNULL(tankObj,animal)
          % ASSIGNNULL  Remove assignment of a given Animal from
          %             tankObj.Animals, so we don't keep handles to deleted
          %             objects in that array. Event listener for
          %             'ObjectDestroyed' event of nigeLab.Animal.
          
-         tankObj.Animals(ind) = [];
+         idx = find(tankObj.Animals == animal,1,'first');
+         tankObj.Animals(idx) = [];
       end
       
       % Event listener callback to make sure that duplicate Animals are not
@@ -486,7 +530,7 @@ classdef Tank < handle
             % Use `find` to support {} indexing.
             idx = find(XcR);
             addBlock(An.Blocks,tankObj.Animals{idx,:});  %#ok<*FNDSB>
-            tankObj.AssignNULL(idx);
+            tankObj.Animals(idx) = [];
             ii=ii+1;
             
             % We should also remove the additional comparisons rows and
@@ -524,6 +568,7 @@ classdef Tank < handle
          %  tankObj = loadObj(tankObj);
          
          if ~isfield(a.Paths,'SaveLoc')
+            a.addListeners();
             b = a;
             return;
          end
@@ -538,9 +583,11 @@ classdef Tank < handle
                in = load(fullfile(A(ii).folder,A(ii).name));
                a.addAnimal(in.animalObj,ii);
             end
+            a.addListeners();
             b = a;
             return;
          else
+            a.addListeners();
             b = a;
             return;
          end
