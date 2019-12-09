@@ -39,7 +39,6 @@ classdef Animal < matlab.mixin.Copyable
       Probes   struct        % Electrode configuration structure
       Blocks   nigeLab.Block % Children (nigeLab.Block objects)
    end
-      Tank     nigeLab.Tank  % Parent (nigeLab.Tank object)
    
    properties (GetAccess = public, SetAccess = private, SetObservable)
       Mask     double        % Channel "Mask" vector (for all recordings)
@@ -56,19 +55,14 @@ classdef Animal < matlab.mixin.Copyable
       TankLoc        char        % directory for saving Animal
       RecDir         char        % directory with raw binary data in intan format
       ExtractFlag    logical     % flag status of extraction for each block
-      MultiAnimals      % flag to signal if it's a single animal or a joined animal recording
-      MultiAnimalsLinkedAnimals
+      MultiAnimals = false                      % flag to signal if it's a single animal or a joined animal recording
+      MultiAnimalsLinkedAnimals  nigeLab.Block  % Array of "linked" blocks
    end
    
    properties  (SetAccess = private, GetAccess = private) 
        RecLocDefault    char     % Default location of raw binary recording
        TankLocDefault   char     % Default location of BLOCK
-   end
-   
-       RecLocDefault     % Default location of raw binary recording
-       TankLocDefault  % Default location of BLOCK
-       end
-   
+   end  
    
    
    %% PUBLIC METHODS
@@ -106,6 +100,7 @@ classdef Animal < matlab.mixin.Copyable
                animalObj = repmat(animalObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Make sure they aren't all pointers to the same thing
                      animalObj(i,k) = copy(animalObj(1,1));
                   end
                end
@@ -153,7 +148,8 @@ classdef Animal < matlab.mixin.Copyable
          
          animalObj.RecDir = nigeLab.utils.getUNCPath(animalObj.RecDir);
          animalObj.init;
-         addlistener(animalObj,'Blocks','PostSet',@(~,~) CheckBlocksForClones(animalObj));
+         addlistener(animalObj,'Blocks','PostSet',@(~,~) ...
+            CheckBlocksForClones(animalObj));
        
       end
       
@@ -201,25 +197,18 @@ classdef Animal < matlab.mixin.Copyable
                error(['nigeLab:' mfilename ':badInputType1'],...
                   'Bad blockPath input type: %s',class(blockPath));
          end
-         blockObj.setAnimal(animalObj);
+         
+         addlistener(blockObj,'ObjectBeingDestroyed',@(h,~) ...
+           AssignNULL(animalObj,find(animalObj.Blocks == h)));
+         
          if nargin < 3
             animalObj.Blocks = [animalObj.Blocks blockObj];
          else
             S = substruct('()',{1,idx});
             animalObj.Blocks = builtin('subsasgn',animalObj.Blocks,...
                                           S,blockObj);
-         end
+         end                  
       end
-      
-      function addBlock(animalObj,BlockPath)
-      %% ADDBLOCK  Add Block to Blocks property   
-         newBlock= nigeLab.Block('RecFile',BlockPath,...
-             'AnimalLoc',animalObj.Paths.SaveLoc);
-         animalObj.Blocks = [animalObj.Blocks newBlock];
-         
-         
-        addlistener(newBlock,'ObjectBeingDestroyed',@(h,~) AssignNULL(animalObj,find(animalObj.Blocks == h))); %#ok<FNDSB>
-          
          
       % Modify behavior of 'end' keyword in indexing expressions
       function ind = end(obj,k,~)
@@ -284,9 +273,7 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.updateParams('Animal');
          animalFile = nigeLab.utils.getUNCPath(...
                      fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
-         T = animalObj.Tank;
          save(animalFile,'animalObj','-v7');
-         animalObj.Tank = T;   % Reassign after save, so pointer is valid
          animalObj.Blocks = B; % Reassign after save, so pointer is valid
          
          % Save "nigelAnimal" file for convenience of identifying this
@@ -298,26 +285,6 @@ classdef Animal < matlab.mixin.Copyable
          fid = fopen(animalIDFile,'w+');
          fwrite(fid,['ANIMAL|' animalObj.Name]);
          fclose(fid);
-      end
-
-      
-      % Set "Parent" Tank object
-      function setTank(animalObj,tankObj)
-         % SETTANK  Sets the "parent" Tank object
-         %
-         %  animalObj.setTank(tankObj);  Sets the 'Tank' property
-         
-         if ~isa(tankObj,'nigeLab.Tank')
-            error(['nigeLab:', mfilename, ':BadTypeInput1'],...
-               'tankObj must be nigeLab.Tank, not %s',class(tankObj));
-         end
-         
-         if ~isscalar(tankObj)
-            error(['nigeLab:', mfilename, ':BadTypeInput2'],...
-               'tankObj must be scalar');
-         end
-         
-         animalObj.Tank = tankObj;
       end
       
       % Overloaded function that is called when ANIMAL is being saved.
@@ -582,12 +549,57 @@ classdef Animal < matlab.mixin.Copyable
       
       N = getNumBlocks(animalObj); % Gets total number of blocks 
    end
-   
+    
    %% PRIVATE METHODS
    methods (Access = 'private')
       init(animalObj)         % Initializes the ANIMAL object
-      def_params(animalObj)   % Default parameters for ANIMAL (deprecated)
+   end
+   
+   methods (Access = 'private') 
+      % Callback for when a "child" Block is moved or otherwise destroyed
+      function AssignNULL(animalObj,ind)
+         % ASSIGNNULL  Does null assignment to remove a block of a
+         %             corresponding index from the animalObj.Blocks
+         %             property array, for example, if that Block is
+         %             destroyed or moved to a different animalObj. Useful
+         %             as a callback for an event listener handle.
+         %
+         %  animalObj.AssignNULL(ind);  Sets animalObj.Blocks(ind) = [];
+         
+         animalObj.Blocks(ind) = [];
+      end
       
+      % Ensure that there are not redundant Blocks in animalObj.Blocks
+      % based on the .Name property of each member Block object
+      function CheckBlocksForClones(animalObj)
+         % CHECKBLOCKSFORCLONES  Creates an nBlock x nBlock logical matrix
+         %                       comparing each Block in animalObj.Blocks
+         %                       to the Name of every other such Block.
+         %                       After subtracting the main diagonal of
+         %                       this matrix, any row with redundant
+         
+         % If no Blocks, can't have clones
+         if isempty(animalObj.Blocks)
+            return;
+         end
+         
+         % look for animals with the same name
+         comparisons_cell = cellfun(... % check each element name against 
+            @(s) strcmp(s,{animalObj.Blocks.Name}),... 
+            {animalObj.Blocks.Name},... % all other elements
+            'UniformOutput',false);     % return result in cells
+         
+         % Use upper triangle portion only, so that at least 1 member is
+         % kept from any matched pair
+         comparisons_mat = triu(cat(1,comparisons_cell{:}));
+         rmvec = any(comparisons_mat,1);
+
+         animalObj.Blocks(rmvec)=[];
+
+      end
+      
+      % Callback for when the Animal name is changed, to update all "child"
+      % block objects.
       function updateAnimalNameInChildBlocks(animalObj,~,~)
          % UPDATEANIMALNAMEINCHILDBLOCKS  Updates the animal Name in any
          %                                Children, whenever that property
@@ -602,9 +614,12 @@ classdef Animal < matlab.mixin.Copyable
              animalObj.Blocks(bb).Meta.AnimalID = animalObj.Name;
           end
       end
+      
+      
    end
    
    methods (Static)
+      % Static method to construct empty Animal object
       function animalObj = Empty(n)
          % EMPTY  Creates "empty" Animal or Animal array
          %
@@ -623,6 +638,7 @@ classdef Animal < matlab.mixin.Copyable
          animalObj = nigeLab.Animal(n);
       end
       
+      % Method invoked any time animalObj is loaded
       function b = loadobj(a)
          % LOADOBJ  Method to load ANIMAL objects
          %
@@ -652,22 +668,6 @@ classdef Animal < matlab.mixin.Copyable
          end
          
       end
-      
-      
-   end
+   end 
    
-end
-
-function AssignNULL(animalObj,ind)
-animalObj.Blocks(ind) = [];
-end
-
-function CheckBlocksForClones(animalObj)
-if isempty(animalObj.Blocks),return;end
-% look for animals with the same name
-tmp = cellfun(@(s) strcmp(s,{animalObj.Blocks.Name}),{animalObj.Blocks.Name},'UniformOutput',false);
-Xcorr = any(upper(cat(1,tmp{:})-eye(size(tmp,2))),1);
-
-animalObj.Blocks(Xcorr)=[];
-
 end

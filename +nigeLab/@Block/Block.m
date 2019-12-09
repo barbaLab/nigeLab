@@ -77,8 +77,7 @@ classdef Block < matlab.mixin.Copyable
    %% PROPERTIES
    % Public properties that are SetObservable
    properties (Access = public, SetObservable = true)
-      Name     char        % Name of the recording block
-      Animal   nigeLab.Animal  % nigeLab.Animal "Parent" object
+      Name     char            % Name of the recording block
    end
    
    % Public properties that can be modified externally
@@ -215,6 +214,7 @@ classdef Block < matlab.mixin.Copyable
                blockObj = repmat(blockObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Make sure they aren't just all the same handle
                      blockObj(i,k) = copy(blockObj(1,1));
                   end
                end
@@ -306,9 +306,7 @@ classdef Block < matlab.mixin.Copyable
           % Save blockObj
           blockFile = nigeLab.utils.getUNCPath(...
              [blockObj.Paths.SaveLoc.dir '_Block.mat']);
-          A = blockObj.Animal;
           save(blockFile,'blockObj','-v7');
-          blockObj.Animal = A; % Reassign after save, so pointer is valid
           
           % Save "nigelBlock" file for convenience of identifying this
           % folder as a "BLOCK" folder in the future
@@ -331,12 +329,7 @@ classdef Block < matlab.mixin.Copyable
           flag = true;
 
       end
-      
-      % Overloaded SAVEOBJ method to "unlink" Parent
-      function blockObj = saveobj(blockObj)
-         blockObj.Animal(:) = [];
-      end
-      
+
       % Overloaded SUBSREF method for indexing shortcuts on BLOCK
       function varargout = subsref(blockObj,s)
          % SUBSREF  Overload indexing operators for BLOCK

@@ -12,7 +12,7 @@ classdef DashBoard < handle
         job
         jobIsRunning = false;
         Tree
-        splitMultiAnimlasUI = ?nigeLab.libs.splitMultiAnimlasUI
+        splitMultiAnimalsUI = ?nigeLab.libs.splitMultiAnimalsUI
     end
     
     events
@@ -133,7 +133,7 @@ classdef DashBoard < handle
             
             %% Add all the listeners
             addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
-            addlistener(obj.splitMultiAnimlasUI,'splitCompleted',@(~,e)obj.addToTree(e.nigelObj));
+            addlistener(obj.splitMultiAnimalsUI,'splitCompleted',@(~,e)obj.addToTree(e.nigelObj));
             
             addlistener([obj.Tank.Animals.Blocks],'ObjectBeingDestroyed',@obj.removeFromTree);
             addlistener([obj.Tank.Animals],'ObjectBeingDestroyed',@obj.removeFromTree);
@@ -178,9 +178,9 @@ classdef DashBoard < handle
         % CloseRequestFcn handler
         % takes car of deleting various objects
         function deleteDashBoard(obj)
-            if ~isempty(obj.splitMultiAnimlasUI)
-                delete(obj.splitMultiAnimlasUI.Fig);
-                delete(obj.splitMultiAnimlasUI);
+            if ~isempty(obj.splitMultiAnimalsUI)
+                delete(obj.splitMultiAnimalsUI.Fig);
+                delete(obj.splitMultiAnimalsUI);
             end
            delete(obj.nigelGui);
         end
@@ -867,8 +867,8 @@ classdef DashBoard < handle
                             end
                     end
                     obj.getChildPanel('Overview').getChild('Tree').SelectionType = 'single';
-                    if isvalid(obj.splitMultiAnimlasUI)
-                        obj.splitMultiAnimlasUI.toggleVisibility;
+                    if isvalid(obj.splitMultiAnimalsUI)
+                        obj.splitMultiAnimalsUI.toggleVisibility;
                         return;
                     else
                         toggleSplitMultiAnimalsUI(obj,'init');
@@ -880,10 +880,10 @@ classdef DashBoard < handle
                     obj.getChildPanel('Overview').getChild('Tree').SelectionType = 'discontiguous';
                     % TODO reenable nodes without multiAnimal flag!
                     if any([obj.Tank.Animals.MultiAnimals])
-                        obj.splitMultiAnimlasUI.toggleVisibility;
+                        obj.splitMultiAnimalsUI.toggleVisibility;
                     else
-                        delete( obj.splitMultiAnimlasUI.Fig);
-                        delete(obj.splitMultiAnimlasUI);
+                        delete( obj.splitMultiAnimalsUI.Fig);
+                        delete(obj.splitMultiAnimalsUI);
                     end
                     
                 case 'init'
@@ -907,7 +907,7 @@ classdef DashBoard < handle
                                 return;
                             end
                     end
-                    obj.splitMultiAnimlasUI = nigeLab.libs.splitMultiAnimalsUI(obj);                    
+                    obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(obj);                    
             end
 
         end

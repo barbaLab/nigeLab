@@ -66,17 +66,6 @@ classdef Tank < handle
       RecDir                  char     % Directory of the TANK
       SaveLoc                 char     % Top folder
       Pars                    struct   % Parameters struct
-      
-%       BlockNameVars           % Metadata variables from BLOCK names
-%       DefaultSaveLoc          % Default for save location
-%       DefaultTankLoc          % Default for UI TANK selection
-%       Delimiter               % Filename metadata delimiter
-%       RecType                 % Acquisition system used for this Tank
-%                               % Currently supported formats
-%                               % ---------------------------
-%                               % Intan  ('Intan')
-%                               % TDT    ('TDT')         
-%                               
    end
   
    %% PUBLIC METHODS
@@ -122,6 +111,7 @@ classdef Tank < handle
                tankObj = repmat(tankObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Ensure not just all the same handle
                      tankObj(i,k) = copy(tankObj(1,1));
                   end
                end
@@ -174,9 +164,8 @@ classdef Tank < handle
                'Could not initialize TANK object.');
          end
          
-         addlistener(tankObj,'Animals','PostSet',@(~,~) CheckAnimalsForClones(tankObj));
-         
-          
+         addlistener(tankObj,'Animals','PostSet',@(~,~)...
+            CheckAnimalsForClones(tankObj));
       end
       
       % Method to add animals to Tank
@@ -230,7 +219,7 @@ classdef Tank < handle
             end
             animalObj = nigeLab.Animal(animalPath,tankObj.Paths.SaveLoc);
          end
-         animalObj.setTank(tankObj); % Set "parent" tank
+         
          if nargin < 3
             tankObj.Animals = [tankObj.Animals animalObj];
          else
@@ -423,6 +412,7 @@ classdef Tank < handle
       runFun(tankObj,f) % Run function f on all child blocks in tank
       
    end
+   
    %% PRIVATE METHODS
    methods (Access = public, Hidden = true)
       flag = init(tankObj)                 % Initializes the TANK object.
@@ -436,6 +426,75 @@ classdef Tank < handle
       clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
       
       removeAnimal(tankObj,ind) % remove the animalObj at index ind
+   end
+   
+   methods (Access = private)
+      % Remove Animals from the array at a given index (event listener) if
+      % that animal object is destroyed for some reason.
+      function AssignNULL(tankObj,ind)
+         % ASSIGNNULL  Remove assignment of a given Animal from
+         %             tankObj.Animals, so we don't keep handles to deleted
+         %             objects in that array. Event listener for
+         %             'ObjectDestroyed' event of nigeLab.Animal.
+         
+         tankObj.Animals(ind) = [];
+      end
+      
+      % Event listener callback to make sure that duplicate Animals are not
+      % added and if they are duplicated, that upon removal there are not
+      % "lost" Child Blocks.
+      function CheckAnimalsForClones(tankObj)
+         % CHECKANIMALSFORCLONES  Event listener callback invoked when a
+         %                        new Animal is added to tankObj.Animals.
+         %
+         %  tankObj.CheckAnimalsForClones;  Ensure no redundancies in
+         %                                   tankObj.Animals.
+         
+         % If no animals, no need to check
+         if isempty(tankObj.Animals)
+            return;
+         end
+         
+         % look for animals with the same name
+         comparisons_cell = cellfun(@(s) strcmp(s,{tankObj.Animals.Name}),...
+            {tankObj.Animals.Name},...
+            'UniformOutput',false);
+         comparisons_mat = triu(cat(1,comparisons_cell{:}));
+         rmvec = any(comparisons_mat,1);
+         if ~any(rmvec)
+            return;
+         end
+         
+         % cycle through each animal, removing animals and adding any
+         % associated blocks to the "kept" animal Blocks property
+         ii=1;
+         while ii <= size(comparisons_mat,1)
+            % Current row contains all comparisons to other Animals in
+            % tankObj.Animals
+            XcR = comparisons_mat(ii,:);
+            
+            % ii indexes current "good" Animal
+            An = tankObj.Animals(ii); 
+            
+            % If no redundancies, then continue. We should increment the
+            % Animal indexer (ii) here
+            if ~any(XcR)
+               ii = ii + 1;
+               continue;
+            end
+            
+            % Use `find` to support {} indexing.
+            idx = find(XcR);
+            addBlock(An.Blocks,tankObj.Animals{idx,:});  %#ok<*FNDSB>
+            tankObj.AssignNULL(idx);
+            ii=ii+1;
+            
+            % We should also remove the additional comparisons rows and
+            % columns, so that our indexing won't be messed up. 
+            comparisons_mat(idx,:) = [];
+            comparisons_mat(:,idx) = [];
+         end
+      end
    end
 
    methods (Static)
@@ -491,31 +550,4 @@ classdef Tank < handle
       
    end
    
-end
-
-%% Some helper functions
-
-function CheckAnimalsForClones(tankObj)
-if isempty(tankObj.Animals),return;end
-
-% look for animals with the same name
-tmp = cellfun(@(s) strcmp(s,{tankObj.Animals.Name}),{tankObj.Animals.Name},'UniformOutput',false);
-Xcorr = logical(triu(cat(1,tmp{:}))-eye(length(tmp)));
-ii=1;
-if ~any(Xcorr),return;end
-while ~isempty(Xcorr(:))
-    % pop first row
-    XcR = Xcorr(1,:);Xcorr(1,:) = [];    
-    An = tankObj.Animals(ii);
-    if ~any(XcR),continue;
-    elseif all(An == tankObj.Animals(XcR)),tankObj.Animals(XcR)=[];end
-    
-    An.Blocks = [An.Blocks,tankObj.Animals(XcR).Blocks];
-    tankObj.Animals(XcR)=[];
-    ii=ii+1;
-end
-end
-
-function AssignNULL(tankObj,ind)
-tankObj.Animals(ind) = [];
 end
