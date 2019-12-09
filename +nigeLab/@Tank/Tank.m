@@ -51,7 +51,7 @@ classdef Tank < handle
 %     Empty - Create an Empty TANK object or array
 
    %% PUBLIC PROPERTIES
-   properties (GetAccess = public, SetAccess = public)
+   properties (GetAccess = public, SetAccess = public, SetObservable)
       Name    char               % Name of experiment (TANK)
       Animals nigeLab.Animal     % Handle array to Children
    end
@@ -390,17 +390,15 @@ classdef Tank < handle
          %  ** NOTE ** tankObj{idx1,end} references the last Block in each
          %             element of tankObj.Animals indexed by idx1.
          
+         varargout = cell(1,nargout);
          if isempty(tankObj.Animals)
-            error(['nigeLab:' mfilename ':indexOutOfBounds'],...
-               'tankObj.Animals is empty');
+            return;
          end
-         
-         
+
          subs = S(1).subs;
          
          switch S(1).type
             case '{}'
-               varargout = cell(1,nargout);
                switch numel(subs)
                   % If only 1 subscript, then it indexes Animals
                   case 1
@@ -515,21 +513,22 @@ classdef Tank < handle
          while ii <= size(comparisons_mat,1)
             % Current row contains all comparisons to other Animals in
             % tankObj.Animals
-            XcR = comparisons_mat(ii,:);
+            animalIsSame = comparisons_mat(ii,:);
             
             % ii indexes current "good" Animal
-            An = tankObj.Animals(ii); 
+            animalObj = tankObj.Animals(ii); 
             
             % If no redundancies, then continue. We should increment the
             % Animal indexer (ii) here
-            if ~any(XcR)
+            if ~any(animalIsSame)
                ii = ii + 1;
                continue;
             end
             
             % Use `find` to support {} indexing.
-            idx = find(XcR);
-            addBlock(An.Blocks,tankObj.Animals{idx,:});  %#ok<*FNDSB>
+            idx = find(animalIsSame);
+            B = tankObj.Animals{idx,:};
+            addChildBlock(animalObj,B);  %#ok<*FNDSB>
             tankObj.Animals(idx) = [];
             ii=ii+1;
             

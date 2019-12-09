@@ -5,8 +5,6 @@ function flag = initStreams(blockObj)
 %
 %  flag: Returns false if initialized correctly; otherwise, returns true
 %        (so it is really "warningFlag")
-%
-% By: Max Murphy  v1.0  2019/01/11  Original version (R2017a)
 
 %%
 flag = false;

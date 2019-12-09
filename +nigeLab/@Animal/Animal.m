@@ -23,7 +23,7 @@ classdef Animal < matlab.mixin.Copyable
 %  ANIMAL Methods:
 %     Animal - Class constructor
 %
-%     addBlock - Add Blocks to Animal object
+%     addChildBlock - Add Blocks to Animal object
 %
 %     getStatus - Returns status of each Operation/Block pairing
 %
@@ -152,16 +152,16 @@ classdef Animal < matlab.mixin.Copyable
       end
       
       % Add Blocks to Animal object
-      function addBlock(animalObj,blockPath,idx)
+      function addChildBlock(animalObj,blockPath,idx)
          % ADDBLOCK  Add Block "Children" to Blocks property
          %
-         %  animalObj.addBlock('blockPath'); 
+         %  animalObj.addChildBlock('blockPath'); 
          %  --> Adds block located at 'BlockPath'
          %
-         %  animalObj.addBlock(blockObj);
+         %  animalObj.addChildBlock(blockObj);
          %  --> Adds the block directly to 'Blocks'
          %
-         %  animalObj.addBlock(blockObj,idx);
+         %  animalObj.addChildBlock(blockObj,idx);
          %  --> Adds the block to the array element indexed by idx
 
          if nargin < 2
@@ -176,7 +176,7 @@ classdef Animal < matlab.mixin.Copyable
          switch class(blockPath)
             case 'char'
                % Create the Children Block objects
-               blockObj = nigeLab.Block(blockPath);
+               blockObj = nigeLab.Block(blockPath,animalObj.Paths.SaveLoc);
                
             case 'nigeLab.Block'
                % Load them directly as Children
@@ -708,7 +708,7 @@ classdef Animal < matlab.mixin.Copyable
 
             for ii=1:numel(BL)
                in = load(fullfile(BL(ii).folder,BL(ii).name));
-               a.addBlock(in.blockObj,ii);
+               a.addChildBlock(in.blockObj,ii);
             end
             a.addListeners(); % Add listeners after all blocks back in
             b = a;
