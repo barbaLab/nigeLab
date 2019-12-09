@@ -32,8 +32,8 @@ blockObj.Name = str(1:(end-1));
 
 %% Check for multiple Animals
 for ii = fieldnames(meta)'
-   if contains(meta.(ii{:}),blockObj.ManyAnimalsChar)
-       blockObj.ManyAnimals = true;
+   if contains(meta.(ii{:}),blockObj.MultiAnimalsChar)
+       blockObj.MultiAnimals = true;
        break;
    end
 end

@@ -78,7 +78,7 @@ classdef Tank < handle
 %                               % TDT    ('TDT')         
 %                               
    end
-   
+  
    %% PUBLIC METHODS
    methods (Access = public)
       % Class constructor
@@ -174,6 +174,9 @@ classdef Tank < handle
                'Could not initialize TANK object.');
          end
          
+         addlistener(tankObj,'Animals','PostSet',@(~,~) CheckAnimalsForClones(tankObj));
+         
+          
       end
       
       % Method to add animals to Tank
@@ -431,6 +434,8 @@ classdef Tank < handle
 %       LocalConvert(tankObj)
 %       SlowConvert(tankObj)
       clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
+      
+      removeAnimal(tankObj,ind) % remove the animalObj at index ind
    end
 
    methods (Static)
@@ -486,4 +491,31 @@ classdef Tank < handle
       
    end
    
+end
+
+%% Some helper functions
+
+function CheckAnimalsForClones(tankObj)
+if isempty(tankObj.Animals),return;end
+
+% look for animals with the same name
+tmp = cellfun(@(s) strcmp(s,{tankObj.Animals.Name}),{tankObj.Animals.Name},'UniformOutput',false);
+Xcorr = logical(triu(cat(1,tmp{:}))-eye(length(tmp)));
+ii=1;
+if ~any(Xcorr),return;end
+while ~isempty(Xcorr(:))
+    % pop first row
+    XcR = Xcorr(1,:);Xcorr(1,:) = [];    
+    An = tankObj.Animals(ii);
+    if ~any(XcR),continue;
+    elseif all(An == tankObj.Animals(XcR)),tankObj.Animals(XcR)=[];end
+    
+    An.Blocks = [An.Blocks,tankObj.Animals(XcR).Blocks];
+    tankObj.Animals(XcR)=[];
+    ii=ii+1;
+end
+end
+
+function AssignNULL(tankObj,ind)
+tankObj.Animals(ind) = [];
 end

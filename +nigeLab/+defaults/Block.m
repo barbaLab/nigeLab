@@ -118,7 +118,7 @@ pars.DiscardChar='~';
 %
 % Example 
 % R18-68&&R18-69_180724_141203.rhd
-pars.ManyAnimalsChar='&&';
+pars.MultiAnimalsChar='&&';
 
 %%
 Fields =  { ...

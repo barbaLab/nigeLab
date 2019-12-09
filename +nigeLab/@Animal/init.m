@@ -96,11 +96,11 @@ for bb=1:numel(Recordings)
    end
    
    if  addBlock
-      animalObj.addBlock(RecFile,bb);
+      animalObj.addBlock(RecFile);
+      animalObj.MultiAnimals = any([animalObj.Blocks.MultiAnimals]);
    end
    skipVec(bb) = ~addBlock;
 end
 animalObj.Blocks(skipVec) = [];
 animalObj.save;
 end
-

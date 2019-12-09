@@ -1,3 +1,4 @@
+
 classdef Block < matlab.mixin.Copyable
 % BLOCK    Creates datastore for an electrophysiology recording.
 %
@@ -156,9 +157,9 @@ classdef Block < matlab.mixin.Copyable
       IncludeChar             char        % Character indicating included name elements
       DiscardChar             char        % Character indicating discarded name elements
       
-      ManyAnimalsChar         char                 % Character indicating the presence of many animals in the recording
-      ManyAnimals = false;                         % Flag indicating that multiple animals were used in the same recording Block
-      ManyAnimalsLinkedBlocks    nigeLab.Block     % [1 x nLinkedBlock] array of nigeLab.Block objects ("pointers")
+      MultiAnimalsChar  % Character indicating the presence of many animals in the recording
+      MultiAnimals = 0; % flag for many animals contained in one block
+      MultiAnimalsLinkedBlocks % Pointer to the splitted blocks. 
 %                 In conjuction with the multianimals flag keeps track of
 %                 where the data is temporary saved.
       
@@ -279,62 +280,7 @@ classdef Block < matlab.mixin.Copyable
          end
          
       end
-   end
-   
-   % "PUBLIC" methods
-   methods (Access = public)
-      % Add "Parent" Animal to this Block
-      function setAnimal(blockObj,animalObj)
-         % SETANIMAL  Sets the "Parent" nigeLab.Animal to this Block
-         %
-         %  blockObj.setAnimal(animalObj);
-         
-         if ~isa(animalObj,'nigeLab.Animal')
-            error(['nigeLab:' mfilename ':badInputType1'],...
-               'Bad animalObj input type: %s',class(animalObj));
-         end
-         
-         if ~isscalar(animalObj)
-            error(['nigeLab:' mfilename ':badInputType2'],...
-               'animalObj must be scalar.');
-         end
-         
-         if numel(blockObj) > 1
-            for i = 1:numel(blockObj)
-               blockObj(i).setAnimal(animalObj);
-            end
-            return;
-         end
-         
-         blockObj.Animal = animalObj;
-      end
-   end
-   
-   % OVERLOADED or OVERRIDDEN methods
-   methods (Access = public)
-      % Overloaded RELOAD method for loading a BLOCK matfile
-      function reload(blockObj)
-         % RELOAD  Load block (related to multi-animal stuff?)
-         %
-         %  blockObj.reload;
-         
-         % Probably it's that blockObj.Paths.SaveLoc.dir is different from
-         % the identical value of the child Block. But in that case, why
-         % don't we just make a copy of the child Block?
-         c = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),...
-            'blockObj');
-%          ff=fieldnames(c.blockObj);
-%          for f=1:numel(ff)
-%             blockObj.(ff{f}) = c.blockObj.(ff{f});
-%          end
-         if ~isa(c.blockObj,'nigeLab.Block')
-            error(['nigeLab:' mfilename ':badChildBlockType'],...
-               'Bad child Block type: %s',class(c.blockObj));
-         end
-         blockObj = copy(c.blockObj);
-      end
       
-      % Overloaded SAVE method to save a BLOCK matfile
       function flag = save(blockObj)
          % SAVE  Overloaded SAVE method for BLOCK
          %

@@ -36,10 +36,10 @@ classdef Animal < matlab.mixin.Copyable
    %% PUBLIC PROPERTIES
    properties (GetAccess = public, SetAccess = public, SetObservable)
       Name     char          % Animal identification code
-      Tank     nigeLab.Tank  % Parent (nigeLab.Tank object)
       Probes   struct        % Electrode configuration structure
       Blocks   nigeLab.Block % Children (nigeLab.Block objects)
    end
+      Tank     nigeLab.Tank  % Parent (nigeLab.Tank object)
    
    properties (GetAccess = public, SetAccess = private, SetObservable)
       Mask     double        % Channel "Mask" vector (for all recordings)
@@ -56,12 +56,20 @@ classdef Animal < matlab.mixin.Copyable
       TankLoc        char        % directory for saving Animal
       RecDir         char        % directory with raw binary data in intan format
       ExtractFlag    logical     % flag status of extraction for each block
+      MultiAnimals      % flag to signal if it's a single animal or a joined animal recording
+      MultiAnimalsLinkedAnimals
    end
    
    properties  (SetAccess = private, GetAccess = private) 
        RecLocDefault    char     % Default location of raw binary recording
        TankLocDefault   char     % Default location of BLOCK
    end
+   
+       RecLocDefault     % Default location of raw binary recording
+       TankLocDefault  % Default location of BLOCK
+       end
+   
+   
    
    %% PUBLIC METHODS
    methods (Access = public)
@@ -145,7 +153,8 @@ classdef Animal < matlab.mixin.Copyable
          
          animalObj.RecDir = nigeLab.utils.getUNCPath(animalObj.RecDir);
          animalObj.init;
-         
+         addlistener(animalObj,'Blocks','PostSet',@(~,~) CheckBlocksForClones(animalObj));
+       
       end
       
       % Add Blocks to Animal object
@@ -202,6 +211,16 @@ classdef Animal < matlab.mixin.Copyable
          end
       end
       
+      function addBlock(animalObj,BlockPath)
+      %% ADDBLOCK  Add Block to Blocks property   
+         newBlock= nigeLab.Block('RecFile',BlockPath,...
+             'AnimalLoc',animalObj.Paths.SaveLoc);
+         animalObj.Blocks = [animalObj.Blocks newBlock];
+         
+         
+        addlistener(newBlock,'ObjectBeingDestroyed',@(h,~) AssignNULL(animalObj,find(animalObj.Blocks == h))); %#ok<FNDSB>
+          
+         
       % Modify behavior of 'end' keyword in indexing expressions
       function ind = end(obj,k,~)
          % END  Change so if its the 2nd index argument, references BLOCKS
@@ -280,6 +299,7 @@ classdef Animal < matlab.mixin.Copyable
          fwrite(fid,['ANIMAL|' animalObj.Name]);
          fclose(fid);
       end
+
       
       % Set "Parent" Tank object
       function setTank(animalObj,tankObj)
@@ -636,4 +656,18 @@ classdef Animal < matlab.mixin.Copyable
       
    end
    
+end
+
+function AssignNULL(animalObj,ind)
+animalObj.Blocks(ind) = [];
+end
+
+function CheckBlocksForClones(animalObj)
+if isempty(animalObj.Blocks),return;end
+% look for animals with the same name
+tmp = cellfun(@(s) strcmp(s,{animalObj.Blocks.Name}),{animalObj.Blocks.Name},'UniformOutput',false);
+Xcorr = any(upper(cat(1,tmp{:})-eye(size(tmp,2))),1);
+
+animalObj.Blocks(Xcorr)=[];
+
 end
