@@ -451,7 +451,8 @@ classdef Tank < handle
       end
    end   
    
-   % PUBLIC methods (to be catalogued using contents.m)
+   % PUBLIC
+   % Methods (to be catalogued using contents.m)
    methods (Access = public)
       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
@@ -482,7 +483,8 @@ classdef Tank < handle
       removeAnimal(tankObj,ind) % remove the animalObj at index ind
    end
    
-   % Private initialization methods
+   % PRIVATE
+   % Used during initialization
    methods (Access = private)
       % Add property listeners to 'Animals' 
       function addListeners(tankObj)
@@ -497,8 +499,9 @@ classdef Tank < handle
       end
    end
    
+   % PRIVATE
    % Listener callbacks
-   methods (Access = private)
+   methods (Access = private, Hidden = true)
       % Remove Animals from the array at a given index (event listener) if
       % that animal object is destroyed for some reason.
       function AssignNULL(tankObj,animal)
@@ -543,30 +546,35 @@ classdef Tank < handle
             % Current row contains all comparisons to other Animals in
             % tankObj.Animals
             animalIsSame = comparisons_mat(1,:);
+            comparisons_mat(1,:) = []; % ensure this row is dropped
             
             % ii indexes current "good" Animal
             animalObj = tankObj.Animals(ii); 
+            ii = ii + 1; % ensure it is incremented
             
-            
+            % Use `find` to support {} indexing.
+            idx = find(animalIsSame); % note that idx ~= 1 ever
+
+            % If animal is empty, do not proceed with checks
+            if isempty(animalObj)
+               continue;
+            end
             
             % If no redundancies, then continue. We should increment the
             % Animal indexer (ii) here
             if ~any(animalIsSame)
-               ii = ii + 1;
                continue;
             end
             
-            % Use `find` to support {} indexing.
-            idx = find(animalIsSame);
             B = tankObj.Animals{idx,:};
-            addChildBlock(animalObj,B);  %#ok<*FNDSB>
-            tankObj.Animals(idx) = [];
-            ii=ii+1;
+            addChildBlock(animalObj,B); 
             
-            % We should also remove the additional comparisons rows and
-            % columns, so that our indexing won't be messed up. 
-            comparisons_mat(idx,:) = [];
-            comparisons_mat(:,idx) = [];
+            % Now, remove redundant animals from array and also remove them
+            % from the comparisons matrix since we don't need to redo them
+            tankObj.Animals(idx) = [];
+            iRow = idx-1; % To account for previously-removed row
+            comparisons_mat(iRow,:) = []; 
+            comparisons_mat(:,idx) = []; % Columns still all there
          end
       end
    end

@@ -575,7 +575,8 @@ classdef Animal < matlab.mixin.Copyable
       end
    end
    
-   % PUBLIC methods (to go in Contents.m)
+   % PUBLIC 
+   % Methods that should go in Contents.m eventually
    methods (Access = public)
       table = list(animalObj)               % List of recordings currently associated with the animal
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
@@ -596,7 +597,8 @@ classdef Animal < matlab.mixin.Copyable
       flag = splitMultiAnimals(blockObj,tabpanel) % Split recordings that have multiple animals to separate recs
    end
    
-   % "HIDDEN" PUBLIC methods
+   % PUBLIC
+   % "Hidden" methods that shouldn't typically be used
    methods (Access = public, Hidden = true)
       clearSpace(animalObj,ask,usrchoice) % Remove files from disk
       updateNotes(blockObj,str) % Update notes for a recording
@@ -609,13 +611,14 @@ classdef Animal < matlab.mixin.Copyable
       N = getNumBlocks(animalObj); % Gets total number of blocks 
    end
     
-   % PRIVATE METHODS
+   % PRIVATE 
    % To be catalogued in 'Contents.m'
-   methods (Access = 'private')
+   methods (Access = private, Hidden = false)
       init(animalObj)         % Initializes the ANIMAL object
    end
    
-   % Private initialization methods
+   % PRIVATE
+   % Used during Initialization
    methods (Access = 'private')
       % Adds listener handles to array property of animalObj
       function addListeners(animalObj)
@@ -636,8 +639,9 @@ classdef Animal < matlab.mixin.Copyable
       end
    end
    
+   % PRIVATE
    % Listener callbacks
-   methods (Access = 'private') 
+   methods (Access = private, Hidden = true) 
       % Callback for when a "child" Block is moved or otherwise destroyed
       function AssignNULL(animalObj,block)
          % ASSIGNNULL  Does null assignment to remove a block of a
@@ -701,6 +705,7 @@ classdef Animal < matlab.mixin.Copyable
       end
    end
    
+   % STATIC
    methods (Static)
       % Static method to construct empty Animal object
       function animalObj = Empty(n)
