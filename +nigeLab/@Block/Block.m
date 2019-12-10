@@ -177,17 +177,25 @@ classdef Block < matlab.mixin.Copyable
 
    end
 
+   % Private - Listeners
    properties (Access = private)
       Listener             event.listener       % Scalar event.listener associated with this Block
    end
    
+   % Private - Flags
+   properties (Access = private)
+      IsEmpty = true   % True if no data in this (e.g. Empty() method used)
+   end
+   
+   %% EVENTS
    events
       channelCompleteEvent
       processCompleteEvent
    end
    
    %% METHODS
-   % BLOCK class constructor
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % BLOCK class constructor
       function blockObj = Block(blockPath,animalPath,varargin)
@@ -230,6 +238,8 @@ classdef Block < matlab.mixin.Copyable
             end
          end
          
+         % At this point it will be initialized "normally"
+         blockObj.IsEmpty = false;
          if nargin < 2
             blockObj.AnimalLoc = [];
          else
@@ -298,6 +308,23 @@ classdef Block < matlab.mixin.Copyable
          end
       end
       
+      % Overload to 'isempty' 
+      function tf = isempty(blockObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If blockObj is array, then returns an
+         %          array of true or false for each element of blockObj.
+         
+         if ~isscalar(blockObj)
+            tf = false(size(blockObj));
+            for i = 1:numel(blockObj)
+               tf(i) = isempty(blockObj(i));
+            end
+            return;
+         end
+         
+         tf = blockObj.IsEmpty || builtin('isempty',blockObj);
+      end
+      
       % Overloaded SAVE method for BLOCK to handle child objects such as
       % listener handles, as well as to deal with splitting multi-block
       % cases etc.
@@ -340,10 +367,10 @@ classdef Block < matlab.mixin.Copyable
           fclose(fid);
 
           % save multianimals if present
-          if blockObj.ManyAnimals
-             for bl = blockObj.ManyAnimalsLinkedBlocks 
-                  bl.ManyAnimalsLinkedBlocks(:) = [];
-                  bl.ManyAnimals = false;
+          if blockObj.MultiAnimals
+             for bl = blockObj.MultiAnimalsLinkedBlocks 
+                  bl.MultiAnimalsLinkedBlocks(:) = [];
+                  bl.MultiAnimals = false;
                   bl.save();
              end
           end
@@ -644,7 +671,7 @@ classdef Block < matlab.mixin.Copyable
          %  blockObj = nigeLab.Block.Empty(n); % Make n-element array Block
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)
@@ -659,42 +686,24 @@ classdef Block < matlab.mixin.Copyable
       function b = loadobj(a)
          % LOADOBJ  Overloaded method called when loading BLOCK.
          %
-         %  Has to be called when there ManyAnimals is true because the
+         %  Has to be called when there MultiAnimals is true because the
          %  BLOCKS are removed from parent objects in that case during
          %  saving.
          %
          %  blockObj = loadobj(blockObj);
          
-         if ~a.ManyAnimals
+         if ~a.MultiAnimals
             b = a;
             return;
          end
 
-         % blockObj has "pointer" to 'ManyAnimalsLinkedBlocks' but until
+         % blockObj has "pointer" to 'MultiAnimalsLinkedBlocks' but until
          % they are "reloaded" the "pointer" is bad (references bl in
          % the wrong place, essentially?)
-         for bl=a.ManyAnimalsLinkedBlocks
+         for bl=a.MultiAnimalsLinkedBlocks
             bl.reload();
          end
          b = a;
-      end
-      
-      % Static method for converting subs to index
-      function idx = subs2idx(subs,n)
-         % SUBS2IDX  Converts subscripts to indices
-         
-         if ischar(subs)
-            switch subs
-               case ':'
-                  idx = 1:n;
-               case 'end'
-                  idx = n;
-               otherwise
-                  idx = [];
-            end
-         else
-            idx = subs;
-         end
       end
    end
 end

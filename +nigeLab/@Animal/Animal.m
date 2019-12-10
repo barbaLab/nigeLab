@@ -33,41 +33,55 @@ classdef Animal < matlab.mixin.Copyable
 %
 %     Empty - Create an Empty ANIMAL object or array
    
-   %% PUBLIC PROPERTIES
+   %% PROPERTIES
+   % Can get and set publically; SetObservable is true for these.
    properties (GetAccess = public, SetAccess = public, SetObservable)
       Name     char          % Animal identification code
       Probes   struct        % Electrode configuration structure
       Blocks   nigeLab.Block % Children (nigeLab.Block objects)
    end
    
+   % Cannot set but may want to see it publically. SetObservable.
    properties (GetAccess = public, SetAccess = private, SetObservable)
       Mask     double        % Channel "Mask" vector (for all recordings)
    end
    
-   %% HIDDEN OR PRIVATE PROPERTIES
+   % More likely to externally reference
    properties (SetAccess = private, GetAccess = public)
       Paths   struct      % Path to Animal folder
    end
-      
+   
+   % Less-likely but possible to externally reference
    properties (GetAccess = public, SetAccess = private, Hidden = true)
-      Pars           struct      % parameters struct for templates from nigeLab.defaults
-      
-      TankLoc        char        % directory for saving Animal
-      RecDir         char        % directory with raw binary data in intan format
-      ExtractFlag    logical     % flag status of extraction for each block
+      Pars                       struct      % parameters struct for templates from nigeLab.defaults
+      TankLoc                    char        % directory for saving Animal
+      RecDir                     char        % directory with raw binary data in intan format
+      ExtractFlag                logical     % flag status of extraction for each block
       MultiAnimals = false                      % flag to signal if it's a single animal or a joined animal recording
       MultiAnimalsLinkedAnimals  nigeLab.Block  % Array of "linked" blocks
    end
    
+   % Default parameters
    properties  (SetAccess = private, GetAccess = private) 
        RecLocDefault    char     % Default location of raw binary recording
        TankLocDefault   char     % Default location of BLOCK
-       Listener         event.listener  % Scalar event.listener associated with this ANIMAL
-       PropListener     event.listener  % Array of handles listening to ANIMAL property changes
    end  
    
+   % Listeners
+   properties (Access = private)
+      Listener         event.listener  % Scalar event.listener associated with this ANIMAL
+      PropListener     event.listener  % Array of handles listening to ANIMAL property changes
+   end
    
-   %% PUBLIC METHODS
+   % Flags
+   properties (Access = private)
+      IsEmpty = true  % Flag to indicate whether block is EMPTY
+   end
+   
+   
+   %% METHODS
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % Class constructor
       function animalObj = Animal(animalPath,tankPath,varargin)
@@ -113,6 +127,8 @@ classdef Animal < matlab.mixin.Copyable
             end
          end
          
+         % At this point it will be initialized "normally"
+         animalObj.IsEmpty = false;
          if nargin < 2
             animalObj.TankLoc = '';
          else
@@ -265,6 +281,23 @@ classdef Animal < matlab.mixin.Copyable
          end
          
          flag = getStatus(animalObj.Blocks,opField);
+      end
+      
+      % Overload to 'isempty' 
+      function tf = isempty(animalObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If animalObj is array, then returns an
+         %          array of true or false for each element of animalObj.
+         
+         if ~isscalar(animalObj)
+            tf = false(size(animalObj));
+            for i = 1:numel(animalObj)
+               tf(i) = isempty(animalObj(i));
+            end
+            return;
+         end
+         
+         tf = animalObj.IsEmpty || builtin('isempty',animalObj);
       end
       
       % Save Animal object
@@ -577,7 +610,7 @@ classdef Animal < matlab.mixin.Copyable
       N = getNumBlocks(animalObj); % Gets total number of blocks 
    end
     
-   %% PRIVATE METHODS
+   % PRIVATE METHODS
    % To be catalogued in 'Contents.m'
    methods (Access = 'private')
       init(animalObj)         % Initializes the ANIMAL object
@@ -674,7 +707,7 @@ classdef Animal < matlab.mixin.Copyable
          %  nigeLab.Animal.Empty(n); % Make n-element array of Animal
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)

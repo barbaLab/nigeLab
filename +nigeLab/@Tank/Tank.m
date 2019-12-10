@@ -50,29 +50,39 @@ classdef Tank < handle
 %
 %     Empty - Create an Empty TANK object or array
 
-   %% PUBLIC PROPERTIES
+   %% PROPERTIES
+   % Public get & set, SetObservable as well
    properties (GetAccess = public, SetAccess = public, SetObservable)
       Name    char               % Name of experiment (TANK)
       Animals nigeLab.Animal     % Handle array to Children
    end
 
+   % Has to be set by method of Tank, but can be accessed publically
    properties (SetAccess = private, GetAccess = public)
       Paths  struct             % Detailed paths specifications for all the saved files
-      
    end
    
-   %% PRIVATE PROPERTIES
+   % Various parameters that may be useful to access publically but cannot
+   % be set externally and don't populate the normal list of properties
    properties (GetAccess = public, SetAccess = private, Hidden = true) %debugging purposes, is private
       RecDir                  char     % Directory of the TANK
       SaveLoc                 char     % Top folder
       Pars                    struct   % Parameters struct
    end
    
+   % Private - Listeners
    properties (Access = private)
       PropListener    event.listener  % Array of handles that listen for key event changes
    end
+   
+   % Private - Flags
+   properties (Access = private)
+      IsEmpty = true  % Is this an empty block
+   end
   
-   %% PUBLIC METHODS
+   %% METHODS
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % Class constructor
       function tankObj = Tank(tankRecPath,tankSavePath,varargin)
@@ -126,6 +136,8 @@ classdef Tank < handle
             end
          end
          
+         % At this point it will be initialized "normally"
+         tankObj.IsEmpty = false;
          if nargin < 2
             tankObj.SaveLoc = [];
          else
@@ -236,6 +248,19 @@ classdef Tank < handle
          
       end
       
+      % Make sure listeners are deleted when tankObj is destroyed
+      function delete(tankObj)
+         % DELETE  Ensures listener handles are properly destroyed
+         %
+         %  delete(tankObj);
+         
+         for i = 1:numel(tankObj.PropListener)
+            if isvalid(tankObj.PropListener(i))
+               delete(tankObj.PropListener(i));
+            end
+         end
+      end
+      
       % Overload to 'end' indexing operator
       function ind = end(tankObj,k,~)
          % END  Operator to index end of tankObj.Animals or
@@ -252,17 +277,21 @@ classdef Tank < handle
          end
       end
       
-      % Make sure listeners are deleted when tankObj is destroyed
-      function delete(tankObj)
-         % DELETE  Ensures listener handles are properly destroyed
-         %
-         %  delete(tankObj);
+      % Overload to 'isempty' 
+      function tf = isempty(tankObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If tankObj is array, then returns an
+         %          array of true or false for each element of tankObj.
          
-         for i = 1:numel(tankObj.PropListener)
-            if isvalid(tankObj.PropListener(i))
-               delete(tankObj.PropListener(i));
+         if ~isscalar(tankObj)
+            tf = false(size(tankObj));
+            for i = 1:numel(tankObj)
+               tf(i) = isempty(tankObj(i));
             end
+            return;
          end
+         
+         tf = tankObj.IsEmpty || builtin('isempty',tankObj);
       end
       
       % Method used for saving TANK object
@@ -437,7 +466,7 @@ classdef Tank < handle
       
    end
    
-   %% PRIVATE METHODS
+   % PRIVATE
    % To be added to 'Contents.m'
    methods (Access = public, Hidden = true)
       flag = init(tankObj)                 % Initializes the TANK object.
@@ -513,10 +542,12 @@ classdef Tank < handle
          while ii <= size(comparisons_mat,1)
             % Current row contains all comparisons to other Animals in
             % tankObj.Animals
-            animalIsSame = comparisons_mat(ii,:);
+            animalIsSame = comparisons_mat(1,:);
             
             % ii indexes current "good" Animal
             animalObj = tankObj.Animals(ii); 
+            
+            
             
             % If no redundancies, then continue. We should increment the
             % Animal indexer (ii) here
@@ -540,6 +571,7 @@ classdef Tank < handle
       end
    end
 
+   % STATIC
    methods (Static)
       % Method to create Empty TANK object or array
       function tankObj = Empty(n)
@@ -549,7 +581,7 @@ classdef Tank < handle
          %  tankObj = nigeLab.Tank.Empty(n); % Make n-element array Tank
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)
