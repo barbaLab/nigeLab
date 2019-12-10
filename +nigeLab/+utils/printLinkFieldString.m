@@ -10,12 +10,6 @@ function str = printLinkFieldString(fieldType,field)
 %  leading and trailing '\n' and trailing percentage.
 
 %%
-<<<<<<< Updated upstream
-
-nigeLab.utils.cprintf('Text','\nLinking ');
-nigeLab.utils.cprintf('Keywords',fieldType);
-nigeLab.utils.cprintf('Text',' field: %s ...000%%\n',field);
-=======
 linkStr = '<a href="matlab:doc nigelab.Block/%s">%s</a>';
 fieldTypeStr = sprintf(linkStr,fieldType,fieldType);
 switch lower(field)
@@ -42,6 +36,5 @@ switch lower(field)
 end
 str = sprintf('Linking %s field: %s',fieldTypeStr,fieldStr);
 fprintf(1,['\n' str '...000%%\n']);
->>>>>>> Stashed changes
 
 end
