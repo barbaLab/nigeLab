@@ -70,15 +70,15 @@ classdef Tank < handle
       Pars                    struct   % Parameters struct
    end
    
-   % Private - Listeners
-   properties (Access = private)
+   % Private - Listeners & Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
       PropListener    event.listener  % Array of handles that listen for key event changes
+      
+      % Flags
+      IsEmpty = true  % Is this an empty tank
    end
-   
-   % Private - Flags
-   properties (Access = private)
-      IsEmpty = true  % Is this an empty block
-   end
+
   
    %% METHODS
    % PUBLIC

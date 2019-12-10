@@ -101,6 +101,6 @@ for bb=1:numel(Recordings)
    end
    skipVec(bb) = ~addThisBlock;
 end
-animalObj.Blocks(skipVec) = [];
+animalObj.Blocks(isempty(animalObj.Blocks)) = [];
 animalObj.save;
 end

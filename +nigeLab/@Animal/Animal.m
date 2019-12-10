@@ -67,14 +67,13 @@ classdef Animal < matlab.mixin.Copyable
        TankLocDefault   char     % Default location of BLOCK
    end  
    
-   % Listeners
-   properties (Access = private)
+   % Listeners and Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
       Listener         event.listener  % Scalar event.listener associated with this ANIMAL
       PropListener     event.listener  % Array of handles listening to ANIMAL property changes
-   end
-   
-   % Flags
-   properties (Access = private)
+      
+      % Flags
       IsEmpty = true  % Flag to indicate whether block is EMPTY
    end
    
@@ -665,15 +664,19 @@ classdef Animal < matlab.mixin.Copyable
             return;
          end
          
+         b = animalObj.Blocks;
+         cname = {b.Name};
+         
          % look for animals with the same name
          comparisons_cell = cellfun(... % check each element name against 
-            @(s) strcmp(s,{animalObj.Blocks.Name}),... 
-            {animalObj.Blocks.Name},... % all other elements
+            @(s) strcmp(s,cname),... 
+            cname,... % all other elements
             'UniformOutput',false);     % return result in cells
          
          % Use upper triangle portion only, so that at least 1 member is
          % kept from any matched pair
-         comparisons_mat = triu(cat(1,comparisons_cell{:}));
+         comparisons_mat = triu(cat(1,comparisons_cell{:}) - ...
+                                eye(size(comparisons_cell)));
          rmvec = any(comparisons_mat,1);
 
          animalObj.Blocks(rmvec)=[];

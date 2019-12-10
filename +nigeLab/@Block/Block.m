@@ -177,15 +177,15 @@ classdef Block < matlab.mixin.Copyable
 
    end
 
-   % Private - Listeners
-   properties (Access = private)
-      Listener             event.listener       % Scalar event.listener associated with this Block
-   end
-   
-   % Private - Flags
-   properties (Access = private)
+   % Private - Listeners & Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
+      Listener  event.listener       % Scalar event.listener associated with this Block
+      
+      % Flags
       IsEmpty = true   % True if no data in this (e.g. Empty() method used)
    end
+  
    
    %% EVENTS
    events
@@ -381,7 +381,7 @@ classdef Block < matlab.mixin.Copyable
 
       % Overloaded SAVE method to ensure that additional object handles
       % don't save with the object
-      function saveobj(blockObj)
+      function blockObj = saveobj(blockObj)
          % SAVEOBJ  Overloaded saveobj method to ensure that additional
          %          object handles do not save with the object
          %
