@@ -1,15 +1,47 @@
-function printLinkFieldString(fieldType,field)
+function str = printLinkFieldString(fieldType,field)
 %% PRINTLINKFIELDSTRING  Standardized Command Window print command for link
 %
-%  nigeLab.utils.PRINTLINKFIELDSTRING(fieldType,field);
+%  str = nigeLab.utils.PRINTLINKFIELDSTRING(fieldType,field);
 %
 %  fieldType: {'Channels', 'Streams', 'Events', 'Videos', or 'Meta'}
 %  field: Member of blockObj.Fields;
+%
+%  str: If used in fprintf, reproduces the printed statement without
+%  leading and trailing '\n' and trailing percentage.
 
 %%
+<<<<<<< Updated upstream
 
 nigeLab.utils.cprintf('Text','\nLinking ');
 nigeLab.utils.cprintf('Keywords',fieldType);
 nigeLab.utils.cprintf('Text',' field: %s ...000%%\n',field);
+=======
+linkStr = '<a href="matlab:doc nigelab.Block/%s">%s</a>';
+fieldTypeStr = sprintf(linkStr,fieldType,fieldType);
+switch lower(field)
+   case {'raw','rawdata','filt','filtdata','car','referenced'}
+      fieldStr = sprintf(linkStr,'doRawExtraction',field);
+   case {'artifact','spikes','features','spikefeatures'}
+      fieldStr = sprintf(linkStr,'doSD',field);
+   case {'clusters'}
+      fieldStr = sprintf(linkStr,'doAutoClustering',field);
+   case {'sorted','sort'}
+      fieldStr = sprintf('<a href="matlab:doc nigelab.Sort">%s</a>',field);
+   case {'lfp','localfieldpotential'}
+      fieldStr = sprintf(linkStr,'doLFPExtraction',field);
+   case {'digio','analogio'}
+      fieldStr = sprintf(linkStr,'doRawExtraction',field);
+   case {'digevents','scoredevents'}
+      fieldStr = sprintf(linkStr,'scoreVideo',field);
+   case {'time'}
+      fieldStr = sprintf(linkStr,'doRawExtraction',field);
+   case {'video','vidstreams','vid'}
+      fieldStr = sprintf('<a href="matlab:doc nigelab.defaults.Video">%s</a>',field);
+   otherwise
+      fieldStr = field;
+end
+str = sprintf('Linking %s field: %s',fieldTypeStr,fieldStr);
+fprintf(1,['\n' str '...000%%\n']);
+>>>>>>> Stashed changes
 
 end

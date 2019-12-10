@@ -9,8 +9,6 @@ function flag = linkStreamsField(blockObj,field)
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Parse input
 if nargin < 2
@@ -29,7 +27,8 @@ end
 
 %%
 flag = false;
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+blockObj.reportProgress(str,0);
 
 % updateFlag corresponds to blockObj.Streams.(field)
 updateFlag = false(1,numel(blockObj.Streams.(field)));
@@ -57,7 +56,7 @@ for iStream = 1:numel(blockObj.Streams.(field))
          nigeLab.libs.DiskData('Hybrid',dataFileName);
    end
    pct = 100 * (counter / numel(blockObj.Streams.(field))); 
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+   blockObj.reportProgress(str,pct);
 end
 
 blockObj.updateStatus(field,updateFlag);

@@ -147,8 +147,8 @@ spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 
 % Create structure arrays for each type of data channel.
 raw_channels = utils.initChannelStruct('Channels',1); 
-analogIO_channels = utils.initChannelStruct('Streams',1); 
-digIO_channels = utils.initChannelStruct('Streams',1); 
+analogIO_channels = utils.initChannelStruct('Streams',0); 
+digIO_channels = utils.initChannelStruct('Streams',0); 
 
 raw_index = 1;
 analogIO_index = 1;

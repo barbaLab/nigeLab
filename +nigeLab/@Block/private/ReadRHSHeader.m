@@ -49,8 +49,8 @@ filesize = s.bytes;
 
 % Create structure arrays for each type of data channel.
 raw_channels = nigeLab.utils.initChannelStruct('Channels',1);
-analogIO_channels = nigeLab.utils.initChannelStruct('Streams',1);
-digIO_channels = nigeLab.utils.initChannelStruct('Streams',1);
+analogIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
+digIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
 
 spike_triggers=nigeLab.utils.initSpikeTriggerStruct('RHS',1);
 
