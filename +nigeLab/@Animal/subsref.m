@@ -210,7 +210,7 @@ switch S(1).type
                   numel(subs));
          end
       end
-   otherwise
+   otherwise      
       [varargout{1:nargout}] = builtin('subsref',animalObj,S);
 end
 end
