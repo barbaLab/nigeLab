@@ -4,7 +4,7 @@ classdef (ConstructOnLoad) jobCompletedEventData < event.EventData
 
 %% Properties
    properties
-      progBar   nigeLab.libs.nigelProgress  % nigelProgressObj
+      bar       nigeLab.libs.nigelProgress  % nigelProgressObj
       data                                  % UserData from nigelProgressObj
    end
    

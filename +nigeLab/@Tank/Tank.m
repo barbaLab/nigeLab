@@ -242,8 +242,8 @@ classdef Tank < handle
          end
          for i = 1:numel(animalObj)
             animalObj(i).Listener = addlistener(animalObj(i),...
-               'ObjectBeingDestroyed',...
-               @(animal,~)tankObj.AssignNULL(animal));
+                                       'ObjectBeingDestroyed',...
+                                       @(~,~)tankObj.AssignNULL);
          end
          
       end
@@ -253,6 +253,13 @@ classdef Tank < handle
          % DELETE  Ensures listener handles are properly destroyed
          %
          %  delete(tankObj);
+         
+         if numel(tankObj) > 1
+            for i = 1:numel(tankObj)
+               delete(tankObj(i));
+            end
+            return;
+         end
          
          for i = 1:numel(tankObj.PropListener)
             if isvalid(tankObj.PropListener(i))
@@ -378,77 +385,6 @@ classdef Tank < handle
             end
          end
       end
-
-      % Overloaded function for referencing ANIMAL/BLOCK using {}
-      function varargout = subsref(tankObj,S)
-         % SUBSREF  Overloaded function modified so that BLOCK can be
-         %          referenced by indexing from ANIMAL using {} operator.
-         %          Everything with {} referencing refers to the
-         %          tankObj.Animals property.
-         %
-         %  childBlockArray = tankObj{[2,1;1,4;3,1]}
-         %  --> childBlockArray is the 1st Child Block of 2nd Animal in
-         %     array, 4th Block of 1st Animal, and 1st Block of 3rd Animal,
-         %     concatenated into a horizontal array [b21, b14, b31]
-         %
-         %  --> equivalent to calling tankObj{[2,1,3],[1,4,1]};
-         %
-         %  ** NOTE ** that calling
-         %  tankObj{[2,1,3],[1,2,4,5]} would only return a single
-         %  element for each animalObj [b21, b12, b34], NOT the 1st, 2nd,
-         %  4th, and 5th block from each animal.
-         %
-         %  childBlock = tankObj{1,1}
-         %  --> returns 1st child of 1st animal in tankObj.Animals
-         %
-         %  childBlockArray = tankObj{1}
-         %  --> Returns first animal in tankObj.Animals
-         %
-         %  ** NOTE ** tankObj{end} references the last Animal in
-         %             tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{:}
-         %  --> Returns all animals in tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{2,:}
-         %  --> Returns all children of 2nd animal in tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{:,1}
-         %  --> Returns first child Block of each animal in tankObj.Animals
-         %
-         %  ** NOTE ** tankObj{idx1,end} references the last Block in each
-         %             element of tankObj.Animals indexed by idx1.
-         
-         varargout = cell(1,nargout);
-         if isempty(tankObj.Animals)
-            return;
-         end
-
-         subs = S(1).subs;
-         
-         switch S(1).type
-            case '{}'
-               switch numel(subs)
-                  % If only 1 subscript, then it indexes Animals
-                  case 1
-                     s = substruct('()',subs);
-                     varargout{1} = subsref(tankObj.Animals,s);
-                  case 2
-                     s = substruct('{}',subs);
-                     varargout{1} = subsref(tankObj.Animals,s);
-                     
-                  otherwise
-                     error(['nigeLab:' mfilename ':tooManyInputs'],...
-                        'Too many subscript indexing args (%g) given.',...
-                        numel(subs));
-               end
-               return;
-               
-            % If not {} index, use normal behavior
-            otherwise
-               [varargout{1:nargout}] = builtin('subsref',tankObj,S);
-         end
-      end
    end   
    
    % PUBLIC
@@ -504,14 +440,13 @@ classdef Tank < handle
    methods (Access = private, Hidden = true)
       % Remove Animals from the array at a given index (event listener) if
       % that animal object is destroyed for some reason.
-      function AssignNULL(tankObj,animal)
+      function AssignNULL(tankObj)
          % ASSIGNNULL  Remove assignment of a given Animal from
          %             tankObj.Animals, so we don't keep handles to deleted
          %             objects in that array. Event listener for
          %             'ObjectDestroyed' event of nigeLab.Animal.
          
-         idx = find(tankObj.Animals == animal,1,'first');
-         tankObj.Animals(idx) = [];
+         tankObj.Animals(~isvalid(tankObj.Animals)) = [];
       end
       
       % Event listener callback to make sure that duplicate Animals are not
@@ -524,16 +459,22 @@ classdef Tank < handle
          %  tankObj.CheckAnimalsForClones;  Ensure no redundancies in
          %                                   tankObj.Animals.
          
-         % If no animals, no need to check
-         if isempty(tankObj.Animals)
+         % If no animals or only 1 animal, no need to check
+         a = tankObj.Animals;
+         if sum(isempty(a)) == 1
             return;
+         else
+            idx = ~isempty(a);
+            a = a(idx);
          end
-         
+         % Get names for comparison
+         cname = {a.Name};
          % look for animals with the same name
-         comparisons_cell = cellfun(@(s) strcmp(s,{tankObj.Animals.Name}),...
-            {tankObj.Animals.Name},...
+         comparisons_cell = cellfun(@(s) strcmp(s,cname),...
+            cname,...
             'UniformOutput',false);
-         comparisons_mat = triu(cat(1,comparisons_cell{:}));
+         comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
+                                    eye(size(comparisons_cell))));
          rmvec = any(comparisons_mat,1);
          if ~any(rmvec)
             return;
@@ -549,32 +490,38 @@ classdef Tank < handle
             comparisons_mat(1,:) = []; % ensure this row is dropped
             
             % ii indexes current "good" Animal
-            animalObj = tankObj.Animals(ii); 
+            animalObj = a(ii); 
             ii = ii + 1; % ensure it is incremented
             
-            % Use `find` to support {} indexing.
-            idx = find(animalIsSame); % note that idx ~= 1 ever
-
-            % If animal is empty, do not proceed with checks
-            if isempty(animalObj)
-               continue;
-            end
-            
-            % If no redundancies, then continue. We should increment the
-            % Animal indexer (ii) here
+            % If no redundancies, then continue. 
             if ~any(animalIsSame)
                continue;
             end
             
-            B = tankObj.Animals{idx,:};
+            % To prevent weird case where you have a 1x0 array
+            if isempty(animalIsSame)
+               continue;
+            end
+            
+            % Add child blocks from removed animals to this animal to
+            % ensure they aren't accidentally discarded
+            aidx = find(animalIsSame);
+            B = a{aidx,:}; %#ok<*FNDSB>
             addChildBlock(animalObj,B); 
             
             % Now, remove redundant animals from array and also remove them
             % from the comparisons matrix since we don't need to redo them
-            tankObj.Animals(idx) = [];
-            iRow = idx-1; % To account for previously-removed row
-            comparisons_mat(iRow,:) = []; 
-            comparisons_mat(:,idx) = []; % Columns still all there
+            mask = find(idx);
+            tankObj.Animals(mask(animalIsSame)) = []; % Remove from property
+            a(animalIsSame) = []; % Remove them from consideration in the array
+            idx(animalIsSame) = []; % Remove corresponding indexes
+            
+            % Lastly, update the comparisons matrices
+            iRow = animalIsSame(2:end); % To account for previously-removed row of comparisons
+            comparisons_mat(iRow,:) = [];
+            % Columns are not removed, since the original animal is kept in
+            % the array and we should account for its index.
+            comparisons_mat(:,animalIsSame) = []; 
          end
       end
    end

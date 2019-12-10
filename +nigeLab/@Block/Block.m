@@ -303,6 +303,13 @@ classdef Block < matlab.mixin.Copyable
          %
          %  delete(blockObj);
          
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               delete(blockObj(i));
+            end
+            return;
+         end
+         
          if isvalid(blockObj.Listener)
             delete(blockObj.Listener)
          end
