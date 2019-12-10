@@ -26,13 +26,13 @@ function [fieldType,n] = getFieldType(blockObj,field)
 N_CHARS_TO_COMPARE = 7;
 
 %% Simple code but for readability
-idx = strncmpi(blockObj.Fields,field,N_CHARS_TO_COMPARE);
+idx = strncmpi(blockObj(1).Fields,field,N_CHARS_TO_COMPARE);
 if sum(idx) == 0
    error('No matching field type: %s',field);
 end
-fieldType = blockObj.FieldType{idx};
+fieldType = blockObj(1).FieldType{idx};
 if nargout > 1
-   idx = ismember(blockObj.FieldType,fieldType);
+   idx = ismember(blockObj(1).FieldType,fieldType);
    n = sum(idx);
 end
 

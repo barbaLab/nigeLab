@@ -31,6 +31,7 @@ classdef DashBoard < handle
       jobIsRunning = false;       % Flag indicating current job(s) state
       Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
       splitMultiAnimalsUI = ?nigeLab.libs.splitMultiAnimalsUI
+      Listener  event.listener    % Array of event listeners to delete on destruction
    end
    
    %% EVENTS
@@ -53,47 +54,17 @@ classdef DashBoard < handle
          %
          %  tankObj = nigeLab.Tank();
          %  obj = nigeLab.libs.DashBoard(tankObj);
-         
-         %% Default Values
-         obj.Color = struct;
-         obj.Color.fig = nigeLab.defaults.nigelColors('background');
-         obj.Color.panel = nigeLab.defaults.nigelColors('surface');
-         obj.Color.onPanel = nigeLab.defaults.nigelColors('onsurface');
-         
+        
          %% Init
          obj.Tank = tankObj;
+         obj.Color = obj.initColors();
+         obj.nigelGUI = obj.buildGUI();
+         obj.Tree = obj.buildTree();
          
-         %% Load Graphics
-         obj.nigelGUI = buildGUI(obj);
-         obj.remoteMonitor=nigeLab.libs.remoteMonitor(obj.getChildPanel('Queue'));
-         addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
-         
-         %% Create Tank Tree
-         obj.buildTree();
-         obj.Tree.Position(3) = obj.Tree.Position(3)./2;
-         obj.Children{1}.nestObj(obj.Tree,'MainTree');
-         treeContextMenu = uicontextmenu(...
-            'Parent',obj.nigelGUI,...
-            'Callback',@obj.prova1);
-         m = methods(obj.Tank);
-         m = m(startsWith(m,'do'));
-         for ii=1:numel(m)
-            mitem = uimenu(treeContextMenu,'Label',m{ii});
-            mitem.Callback = @obj.uiCMenuClick;
-         end
-         set(obj.Tree,'UIContextMenu',treeContextMenu);
-         
-         % Cosmetic adjustments
-         Jobjs = obj.Tree.getJavaObjects;
-         Jobjs.JScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder)
-         Jobjs.JScrollPane.setComponentOrientation(java.awt.ComponentOrientation.RIGHT_TO_LEFT);
-         set(obj.Tree,...
-            'TreePaneBackgroundColor',obj.Color.panel,...
-            'BackgroundColor',obj.Color.panel,...
-            'TreeBackgroundColor',obj.Color.panel,...
-            'Units','normalized',...
-            'SelectionType','discontiguous');
-         
+         pQueue = obj.getChildPanel('Queue');
+         obj.remoteMonitor=nigeLab.libs.remoteMonitor(pQueue);
+         obj.buildJavaObjs();
+
          %% Save, New buttons
          ax = axes('Units','normalized', ...
             'Tag','SaveNewButtonAxes',...
@@ -169,20 +140,24 @@ classdef DashBoard < handle
             'Callback',{''    ,''});
          obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGUI,...
             'Position',Position,...
+            'Tag','TitleBar',...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
             'StringColor',nigeLab.defaults.nigelColors('onprimary'),...
             'Buttons',Btns);
          
          %% Parameters UItabGroup
          h=uitabgroup();
-         Pan = getChildPanel(obj,'Parameters');
-         Pan.nestObj(h,'TabGroup');
+         pParam = getChildPanel(obj,'Parameters');
+         pParam.nestObj(h,'TabGroup');
          
          %% Set the selected node as the root node
          obj.Tree.SelectedNodes = obj.Tree.Root;
          Nodes.Nodes = obj.Tree.Root;
          Nodes.AddedNodes = obj.Tree.Root;
          treeSelectionFcn(obj,obj.Tree,Nodes)
+         
+         %% Add listeners
+         obj.Listener = obj.addAllListeners();
          
       end
       
@@ -192,12 +167,18 @@ classdef DashBoard < handle
          %
          %  delete(obj);
          
+         % Delete all listener handles
+         obj.deleteListeners();
+         
+         % Delete anything associated with multianimals UI
          if ~isempty(obj.splitMultiAnimalsUI)
             if isvalid(obj.splitMultiAnimalsUI.Fig)
                delete(obj.splitMultiAnimalsUI.Fig);
             end
             delete(obj.splitMultiAnimalsUI);
          end
+         
+         % Delete this interface
          if isvalid(obj.nigelGUI)
             delete(obj.nigelGUI);
          end
@@ -236,9 +217,32 @@ classdef DashBoard < handle
 
    end
    
-   % PUBLIC
-   % Callback functions
-   methods(Access = public)
+   % PRIVATE
+   % Build or initialize elements of interface
+   methods(Access = private)   
+      % Method to add all listeners
+      function lh = addAllListeners(obj)
+         %% Add all the listeners
+         
+         lh = [];
+         lh = [lh, addlistener(obj.remoteMonitor,...
+                     'jobCompleted',@obj.refreshStats)];
+         lh = [lh, addlistener(obj.splitMultiAnimalsUI,...
+                     'splitCompleted',@(~,e)obj.addToTree(e.nigelObj))];
+         
+         for a = obj.Tank.Animals
+            lh = [lh, ...
+               addlistener(a,'ObjectBeingDestroyed',...
+               @obj.removeFromTree)];
+            for b = a.Blocks
+               lh = [lh, addlistener(b,'ObjectBeingDestroyed',...
+                  @obj.removeFromTree)];
+            end
+         end
+         lh = [lh, addlistener(obj.Tank,'ObjectBeingDestroyed',...
+                     @obj.removeFromTree)];
+      end
+      
       % Add a nigelObj to the tree
       function addToTree(obj,nigelObj)
          % ADDTOTREE  Add a nigelObj to the tree, for example after
@@ -298,12 +302,8 @@ classdef DashBoard < handle
          
          nigeLab.libs.DashBoard.addToNode(animalNode,BlNames);
          obj.Tree = Tree; % Assign as property of DashBoard at end
-      end      
-   end
-   
-   % PRIVATE
-   % Build or initialize elements of interface
-   methods(Access = private)      
+      end    
+      
       % Method to create figure for UI as well as panels that serve as
       % containers for the rest of the UI contents
       function fig = buildGUI(obj,fig)
@@ -385,25 +385,28 @@ classdef DashBoard < handle
             javax.swing.BorderFactory.createEmptyBorder)
          Jobjs.JScrollPane.setComponentOrientation(...
             java.awt.ComponentOrientation.RIGHT_TO_LEFT);
-         set(obj.Tree,...
-            'TreePaneBackgroundColor',obj.Color.panel,...
-            'BackgroundColor',obj.Color.panel,...
-            'TreeBackgroundColor',obj.Color.panel,...
-            'Units','normalized',...
-            'SelectionType','discontiguous');
       end
       
       % Initializes the graphics tree widget
       function Tree = buildTree(obj)
          % BUILDTREE  Method to initialize tree
          
+         pTree = obj.getChildPanel('Tree');
+         pos = pTree.InnerPosition;
+         pos(3) = pos(3)/2;
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
             'Units', 'normalized', ...
-            'Position',obj.Children{1}.InnerPosition,...
+            'Position',pos,...
             'FontName','Droid Sans',...
             'FontSize',15,...
-            'ForegroundColor',obj.Color.onPanel);
+            'Tag','MainTree',...
+            'ForegroundColor',obj.Color.onPanel,...
+            'TreePaneBackgroundColor',obj.Color.panel,...
+            'BackgroundColor',obj.Color.panel,...
+            'TreeBackgroundColor',obj.Color.panel,...
+            'Units','normalized',...
+            'SelectionType','discontiguous');
          
          Tree.Root.Name = obj.Tank.Name;
          
@@ -418,7 +421,8 @@ classdef DashBoard < handle
             names = obj.getName(animalObj(ii),'Block');
             nigeLab.libs.DashBoard.addToNode(animalNode,names);
          end
-
+         
+         pTree.nestObj(Tree,Tree.Tag);
          obj.Tree = Tree; % Assign as property of DashBoard at end
       end
       
@@ -431,6 +435,27 @@ classdef DashBoard < handle
          %  fig.CloseRequestFcn = @obj.deleteDashBoard;  Just deletes obj
          
          delete(obj);
+      end
+      
+      % Delete all current listener handles
+      function deleteListeners(obj)
+         % DELETELISTENERS  Deletes all current listener handles
+         %
+         %  obj.deleteListeners();
+         
+         for lh = obj.Listener
+            delete(lh);
+         end
+         obj.Listener(:) = [];
+      end
+      
+      % Initialize Colors struct with default values
+      function col = initColors(obj)
+         
+         col = struct;
+         col.fig = nigeLab.defaults.nigelColors('background');
+         col.panel = nigeLab.defaults.nigelColors('surface');
+         col.onPanel = nigeLab.defaults.nigelColors('onsurface');
       end
       
       % Initialize the job array, as well as the isJobRunning
@@ -963,15 +988,8 @@ classdef DashBoard < handle
          ActPars = A.Pars;
          
          %% init splitmultianimals interface
-         toggleSplitMultiAnimalsUI(obj,'init');
+%          toggleSplitMultiAnimalsUI(obj,'init');
          
-         %% Add all the listeners
-         addlistener(obj.remoteMonitor,'jobCompleted',@obj.refreshStats);
-         addlistener(obj.splitMultiAnimalsUI,'splitCompleted',@(~,e)obj.addToTree(e.nigelObj));
-         
-         addlistener([obj.Tank.Animals.Blocks],'ObjectBeingDestroyed',@obj.removeFromTree);
-         addlistener([obj.Tank.Animals],'ObjectBeingDestroyed',@obj.removeFromTree);
-         addlistener([obj.Tank],'ObjectBeingDestroyed',@obj.removeFromTree);
       end
       
       % Updates the 'Parameters' panel with current BLOCK parameters
@@ -1013,7 +1031,7 @@ classdef DashBoard < handle
    % PRIVATE
    % Methods for UI Context Interactions
    methods(Access = private)
-       % Callback for when user clicks on tree interface
+      % Callback for when user clicks on tree interface
       function uiCMenuClick(obj,m,~)
          % UICMENUCLICK  Callback for when user clicks on tree interface
          %               context menu.
@@ -1063,6 +1081,24 @@ classdef DashBoard < handle
                   obj.qOperations(m.Label,B(ii),SelectedItems(ii,:));
                end
          end
+      end
+      
+      function treeContextMenu = initUICMenu(obj)
+         % INITUICMENU  Initialize UI Context menu. Adds all 'do' methods
+         %              to the context options list.
+         %
+         %  obj.initUICMenu();
+         
+         treeContextMenu = uicontextmenu(...
+            'Parent',obj.nigelGUI,...
+            'Callback',@obj.prova1);
+         m = methods(obj.Tank);
+         m = m(startsWith(m,'do'));
+         for ii=1:numel(m)
+            mitem = uimenu(treeContextMenu,'Label',m{ii});
+            mitem.Callback = @obj.uiCMenuClick;
+         end
+         set(obj.Tree,'UIContextMenu',treeContextMenu);
       end
    end
    

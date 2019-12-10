@@ -41,9 +41,9 @@ VariableNames = {'Animals';
                 
 GatherFunction = { @(an) an.Name;
                    @(an) getAnimalDate(an)
-                   @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.FileExt})];
+                   @(an) getRecDate(an);
                    @(an) numel(an.Blocks);
-                   @(an) {unique(cat(1,an.Blocks.NumChannels))};
+                   @(an) getNChannel(an);
                    @(an) getAnimalStatus(an);
     };
 
@@ -91,4 +91,16 @@ function D = getAnimalDate(animalObj)
    catch
       D = NaT;
    end
+end
+
+function N = getNChannel(animalObj)
+b = animalObj.Blocks;
+N = {unique(cat(1,b.NumChannels))};
+end
+
+function R = getRecDate(animalObj)
+b = animalObj.Blocks;
+rt = unique({b.RecType});
+fe = unique({b.FileExt});
+R = [rt, fe];
 end
