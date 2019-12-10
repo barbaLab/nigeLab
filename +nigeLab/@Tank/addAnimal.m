@@ -64,7 +64,7 @@ end
 for i = 1:numel(animalObj)
    animalObj(i).Listener = addlistener(animalObj(i),...
       'ObjectBeingDestroyed',...
-      @tankObj.AssignNULL);
+      @(~,~)tankObj.AssignNULL);
 end
 
 end

@@ -138,7 +138,7 @@ classdef DashBoard < handle
             pRecap.InnerPosition(4)./2-0.1],...
             'BackgroundColor',obj.Color.panel,...
             'FontName','Droid Sans');
-         obj.Children{2}.nestObj(RecapTable,'RecapTable');
+         pRecap.nestObj(RecapTable,'RecapTable');
          RecapTableMJScrollPane = RecapTable.JControl.getParent.getParent;
          RecapTableMJScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder);
          
@@ -478,7 +478,7 @@ classdef DashBoard < handle
       % look nice) for displaying the current status of different
       % processing stages. This should behave differently depending on if a
       % Tank, Animal, or Block node has been selected.
-      function plotRecapCircle(obj,SelectedItems)
+      function plotRecapCircle(obj,Status)
         % PLOTRECAPCIRCLE  Plot overview of operations performed within the
         %                  "Stats" panel.
         %
@@ -495,8 +495,8 @@ classdef DashBoard < handle
         %          processing status based on combination of all channels'
         %          progress on that stage and the channel mask (Block.Mask)
         
-         p = obj.getChildPanel('Stats');
-         ax = p.getChild('RecapAxes');
+         pRecap = obj.getChildPanel('Stats');
+         ax = pRecap.getChild('RecapAxes');
          cla(ax);
          [NAn,~] = size(Status);
          St = obj.Tank.Animals(1).Blocks(1).Fields;
@@ -504,7 +504,7 @@ classdef DashBoard < handle
          xlim(ax,[1 Nst+1]);
          ylim(ax,[1 NAn+1]);
          
-         switch size(SelectedItems,1)
+         switch size(Status,1)
             case 1
                
             otherwise
@@ -791,29 +791,89 @@ classdef DashBoard < handle
          %
          %  obj.setTankTable();
          
-         pbaspect([1,1,1]);
-         obj.Children{1}.nestObj(ax);
+%          pbaspect([1,1,1]);
+%          obj.Children{1}.nestObj(ax);
          
          %% splitMultiAnimals Button
+         tankObj = obj.Tank;
+         tt = tankObj.list;
+         tCell = table2cell(tt);
+         Status = obj.Tank.getStatus(obj.Tank.Animals(1).Blocks(1).Fields);
+         StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
+         tCell = tCell(:,not(StatusIndx));
+         columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
          
+         % Do some reformatting on dates
+         dateTimeCol = strcmp(columnFormatsAndData,'datetime');
+         dateData = tCell(:,dateTimeCol);
+         monthAbbrev = cell(size(dateData));
+         for i = 1:numel(dateData)
+            monthAbbrev{i} = month(dateData{i},'shortname');
+            monthAbbrev{i} = monthAbbrev{i}{1};
+         end
+         tmp = unique(monthAbbrev);
+         for ii=1:(numel(tmp)-1)
+            tmp{ii} = [tmp{ii} ', '];
+         end
+         tCell(:,dateTimeCol) = {tmp};
+         
+         columnFormatsAndData{dateTimeCol} = 'cell';
+         [tCell, columnFormatsAndData] = uxTableFormat(...
+            columnFormatsAndData(not(StatusIndx)),tCell,'Tank');
          
          %% Create recap Table
-         statPanel = obj.getChildPanel('Stats');
+         pRecap = obj.getChildPanel('Stats');
          RecapTable = uiw.widget.Table(...
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
             'Units','normalized', ...
-            'Position',[statPanel.InnerPosition(1) ...
-                        statPanel.InnerPosition(4)./2+0.05 ...
-                        statPanel.InnerPosition(3) ...
-                        statPanel.InnerPosition(4)./2-0.1],...
+            'Position',[pRecap.InnerPosition(1) ...
+                        pRecap.InnerPosition(4)./2+0.05 ...
+                        pRecap.InnerPosition(3) ...
+                        pRecap.InnerPosition(4)./2-0.1],...
             'BackgroundColor',obj.Color.panel,...
             'FontName','Droid Sans');
-         obj.Children{2}.nestObj(RecapTable);
+         pRecap.nestObj(RecapTable);
          RecapTableMJScrollPane = RecapTable.JControl.getParent.getParent;
-         RecapTableMJScrollPane.setBorder(javax.swing.BorderFactory.createEmptyBorder);
+         RecapTableMJScrollPane.setBorder(...
+            javax.swing.BorderFactory.createEmptyBorder);
          
-         w = obj.Children{2}.Children{1};
+         w = getChild(pRecap,'RecapTable');
+         w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
+         w.ColumnFormat = columnFormatsAndData(:,1);
+         w.ColumnFormatData = columnFormatsAndData(:,2);
+         w.Data = tCell;
+         plotRecapCircle(obj,Status);
+      end
+      
+      % Set the "ANIMAL" table -- the display showing processing status
+      function setAnimalTable(obj,SelectedItems)
+         % SETANIMALTABLE  Creates "ANIMAL" table for currently-selected
+         %                 NODE, indicating the current state of processing
+         %                 for a given nigeLab.Animal object.
+         %
+         %  obj.setAnimalTable(SelectedItems);
+         %
+         %  SelectedItems  --  Subset of nodes corresponding to
+         %                     currently-selected nigeLab.Animal objects.
+         %                    --> This is an indexing array
+         
+         A = obj.Tank.Animals(SelectedItems);
+         
+         tCell = [];
+         Status = [];
+         for ii=1:numel(A)
+            tt = A(ii).list;
+            tCell = [tCell; table2cell(tt)];
+            Status = [Status; A(ii).getStatus(A(1).Blocks(1).Fields)];
+         end
+         StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
+         tCell = tCell(:,not(StatusIndx));
+         columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
+         [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Animal');
+         
+         pRecap = obj.getChildPanel('Stats');
+         w = pRecap.getChild('RecapTable');
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);

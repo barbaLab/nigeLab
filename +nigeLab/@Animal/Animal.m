@@ -475,7 +475,7 @@ classdef Animal < matlab.mixin.Copyable
          % Use upper triangle portion only, so that at least 1 member is
          % kept from any matched pair
          comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
-                                   eye(size(comparisons_cell))));
+                                   eye(numel(cname))));
          rmvec = any(comparisons_mat,1);
          animalObj.Blocks(idx(rmvec))=[];
 
