@@ -83,7 +83,9 @@ end
 propString = [paramType 'Pars'];
 blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 
-blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
+if isprop(blockObj,propString)
+    blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
+end
 flag = true;
 if nargout > 1
    p = blockObj.Pars.(paramType);

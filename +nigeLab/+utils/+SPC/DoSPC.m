@@ -1,5 +1,5 @@
-function [class,temp]=DoSPC(parsin,features)
-%% CRC_DOSPC Do SPC with already-known features
+function [class,temp]=DoSPC(pars,features)
+%% DOSPC Do SPC with already-known features
 %
 %
 % By: Max Murphy    v1.1    08/10/2017  Updated a lot of it, some of the
@@ -7,38 +7,16 @@ function [class,temp]=DoSPC(parsin,features)
 %                                       said it was doing.
 %                   v1.0    08/08/2017  Modified for R2017a
 %% Select paths
-localpath = fileparts(mfilename('fullpath'));
+localpath = fullfile(nigeLab.utils.getNigelPath,'+nigeLab','+utils','+SPC');
 temppath = nigeLab.defaults.Tempdir;
-
-%% DEFAULTS
-pars.TEMPLATE = 'center';
-pars.FNAME_IN = 'tmp_data';              % Input name for cluster.exe
-pars.FNAME_OUT = 'data_tmp_curr.mat';    % Read-out from cluster.exe
-pars.RANDOMSEED = 147;                   % Random seed
-pars.ABS_KNN = 15;                       % Absolute (min) K-Nearest Neighbors
-pars.REL_KNN = 0.0001;                   % Relative K-Nearest Neighbors
-pars.SWCYC = 75;                    % Swendsen-Wang cycles
-pars.TSTEP = 0.001;                 % Increments for vector of temperatures
-pars.MAXTEMP = 0.300;               % Max. temperature for SPC
-pars.MINTEMP = 0.000;               % Min. temperature for SPC
-pars.NMINCLUS = 3;                  % Absolute minimum cluster size diff
-pars.RMINCLUS = 0.005;              % Relative minimum cluster size diff
-pars.MAX_SPK = 1000;                % Max. # of features for SPC
-pars.TEMPSD = 2;                    % # of SD for template matching
-pars.NCLUS_MAX = 9;
 
 N = size(features,1);               % Number of spikes
 K = size(features,2);               % Number of features or dimensions
 
-nm = fieldnames(parsin);
-for ii=1:numel(nm)
-    pars.(upper(nm{ii})) = parsin.(nm{ii});
-end
-
 %% SELECT PARAMETERS
-n_feat   = min(pars.MAX_SPK,N);
-min_clus = max(pars.NMINCLUS,pars.RMINCLUS*n_feat);
-n_knn    = max(pars.ABS_KNN,ceil(pars.REL_KNN*N));
+n_feat   = min(pars.MaxSpk,N);
+min_clus = max(pars.NminClus,pars.RminClus*n_feat);
+n_knn    = max(pars.AbsKNN,ceil(pars.RelKNN*N));
 
 if n_feat < N
    ind = sort(RandSelect(1:N,n_feat));
@@ -46,42 +24,32 @@ else
    ind = 1:N;
 end
 
-%% CHECK TO MAKE SURE "BAD" FILES ARE NOT STILL PRESENT
 fprintf(1,'Beginning SPC...');
 
 cleanup(temppath,pars);
 
 inspk_aux = features(ind,:);
-save(fullfile(temppath, pars.FNAME_IN),'inspk_aux','-ascii');
-
-% if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01.lab']), 'file')
-%    delete( sprintf('%s.dg_01.lab',fullfile(temppath,pars.FNAME_IN )));
-% end
-% 
-% if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01']), 'file')
-%    delete( sprintf('%s.dg_01',    fullfile(temppath,pars.FNAME_IN )));
-% end
-
+save(fullfile(temppath, pars.FNameIn),'inspk_aux','-ascii');
 
 %% PRINT INPUT FILE FOR SPC
 fprintf(1,' writing input...');
-fid=fopen(sprintf('%s.run',fullfile(temppath,pars.FNAME_OUT)),'wt');
+fid = fopen(sprintf('%s.run',fullfile(temppath,pars.FNAME_OUT)),'wt');
 fprintf(fid,'NumberOfPoints: %s\n',num2str(n_feat));
-fprintf(fid,'DataFile: %s\n',pars.FNAME_IN);
-fprintf(fid,'OutFile: %s\n', pars.FNAME_OUT);
+fprintf(fid,'DataFile: %s\n',pars.FNameIn);
+fprintf(fid,'OutFile: %s\n', pars.FNameOut);
 fprintf(fid,'Dimensions: %s\n',num2str(K));
-fprintf(fid,'MinTemp: %s\n',num2str(pars.MINTEMP));
-fprintf(fid,'MaxTemp: %s\n',num2str(pars.MAXTEMP));
+fprintf(fid,'MinTemp: %s\n',num2str(pars.MinTemp));
+fprintf(fid,'MaxTemp: %s\n',num2str(pars.MaxTemp));
 fprintf(fid,'TempStep: %s\n',num2str(pars.TSTEP));
-fprintf(fid,'SWCycles: %s\n',num2str(pars.SWCYC));
+fprintf(fid,'SWCycles: %s\n',num2str(pars.SWCyc));
 fprintf(fid,'KNearestNeighbours: %s\n',num2str(n_knn));
 fprintf(fid,'MSTree|\n');
 fprintf(fid,'DirectedGrowth|\n');
 fprintf(fid,'SaveSuscept|\n');
 fprintf(fid,'WriteLables|\n');
 fprintf(fid,'WriteCorFile~\n');
-if pars.RANDOMSEED ~= 0
-   fprintf(fid,'ForceRandomSeed: %s\n',num2str(pars.RANDOMSEED));
+if pars.randomseed ~= 0
+   fprintf(fid,'ForceRandomSeed: %s\n',num2str(pars.randomseed));
 end
 fclose(fid);
 
@@ -173,26 +141,25 @@ for ii = uvec
    end
 end
 % % Anything assigned to 0 is "out"
-% class(class >= pars.NCLUS_MAX) = pars.NCLUS_MAX;
+% class(class >= pars.NMaxClus) = pars.NMaxClus;
 
-class(class > pars.NCLUS_MAX) = nan; % Cast as "unassigned" again
+class(class > max_clus) = nan; % Cast as "unassigned" again
 remvec = find(isnan(class));
 remvec = reshape(remvec,1,numel(remvec));
 
 %% FORCE TEMPLATE MATCHING
-if ~isempty(remvec)
+if ~isempty(remvec) && pars.match == 'y'
    fprintf(1,' building templates...');
-   f_in  = features(~isnan(class),:);   % already-classified spikes
    
    centers = zeros(nanmax(class), K); % init. cluster centers
    sd   = zeros(1,nanmax(class));     % init. cluster radii
    
-   uvec = unique(class(~isnan(class))); % go through unique instances
-   uvec = reshape(uvec,1,numel(uvec));
+   uvec = unique(class(~isnan(class))); % select all unique valid classes
+   uvec = uvec(:)';                     % just make sure is a row vector
    
    % Get centroids (medroids, really)
    for ii = uvec
-      f = features(abs(class-ii)<eps,:);
+      f = features(class == ii,:);
       if size(f,1) > 1
          centers(ii,:) = median(f);
          sd(ii)        = sqrt(sum(var(f,1)));
@@ -204,35 +171,36 @@ if ~isempty(remvec)
       end
    end
    
-   switch pars.TEMPLATE
+   switch pars.template_type
       case 'center'
          fprintf(1,' matching templates using L2 center...');
-         for ii=remvec
+         for ii = remvec % cycling through spikes dropuouts
             % L2 distance formula:
             distances = sqrt(sum((ones(size(centers,1),1)...
                *features(ii,:)- centers).^2,2).');
             
-            % Identify any within cluster radius
-            conforming = find(distances < pars.TEMPSD*sd);
+            % Identify any cluster within template_sdnum radius
+            conforming = find(distances < pars.template_sdnum*sd);
             
-            % If belongs, find minimum distance
+            % If belongs, find cluster with minimum distance
             if ~isempty(conforming)
                [~,imin] = min(distances(conforming));
                class(ii) = conforming(imin);
                
             else % Otherwise just throw it out
-               class(ii) = pars.NCLUS_MAX;
+               class(ii) = pars.NMaxClus;
             end
          end
       case 'proportions'
-         fprintf(1,' matching templates using proportional clusters...');
-         p = zeros(pars.NCLUS_MAX,1);
-         for ii = 1:pars.NCLUS_MAX
-            p(ii) = sum(abs(class(ind)-ii)<eps)/numel(ind);
-         end
-         class(remvec) = ...
-            proportional_clustering(features(remvec,:),centers,p);
-         
+          % TODO not sure how this works
+%          fprintf(1,' matching templates using proportional clusters...');
+%          p = zeros(pars.NMaxClus,1);
+%          for ii = 1:pars.NMaxClus
+%             p(ii) = sum(abs(class(ind)-ii)<eps)/numel(ind);
+%          end
+%          class(remvec) = ...
+%             proportional_clustering(features(remvec,:),centers,p);
+%          
       otherwise
          error('%s is an invalid template-matching strategy.',...
             pars.TEMPLATE);
@@ -240,8 +208,10 @@ if ~isempty(remvec)
 end
 
 
-% Set anything in pars.NCLUS_MAX to 0 since it is "out"
-class(abs(class-pars.NCLUS_MAX)<eps) = 0;
+% Set anything in pars.NMaxClus to 0 since it is "out"
+class(abs(class-pars.NMaxClus)<eps) = 0;
+
+% our class indexing starts from 1
 class = class + 1;
 
 
@@ -251,6 +221,7 @@ fprintf(1,'complete.\n');
 end
 
 function cleanup(temppath,pars)
+%% CLEANUP cleans the workspce of old files
 warning off
 delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01']));
 delete(fullfile(temppath, [pars.FNAME_OUT '.dg_01.lab']));
@@ -269,8 +240,9 @@ if exist(fullfile(temppath,[pars.FNAME_IN '.dg_01']), 'file')
 end
 warning on
 end
+
 function [out,skip] = RandSelect(in, num)
-%% Randomly selects specified subset of indices from "in"
+%% RANDSELECT Randomly selects specified subset of indices from "in"
 
 N = length(in);
 

@@ -13,7 +13,7 @@ if nargin < 1
             || isempty(ver('distcomp')) ) && qParams.UseParallel ...
             %% otherwise prompt the user to install the toolboxes.
             
-        nigeLab.utils.cprintf('SystemCommands','Parallel computing toolbox might be uninstalled or unlicesend on thi machine.\n');
+        nigeLab.utils.cprintf('SystemCommands','Parallel computing toolbox might be uninstalled or unlicesend on this machine.\n');
         nigeLab.utils.cprintf('Comments','But no worries: your code will still be executed serially. This might be slower...\n');
     end
     
@@ -21,7 +21,7 @@ elseif strcmpi(mode,'config')  % nargin > 0
     %% in config mode checkForWorker and run the config script
     flag = false;
     if nigeLab.utils.checkForWorker()
-        configW;     % run the programmatically generated configuration script
+        configW;     % run the programmatically generated configuration script; this is generated in qOperations
         flag = true;
     end
     

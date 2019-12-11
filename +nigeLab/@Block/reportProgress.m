@@ -2,6 +2,7 @@ function str = reportProgress(blockObj, string, pct ) %#ok<INUSL>
 %%
 
 pars = nigeLab.defaults.Notifications;
+pct = floor(pct);
 
 if ~nigeLab.utils.checkForWorker % serial execution on localhost
     metas = cell(1, numel(pars.NotifyString.Vars));
