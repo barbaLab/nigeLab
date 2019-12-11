@@ -1,5 +1,5 @@
 function flag = doRawExtraction(blockObj)
-%% CONVERT  Convert raw data files to Matlab TANK-BLOCK structure object
+%% DORAWEXTRACTION  Convert raw data files to Matlab TANK-BLOCK structure object
 %
 %  b = nigeLab.Block;
 %  flag = doRawExtraction(b);

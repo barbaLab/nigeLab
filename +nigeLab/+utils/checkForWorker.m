@@ -42,7 +42,7 @@ elseif strcmpi(mode,'config')  % nargin > 0
     %% in config mode checkForWorker and run the config script
     flag = false;
     if nigeLab.utils.checkForWorker()
-        configW;     % run the programmatically generated configuration script
+        configW;     % run the programmatically generated configuration script; this is generated in qOperations
         flag = true;
     end
     
