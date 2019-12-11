@@ -89,8 +89,8 @@ classdef nigelPanel < handle
    end
    
    methods (Access = public)
-     % Class constructor for nigeLab.libs.nigelPanel object
-     function obj = nigelPanel(parent,varargin)
+      % Class constructor for nigeLab.libs.nigelPanel object
+      function obj = nigelPanel(parent,varargin)
          % NIGELPANEL  Class constructor for nigelPanel, a standardized
          %             custom graphics container for nigeLab.
          %
@@ -107,19 +107,19 @@ classdef nigelPanel < handle
          %                 correspond mostly to properties of
          %                 matlab.ui.container.Panel. Valid 'Name' values
          %                 include:
-         %                 --> 'TitleBarColor' (see: 
+         %                 --> 'TitleBarColor' (see:
          %                      nigeLab.defaults.nigelColors)
-         %                 --> 'PanelColor' (see: 
+         %                 --> 'PanelColor' (see:
          %                      nigeLab.defaults.nigelColors)
-         %                 --> 'TitleColor' (see: 
+         %                 --> 'TitleColor' (see:
          %                      nigeLab.defaults.nigelColors)
          %                 --> 'Position'
          %                 --> 'String'
-         %                 --> 'Substr' 
+         %                 --> 'Substr'
          %                 --> 'Tag' (default is 'nigelPanel')
          %                 --> 'Units' ('normalized' or 'pixels')
          %                 --> 'Scrollable' ('off' (default) or 'on')
-
+         
          % Configure Parent property
          if nargin < 1
             parent = gcf;
@@ -127,19 +127,19 @@ classdef nigelPanel < handle
             varargin = [parent, varargin];
             parent = gcf;
          end
-
+         
          % If this is a nested nigeLab.libs.nigelPanel panel, then make the
          % parent the .Panel from the "parent" nigelPanel.
          if isa(parent,'nigeLab.libs.nigelPanel')
             parent = parent.Panel;
          end
-         obj.Parent = parent; 
-
+         obj.Parent = parent;
+         
          obj.initProps(varargin{:});
-
+         
          obj.buildOuterPanel;  % Make "outer frame" for if there is scroll bar
          obj.buildTitleBar;    % Makes "nice header box"
-         obj.buildInnerPanel;  % Make scrollbar and "inner frame" container        
+         obj.buildInnerPanel;  % Make scrollbar and "inner frame" container
          obj.buildListeners;   % Make event listeners
       end
       
@@ -147,7 +147,7 @@ classdef nigelPanel < handle
       function cl = class(obj)
          % CLASS  Returns the Tag property as formatted char array
          %
-         %  cl = obj.class;  
+         %  cl = obj.class;
          %
          %  cl: Char array formatted as 'nigelPanel (obj.Tag)'
          
@@ -167,11 +167,11 @@ classdef nigelPanel < handle
       
       % Function to execute when panel is deleted
       function deleteFcn(obj)
-         delete(obj);         
+         delete(obj);
       end
       
       % Return handle to child object corresponding to 'name'
-      function varargout = getChild(obj,name)
+      function varargout = getChild(obj,name,suppressWarnings)
          % GETCHILD  Return handle to child object corresponding to 'name'
          %
          %  c = obj.getChild('ChildName');
@@ -184,10 +184,16 @@ classdef nigelPanel < handle
          %  See Also:
          %  nigeLab.libs.nigelPanel/NESTOBJ
          
+         if nargin < 3
+            suppressWarnings = false;
+         end
+         
          idx = ismember(obj.ChildName,name);
          if sum(idx)==0
-            warning('No member of %s property ChildName: %s',...
-               obj.class,name);
+            if ~suppressWarnings
+               warning('No member of %s property ChildName: %s',...
+                  obj.class,name);
+            end
             varargout = {[]};
          elseif sum(idx)>1
             warning('Ambiguous ChildName: %s',name);
@@ -232,8 +238,8 @@ classdef nigelPanel < handle
          % REMOVECHILD  Remove the child object corresponding to
          %              name ('ChildName').
          %
-         %  obj.removeChild('ChildName'); 
-         %  
+         %  obj.removeChild('ChildName');
+         %
          %  If it is a valid element of Children (determined by matching
          %  ChildName to ChildName property), then remove it from both
          %  Children and ChildName property arrays and delete the object
@@ -273,15 +279,15 @@ classdef nigelPanel < handle
             panPos(4) = panPos(4) - chPos(2)+5;
             setpixelposition(obj.Panel,panPos);
             for ii=1:(numel(obj.Children)-1)
-                objPos = getpixelposition(obj.Children{ii});
-                objPos(2) = objPos(2) - chPos(2);
-                setpixelposition(obj.Children{ii},objPos);   
+               objPos = getpixelposition(obj.Children{ii});
+               objPos(2) = objPos(2) - chPos(2);
+               setpixelposition(obj.Children{ii},objPos);
             end
             chPos(2) = 5;
             setpixelposition(obj.Children{end},chPos);
             
          end
-
+         
       end
       
       % Set a specific property (case-insensitive)

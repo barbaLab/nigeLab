@@ -75,6 +75,20 @@ classdef nigelButton < handle
          %  the button rectangle, and labPropPairs can be given as the
          %  string to go into the button. In this case, the fourth input
          %  (fcn) should be provided as a function handle for ButtonDownFcn
+         %
+         %  Example syntax:
+         %  >> fig = figure; % Test 1
+         %  >> p = nigeLab.libs.nigelPanel(fig);
+         %  >> b = nigeLab.libs.nigelButton(p,...
+         %         {'FaceColor',[1 0 0],...
+         %          'ButtonDownFcn',@(src,~)disp(class(src))},...
+         %         {'String','test'});
+         %
+         %  >> fig = figure; % Test 2
+         %  >> ax = axes(fig);
+         %  >> bPos = [-0.35 0.2 0.45 0.15];
+         %  >> b = nigeLab.libs.nigelButton(ax,bPos,'test2',...
+         %           @(~,~)disp('test2'));
          
          if nargin < 4
             fcn = [];
@@ -198,7 +212,7 @@ classdef nigelButton < handle
                      ismember(lower(allPropList),lower(propPairsIn{i})),...
                      1,'first');
                   if ~isempty(idx)
-                     b.(allPropList{idx}) = propPairsIn{i+1};
+                     b.(propName).(allPropList{idx}) = propPairsIn{i+1};
                   end
                end
                
@@ -299,12 +313,12 @@ classdef nigelButton < handle
          %
          %  ax = nigeLab.libs.nigelButton.parseContainer(container);
          
-         switch class(container)
+         switch builtin('class',container)
             case 'nigeLab.libs.nigelPanel'
                %% If containerObj is nigelPanel, then use ButtonAxes
                ax = getChild(container,'ButtonAxes',true);
                if isempty(ax)
-                  pos = nigelPanelObj.InnerPosition;
+                  pos = container.InnerPosition;
                   pos = [pos(1) + pos(3) / 2, ...
                      pos(2), ...
                      pos(3) / 2, ...
