@@ -34,8 +34,6 @@ if strcmpi(unit,'all')
 end
 blockObj.reportProgress('AutoClustering',0);
 
-SuppressText = true;
-
 switch par.MethodName
     
     case 'KMEANS'
@@ -51,6 +49,7 @@ end
 function runSPCclustering(blockObj,chan,par)
 %TODO inspk = getspikes(chan,block)
 for iCh = chan
+    inspk = blockObj.getSpikes(iCh);
     [classes,temp] = nigeLab.utils.SPC.DoSPC(par.SPC,inspk);
     saveClusters(blockObj,classes,iCh,temp);
     
@@ -60,9 +59,6 @@ end
 end
 
 function runKMEANSclustering(blockObj,chan,par)
-%TODO inspk = getspikes(chan,block)
-% TODO parallel
-
 for iCh = chan
     inspk = blockObj.getSpikes(iCh);
     GPUavailable = false;

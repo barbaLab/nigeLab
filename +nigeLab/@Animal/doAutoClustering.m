@@ -10,30 +10,14 @@ switch nargin
       unit = 'all';
 end
 
-if strcmpi(unit,'all'),unit = 0:par.NCLUS_MAX;end
-fprintf(1,'Performing auto clustering... %.3d%%',0);
+if strcmpi(unit,'all')
+    unit = 0:par.NCLUS_MAX;
+end
 
 for iCh = chan
-   inspk = [];
-   classes = [];
-   BlInd = [];
-   subsetIndex = [];
    
-   for bb=1:numel(animalObj.Blocks)
-      blockObj = animalObj.Blocks(bb);
-      if not(ismember(iCh,blockObj.Mask)),continue;end
-      [inspk_] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
-      
-      SuppressText = true;
-      classes_ = blockObj.getClus(iCh,SuppressText);
-      subsetIndex_ = (ismember(classes_,unit));
-
-      subsetIndex = [subsetIndex; subsetIndex_];
-      inspk = [inspk; inspk_(subsetIndex_,:) ];
-      classes = [classes; classes_];
-      BlInd = [BlInd; ones(size(classes_))*bb];
-   end
-   
+    [inspk,classes,BlInd,subsetIndex]= gatherSpikesFromAllBlocks(animalObj,iCh,unit);
+    
     if size(inspk,1) < 15
         nigeLab.utils.cprintf('err','Channel %.3d: Not enough Spikes!\nLess than 15 spikes detected.',1);
         return;
@@ -57,34 +41,39 @@ for iCh = chan
 %        end
 %     end
     
-%% Perfomring clustering
+%% assigning usable labels
     
-    allLabels = 1:par.NCLUS_MAX;
-    usedClasses = unique(classes(~subsetIndex));
-    usedClasses(usedClasses < 1) = 1;
-    if isempty(usedClasses),freeLabels = allLabels;else
-    freeLabels = allLabels(ismember(allLabels, usedClasses));
-    freeLabels = [freeLabels(:);...
-        ones(numel(unique(classes_))-numel(freeLabels),1)*par.NCLUS_MAX];
+    allLabels = 1:par.NMaxClus;
+    usedLabels = unique(classes(~subsetIndex));
+    freeLabels = allLabels(~ismember(allLabels, usedLabels));
+    
+    %% do clustering here
+switch par.MethodName
+    
+    case 'KMEANS'
+        classes_ = runKMEANSclustering(inspk,chan,par);
+        temp = 0;
+    case 'SPC'
+           [classes_,temp] = nigeLab.utils.SPC.DoSPC(par.SPC,inspk);
+    otherwise
+end
+
+%% Matching claseter results with free labels
+    newLabels = unique(classes_);
+    for ii = 1:numel(newLabels)
+       classes_(classes_== newLabels(ii))= freeLabels(ii);
     end
     
-    par.NCLUS_MAX = numel(freeLabels);
-    [classes_,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
-    classes_(classes_>par.NCLUS_MAX) = par.NCLUS_MAX;
-    
-    jj=1;
-    for ii=unique(classes_(:))'
-       classes_(classes_==ii)= freeLabels(jj);
-       jj=jj+1;
-    end
     classes(subsetIndex) = classes_;
       
+    %% saving clustering results to the appropriate block
       for bb=1:numel(animalObj.Blocks)
          blockObj = animalObj.Blocks(bb);
          saveClusters(blockObj,classes(BlInd == bb),iCh,temp);         
          blockObj.updateStatus('Clusters',true,iCh);
       end
       
+      %% report progress to user
       pc = 100 * (iCh / blockObj.NumChannels);
       if ~floor(mod(pc,5)) % only increment counter by 5%
          fprintf(1,'\b\b\b\b%.3d%%',floor(pc))
@@ -96,13 +85,82 @@ fprintf(1,'\b\b\b\bDone.\n');
     flag = true;
 end
 
+function [inspk,classes,BlInd,subsetIndex]= gatherSpikesFromAllBlocks(animalObj,iCh,unit)
+%% Gathers spikes and classes information across all the blocks
+% Output:
+%           - All the spikes (not restricted by unit)
+%           - All the classes (not restricted by unit)
+%           - A vectro the same size as classes with the block index (1 if belonging to block # 1 etc)
+%           - A logical vector same size as classes and spikes set to true
+%               if the entry corresponds to the given unit.
+   inspk = [];
+   classes = [];
+   BlInd = [];
+   subsetIndex = [];
+   
+   for bb=1:numel(animalObj.Blocks)
+      blockObj = animalObj.Blocks(bb);
+      if not(ismember(iCh,blockObj.Mask)),continue;end
+      [inspk_] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
+      
+      SuppressText = true;
+      classes_ = blockObj.getClus(iCh,SuppressText);
+      subsetIndex_ = (ismember(classes_,unit));
+
+      subsetIndex = [subsetIndex; subsetIndex_];
+      inspk = [inspk; inspk_];
+      classes = [classes; classes_];
+      BlInd = [BlInd; ones(size(classes_))*bb];
+   end
+
+end
+
+function classes = runKMEANSclustering(inspk,par)
+    GPUavailable = false;
+    if par.KMEANS.UseGPU
+        try
+            inspk = gpuArray(inspk(:));     % we need inspk as column for KMENAS
+            GPUavailable = true;
+        catch
+            warning('gpuArray non available. Computing on CPU;');
+        end
+    else
+        inspk = inspk(:);     % we need inspk as column for KMENAS
+    end
+    
+    switch par.KMEANS.NClus
+        % set Klist, list of K to try with KMEANS
+        case 'best'
+            Klist = 1:pars.MaxNClus;
+        case 'max'
+            Klist = pars.MaxNClus;
+    end
+    
+    if GPUavailable
+        % sadly evalcluster is broken with gpuArrays, at least on 2017a
+        % workarouund, compute the cluster solution outside evalclust and
+        % use it only to evaluate the solution.
+        
+        ClustSolutions = zeros(numel(inspk),numel(Klist));
+        for ii=Klist
+          ClustSolutions(:,ii) = gather(kmeans(inspk,Klist(ii)));
+          evals = evalclusters(inspk,ClustSolutions,'Silhouette');
+          classes = evals.OptimalY;
+        end
+    else
+       evals = evalclusters(inspk,'kmeans','Silhouette','Klist',Klist);
+       classes = evals.OptimalY;
+    end
+end
+
+
 function saveClusters(blockObj,classes,iCh,temp)
 if not(iscolumn(classes)),classes=classes';end
 ts = getSpikeTimes(blockObj,iCh);
 n = numel(ts);
 data = [zeros(n,1) classes temp*ones(n,1) ts zeros(n,1)];
 
-% initialize the 'Sorted' DiskData file
+% initialize the 'Clusters' DiskData file
 fType = blockObj.getFileType('Clusters');
 fName = fullfile(sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
     num2str(blockObj.Channels(iCh).probe),...
@@ -112,63 +170,4 @@ if exist(blockObj.Paths.Clusters.dir,'dir')==0
 end
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData(fType,...
     fName,data,'access','w');
-end
-
-function [Temp,classes] = SPCrun(par,inspk_aux)
-       %Interaction with SPC
-    workdir = fullfile(fullfile(fileparts(fileparts(mfilename('fullpath')))),'+utils','+SPC');
-
-    par.fname_in = fullfile(par.fname_in);
-    save(fullfile(workdir,par.fname_in),'inspk_aux','-ascii');                      %Input file for SPC
-
-    [clu,tree] = nigeLab.utils.SPC.run_cluster(par);
-        
-    [clust_num,temp,auto_sort] = nigeLab.utils.SPC.find_temp(tree,clu, par);
-    current_temp = max(temp);
-    classes = zeros(1,size(clu,2)-2);
-%     for c =1: length(clust_num)
-%        aux = clu(temp(c),3:end) +1 == clust_num(c);
-%        classes(aux) = c;
-%     end
-% Same but vectorized
- classes = sum( (clu(temp,3:end) +1 == clust_num) .* (1:numel(clust_num))',1);
-
-    
-    if par.permut == 'n'
-       classes = [classes zeros(1,max(size(spikes,1)-size(clu,2)-2,0))];
-    end
-    
-    [Temp,classes]=checkclasses(current_temp,classes);
-    
-%     clustering_results = [];
-%     clustering_results(:,1) = repmat(current_temp,length(classes),1); % temperatures
-%     clustering_results(:,2) = classes'; % classes
-%     
-%     for i=1:max(classes)
-%        clustering_results(classes==i,3) = Temp(i);
-%        clustering_results(classes==i,4) = clust_num(i); % original classes
-%     end
-%     
-%     clustering_results(:,5) = repmat(par.min_clus,length(classes),1);
-%     
-
-    
-end
-
-function [Temp,classes]=checkclasses(temp,classes)
-
-    Temp = temp;
-    % Classes should be consecutive numbers
-    classes_names = nonzeros(sort(unique(classes)));
-    if isempty(classes_names),return;end
-    if sum(classes_names) ~= classes_names(end)*(classes_names(end)+1)/2
-       for i= 1:length(classes_names)
-          c = classes_names(i);
-          if c~= i
-             classes(classes == c) = i;
-          end
-          Temp(i) = temp(i);
-       end
-    end
-    
 end
