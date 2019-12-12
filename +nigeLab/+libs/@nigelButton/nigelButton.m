@@ -123,6 +123,14 @@ classdef nigelButton < handle
          %
          %  delete(b);
          
+         % Handle array elements individually
+         if numel(b) > 1
+            for i = 1:numel(b)
+               delete(b(i));
+            end
+            return;
+         end
+         
          if ~isempty(b.Listener)
             for lh = b.Listener
                if isvalid(lh)
@@ -284,7 +292,7 @@ classdef nigelButton < handle
                      @(~,evt)set(evt.AffectedObject.Group.Children,...
                                     'ButtonDownFcn',...
                                     evt.AffectedObject.ButtonDownFcn));
-         b.ButtonDownFcn = btnDownFcnHandle;
+         b.ButtonDownFcn(:) = btnDownFcnHandle;
          
       end
    end

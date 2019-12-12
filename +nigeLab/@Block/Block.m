@@ -191,6 +191,8 @@ classdef Block < matlab.mixin.Copyable
    events
       channelCompleteEvent
       processCompleteEvent
+      ProgressChanged
+      MethodCanceled
    end
    
    %% METHODS
@@ -315,11 +317,21 @@ classdef Block < matlab.mixin.Copyable
          end
       end
       
+      % "Cancels" method execution
+      function invokeCancel(blockObj)
+         notify(blockObj,'MethodCanceled');
+      end
+      
       % Overload to 'isempty' 
       function tf = isempty(blockObj)
          % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
          %          returns true. If blockObj is array, then returns an
          %          array of true or false for each element of blockObj.
+         
+         if numel(blockObj) == 0
+            tf = true;
+            return;
+         end
          
          if ~isscalar(blockObj)
             tf = false(size(blockObj));
@@ -416,11 +428,32 @@ classdef Block < matlab.mixin.Copyable
                calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
                n = numel(mc.MethodList(calledmethod).OutputNames);
             else
-               n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+               n = builtin('numArgumentsFromSubscript',...
+                  blockObj,s,indexingContext);
             end
          else
-            n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+            n = builtin('numArgumentsFromSubscript',...
+               blockObj,s,indexingContext);
          end
+      end
+      
+      % Overloaded RELOAD method for loading a BLOCK matfile
+      function reload(blockObj,field)
+         % RELOAD  Load block (related to multi-animal stuff?)
+         
+         if nargin < 2
+            field = 'all';
+         end
+         
+          obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
+          ff=fieldnames(obj.blockObj);
+          if strcmpi(field,'all')
+             field = ff;
+          end
+          indx = find(ismember(ff,field))';
+          for f=indx
+              blockObj.(ff{f}) = obj.blockObj.(ff{f});
+          end
       end
    end
    
@@ -512,7 +545,7 @@ classdef Block < matlab.mixin.Copyable
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
-      str = reportProgress(blockObj, string, pct ) % Update the user of progress
+      str = reportProgress(blockObj,str_expr,pct,notification_mode) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
       idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
@@ -549,6 +582,11 @@ classdef Block < matlab.mixin.Copyable
    
    % Static methods for multiple animals
    methods (Static)
+      % Method to "cancel" execution of a function evaluation
+      function cancelExecution()
+         evalin('caller','return;');
+      end
+      
       % Method to instantiate "Empty" Blocks from constructor
       function blockObj = Empty(n)
          % EMPTY  Creates "empty" block or block array

@@ -227,6 +227,11 @@ classdef Tank < handle
          %          returns true. If tankObj is array, then returns an
          %          array of true or false for each element of tankObj.
          
+         if numel(tankObj) == 0
+            tf = true;
+            return;
+         end
+         
          if ~isscalar(tankObj)
             tf = false(size(tankObj));
             for i = 1:numel(tankObj)

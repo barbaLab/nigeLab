@@ -27,10 +27,12 @@ classdef DashBoard < handle
    % PRIVATE
    % Object "children" of DashBoard etc
    properties(Access=private)
+      nigelButtons   nigeLab.libs.nigelButton  % Array of nigelButtons
       job            cell         % Cell array of Matlab job objects
       jobIsRunning = false;       % Flag indicating current job(s) state
       Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
-      splitMultiAnimalsUI = ?nigeLab.libs.splitMultiAnimalsUI
+      splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI % interface to split multiple animals
+      treeContextMenu  matlab.ui.container.ContextMenu  % UI context menu for launching "do" actions
       Listener  event.listener    % Array of event listeners to delete on destruction
    end
    
@@ -54,50 +56,33 @@ classdef DashBoard < handle
          %
          %  tankObj = nigeLab.Tank();
          %  obj = nigeLab.libs.DashBoard(tankObj);
-        
+         
+         %% Check input
+         if nargin < 1
+            % Allow selection of TANK if not assigned directly
+            tankObj = nigeLab.Tank();
+         end
+         
          %% Init
          obj.Tank = tankObj;
-         obj.Color = obj.initColors();
-         obj.nigelGUI = obj.buildGUI();
-         obj.Tree = obj.buildTree();
+         obj.Color = nigeLab.libs.DashBoard.initColors();
          
-         pQueue = obj.getChildPanel('Queue');
-         obj.remoteMonitor=nigeLab.libs.remoteMonitor(pQueue);
+         % Build all the panels and add the list of nigelObjects as a
+         % uiw.widget.Tree to the "Tree" panel.
+         obj.nigelGUI = obj.buildGUI();
+         pTree = obj.getChild('Tree');
+         obj.Tree = obj.buildTree(pTree);
+         
+         % Add the remote monitor to the "Queue" panel
+         pQueue = obj.getChild('Queue');
+         obj.remoteMonitor=nigeLab.libs.remoteMonitor(tankObj,pQueue);
          obj.buildJavaObjs();
-
-         %% Save, New buttons
-         ax = axes('Units','normalized', ...
-            'Tag','SaveNewButtonAxes',...
-            'Position', obj.Children{1}.InnerPosition,...
-            'Color',obj.Color.panel,...
-            'XColor','none','YColor','none',...
-            'FontName',obj.Children{1}.FontName);
-         ax.Position(3) = ax.Position(3)./2;
-         ax.Position(4) = ax.Position(4) .* 0.15;
-         ax.Position(1) = ax.Position(1) + ax.Position(3);
-         b1 = rectangle(ax,...
-            'Position',[1 1 2 1],...
-            'Curvature',[.1 .4],...
-            'FaceColor',nigeLab.defaults.nigelColors(2),...
-            'EdgeColor','none');
-         b2 = rectangle(ax,...
-            'Position',[1 2.3 2 1],...
-            'Curvature',[.1 .4],...
-            'FaceColor',nigeLab.defaults.nigelColors(2),...
-            'EdgeColor','none');
-         t1 = text(ax,2,1.5,'Add',...
-            'Color',nigeLab.defaults.nigelColors(2.1),...
-            'FontName','Droid Sans',...
-            'HorizontalAlignment','center');
-         t2 = text(ax,2,2.8,'Save',...
-            'Color',nigeLab.defaults.nigelColors(2.1),...
-            'FontName','Droid Sans',...
-            'HorizontalAlignment','center');
-         pbaspect([1,1,1]);
-         obj.Children{1}.nestObj(ax);
+         
+         % Nest the buttons in the "Tree" panel
+         obj.buildButtons(pTree); 
          
          %% Create recap Table
-         pRecap = obj.getChildPanel('Stats');
+         pRecap = obj.getChild('Stats');
          RecapTable = uiw.widget.Table(...
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
@@ -138,7 +123,7 @@ classdef DashBoard < handle
          Position = [.01,.93,.98,.06];
          Btns = struct('String',  {'Home','Visualization Tools'},...
             'Callback',{''    ,''});
-         obj.Children{end+1} = nigeLab.libs.nigelBar(obj.nigelGUI,...
+         obj.Children{5} = nigeLab.libs.nigelBar(obj.nigelGUI,...
             'Position',Position,...
             'Tag','TitleBar',...
             'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
@@ -147,7 +132,7 @@ classdef DashBoard < handle
          
          %% Parameters UItabGroup
          h=uitabgroup();
-         pParam = getChildPanel(obj,'Parameters');
+         pParam = getChild(obj,'Parameters');
          pParam.nestObj(h,'TabGroup');
          
          %% Set the selected node as the root node
@@ -157,6 +142,7 @@ classdef DashBoard < handle
          treeSelectionFcn(obj,obj.Tree,Nodes)
          
          %% Add listeners
+         obj.treeContextMenu = obj.initUICMenu();
          obj.Listener = obj.addAllListeners();
          
       end
@@ -178,6 +164,22 @@ classdef DashBoard < handle
             delete(obj.splitMultiAnimalsUI);
          end
          
+         % Delete buttons
+         if ~isempty(obj.nigelButtons)
+            for b = obj.nigelButtons
+               if isvalid(b)
+                  delete(b);
+               end
+            end
+         end
+         
+         % Delete remote monitor
+         if ~isempty(obj.remoteMonitor)
+            if isvalid(obj.remoteMonitor)
+               delete(obj.remoteMonitor);
+            end
+         end
+         
          % Delete this interface
          if isvalid(obj.nigelGUI)
             delete(obj.nigelGUI);
@@ -185,11 +187,11 @@ classdef DashBoard < handle
       end
       
       % Return the panel corresponding to a given tag 
-      % (e.g. getChildPanel('Tree'))
-      function panelHandle = getChildPanel(obj,tagString)
+      % (e.g. getChild('Tree'))
+      function panelHandle = getChild(obj,tagString)
          % GETCHILDPANEL  Return panel handle that corresponds to tagString
          %
-         %  panelHandle = obj.getChildPanel('nigels favorite panel');
+         %  panelHandle = obj.getChild('nigels favorite panel');
          %  --> panelHandle returns handle to nigelPanel with Tag property
          %      of 'nigels favorite panel'
          %
@@ -198,6 +200,7 @@ classdef DashBoard < handle
          %     Children{2}  <--> 'Stats'
          %     Children{3}  <--> 'Queue'
          %     Children{4}  <--> 'Parameters'
+         %     Children{5}  <--> 'TitleBar'
          
          idx = 0;
          panelHandle = [];
@@ -220,9 +223,13 @@ classdef DashBoard < handle
    % PRIVATE
    % Build or initialize elements of interface
    methods(Access = private)   
+      % Method to add all bars
+      
       % Method to add all listeners
       function lh = addAllListeners(obj)
-         %% Add all the listeners
+         % ADDALLLISTENERS  Add all the listeners and contain them in a
+         %                  handle array that can be deleted on object
+         %                  destruction.
          
          lh = [];
          lh = [lh, addlistener(obj.remoteMonitor,...
@@ -241,6 +248,7 @@ classdef DashBoard < handle
          end
          lh = [lh, addlistener(obj.Tank,'ObjectBeingDestroyed',...
                      @obj.removeFromTree)];
+         
       end
       
       % Add a nigelObj to the tree
@@ -292,7 +300,7 @@ classdef DashBoard < handle
                      
                      set(BlNode,'UserData',[numAnimal + ii,jj]);
                   end
-                  %% actually add animals to block
+                  % actually add animals to block
                   obj.Tank.Animals(AnIndx).Blocks = [obj.Tank.Animals(AnIndx).Blocks, nigelObj];
                end
             otherwise
@@ -303,6 +311,42 @@ classdef DashBoard < handle
          nigeLab.libs.DashBoard.addToNode(animalNode,BlNames);
          obj.Tree = Tree; % Assign as property of DashBoard at end
       end    
+      
+      % Add buttons to interface
+      function buildButtons(obj,nigelPanelObj)
+         % BUILDBUTTONS  Initialize/built buttons on interface panel
+         
+         if nargin < 2
+            nigelPanelObj = obj.getChild('Tree');
+         end
+         
+         % Make button axes for this nigelPanelObj (Tree panel)
+         pos = nigelPanelObj.InnerPosition;
+         pos = [pos(1) + pos(3) / 2, ...
+                pos(2), ...
+                pos(3) / 2, ...
+                pos(4) * 0.15];
+         ax = axes('Units','normalized', ...
+            'Tag','ButtonAxes',...
+            'Position', pos,...
+            'Color',obj.Color.panel,...
+            'XColor','none',...
+            'YColor','none',...
+            'FontName',nigelPanelObj.FontName);
+         nigelPanelObj.nestObj(ax,'ButtonAxes');
+         p = nigelPanelObj; % For shorter reference
+         
+         % Create array of nigelButtons
+         obj.nigelButtons = [obj.nigelButtons, ...
+            nigeLab.libs.nigelButton(p, [1 1 2 1],   'Add', ...
+               []), ... % Add handle to 'ADD' function here
+            nigeLab.libs.nigelButton(p, [1 2.3 2 1], 'Save', ...
+               []), ... % Add handle to 'SAVE' function here
+            nigeLab.libs.nigelButton(p, [1 3.6 2 1], 'Split',...
+               @(~,~)obj.toggleSplitMultiAnimalsUI('start'))];
+         pbaspect([1,1,1]);
+
+      end
       
       % Method to create figure for UI as well as panels that serve as
       % containers for the rest of the UI contents
@@ -388,11 +432,18 @@ classdef DashBoard < handle
       end
       
       % Initializes the graphics tree widget
-      function Tree = buildTree(obj)
+      function Tree = buildTree(obj,nigelPanelObj)
          % BUILDTREE  Method to initialize tree
+         %
+         %  Tree = obj.buildTree(); Automatically puts Tree in "Tree" panel
+         %  Tree = obj.buildTree(nigelPanelObj); Puts tree in assigned
+         %                                       nigelPanelObj.
          
-         pTree = obj.getChildPanel('Tree');
-         pos = pTree.InnerPosition;
+         if nargin < 2
+            nigelPanelObj = obj.getChild('Tree');
+         end
+         
+         pos = nigelPanelObj.InnerPosition;
          pos(3) = pos(3)/2;
          Tree = uiw.widget.Tree(...
             'SelectionChangeFcn',@obj.treeSelectionFcn,...
@@ -422,7 +473,7 @@ classdef DashBoard < handle
             nigeLab.libs.DashBoard.addToNode(animalNode,names);
          end
          
-         pTree.nestObj(Tree,Tree.Tag);
+         nigelPanelObj.nestObj(Tree,Tree.Tag);
          obj.Tree = Tree; % Assign as property of DashBoard at end
       end
       
@@ -447,15 +498,6 @@ classdef DashBoard < handle
             delete(lh);
          end
          obj.Listener(:) = [];
-      end
-      
-      % Initialize Colors struct with default values
-      function col = initColors(obj)
-         
-         col = struct;
-         col.fig = nigeLab.defaults.nigelColors('background');
-         col.panel = nigeLab.defaults.nigelColors('surface');
-         col.onPanel = nigeLab.defaults.nigelColors('onsurface');
       end
       
       % Initialize the job array, as well as the isJobRunning
@@ -520,7 +562,7 @@ classdef DashBoard < handle
         %          processing status based on combination of all channels'
         %          progress on that stage and the channel mask (Block.Mask)
         
-         pRecap = obj.getChildPanel('Stats');
+         pRecap = obj.getChild('Stats');
          ax = pRecap.getChild('RecapAxes');
          cla(ax);
          [NAn,~] = size(Status);
@@ -560,34 +602,34 @@ classdef DashBoard < handle
       
       % This function wraps any of the "do" methods of Block, allowing them
       % to be added to a job queue for parallel and/or remote processing
-      function qOperations(obj,operation,target,idx)
+      function qOperations(obj,operation,target,sel)
          % QOPERATIONS  Wrapper for "do" methods of Block, for adding to
          %              jobs to a queue for parallel and/or remote
          %              processing.
          %
          %  nigeLab.DashBoard.qOperations(operation,target);
-         %  nigeLab.DashBoard.qOperations(operation,target,idx);
+         %  nigeLab.DashBoard.qOperations(operation,target,sel);
          %
          %  inputs:
          %  operation  --  "do" method function handle
          %  target  --  ULTIMATELY, A BLOCK OR ARRAY OF BLOCKS. Can be
          %                 passed as: Tank, Animal, Block or Block array.
-         %  idx  --  (Optional) Indexing into subset of tanks or blocks to
+         %  sel  --  Indexing into subset of tanks or blocks to
          %              use. Should be set as a two-element column vector,
-         %              where the first index references ??? and second
-         %              index references ??? 
+         %              where the first index references animal and second
+         %              references block
          
          % Set indexing to assign to UserData property of Jobs, so that on
          % job completion the corresponding "jobIsRunning" property array
          % element can be updated appropriately.
          if nargin < 4
-            idx = [1 1];
-         end 
+            sel = [1 1];
+         end
          
          % Want to split this up based on target type so that we can
          % manage Job/Task creation depending on the input target class
          switch class(target)
-            case 'nigeLab.Tank'               
+            case 'nigeLab.Tank'
                for ii = 1:numel(target.Animals)
                   for ik = 1:target.Animals(ii).getNumBlocks
                      qOperations(obj,operation,...
@@ -596,42 +638,44 @@ classdef DashBoard < handle
                   end
                end
                
-            case 'nigeLab.Animal'              
+            case 'nigeLab.Animal'
                for ii = 1:numel(target.Blocks)
-                  qOperations(obj,operation,target.Blocks(ii),[idx ii]);
+                  qOperations(obj,operation,target.Blocks(ii),[sel ii]);
                end
                
             case 'nigeLab.Block'
                
-% checking licences and parallel flags to determine where to execute the
-% computation. Three possible outcomes:
-% local - Serialized
-% local - Distributed
-% remote - Distributed
-               qParams = nigeLab.defaults.Queue;
+               % checking licences and parallel flags to determine where to execute the
+               % computation. Three possible outcomes:
+               % local - Serialized
+               % local - Distributed
+               % remote - Distributed
+               target.updateParams('Queue');
+               target.updateParams('Notifications');
+               qParams = target.Pars.Queue;
                
                
                if qParams.UseParallel...              check user preference
-                       && license('test','Distrib_Computing_Toolbox')... check if toolbox is licensed
-                       && ~isempty(ver('distcomp'))...           and check if it's installed
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Configure remote or local cluster for correct parallel computation
+                     && license('test','Distrib_Computing_Toolbox')... check if toolbox is licensed
+                     && ~isempty(ver('distcomp'))...           and check if it's installed
+                     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+                  %% Configure remote or local cluster for correct parallel computation
                   fprintf(1,'Initializing job: %s - %s\n',operation,target.Name);
                   if qParams.UseRemote
-                      if isfield(qParams,'Cluster')                          
-                          myCluster = parcluster(qParams.Cluster);
-                      else
-                          myCluster = nigeLab.utils.findGoodCluster();
-                      end
+                     if isfield(qParams,'Cluster')
+                        myCluster = parcluster(qParams.Cluster);
+                     else
+                        myCluster = nigeLab.utils.findGoodCluster();
+                     end
                   else
-                      myCluster = parcluster();
+                     myCluster = parcluster();
                   end
                   
                   
                   attachedFiles = ...
                      matlab.codetools.requiredFilesAndProducts(...
                      sprintf('%s.m',operation));
-                 
+                  
                   p = nigeLab.utils.getNigelPath('UNC');
                   
                   % programmatically create a worker config file.
@@ -643,9 +687,9 @@ classdef DashBoard < handle
                   fclose(fid);
                   attachedFiles = [attachedFiles, {configFilePath}];
                   
-                 
+                  
                   for jj=1:numel(attachedFiles)
-                      attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
+                     attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
                   end
                   nPars = nigeLab.defaults.Notifications();
                   n = min(nPars.NMaxNameChars,numel(target.Name));
@@ -658,51 +702,64 @@ classdef DashBoard < handle
                      'Name', [operation target.Name], ...
                      'NumWorkersRange', qParams.NWorkerMinMax, ...
                      'Type','pool', ...
-                     'UserData',idx,...
+                     'UserData',sel,...
                      'Tag',tagStr); %#ok<*PROPLC>
-                 
-                 if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
-                     BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
-                 else
-                     warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
-                     BlName = strrep(target.Name,'_','.');
-                 end
-                 BlName = BlName(1:min(end,25));
-                 barName = sprintf('%s %s',BlName,operation(3:end));
-                 bar = obj.remoteMonitor.addBar(barName,job,idx);
-                 obj.remoteMonitor.updateStatus(bar,'Pending...')
-
-                  job.FinishedFcn = {@(~,~,b)obj.remoteMonitor.barCompleted(b),bar};
                   
-                  % updating status labels
-                  job.QueuedFcn =  {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Queuing...'),bar};
-                  job.RunningFcn = {@(~,~,b)obj.remoteMonitor.updateStatus(b,'Running...'),bar};
-
+                  if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
+                     blockName = sprintf('%s.%s',...
+                        target.Meta.AnimalID,...
+                        target.Meta.RecID);
+                  else
+                     warning(['Missing AnimalID or RecID Meta fields. ' ...
+                        'Using Block.Name instead.']);
+                     blockName = strrep(target.Name,'_','.');
+                  end
+                  % target is nigelab.Block
+                  blockName = blockName(1:min(end,...
+                     target.Pars.Notifications.NMaxNameChars));
+                  barName = sprintf('%s %s',blockName,operation(3:end));                
+                  bar = obj.remoteMonitor.startBar(barName,sel,job);
+                  bar.updateStatus('Pending...')
+                  
+                  % Assign callbacks to update labels and timers etc.
+                  job.FinishedFcn=@(~,~)obj.remoteMonitor.barCompleted(bar);
+                  job.QueuedFcn=@(~,~)bar.updateStatus(bar,'Queuing...');
+                  job.RunningFcn=@(~,~)bar.updateStatus(bar,'Running...');
+                  
                   createTask(job,operation,0,{target});
                   submit(job);
                   fprintf(1,'Job running: %s - %s\n',operation,target.Name);
                   
                   
                else
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                   
+                  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
                   %% otherwise run single operation serially
                   fprintf(1,'(Non-parallel) job running: %s - %s\n',...
                      operation,target.Name);
-                 
-                 if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
-                     BlName = sprintf('%s.%s',target.Meta.AnimalID,target.Meta.RecID);
-                 else
-                     warning('Missing AnimalID or RecID Meta fields. Using Block.Name instead.');
-                     BlName = strrep(target.Name,'_','.');
-                 end
-                 BlName = BlName(1:min(end,25));
-                 barName = sprintf('%s %s',BlName,operation(3:end));
-                 bar = obj.remoteMonitor.addBar(barName,[],idx);
-                 obj.remoteMonitor.updateStatus(bar,'Serial. Check command window.')
-                 pause(0.1);
-                 feval(operation,target);
-                 obj.remoteMonitor.barCompleted(bar);
-                 obj.remoteMonitor.updateStatus(bar,'Done.')
+                  
+                  if isfield(target.Meta,'AnimalID') && isfield(target.Meta,'RecID')
+                     blockName = sprintf('%s.%s',...
+                        target.Meta.AnimalID,...
+                        target.Meta.RecID);
+                  else
+                     warning(['Missing AnimalID or RecID Meta fields. '...
+                        'Using Block.Name instead.']);
+                     blockName = strrep(target.Name,'_','.');
+                  end
+                  % target is nigeLab.Block
+                  blockName = blockName(...
+                     1:min(end,target.Pars.Notifications.NMaxNameChars));
+                  barName = sprintf('%s %s',blockName,operation(3:end));
+                  starttime = clock();
+                  bar = obj.remoteMonitor.startBar(barName,sel);
+                  lh = addlistener(bar,'JobCanceled',...
+                     @(~,~)target.invokeCancel);
+                  flag = feval(operation,target);
+                  delete(lh);
+                  % Since it is SERIAL, bar will be updated
+                  if flag
+                     obj.remoteMonitor.stopBar(bar);
+                  end
                end
                
             otherwise
@@ -799,9 +856,7 @@ classdef DashBoard < handle
          %           'jobCompleted' event, which is a
          %           nigeLab.evt.jobCompletedEventData custom event
          
-         % class(bar) = 'nigeLab.libs.nigelProgress'  
-         % evt.UserData is from evt.bar
-         idx = evt.UserData;
+         idx = evt.BlockSelectionIndex;
          obj.Tank.Animals(idx(1)).Blocks(idx(2)).reload;
          selEvt = struct('Nodes',obj.Tree.SelectedNodes,...
                          'AddedNodes',obj.Tree.SelectedNodes);
@@ -819,7 +874,7 @@ classdef DashBoard < handle
 %          pbaspect([1,1,1]);
 %          obj.Children{1}.nestObj(ax);
          
-         %% splitMultiAnimals Button
+         % splitMultiAnimals Button
          tankObj = obj.Tank;
          tt = tankObj.list;
          tCell = table2cell(tt);
@@ -846,8 +901,8 @@ classdef DashBoard < handle
          [tCell, columnFormatsAndData] = uxTableFormat(...
             columnFormatsAndData(not(StatusIndx)),tCell,'Tank');
          
-         %% Create recap Table
-         pRecap = obj.getChildPanel('Stats');
+         % Create recap Table
+         pRecap = obj.getChild('Stats');
          RecapTable = uiw.widget.Table(...
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
@@ -897,13 +952,13 @@ classdef DashBoard < handle
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
          [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Animal');
          
-         pRecap = obj.getChildPanel('Stats');
+         pRecap = obj.getChild('Stats');
          w = pRecap.getChild('RecapTable');
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         plotRecapCircle(obj,SelectedItems);
+         plotRecapCircle(obj,Status);
       end
       
       % Set the "BLOCK" table -- the display showing processing status
@@ -926,21 +981,21 @@ classdef DashBoard < handle
          for b = B
             tt = b.list;
             tCell = [tCell; table2cell(tt)];
-            Status = [Status; b.getStatus(b.Fields)'];
+            Status = [Status; b.getStatus(b.Fields)];
          end
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
          [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Block');
          
-         pRecap = obj.getChildPanel('Stats');
+         pRecap = obj.getChild('Stats');
          w = pRecap.getChild('RecapTable');
          w.ColumnName = tt.Properties.VariableNames(not(StatusIndx)); %Just to show the name of each format
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
 
-         plotRecapCircle(obj,SelectedItems);
+         plotRecapCircle(obj,Status);
 
       end
       
@@ -951,7 +1006,7 @@ classdef DashBoard < handle
          %  obj.setTankTablePars
          
          T = obj.Tank;
-         parPanel = getChildPanel(obj,'Parameters');
+         parPanel = getChild(obj,'Parameters');
          h =  parPanel.Children{1};
          delete(h.Children);
          ActPars = T.Pars;
@@ -962,13 +1017,15 @@ classdef DashBoard < handle
          ff =fieldnames(ActPars);
          if any(inx)
             tab1 = uitab(h,'Title','Pars');
-            InnerPos = getpixelposition(tab1) .*tab1.Position;
-            InneWidth = InnerPos(3);
             uit = uitable(tab1,'Units','normalized',...
-               'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
-               'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+               'Position',[0 0 1 1],'Data',[cell(sum(inx),1),ff(inx),dd(inx),cell(sum(inx),1)],...
+               'RowName',[],'ColumnWidth',{2,'auto','auto',2});
          end
-         
+         pos = getpixelposition(uit);
+         width = pos(3) - 4;
+
+         uit.ColumnWidth{2} = width*0.2;
+         uit.ColumnWidth{3} = width*0.725;
       end
       
       % Updates the 'Parameters' panel with current ANIMAL parameters
@@ -982,13 +1039,30 @@ classdef DashBoard < handle
          %                    --> This is an indexing array
          
          A = obj.Tank.Animals(SelectedItems);
-         Pan = getChildPanel(obj,'Parameters');
-         h =  Pan.Children{1};
+         pParam = getChild(obj,'Parameters');
+         h =  pParam.Children{1};
          delete(h.Children);
          ActPars = A.Pars;
          
-         %% init splitmultianimals interface
-%          toggleSplitMultiAnimalsUI(obj,'init');
+         dd=struct2cell(ActPars);
+         inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);
+         
+         ff =fieldnames(ActPars);
+         if any(inx)
+            tab1 = uitab(h,'Title','Pars');
+            InnerPos = getpixelposition(tab1) .*tab1.Position;
+            uit = uitable(tab1,'Units','normalized',...
+               'Position',[0 0 1 1],'Data',[cell(sum(inx),1),ff(inx),dd(inx),cell(sum(inx),1)],...
+               'RowName',[],'ColumnWidth',{2,'auto','auto',2});
+         end
+         pos = getpixelposition(uit);
+         width = pos(3) - 4;
+
+         uit.ColumnWidth{2} = width*0.2;
+         uit.ColumnWidth{3} = width*0.725;
+         
+         % init splitmultianimals interface
+         toggleSplitMultiAnimalsUI(obj,'init');
          
       end
       
@@ -1004,7 +1078,7 @@ classdef DashBoard < handle
          
          B = obj.Tank.Animals(SelectedItems(1,1)).Blocks(SelectedItems(1,2));
          Fnames = fieldnames(B.Pars);
-         Pan = getChildPanel(obj,'Parameters');
+         Pan = getChild(obj,'Parameters');
          h =  Pan.Children{1};
          delete(h.Children);
          for ii=1:numel(Fnames)
@@ -1017,19 +1091,23 @@ classdef DashBoard < handle
             ff =fieldnames(ActPars);
             if any(inx)
                tab1 = uitab(h,'Title',Fnames{ii});
-               InnerPos = getpixelposition(tab1) .*tab1.Position;
-               InneWidth = InnerPos(3);
                uit = uitable(tab1,'Units','normalized',...
-                  'Position',[0 0 1 1],'Data',[ff(inx),dd(inx)],...
-                  'RowName',[],'ColumnWidth',{round(InneWidth*0.3),round(InneWidth*0.65)});
+               'ColumnName',{'--','Parameter','Value','--'},...
+               'Position',[0 0 1 1],'Data',[cell(sum(inx),1),ff(inx),dd(inx),cell(sum(inx),1)],...
+               'RowName',[],'ColumnWidth',{2,'auto','auto',2});
             end
+            pos = getpixelposition(uit);
+            width = pos(3) - 4;
+            
+            uit.ColumnWidth{2} = width*0.2;
+            uit.ColumnWidth{3} = width*0.725;
          end
       end
       
    end
    
    % PRIVATE
-   % Methods for UI Context Interactions
+   % Methods for UI Context Interactions (mostly callbacks)
    methods(Access = private)
       % Callback for when user clicks on tree interface
       function uiCMenuClick(obj,m,~)
@@ -1058,7 +1136,7 @@ classdef DashBoard < handle
          % can figure out what level was selected based on the number of
          % unique "counts" of UserData
          switch  unique(cellfun(@(x) numel(x), ...
-               {Tree.SelectedNodes.UserData}))
+               {obj.Tree.SelectedNodes.UserData}))
             case 0  % tank
                obj.qOperations(m.Label,obj.Tank)
             case 1  % animal
@@ -1083,6 +1161,7 @@ classdef DashBoard < handle
          end
       end
       
+      % Initialize UI context menu for tree click interactions
       function treeContextMenu = initUICMenu(obj)
          % INITUICMENU  Initialize UI Context menu. Adds all 'do' methods
          %              to the context options list.
@@ -1090,8 +1169,7 @@ classdef DashBoard < handle
          %  obj.initUICMenu();
          
          treeContextMenu = uicontextmenu(...
-            'Parent',obj.nigelGUI,...
-            'Callback',@obj.prova1);
+            'Parent',obj.nigelGUI);
          m = methods(obj.Tank);
          m = m(startsWith(m,'do'));
          for ii=1:numel(m)
@@ -1100,6 +1178,86 @@ classdef DashBoard < handle
          end
          set(obj.Tree,'UIContextMenu',treeContextMenu);
       end
+      
+      % Callback that toggles the split multi animals UI on or off
+      function toggleSplitMultiAnimalsUI(obj,mode)
+         % TOGGLESPLITMULTIANIMALSUI  Toggle the split multi animals UI on
+         %                            or off.
+         %
+         %  Assignment syntax:
+         %  b.ButtonDownFcn = ...
+         %     {@(~,~,str) obj.toggleSplitMultiAnimalsUI(str),'start'};
+         %
+         %  Where 'start' corresponds to a fixed instantiation of "mode"
+         %  input, as desired for the application.
+         
+         switch mode
+            case 'start'
+               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+               switch  unique(cellfun(@(x) numel(x), {obj.Tree.SelectedNodes.UserData}))
+                  case 0  % tank
+                     idx= find([obj.Tank.Animals.MultiAnimals],1);
+                     obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
+                  case 1  % animal
+                     if obj.Tank.Animals(SelectedItems).MultiAnimals
+                        obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
+                     else
+                        errordlg('This is not a multiAnimal!');
+                        return;
+                     end
+                  case 2  % block
+                     if ~obj.Tank.Animals(SelectedItems(1)).Blocks(SelectedItems(2)).MultiAnimals
+                        errordlg('This is not a multiAnimal!');
+                        return;
+                     end
+               end
+               obj.getChild('Overview').getChild('Tree').SelectionType = 'single';
+               if isvalid(obj.splitMultiAnimalsUI)
+                  obj.splitMultiAnimalsUI.toggleVisibility;
+                  return;
+               else
+                  toggleSplitMultiAnimalsUI(obj,'init');
+               end
+               
+               % TODO disable nodes without multiAnimal flag!
+               %                    [obj.Tree.Root.Children(find([obj.Tank.Animals.MultiAnimals])).Enable] = deal('off');
+            case 'stop'
+               obj.getChild('Overview').getChild('Tree').SelectionType = ...
+                  'discontiguous';
+               % TODO reenable nodes without multiAnimal flag!
+               if any([obj.Tank.Animals.MultiAnimals])
+                  obj.splitMultiAnimalsUI.toggleVisibility;
+               else
+                  delete( obj.splitMultiAnimalsUI.Fig);
+                  delete(obj.splitMultiAnimalsUI);
+               end
+               
+            case 'init'
+               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+               switch  unique(cellfun(@(x) numel(x),...
+                     {obj.Tree.SelectedNodes.UserData}))
+                  case 0  % tank
+                     idx = find([obj.Tank.Animals.MultiAnimals],1);
+                     if idx
+                        obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
+                     end
+                  case 1  % animal
+                     if obj.Tank.Animals(SelectedItems).MultiAnimals
+                        obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
+                     else
+                        errordlg('This is not a multiAnimal!');
+                        return;
+                     end
+                  case 2  % block
+                     if ~obj.Tank.Animals(SelectedItems(1)).Blocks(SelectedItems(2)).MultiAnimals
+                        errordlg('This is not a multiAnimal!');
+                        return;
+                     end
+               end
+               obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(obj);
+         end
+      end
+        
    end
    
    % STATIC/private functions
@@ -1227,6 +1385,50 @@ classdef DashBoard < handle
             otherwise
                error(['nigeLab:' mfilename ':badInputType2'],...
                   'Unexpected input class: %s',class(nigelObj));
+         end
+      end
+      
+      % Initialize Colors struct with default values
+      function col = initColors(figCol,panelCol,onPanelCol,buttonCol,onButtonCol)
+         % INITCOLORS  Initialize colors struct for panel colors
+         %
+         %  col has three fields: 'fig', 'panel', 'onPanel', 'button', and
+         %  'onButton'. They correspond to optional inputs 'figCol',
+         %  'panelCol','onPanelCol','buttonCol', and 'onButtonCol'.
+         %
+         %  col = nigeLab.libs.initColors();
+         %  col = nigeLab.libs.initColors(bg,surf,onsurf);
+         
+         col = struct;
+         
+         if nargin < 1
+            col.fig = nigeLab.defaults.nigelColors('background');
+         else
+            col.fig = figCol;
+         end
+         
+         if nargin < 2
+            col.panel = nigeLab.defaults.nigelColors('surface');
+         else
+            col.panel = panelCol;
+         end
+         
+         if nargin < 3
+            col.onPanel = nigeLab.defaults.nigelColors('onsurface');
+         else
+            col.onPanel = onPanelCol;
+         end
+         
+         if nargin < 4
+            col.button = nigeLab.defaults.nigelColors(2);
+         else
+            col.button = buttonCol;
+         end
+         
+         if nargin < 5
+            col.onButton = nigeLab.defaults.nigelColors(2.1);
+         else
+            col.onButton = onButtonCol;
          end
       end
    end

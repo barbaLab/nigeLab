@@ -49,7 +49,12 @@ switch S(1).type
       switch numel(subs)
          % If only 1 subscript, then it indexes Animals
          case 1
-            s = substruct('()',subs);
+            % Unless it is a matrix reference
+            if size(subs{1},2) > 1
+               s = substruct('{}',subs);
+            else
+               s = substruct('()',subs);
+            end
             varargout{1} = subsref(tankObj.Animals,s);
          case 2
             s = substruct('{}',subs);

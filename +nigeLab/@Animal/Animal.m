@@ -297,6 +297,11 @@ classdef Animal < matlab.mixin.Copyable
          %          returns true. If animalObj is array, then returns an
          %          array of true or false for each element of animalObj.
          
+         if numel(animalObj) == 0
+            tf = true;
+            return;
+         end
+         
          if ~isscalar(animalObj)
             tf = false(size(animalObj));
             for i = 1:numel(animalObj)

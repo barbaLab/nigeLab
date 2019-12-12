@@ -1,10 +1,10 @@
-function pars = Notifications(paramName)
-%% NOTIFICATIONS     Default notifications parameters for nigeLab
+function varargout = Notifications(varargin)
+% NOTIFICATIONS     Default notifications parameters for nigeLab
 %
-%  pars = nigeLab.defaults.NOTIFICATIONS(); % returns full struct
-%  pars = nigeLab.defaults.NOTIFICATIONS(paramName); % returns single param
-%
-% By: Max Murphy  v1.0  2019-07-11  Original version (R2017a)
+%  pars = nigeLab.defaults.Notifications(); Returns full struct
+%  pars = nigeLab.defaults.Notifications('paramName'); Returns single param
+%  [par1,par2,...] = nigeLab.defaults.Notifications('pName1','pName2',...);
+%  --> Return multiple specific parameter names
 
 %%
 pars = struct;
@@ -19,8 +19,9 @@ pars.TagString.Vars = {'blockObj.Meta.AnimalID',...
 %               Animal.Block operation TagDelim progress
 
 
-
-pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; % regexp for command window updates
+% regexp for command window updates
+pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; 
+% Command window update variables
 pars.NotifyString.Vars = {'blockObj.Meta.AnimalID',...
                           'blockObj.Meta.RecID'};
 %                 Animal.Block -> operation : progress
@@ -28,19 +29,28 @@ pars.NotifyTimer = 0.5; % timer period (seconds) for remote monitor checks
 pars.UseParallel=0;
 pars.MinIncrement = 5;
 
-pars.FixedProgBarHeightNormUnits = 0.12; % Fixed "normalized" prog bar height
+% Fixed "normalized" prog bar height
+pars.FixedProgBarHeightNormUnits = 0.12; 
 
-
-
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Error checking and assignment
 if nargin > 0
-   if isfield(pars,paramName)
-      pars = pars.(paramName);
-   else
-      warning('%s is not a field. Returning full parameters struct.',paramName);
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),varargin{i});
+      if sum(idx) < 1
+         warning('Could not find parameter: %s (returned [])',varargin{i});
+         varargout{i} = [];
+      elseif sum(idx) > 1
+         warning('Parameter is ambiguously named: %s (returned [])',varargin{i});
+         varargout{i} = [];
+      else
+         varargout{i} = pars.(f{idx});
+      end
    end
+else
+   varargout = {pars};
+      
 end
 
 end

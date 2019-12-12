@@ -28,7 +28,7 @@ minPositionRequirements = ...
 % For each element, the minimum to get at least "pixDimsMin" pixels in that
 % dimension will be obtained by taking the max. between these two; if the
 % normDimsq exceeds in each case then it will be selected.
-normDims = max(minNormHeight,normDimsq);
+normDims = max(minPositionRequirements,normDimsq);
 
    % Helper function to get pixel position
    function pos = getPosition(obj)
