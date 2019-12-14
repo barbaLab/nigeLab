@@ -1,9 +1,7 @@
 function flag = parseProbeNumbers(blockObj)
-%% PARSEPROBENUMBERS    Function to parse probe numbers depending on recType
+% PARSEPROBENUMBERS    Function to parse probe numbers depending on recType
 %
 %  flag = blockObj.PARSEPROBENUMBERS;
-%
-% By: Max Murphy  v1.0  2019/01/07  Original version (R2017a)
 
 %% PARSE BASED ON RECORDING TYPE
 flag = false;
@@ -27,16 +25,17 @@ switch blockObj.RecType
             blockObj.Channels(iCh).custom_channel_name);
       end
       
-      
-   case 'TDT'
+   case {'TDT','nigelBlock'}
       for iCh = 1:numel(blockObj.Channels)
          blockObj.Channels(iCh).probe = blockObj.Channels(iCh).port_number;
          [blockObj.Channels(iCh).chNum,...
             blockObj.Channels(iCh).chStr] = getChannelNum(...
             blockObj.Channels(iCh).custom_channel_name);
       end
+      
    case 'Matfile'
       nigeLab.utils.cprintf([255,88,0]./255, 'Matfile detected!\nBe sure you handled everything correctly in your custom load function!\n');
+      
    otherwise
       warning('%s is not a supported RecType.',blockObj.RecType);
       return;

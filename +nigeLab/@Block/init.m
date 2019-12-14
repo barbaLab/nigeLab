@@ -1,15 +1,11 @@
 function flag = init(blockObj)
-%% INIT Initialize BLOCK object
+% INIT Initialize BLOCK object
 %
 %  b = nigeLab.Block();
 %
 %  Note: INIT is a protected function and will always be called on
 %        construction of BLOCK. Returns a "true" flag if executed
 %        successfully.
-%
-%  By: Max Murphy       v1.0  08/25/2017  Original version (R2017a)
-%      Federico Barban  v2.0  07/08/2018
-%      MAECI 2018       v3.0  11/28/2018
 
 %% INITIALIZE PARAMETERS
 flag = false;
@@ -52,7 +48,8 @@ if ~blockObj.getSaveLocation(blockObj.AnimalLoc)
 end
 
 %% EXTRACT HEADER INFORMATION
-if ~blockObj.initChannels
+header = blockObj.parseHeader();
+if ~blockObj.initChannels(header)
    warning('Could not initialize Channels structure headers properly.');
    return;
 end
@@ -96,23 +93,7 @@ end
 flag = blockObj.linkToData(true);
 if ~flag
    nigeLab.utils.cprintf('UnterminatedStrings',...
-      'Could not successfully link %s to data.',blockObj.Name);
+      'Could not successfully link %s to all data.',blockObj.Name);
 end
-   
-   
-   function printWarningLoop(nsec)
-      % PRINTWARNINGLOOP  Warning function to count down before conversion
-      if nargin < 1
-         nsec = 10;
-      end
-      fprintf(1,' \n');
-      nigeLab.utils.cprintf('Blue','-->\tRunning CONVERSION in ');
-      nigeLab.utils.cprintf('UnterminatedStrings','%02gs\n',nsec);
-      pause('on');
-      for i = nsec:-1:1
-         nigeLab.utils.cprintf('UnterminatedStrings','\b\b\b\b%02gs\n',i);
-         pause(1);
-      end
-   end
 
 end

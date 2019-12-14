@@ -61,6 +61,5 @@ switch blockObj.RecType
 end
 
 %% Update status and save
-blockObj.updateStatus('Raw',true);
 blockObj.save;
 end

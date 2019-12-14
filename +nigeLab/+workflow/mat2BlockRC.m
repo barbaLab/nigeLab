@@ -12,8 +12,10 @@ paths = blockObj.getFolderTree(paths);
 for iCh = 1:blockObj.NumChannels
    chName = blockObj.Channels(iCh).chStr;
    pName = num2str(blockObj.Channels(iCh).probe);
-   diskFile = (sprintf(strrep(paths.Raw.file,'\','/'),pName,chName));
-   blockObj.Channels(iCh).Raw = nigeLab.libs.DiskData('Hybrid',diskFile,'name','data');
+   diskFile = nigeLab.utils.getUNCPath(...
+      (sprintf(strrep(paths.Raw.file,'\','/'),pName,chName)));
+   blockObj.Channels(iCh).Raw = nigeLab.libs.DiskData(...
+      'Hybrid',diskFile,'name','data');
 end
 blockObj.linkToData;
 flag = true;

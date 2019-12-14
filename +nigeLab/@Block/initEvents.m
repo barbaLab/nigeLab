@@ -50,7 +50,7 @@ for ii = 1:nEventTypes
    % k just accounts for the case that "special" 'Trial' Named Event was
    % incorporated for this Field
    for u = (1 + k):(n + k)
-      blockObj.Events.(uF{ii})(u).name = blockObj.EventPars.Name{idx(u-k)};
+      blockObj.Events.(uF{ii})(u).name = blockObj.Pars.Event.Name{idx(u-k)};
       blockObj.Events.(uF{ii})(u).status = false;
    end
 end

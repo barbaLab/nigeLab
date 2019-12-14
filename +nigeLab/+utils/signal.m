@@ -58,10 +58,25 @@ classdef signal
          [sig.Field,sig.FieldType,sig.Source,sig.Name,sig.SubGroup] = sig.enum(field,fieldType,source,name,subgroup);
       end
       
-      % Check is sig belongs to a group of signals or cell array or char
+      % Check if sig belongs to a group of signals or cell array or char
       % vector with for a given property, 'toMatch'
-      function [idx,n] = belongsTo(sig,toCompare,toMatch)
+      function [idx,n] = belongsTo(varargin)
          % BELONGSTO  Checks if sig belongs to 'toCompare' using 'toMatch'
+         %
+         %  [idx,n] = belongsTo(sig,toCompare,toMatch);
+         %
+         %  toCompare  --  nigeLab.utils.signal or char array
+         %  toMatch  --  Property "to match" (char array)
+         %
+         %  toCompare and toMatch must always be the last two inputs
+         
+         if numel(varargin) < 3
+            error('Must provide at least 3 input arguments.');
+         end
+         
+         toCompare = varargin{end-1};
+         toMatch = varargin{end};
+         varargin((end-1):end) = [];
          
          if isa(toCompare,'nigeLab.utils.signal')
             toCompare = {toCompare.(toMatch)};
@@ -69,14 +84,16 @@ classdef signal
             toCompare = {toCompare};
          end
          
-         if numel(sig) > 1
-            idx = false(size(sig));
-            for i = 1:numel(sig)
-               idx(i) = belongsTo(sig(i),toCompare,toMatch);
+         if numel(varargin) > 1
+            idx = false(size(varargin));
+            for i = 1:numel(varargin)
+               idx(i) = belongsTo(varargin{i},toCompare,toMatch);
             end
             n = sum(idx);
             return;
          end
+         
+         sig = varargin{1};
          
          if any(strcmpi(sig.(toMatch),toCompare))
             idx = true;

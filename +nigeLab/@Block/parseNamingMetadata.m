@@ -1,5 +1,5 @@
 function meta = parseNamingMetadata(blockObj)
-%% PARSENAMINGMETADATA  Parse metadata from name of block object
+% PARSENAMINGMETADATA  Parse metadata from name of block object
 %
 %  meta = PARSENAMINGMETADATA(blockObj);
 %
@@ -16,12 +16,13 @@ function meta = parseNamingMetadata(blockObj)
 %                          recording session.
 %
 %  This method also updates the blockObj.Meta field.
-%
-% By: Max Murphy & Fred Barban MAECI Collaboration 2018
 
 %%
 % Parse name and extension. "nameParts" contains parsed variable strings:
-[~,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
+[pname,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
+if strcmp(blockObj.FileExt,blockObj.FolderIdentifier)
+   [~,fName,~] = fileparts(pname);  % Go back one level
+end
 nameParts=strsplit(fName,[blockObj.Delimiter {'.'}]);
 
 % Parse variables from defaults.Block "template," which match delimited

@@ -4,12 +4,11 @@ function flag = linkProbe(blockObj)
 %  b = nigeLab.Block;
 %  flag = LINKPROBE(b);
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+% flag returns true if blockObj.Probes is empty.
 
 %% PARSE PROBE INFORMATION
+blockObj.checkCompatibility('Probes');
+
 % Get probe ane notes info structs
 probe = nigeLab.defaults.Probe();
 blockObj.updateParams('Probe');

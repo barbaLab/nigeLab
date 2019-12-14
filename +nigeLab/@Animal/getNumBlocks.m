@@ -1,11 +1,16 @@
 function N = getNumBlocks(animalObj)
-%% GETNUMBLOCKS   Just makes it easier to count all blocks (common to TANK)
+% GETNUMBLOCKS   Just makes it easier to count all blocks (common to TANK)
 %
 %  N = animalObj.GETNUMBLOCKS;
-%
-% By: Max Murphy v1.0   2019-07-09  Original version (R2017a)
 
 %%
+if numel(animalObj) > 1
+   N = nan(size(animalObj));
+   for i = 1:numel(animalObj)
+      N(i) = getNumBlocks(animalObj(i));
+   end
+   return;
+end
 N = numel(animalObj.Blocks);
 
 

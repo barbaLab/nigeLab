@@ -18,7 +18,7 @@ REQUIRED_FIELD_NAMES = {'DigIO','ScoredEvents','Raw','CAR','Spikes','Clusters'};
 blockObj.checkCompatibility(REQUIRED_FIELD_NAMES);
 
 %% Get properties of interest
-p = blockObj.BlockPars;
+p = blockObj.PathExpr;
 recFile = blockObj.RecFile;
 animalLoc = blockObj.AnimalLoc;
 
@@ -63,22 +63,21 @@ for iF = 1:numel(F)
    if ismember(dtype,{'Beam','Press','Paw'})
       in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'data');
       data = in.data;
-      save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
       if strcmpi(dtype,'Paw')
          save(nigeLab.utils.getUNCPath(fullfile(block_out,p.VidStreams.Folder,...
             sprintf(p.VidStreams.File,'Front-Paw_Likelihood-Marker',1,'mat'))),'data','-v7.3');
+      else
+         save(fullfile(f_out,sprintf(p.DigIO.File,'DigIn',dtype)),'data','-v7.3');
       end
+      
    elseif strcmpi(dtype,'Scoring')
       in = load(nigeLab.utils.getUNCPath(fullfile(F(iF).folder,F(iF).name)),'behaviorData');
       if ~isfield(in,'behaviorData')
          error('Weird "scoring" file. Should have behaviorData. Check configuration.');
       else
-         [fname,data] = nigeLab.workflow.behaviorData2BlockEvents(in.behaviorData,...
+         [fname,X] = nigeLab.workflow.behaviorData2BlockEvents(in.behaviorData,...
             fullfile(block_out,p.ScoredEvents.Folder),...
             p.ScoredEvents.File);
-         for i = 1:numel(fname)
-            out = nigeLab.libs.DiskData('Event',fname{i},data{i});
-         end
       end
       
    elseif strcmpi(dtype,'VideoAlignment')
@@ -93,14 +92,25 @@ for iF = 1:numel(F)
 end
 
 % After 'Header' has been made
-if exist('tmpVidStart','var')~=0
-   out_name =  nigeLab.utils.getUNCPath(fullfile(block_out,...
-      p.ScoredEvents.Folder,...
-      sprintf(p.ScoredEvents.File,'Header')));
-   out = nigeLab.libs.DiskData('Event',out_name,'access','w');
-   out.data(1,4) = tmpVidStart;
-   lockData(out);
+if exist('tmpVidStart','var')==0
+   tmpVidStart = 0;
 end
+
+for i = 1:numel(fname)
+   data = X{i};
+   if i > 1 % For everything but 'Header'
+      data(:,4) = data(:,4) - tmpVidStart; % Remove video offset from times
+   end
+   out = nigeLab.libs.DiskData('Event',fname{i},data);
+end
+   
+out_name =  nigeLab.utils.getUNCPath(fullfile(block_out,...
+   p.ScoredEvents.Folder,...
+   sprintf(p.ScoredEvents.File,'Header')));
+out = nigeLab.libs.DiskData('Event',out_name,'access','w');
+out.data(1,4) = tmpVidStart;
+lockData(out);
+
 
 %% Move filtered and raw streams
 % Raw

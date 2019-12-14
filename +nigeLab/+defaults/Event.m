@@ -27,6 +27,10 @@ pars = struct;
 %    'Beam';            % 10) Reach beam break
 %    'Nose';            % 11) Nose-poke beam break
 %    'Epoch';           % 12) Onsets mid-trial epochs
+%    'Reach';           % 13) 
+%    'Grasp';           % 14)
+%    'Support';         % 15)
+%    'Complete';        % 16)
 %    };           
 pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with different timestamps needs its own 'Events' element
    'Reach';       % 1)
@@ -49,6 +53,10 @@ pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with 
 %    'DigEvents';       % 10) All beam breaks (Pellets, Beam, Nose) could be 
 %    'DigEvents';       % 11) 'AnalogIO' as well?
 %    'DigEvents';       % 12) Could be 'Notes' ?
+%    'ScoredEvents';    % 13)
+%    'ScoredEvents';    % 14)
+%    'ScoredEvents';    % 15)
+%    'ScoredEvents';    % 16)
 %    };
 
 pars.Fields = {...   % KUMC: "RC" project (MM)
@@ -63,9 +71,48 @@ pars.Fields = {...   % KUMC: "RC" project (MM)
 % any unique entry to 'pars.Fields'; "extra" keys are okay. Any data that
 % will have video scoring must have at least one key with the 'manual' type
 % included in 'pars.Fields'.
-pars.EventType = struct(...
-   'ScoredEvents','manual',...
-   'DigEvents','auto');
+pars.EventType = struct(... % KUMC: "RC" project (MM)
+   'ScoredEvents','manual');
+
+% pars.EventType = struct(... % Example A
+%    'ScoredEvents','manual',...
+%    'DigEvents','auto',...
+%    'Stim','auto');
+
+% For automatic detection
+pars.TrialDetectionInfo = struct(... % For sync using parsed 'Paw_Likelihood'
+   'Field','VidStreams',...
+   'Source','Front',... % "source camera" (unused for "non-VidStreams")
+   'Name','Paw_Likelihood',...
+   'Debounce',0.250,...  % Debounce time (seconds)
+   'Threshold',0.6,...   % Threshold for ( > value) to HIGH
+   'Type','Rising'); % Can be 'Rising', 'Falling', 'All' (edge transition type)
+                     % Can also be 'Level' for analog value changes in discrete steps
+
+pars.EventDetectionType = [];
+pars.MaxTrialDistance = 1.5; % Maximum time between within-trial events
+
+% pars.TrialDetectionInfo = struct(... % For sync using LED
+%    'Field','DigIO',...
+%    'Name','TrialRunning',...
+%    'Source',[],...
+%    'Debounce',0.250,... % debounce time (seconds)
+%    'Threshold',0.5,...  % threshold for > value --> HIGH
+%    'Type','Rising');
+% pars.EventDetectionType = {... % Example A (RHS)
+%    'Rising';    % 1)
+%    'Rising';    % 2) 
+%    'Rising';    % 3)
+%    'Falling';   % 4)
+%    'Falling';   % 5)
+%    'Rising';    % 6)
+%    'Falling';   % 7)
+%    'Falling';   % 8)
+%    'Rising';    % 9)
+%    'Falling';   % 10)
+%    'Falling';   % 11)
+%    'Level';     % 12) (skip 13-16 because not 'auto' field)
+%    };
 
 %% Error parsing (do not change)
 % Check that number of elements of Name matches that of Fields
@@ -83,11 +130,22 @@ if ~isempty(idx)
 end
 
 % Check that entries of pars.EventType are valid
+nAuto = 0;
 for iF = 1:numel(f)
    if ~ismember(lower(pars.EventType.(f{iF})),{'manual','auto'})
       error('Bad EventType (%s): ''%s''. Must be ''manual'' or ''auto''.',...
          f{iF},pars.EventType.(f{iF}));
+   elseif strcmpi(pars.EventType.(f{iF}),'auto')
+      nAuto = nAuto + sum(ismember(pars.Fields,f{iF}));
    end
+end
+
+% Check to make sure that there are the right number of elements in
+% 'EventDetectionType'
+if numel(pars.EventDetectionType) ~= nAuto
+   error(['Invalid number of elements of pars.EventDetectionType (%g): '...
+          'should be %g based on pars.Fields + pars.EventType'],...
+          numel(pars.EventDetectionType));
 end
 
 %% If a specific parameter was requested, return only that parameter

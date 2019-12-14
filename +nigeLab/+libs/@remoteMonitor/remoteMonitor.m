@@ -1,276 +1,341 @@
 classdef remoteMonitor < handle
-    %REMOTEMONITOR Summary of this class goes here
-    %   Detailed explanation goes here
-    
-    properties
-        qPanel
-        
-        height = 20;
-        width
-        hoff
-        voff
-        
-        progtimer
-        bars
-        
-        pars
-    end
-    
-    events
-       jobCompleted 
-    end
-    
-    methods
-        function obj = remoteMonitor(panel)
+   %REMOTEMONITOR  Class to monitor changes in remote jobs and issue an
+   %               event ('jobCompleted') whenever the job reaches its
+   %               'Complete
+   %
+   %  monitorObj = nigeLab.libs.remoteMonitor();  Goes in current figure
+   %  monitorObj = nigeLab.libs.remoteMonitor(nigelPanelObj);
+   %
+   %  nigelPanelObj  --  A uipanel, nigeLab.libs.nigelPanel, or figure
+   
+   properties
+      qPanel   nigeLab.libs.nigelPanel     % Graphics container for "queue" panel
+      bars     nigeLab.libs.nigelProgress  % "progress" bars
+      listeners  event.listener  % Array of listener handles
+   end
+   
+   properties (Access = private)
+      runningJobs = 0         % Number of running jobs
+      progtimer   timer       % Timer for checking progress periodically
+      pars        struct      % Parameters struct
+   end
+   
+   events
+      jobCompleted  % Event issued when progress bar hits 100%
+   end
+   
+   methods (Access = ?nigeLab.libs.DashBoard)
+      % Class constructor for nigeLab.libs.remoteMonitor object handle
+      function monitorObj = remoteMonitor(tankObj,nigelPanelObj)
+         %REMOTEMONITOR  Class to monitor changes in remote jobs and issue 
+         %               an event ('jobCompleted') whenever the job reaches
+         %               its 'Complete' state (parallel.Task.State ==
+         %               'Complete')
+         %
+         %  monitorObj = nigeLab.libs.remoteMonitor(nigelPanelObj);
+         %
+         %  tankObj  --  nigeLab.Tank object to monitor
+         %  nigelPanelObj -- A uipanel, nigeLab.libs.nigelPanel, or 
+         %                   figure handle
+         
+         if nargin < 2
+            nigelPanelObj = gcf;
+         end
+         
+         % Handle different input classes
+         if isa(nigelPanelObj,'nigeLab.libs.nigelPanel') % nigelPanel
+            monitorObj.qPanel = nigelPanelObj;
             
-            % qPanle needs to be a nigelPanel
-            if regexp(class(panel),'nigelPanel[ (\w*)]')
-                obj.qPanel = panel;
-            elseif regexp(class(panel),'matlab.ui.container.Panel')
-                p=nigeLab.libs.nigelPanel(panel,...
-                    'String','Remote Monitor','Tag','monitor','Position',[0 0 1 1],...
-                    'PanelColor',nigeLab.defaults.nigelColors('surface'),...
-                    'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
-                    'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-                obj.qPanel = p;
-            elseif regexp(class(panel),'matlab.ui.Figure')
-                p=nigeLab.libs.nigelPanel(panel,...
-                    'String','Remote Monitor','Tag','monitor','Position',[0 0 1 1],...
-                    'PanelColor',nigeLab.defaults.nigelColors('surface'),...
-                    'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
-                    'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
-                obj.qPanel = p;
-            else
-               error('Wrong input argoument. Panel needs to be a figure a ui panel or a nigelPanel'); 
-            end
+         elseif isa(nigelPanelObj,'matlab.ui.container.Panel') % uipanel
+            p=nigeLab.libs.nigelPanel(nigelPanelObj,...
+               'String','Remote Monitor',...
+               'Tag','monitor','Position',[0 0 1 1],...
+               'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+               'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+               'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+            monitorObj.qPanel = p;
             
-            % Define figure size and axes padding for the single bar case
-            pos = obj.qPanel.getPixelPosition();
-            obj.width = pos(3)*0.85;
-            obj.hoff = pos(3)*0.05;
-            obj.voff = pos(4)*0.88;
+         elseif isa(nigelPanelObj,'matlab.ui.Figure') % Figure
+            p=nigeLab.libs.nigelPanel(nigelPanelObj,...
+               'String','Remote Monitor',...
+               'Tag','monitor','Position',[0 0 1 1],...
+               'PanelColor',nigeLab.defaults.nigelColors('surface'),...
+               'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+               'TitleColor',nigeLab.defaults.nigelColors('onprimary'));
+            monitorObj.qPanel = p;
             
-            obj.pars = nigeLab.defaults.Notifications();
-            
-            
-            obj.progtimer = timer('Name',sprintf('%s_timer','remoteMonitor'),...
-                'Period',obj.pars.NotifyTimer,...
-                'ExecutionMode','fixedSpacing',...
-                'TimerFcn',@(~,~)obj.updateRemoteMonitor);
-            
-            cc = {'idx'
-                  'job'
-                  'starttime'
-                  'progaxes'
-                  'progpatch'
-                  'progtext'
-                  'statustext'
-                  'proglabel'
-                  'X'
-                  'containerPanel'
-                  'UserData'}';
-              cc{2,1}={};
-              obj.bars = struct(cc{:});
-        end
-        
-        function delete(obj)
-            stop(obj.progtimer);
-            delete(obj.progtimer);
-            delete(obj);
-        end
-        
-        function bar = addBar(monitorObj,name,job,UserData)
-            nBars = numel(monitorObj.bars);
-            idx = nBars+1;
-            
-            bar.idx = idx;
-            if nargin < 3
-                job = [];
-            end
-            bar.job = job;
-            
-            if nargin < 4
-                UserData = [];
-            end
-            bar.UserData=UserData;
-            
-            % Set starting time reference
-            if ~isfield(bar, 'starttime') || isempty(bar.starttime)
-                bar.starttime = clock;
-            end
-            
-            %%%% Design and plot the progressbars
-            bar.progaxes = axes( ...
-                'Units','pixels',...
-                'Position', [0 0 monitorObj.width monitorObj.height], ...
-                'XLim', [0 1], ...
-                'YLim', [0 1], ...
-                'Box', 'off', ...
-                'ytick', [], ...
-                'xtick', [],...
-                'UserData',idx);
-            
-            bar.progpatch = patch(bar.progaxes, ...
-                'XData', [0.5 0.5 0.5 0.5], ...
-                'YData', [0   0   1   1  ],...
-                'FaceColor',nigeLab.defaults.nigelColors(1));
-            
-            patch(bar.progaxes, ...
-                'XData', [0 0.5 0.5 0], ...
-                'YData', [0 0   1   1],...
-                'FaceColor',nigeLab.defaults.nigelColors('surface'),...
-                'EdgeColor',nigeLab.defaults.nigelColors('surface'));
-            
-           
-            bar.progtext = text(bar.progaxes,0.99, 0.5, '', ...
-                'HorizontalAlignment', 'Right', ...
-                'FontUnits', 'Normalized', ...
-                'FontSize', 0.7,...
-                'FontName','Droid Sans');            
-            set(bar.progtext, 'String', '0%');    
-            
-            bar.statustext = text(bar.progaxes,0.52, 0.5, '', ...
-                'HorizontalAlignment', 'Left', ...
-                'FontUnits', 'Normalized', ...
-                'FontSize', 0.7,...
-                'FontName','Droid Sans');            
-            set(bar.statustext, 'String', '');
-            
-            bar.proglabel = text(bar.progaxes,0.01, 0.5, '', ...
-                'HorizontalAlignment', 'Left', ...
-                'FontUnits', 'Normalized', ...
-                'FontSize', 0.7,...
-                'Color',nigeLab.defaults.nigelColors('onsurface'),...
-                'FontName','Droid Sans');
-            set(bar.proglabel,'String',name);
-            
-            %%%% Design and plot the cancel button
+         else
+            error(['nigeLab:' mfilename ':badInputType2'],...
+               ['Input nigelPanelObj needs to be one of:\n',...
+                '--> matlab.ui.figure\n', ...
+                '--> matlab.ui.container.Panel\n' ...
+                '--> nigeLab.libs.nigelPanel\n'
+                '(currently: %s)'],class(nigelPanelObj));
+         end
+         
+         % Define figure size and axes padding for the single bar case
+         monitorObj.pars = nigeLab.defaults.Notifications();
+         monitorObj.progtimer = timer(...
+            'Name',sprintf('%s_timer','remoteMonitor'),...
+            'Period',monitorObj.pars.NotifyTimer,...
+            'ExecutionMode','fixedSpacing',...
+            'TimerFcn',@(~,~)monitorObj.updateRemoteMonitor);
 
-            XButton = uicontrol('Style','pushbutton',...
-                'Units','pixels',...
-                'Position', [monitorObj.width + 5 0 monitorObj.height monitorObj.height],...
-                'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
-                'ForegroundColor',nigeLab.defaults.nigelColors(3),...
-                'String','X');
+         monitorObj.bars = nigeLab.libs.nigelProgress(0);
+         
+         for iA = 1:numel(tankObj.Animals)
+            a = tankObj.Animals(iA);
+            for iB = 1:numel(a.Blocks)
+               b = a.Blocks(iB);
+               monitorObj.bars = [monitorObj.bars, ...
+                  monitorObj.addBar(b,[iA,iB])];
+            end
+         end
+      end
 
-%             ax = axes( ...
-%                 'Units','pixels',...
-%                 'Position', [monitorObj.width + 5 0 monitorObj.height monitorObj.height]);
-%             plot(ax,.5,.5,'x','MarkerSize',15,'LineWidth',3.5,...
-%          'Color',nigeLab.defaults.nigelColors(3))
-%             set(ax, ...
-%                 'XLim', [0 1], ...
-%                 'YLim', [0 1], ...
-%                 'Box', 'off', ...
-%                 'Color',nigeLab.defaults.nigelColors(0.1),...
-%                 'ytick', [], ...
-%                 'xtick', [],...
-%                 'UserData',idx);
-%             
-%             ax.XAxis.Visible='off';
-%             ax.YAxis.Visible='off';
-            bar.X = XButton;
-            
-            
-            
-            
-            %%%% enclose everything in a panel
-            % this is convenient for stacking purposes
-            pos = [monitorObj.hoff monitorObj.voff-monitorObj.height*4/3*(idx-1) monitorObj.width + 5 + monitorObj.height monitorObj.height];
-            pp = uipanel('BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
-                'Units','pixels','Position',pos,'BorderType','none');
-            bar.progaxes.Parent=pp;
-            bar.X.Parent=pp;
-            bar.containerPanel = pp;
-            %%% Nest the panel in in the nigelpanel
-            monitorObj.qPanel.nestObj(bar.containerPanel,sprintf('ProgressBar_%02d',idx));
-            
-            %%% store the bars in the remoteMonitor obj
-            monitorObj.bars(idx)=bar;
-            set(XButton,'Callback',{@(~,~,bar)monitorObj.deleteBar(bar),bar})
-            jObj = nigeLab.utils.findjobj(XButton);
-            jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
-            jObj.setBorderPainted(false);
-            
-            %%% if first bar we need to start timer
-            if strcmp(monitorObj.progtimer.Running,'off')...
-               start(monitorObj.progtimer); 
+      % Destroy timers when object is deleted
+      function delete(monitorObj)
+         % DELETE  Destroy the object and its timers
+         %
+         %  monitorObj.delete;
+         
+         % Delete the timer
+         if ~isempty(monitorObj.progtimer)
+            if isvalid(monitorObj.progtimer)
+               stop(monitorObj.progtimer);
+               delete(monitorObj.progtimer);
             end
-        end
-        
-        function updateRemoteMonitor(monitorObj)
-            try
-            for ii=1:numel(monitorObj.bars)
-                bar = monitorObj.bars(ii);
-                if isempty(bar.job)
-                    if strcmp(get(bar.statustext, 'String'),'Done.')
-                        pct = 100;
-                    else
-                        pct = nan;
-                    end
-                else
-                    [pct,str] = nigeLab.utils.jobTag2Pct(bar.job);
-                end
-                % Get the offset of the progressbar from the left of the panel
-                xStart = bar.progpatch.XData(1);
-                
-                % Compute how far the bar should be filled based on the percent
-                % completion, accounting for offset from left of panel
-                xStop = xStart + (1-xStart) * (pct/100);
-                
-                % Redraw the patch that colors in the progressbar
-                bar.progpatch.XData = ...
-                    [xStart, xStop, xStop, xStart];
-                bar.progtext.String = ...
-                    sprintf('%.3g%%',pct);
-%                 bar.proglabel.String = str;
-                drawnow;
-                
-                % If the job is completed, then run the completion method
-%                 if pct == 100
-%                     monitorObj.barCompleted;
-%                 end
-                
+         end
+         
+         % Delete all bars
+         if ~isempty(monitorObj.bars)
+            for bar = monitorObj.bars
+               if isvalid(bar)
+                  delete(bar);
+               end
             end
-            catch
-                ...
+         end
+         
+         % Delete all associated listeners
+         if ~isempty(monitorObj.listeners)
+            for lh = monitorObj.listeners
+               if isvalid(lh)
+                  delete(lh);
+               end
             end
-        end
-        
-        function updateStatus(moitorObj,bar,st)
-             set(bar.statustext, 'String', st);
-        end
-        
-        function deleteBar(monitorObj,bar)
+         end
+         
+      end
+      
+      % Starts the bar based on some input selection index
+      function bar = startBar(monitorObj,name,sel,job)
+         % STARTBAR  Starts the bar based on some input selection index and
+         %           assigns a job as well. 
+         %
+         %  Returns a handle to the bar object
+         
+         if nargin < 4
+            job = [];
+         end
+         
+         % Increment counter of running jobs
+         monitorObj.runningJobs = monitorObj.runningJobs + 1;
+         
+         bar = monitorObj.getBar(sel);
+         bar.Progress = 0;
+         bar.Name = name;
+         bar.job = job;
+         bar.BarIndex = monitorObj.runningJobs;
+         
+         jObj = nigeLab.utils.findjobj(getChild(bar,'X'));
+         jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+         jObj.setBorderPainted(false);
+         
+         %%% if first bar we need to start timer
+         if strcmp(monitorObj.progtimer.Running,'off')
+            start(monitorObj.progtimer);
+         end
+         
+      end
+      
+      % Remove a nigeLab.libs.nigelProgress object from visual queue.
+      % Acts as the opposite of "STARTBAR" method.
+      function stopBar(monitorObj,bar,evt)
+         % STOPBAR  function to remove a nigeLab.libs.nigelProgress bar
+         %            Acts as the opposite of "STARTBAR" method.
+         %
+         %  monitorObj.removeBar(nigelProgressObj);
+         %
+         %  bar  -- nigeLab.libs.nigelProgress "progress bar" to remove
+         
+         if nargin < 3
+            evt = [];
+         end
+         
+         % If it came from listener callback, then it was a child of
+         % nigelProgressBarObj.
+         if ~isa(bar,'nigeLab.libs.nigelProgress')
+            bar = bar.UserData;
+         end
+         
+         if strcmp(monitorObj.progtimer.Running,'on')
             stop(monitorObj.progtimer); % to prevent graphical updates errors
+         end
+         
+         % If this was from clicking red 'X', it means the method was
+         % canceled in the middle.
+         if ~isempty(evt)
+            % Then it was listener callback so cancel
+            notify(bar,'JobCanceled');
+         end
+         
+         % Decrement the appropriate .BarIndex property:
+         monitorObj.bars = monitorObj.bars - bar;
+         
+         % Reduce number of running jobs and if there are still jobs
+         % running, start the timer again
+         monitorObj.runningJobs = monitorObj.runningJobs - 1;
+         monitorObj.barCompleted(bar);
+         
+         % Restart the progress timer if there are still bars
+         if monitorObj.runningJobs > 0
+            if strcmp(monitorObj.progTimer.Running,'off')
+               start(monitorObj.progtimer);
+            end
+         end
+      end
+         
+      % Updates the remote monitor with current job status
+      function updateRemoteMonitor(monitorObj)
+         % UPDATEREMOTEMONITOR  Update the remote monitor with current job
+         %                      status
+         %
+         %  monitorObj.updateRemoteMonitor();  
+         %
+         %  --> This method should be periodically "pinged" by the TimerFcn
+         %      so that the state of the remote job can be updated.
+         
+         for bar = monitorObj.bars
+            if ~bar.IsRemote
+               if strcmpi(bar.getChild('status','String'),'Done.')
+                  pct = 100;
+               else
+                  return;
+               end
+            else
+               pct = nigeLab.utils.jobTag2Pct(bar.job);
+            end
+            % Redraw the patch that colors in the progressbar
+            bar.setState(pct);
             
-            ind =  bar.progaxes.UserData;
-            delete(bar.containerPanel);
-            for jj=ind+1:numel(monitorObj.bars)
-                monitorObj.bars(jj).progaxes.UserData= jj-1;
-                pos = [monitorObj.hoff monitorObj.voff-monitorObj.height*4/3*(jj-2) monitorObj.width + 5 + monitorObj.height monitorObj.height];
-                monitorObj.bars(jj).containerPanel.Position = pos;
+            % If the job is completed, then run the completion method
+            if pct == 100
+               monitorObj.barCompleted(bar);
             end
-            try
-                cancel(bar.job);
-                delete(bar.job);
-            end
-            monitorObj.bars(ind) = [];
             
-            if numel(monitorObj.bars) > 0
-                start(monitorObj.progtimer);
-            end
-        end
-        
-        function barCompleted(monitorObj,bar)
-            nigeLab.sounds.play('bell',1.5);
-            evtData = nigeLab.evt.jobCompleted(bar);
-            notify(monitorObj,'jobCompleted',evtData);
-            monitorObj.updateStatus(bar,'Done.')
-        end
-        
+         end
 
-    end
-    
+      end
+
+      
+   end
+   
+   % Private methods accessed internally
+   methods (Access = private)
+      % Adds a nigeLab.libs.nigelBar progress bar that is used in
+      % combination with the remoteMonitor to track processing status
+      function bar = addBar(monitorObj,blockObj,sel)
+         % ADDBAR  Add a "bar" to the remoteMonitor object, allowing the
+         %         remoteMonitor to track completion status via the "bar"
+         %         progress.
+         %
+         %   bar = monitorObj.addBar('barName',sel);
+         %
+         %   bar  --  output handle to nigeLab.libs.nigelBar object
+         %
+         %   monitorObj  --  nigeLab.libs.remoteMonitor object
+         %   name  --  char array that is descriptor of job to monitor
+         %   sel  --  [1 x 2] index referenced by tankObj{[animal,block]}
+         %   starttime  --  Current time (as returned by clock() for
+         %                    format)
+         %   job  --  Matlab job object
+
+         %%%% get bar name
+         if isfield(blockObj.Meta,'AnimalID') && isfield(blockObj.Meta,'RecID')
+            blockName = sprintf('%s.%s',...
+               blockObj.Meta.AnimalID,...
+               blockObj.Meta.RecID);
+         else
+            warning(['Missing AnimalID or RecID Meta fields. ' ...
+               'Using Block.Name instead.']);
+            blockName = strrep(blockObj.Name,'_','.');
+         end
+         name = blockName(1:min(end,...
+            blockObj.Pars.Notifications.NMaxNameChars));
+
+         %%%% enclose everything in a panel
+         % this is convenient for stacking purposes
+         pos = nigeLab.utils.getNormPixelDim(monitorObj.qPanel,...
+                  [-inf -inf 50 20],...
+                  [0.025, ...
+                   0.8870, ...
+                   0.875, ...
+                   0.1125]);
+         pp = uipanel(...
+            'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
+            'Units','Normalized',...
+            'Position',pos,...
+            'BorderType','none',...
+            'Tag',name);
+
+         % Create the actual nigelProgress bar object
+         bar = nigeLab.libs.nigelProgress(pp,name,sel);
+         setChild(bar,'X','Callback',...
+            @monitorObj.stopBar);
+         bar.BarIndex = nan;
+         
+         %%% Nest the panel in in the nigelPanel
+         monitorObj.qPanel.nestObj(bar.Parent,...
+            sprintf('ProgressBar_%s',name));
+         
+         %%% store the bars in the remoteMonitor obj
+         monitorObj.bars = [monitorObj.bars, bar];
+         monitorObj.listeners = [monitorObj.listeners, ...
+            addlistener(blockObj,'ProgressChanged',...
+            @bar.getState)];
+      end
+      
+      % Private function that is issued when the bar associated with this
+      % job reaches 100% completion
+      function barCompleted(monitorObj,bar)
+         % BARCOMPLETED  Callback to issue completion sound for the
+         %               completed task of NIGELBAROBJ, once a particular
+         %               bar has reached 100%.
+         %
+         %   monitorObj.barCompleted(bar);
+         %
+         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
+         
+         % Play the bell sound! Yay!
+         nigeLab.sounds.play('bell',1.5);
+         evtData = nigeLab.evt.jobCompletedEventData(bar);
+         if bar.IsComplete
+            bar.setState(100,'Done.');
+         end
+         notify(monitorObj,'jobCompleted',evtData);
+      end
+      
+      % Returns bar based on sel from list of monitorObj bars
+      function bar = getBar(monitorObj,sel)
+         % GETBAR  Returns a single bar object based on selection from list
+         %           of  monitorObj bars.
+         
+         bar = getBar(monitorObj.bars,sel);
+      end
+      
+      
+
+   end
+   
 end
 

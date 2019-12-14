@@ -1,6 +1,9 @@
-function flag = updatePaths(blockObj,SaveLoc)
-
-%% Script to update the path tree of the block Object.
+function flag = updatePaths(blockObj,saveLoc)
+% UPDATEPATHS  Update the path tree of the Block object
+%
+%  flag = blockObj.updatePaths();
+%  flag = blockObj.updatePaths(saveLoc);  Update blockObj.Paths.SaveLoc
+%
 % generates a new path tree starting from the SaveLoc input and moves any
 % files found in the old path to the new one.
 % in order to match the old path with the new one the Paths struct in
@@ -10,8 +13,6 @@ function flag = updatePaths(blockObj,SaveLoc)
 % two varible parts as well.
 %
 % This is a problem only when changing the naming in the defaults params.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 flag = false;
 
@@ -21,16 +22,17 @@ delete(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
 end
 
 if nargin == 2
-   blockObj.Paths.SaveLoc = SaveLoc;
+   blockObj.Paths.SaveLoc = saveLoc;
 end
 
-% Get old paths
+% Get old paths, removing 'SaveLoc' from the list of Fields that need Paths
+% found for them.
 OldP = blockObj.Paths;
 OldFN_ = fieldnames(OldP);
 OldFN_(strcmp(OldFN_,'SaveLoc'))=[];
 OldFN = [];
 
-% generate new paths
+% generate new blockObj.Paths
 blockObj.genPaths(fileparts(blockObj.Paths.SaveLoc.dir));
 P = blockObj.Paths;
 
@@ -45,10 +47,11 @@ for jj=1:numel(uniqueTypes)
         
         fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),'DiskData.\w', 'once')),...
             struct2cell(blockObj.(uniqueTypes{jj})(1))));
-        OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))];
+        OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))]; %#ok<*AGROW>
         for hh=1:numel(fieldsToMove)
             if all(blockObj.getStatus(fieldsToMove{hh}))
-                filePaths = [filePaths; cellfun(@(x)x.getPath,{blockObj.(uniqueTypes{jj}).(fieldsToMove{hh})},...
+                filePaths = [filePaths; ...
+                   cellfun(@(x)x.getPath,{blockObj.(uniqueTypes{jj}).(fieldsToMove{hh})},...
                     'UniformOutput',false)'];
             end %fi
         end %hh

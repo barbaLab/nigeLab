@@ -922,7 +922,7 @@ classdef DiskData < handle
                a = obj.diskfile_.(obj.name_);
                fprintf(1,'%g events\n',obj.size_(1));
                str = {'type','value','tag','ts','snippet'};
-               for ii = 1:numel(str)
+               for ii = 1:min(size(a,2),numel(str))
                   if any(a(:,ii)~=0)
                      fprintf(1,'->\t %s contains data.\n',str{ii});
                   else
