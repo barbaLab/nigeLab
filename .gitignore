@@ -1,6 +1,4 @@
 *.asv
-*.orig
-
 
 nigelCARperf\.pdf
 
@@ -12,5 +10,28 @@ nigelCARperf\.pdf
 
 \+nigeLab/\+utils/\+SPC/SPC_log/
 
+\+nigeLab/setup/demo/myTank/R19-101/R19-101_2019_05_29_Site1AB-Catch-0_190529_102427.rhs
+\+nigeLab/setup/demo/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-0_190529_123739.rhs
+\+nigeLab/setup/demo/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-1_190529_124238.rhs
+\+nigeLab/setup/demo/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-2_190529_124709.rhs
+\+nigeLab/setup/demo/myTank/R19-101/R19-101_2019_05_29_Site1AB-RSolenoid+ICMS-0_190529_104313.rhs
+\+nigeLab/setup/demo/myTank/R19-94/R19-94_2019_05_27_Site2A-Solenoid-0_190527_100729.rhs
+\+nigeLab/setup/demo/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid+ICMS-0_190527_112000.rhs
+\+nigeLab/setup/demo/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid+ICMS-10_190527_123126.rhs
+\+nigeLab/setup/demo/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid-0_190527_103457.rhs
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101/R19-101_2019_05_29_Site1AB-Catch-0_190529_102427_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-0_190529_123739_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-1_190529_124238_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101/R19-101_2019_05_29_Site1AB-ICMS-2_190529_124709_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101/R19-101_2019_05_29_Site1AB-RSolenoid+ICMS-0_190529_104313_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-101_Animal.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-94/R19-94_2019_05_27_Site2A-Solenoid-0_190527_100729_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid+ICMS-0_190527_112000_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid+ICMS-10_190527_123126_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-94/R19-94_2019_05_27_Site3AB-Solenoid-0_190527_103457_Block.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank/R19-94_Animal.mat
+\+nigeLab/setup/demo/myTank_analysis/myTank_Tank.mat
+
 \+nigeLab/setup/demo/
+
 dev/

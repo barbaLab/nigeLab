@@ -1,5 +1,8 @@
 function header=ReadRHDHeader(varargin)
 %% PARSE VARARGIN
+
+acqsys = 'RHD';
+
 if nargin >0
    VERBOSE = false;
 else
@@ -95,9 +98,9 @@ actual_impedance_test_frequency = fread(FID, 1, 'single');
 
 % Place notes in data strucure
 notes = struct( ...
-   'note1', fread_QString(FID), ...
-   'note2', fread_QString(FID), ...
-   'note3', fread_QString(FID) );
+   'note1', nigeLab.utils.fread_QString(FID), ...
+   'note2', nigeLab.utils.fread_QString(FID), ...
+   'note3', nigeLab.utils.fread_QString(FID) );
 
 % If data file is from GUI v1.1 or later, see if temperature sensor data
 % was saved.
@@ -117,7 +120,7 @@ end
 % If data file is from v2.0 or later (Intan Recording Controller),
 % load name of digital reference channel.
 if (data_file_main_version_number > 1)
-   reference_channel = fread_QString(fid);
+   reference_channel = nigeLab.utils.fread_QString(fid);
 end
 
 % Place frequency-related information in data structure.
@@ -139,13 +142,13 @@ frequency_parameters = struct( ...
    'actual_impedance_test_frequency', actual_impedance_test_frequency );
 
 % spike_trigger_struct is defined below in its function
-new_trigger_channel = spike_trigger_struct;
-spike_triggers = spike_trigger_struct;
+new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
+spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 
 % Create structure arrays for each type of data channel.
-raw_channels = channel_struct;
-analogIO_channels = channel_struct;
-digIO_channels = channel_struct;
+raw_channels = utils.initChannelStruct('Channels',1); 
+analogIO_channels = utils.initChannelStruct('Channels',1); 
+digIO_channels = utils.initChannelStruct('Channels',1); 
 
 raw_index = 1;
 analogIO_index = 1;
@@ -162,23 +165,24 @@ board_dig_out_index = 1;
 number_of_signal_groups = fread(FID, 1, 'int16');
 
 for signal_group = 1:number_of_signal_groups
-   signal_group_name = fread_QString(FID);
-   signal_group_prefix = fread_QString(FID);
+   signal_group_name = nigeLab.utils.fread_QString(FID);
+   signal_group_prefix = nigeLab.utils.fread_QString(FID);
    signal_group_enabled = fread(FID, 1, 'int16');
    signal_group_num_channels = fread(FID, 1, 'int16');
    signal_group_num_amp_channels = fread(FID, 1, 'int16');
    
    if (signal_group_num_channels > 0 && signal_group_enabled > 0)
       for signal_channel = 1:signal_group_num_channels
-         % channel_struct is defined below in its function
-         new_channel = channel_struct;
+         % channel_struct is defined in nigeLab.utils.initChannelStruct
+         new_channel = nigeLab.utils.initChannelStruct('Channels',1);
+         new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
          
          % fill out fields of channel_struct
          new_channel(1).port_name = signal_group_name;
          new_channel(1).port_prefix = signal_group_prefix;
          new_channel(1).port_number = signal_group;
-         new_channel(1).native_channel_name = fread_QString(FID);
-         new_channel(1).custom_channel_name = fread_QString(FID);
+         new_channel(1).native_channel_name = nigeLab.utils.fread_QString(FID);
+         new_channel(1).custom_channel_name = nigeLab.utils.fread_QString(FID);
          new_channel(1).native_order = fread(FID, 1, 'int16');
          new_channel(1).custom_order = fread(FID, 1, 'int16');
          signal_type = fread(FID, 1, 'int16');
@@ -193,36 +197,38 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).electrode_impedance_phase = fread(FID, 1, 'single');
          new_channel(1).custom_channel_name = strrep(new_channel(1).custom_channel_name,' ','');
          new_channel(1).custom_channel_name = strrep(new_channel(1).custom_channel_name,'-','');
+         [new_channel(1).chNum,new_channel(1).chStr] = ...
+            nigeLab.utils.getChannelNum(new_channel(1).custom_channel_name);
          
          if (channel_enabled)
             switch (signal_type)
                case 0
-                  new_channel(1).signal_type = 'Raw';
+                  new_channel(1).signal = nigeLab.utils.signal('Raw');
                   raw_channels(raw_index) = new_channel;
                   spike_triggers(raw_index) = new_trigger_channel;
                   raw_index = raw_index + 1;
                case 1
-                  new_channel(1).signal_type = 'Aux';
+                  new_channel(1).signal = nigeLab.utils.signal('Aux');
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   aux_input_index = aux_input_index + 1;
                case 2
-                  new_channel(1).signal_type = 'Supply';
+                  new_channel(1).signal = nigeLab.utils.signal('Supply');
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   supply_voltage_index = supply_voltage_index + 1;
                case 3
-                  new_channel(1).signal_type = 'Adc';
+                  new_channel(1).signal = nigeLab.utils.signal('Adc');
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_adc_index = board_adc_index + 1;
                case 4
-                  new_channel(1).signal_type = 'DigIn';
+                  new_channel(1).signal = nigeLab.utils.signal('DigIn');
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_in_index = board_dig_in_index + 1;
                case 5
-                  new_channel(1).signal_type = 'DigOut';
+                  new_channel(1).signal = nigeLab.utils.signal('DigOut');
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_out_index = board_dig_out_index + 1;
@@ -248,19 +254,19 @@ num_dig_in_channels = board_dig_in_index - 1;
 num_dig_out_channels = board_dig_out_index - 1;
 
 fprintf(1, 'Found %d amplifier channel%s.\n', ...
-   num_amplifier_channels, plural(num_amplifier_channels));
+   num_amplifier_channels, nigeLab.utils.plural(num_amplifier_channels));
 fprintf(1, 'Found %d auxiliary input channel%s.\n', ...
-   num_aux_channels, plural(num_aux_channels));
+   num_aux_channels, nigeLab.utils.plural(num_aux_channels));
 fprintf(1, 'Found %d supply voltage channel%s.\n', ...
-   num_supply_channels, plural(num_supply_channels));
+   num_supply_channels, nigeLab.utils.plural(num_supply_channels));
 fprintf(1, 'Found %d board ADC channel%s.\n', ...
-   num_adc_channels, plural(num_adc_channels));
+   num_adc_channels, nigeLab.utils.plural(num_adc_channels));
 fprintf(1, 'Found %d board digital input channel%s.\n', ...
-   num_dig_in_channels, plural(num_dig_in_channels));
+   num_dig_in_channels, nigeLab.utils.plural(num_dig_in_channels));
 fprintf(1, 'Found %d board digital output channel%s.\n', ...
-   num_dig_out_channels, plural(num_dig_out_channels));
+   num_dig_out_channels, nigeLab.utils.plural(num_dig_out_channels));
 fprintf(1, 'Found %d temperature sensors channel%s.\n', ...
-   num_sensor_channels, plural(num_sensor_channels));
+   num_sensor_channels, nigeLab.utils.plural(num_sensor_channels));
 fprintf(1, '\n');
 
 
@@ -323,7 +329,7 @@ header_size=ftell(FID);
 
 nPort   = [raw_channels(:).port_number];
 probes = unique(nPort);
-num_probes = numel(unique(nPort));
+num_probes = numel(probes);
 DC_amp_data_saved = false;
 num_dac_channels = 0;
 num_dac_samples = 0;
@@ -335,153 +341,14 @@ num_stim_samples = 0;
 for iN = 1:num_probes
    eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
 end
-for ii=DesiredOutputs.' %  DesiredOutputs defined below
-   header.(ii{:})=eval(ii{:});
-end
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;
+%% Helper functions
 
-return
-end
-
-function a = fread_QString(FID)
-
-% a = read_QString(FID)
-%
-% Read Qt style QString.  The first 32-bit unsigned number indicates
-% the length of the string (in bytes).  If this number equals 0xFFFFFFFF,
-% the string is null.
-
-a = '';
-length = fread(FID, 1, 'uint32');
-if length == hex2num('ffffffff')
-   return;
-end
-% convert length from bytes to 16-bit Unicode words
-length = length / 2;
-
-for i=1:length
-   a(i) = fread(FID, 1, 'uint16');
-end
-
-return
-end
-
-function s = plural(n)
-
-% s = plural(n)
-%
-% Utility function to optionally plurailze words based on the value
-% of n.
-
-if (n == 1)
-   s = '';
-else
-   s = 's';
-end
-
-return
-end
-
-function DesiredOutputs=DesiredOutputs()
-% DesiredOutputs = {
-%    'data_present';
-%    'eval_board_mode';
-%    'sample_rate';
-%    'frequency_parameters';
-%    'amplifier_channels';
-%    'aux_input_channels';
-%    'supply_voltage_channels';
-%    'board_adc_channels';
-%    'board_dig_in_channels';
-%    'board_dig_out_channels';
-%    'spike_triggers';
-%    'num_amplifier_channels';
-%    'num_aux_input_channels';
-%    'num_supply_voltage_channels'
-%    'num_board_adc_channels';
-%    'num_temp_sensor_channels';
-%    'num_board_dig_in_channels';
-%    'num_board_dig_out_channels';
-%    'probes';
-%    'num_probes';
-%    'num_data_blocks';
-%    'num_samples_per_data_block';
-%    'num_amplifier_samples';
-%    'num_aux_input_samples';
-%    'num_supply_voltage_samples';
-%    'num_temp_sensor_samples';
-%    'num_adc_samples';
-%    'num_digin_samples';
-%    'num_digout_samples';
-%    'header_size';
-%    'filesize';
-%    'bytes_per_block';
-%    'data_file_main_version_number';
-%    };
-DesiredOutputs = {
-   'data_present';
-   'DC_amp_data_saved';
-   'eval_board_mode';
-   'sample_rate';
-   'frequency_parameters';
-   'raw_channels';
-   'analogIO_channels';
-   'digIO_channels';
-   'spike_triggers';
-   'num_raw_channels';
-   'num_DC_channels';
-   'num_stim_channels';
-   'num_digIO_channels';
-   'num_analogIO_channels';
-   'num_aux_channels';
-   'num_supply_channels';
-   'num_sensor_channels';
-   'num_adc_channels';
-   'num_dac_channels';
-   'num_dig_in_channels';
-   'num_dig_out_channels';
-   'probes';
-   'num_probes';
-   'num_data_blocks';
-   'num_samples_per_data_block';
-   'num_raw_samples';
-   'num_DC_samples';
-   'num_stim_samples';
-   'num_aux_samples';
-   'num_supply_samples';
-   'num_sensor_samples';
-   'num_adc_samples';
-   'num_dac_samples';
-   'num_dig_in_samples';
-   'num_dig_out_samples';
-   'header_size';
-   'filesize';
-   'bytes_per_block';
-   'data_file_main_version_number';
-   };
-end
-
-function spike_trigger_struct_=spike_trigger_struct()
-spike_trigger_struct_ = struct( ...
-   'voltage_trigger_mode', {}, ...
-   'voltage_threshold', {}, ...
-   'digital_trigger_channel', {}, ...
-   'digital_edge_polarity', {} );
-return
-end
-
-function channel_struct_=channel_struct()
-channel_struct_ = struct( ...
-   'native_channel_name', {}, ...
-   'custom_channel_name', {}, ...
-   'native_order', {}, ...
-   'custom_order', {}, ...
-   'board_stream', {}, ...
-   'chip_channel', {}, ...
-   'port_name', {}, ...
-   'port_prefix', {}, ...
-   'port_number', {}, ...
-   'electrode_impedance_magnitude', {}, ...
-   'electrode_impedance_phase', {}, ...
-   'signal_type', {});
-return
-end
+DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHD').';
+for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
+   fieldOut = field{:};
+   fieldOutVal = eval(fieldOut);
+   header.(fieldOut) = fieldOutVal;

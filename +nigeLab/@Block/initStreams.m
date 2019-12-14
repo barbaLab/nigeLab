@@ -3,76 +3,40 @@ function flag = initStreams(blockObj)
 %
 %  flag = INITSTREAMS(blockObj);
 %
+%  flag: Returns false if initialized correctly; otherwise, returns true
+%        (so it is really "warningFlag")
+%
 % By: Max Murphy  v1.0  2019/01/11  Original version (R2017a)
 
 %%
 flag = false;
-fieldIdx = ismember(blockObj.FieldType,'Streams');
-nStreamTypes = sum(fieldIdx);
+[fieldIdx,nStreamTypes] = blockObj.getFieldTypeIndex('Streams');
+fields = blockObj.Fields(fieldIdx);
 if sum(fieldIdx) == 0
    flag = true;
    disp('No STREAMS to initialize.');
    return;
 end
 
-fieldIdx = find(fieldIdx);
 blockObj.Streams = struct;
-
 headerFields = fieldnames(blockObj.Meta.Header);
 
+% MM modified 2019-11-20
+tmp = repmat({nigeLab.utils.initChannelStruct('Streams',0)},1,nStreamTypes);
 for ii = 1:nStreamTypes
-   name = blockObj.Fields{fieldIdx(ii)};
+   name = fields{ii};
 
    headerStructName = [name 'Channels'];
    if ismember(headerStructName,headerFields)
       blockObj.Streams.(name) = blockObj.Meta.Header.(headerStructName);
    else
-      blockObj.Streams.(name) = channel_struct;
+      warning('Missing header: %s',headerStructName); 
+      fprintf(1,'Initializing empty Streams struct: %s\n',headerStructName);
+      blockObj.Streams.(name) = nigeLab.utils.initChannels('Streams',0);
    end
 end
 flag = true;
 
 
-%%%%%%%%%%% FB modified 10/4/19
-% jj=1;
-% tmp = cell(1,nStreamTypes);
-% tmpSize=zeros(1,nStreamTypes);
-% for ii = 1:nStreamTypes
-%    name = blockObj.Fields{fieldIdx(ii)};
-%    
-%    headerStructName = [name 'Channels'];
-%    if ismember(headerStructName,headerFields)
-%       tmp{jj} = blockObj.Meta.Header.(headerStructName);
-%       tmpSize(jj) = numel(tmp{jj})';
-%       jj=jj+1;
-%    end
-% end
-% 
-% blockObj.Streams=repmat(channel_struct(),1,sum(tmpSize));
-% index = 1;
-% for ii = 1:jj-1
-%     blockObj.Streams(index:(tmpSize(ii)+index-1)) = tmp{ii};
-%     index = index + tmpSize(ii);
-% end
-% 
-% flag = true;
-
-
 end
-   function channel_struct_= channel_struct()
-      channel_struct_ = struct( ...
-         'native_channel_name', {}, ...
-         'custom_channel_name', {}, ...
-         'native_order', {}, ...
-         'custom_order', {}, ...
-         'board_stream', {}, ...
-         'chip_channel', {}, ...
-         'port_name', {}, ...
-         'port_prefix', {}, ...
-         'port_number', {}, ...
-         'electrode_impedance_magnitude', {}, ...
-         'electrode_impedance_phase', {}, ...
-         'signal_type', {});
-      return
-   end
 

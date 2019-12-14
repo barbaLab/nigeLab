@@ -1,0 +1,152 @@
+function fig = scoreVideo(blockObj)
+%% SCOREVIDEO  Locates successful grasps in behavioral video.
+%
+%  fig = blockObj.SCOREVIDEO;
+%
+%  Returns fig, a graphics object handle to the figure that contains the
+%     video panel, controller panel, and associated information panels.
+
+%% Check input
+blockObj.updateParams('Event');
+blockObj.updateParams('Video');
+
+if ~blockObj.Pars.Video.HasVideo
+   error('Check defaults.Video; as configured, no videos associated.');
+end
+
+scoringFieldName = blockObj.Pars.Video.ScoringEventFieldName; % for short
+blockObj.checkCompatibility({scoringFieldName,'Video'});
+if any(~blockObj.Status.(scoringFieldName))
+   error('Not all %s files have been created yet.',scoringFieldName);
+end
+
+
+%% MAKE UI WINDOW AND DISPLAY CONTAINER
+fig=figure('Name','Behavior Scoring',...
+           'NumberTitle','off',...
+           'Color','k',...
+           'Units','Normalized',...
+           'MenuBar','none',...
+           'ToolBar','none',...
+           'Position',[0.1 0.1 0.8 0.8],...
+           'UserData',...
+             struct('CloseReqFcn','Check',...
+              'KeyPressFcn',blockObj.Pars.Video.ScoringHotkeyFcn,...
+              'KeyPressHelpFcn',blockObj.Pars.Video.ScoringHotkeyHelpFcn));
+        
+% Panel for displaying information text
+dispPanel = uipanel(fig,'Units','Normalized',...
+   'BackgroundColor','k',...
+   'Position',[0 0 0.75 1]);
+
+        
+%% Create objects that track event-related and video-related info
+behaviorInfoObj = nigeLab.libs.behaviorInfo(fig,blockObj); % "Event"
+vidInfoObj = nigeLab.libs.vidInfo(fig,dispPanel,blockObj); % "Video"
+ 
+%% BUILD GRAPHICAL ELEMENTS      
+graphicsUpdateObj = nigeLab.libs.graphicsUpdater(blockObj);
+
+% Once the graphicsUpdateObj has been constructed, set the current video
+% (which issues an event notification that triggers subsequent updates)
+vidInfoObj.setCurrentVideo(1); 
+
+% Get "graphics" children structs from vidInfoObj and behaviorInfoObj, then
+% add listeners to all the fields of those structs using 'addGraphics' to
+% first add them to the graphicsUpdateObj then 'addListeners' to add event
+% listeners to the updated graphics
+graphics = getGraphics(vidInfoObj);
+graphicsUpdateObj.addGraphics(graphics);
+graphics = getGraphics(behaviorInfoObj);
+graphicsUpdateObj.addGraphics(graphics);
+graphicsUpdateObj.addListeners(vidInfoObj,behaviorInfoObj);
+                     
+% Initialize hotkeys for navigating through movie
+set(fig,'WindowKeyPressFcn',...
+   {@hotKey,vidInfoObj,behaviorInfoObj});
+
+% Update everything to make sure it looks correct
+vidInfoObj.setOffset(behaviorInfoObj.VideoStart);
+notify(vidInfoObj,'vidChanged');
+behaviorInfoObj.setTrial(nan,behaviorInfoObj.cur,true);
+set(fig,'CloseRequestFcn',{@closeUI,behaviorInfoObj,vidInfoObj,graphicsUpdateObj});
+
+%% Print instructions to command window to help user
+nigeLab.utils.cprintf('Comments','\n-->\tPress '); 
+nigeLab.utils.cprintf('Keywords','''h''');
+nigeLab.utils.cprintf('Comments',' for list of scoring commands. <--\n'); 
+
+nigeLab.utils.cprintf('Comments','\n-->\t(Or) press '); 
+nigeLab.utils.cprintf('Keywords','''control + [key]''');
+nigeLab.utils.cprintf('Comments',' for specific help. <--\n');
+
+   %% Helper functions
+   % Closes the current user-interface (UI)
+   function closeUI(src,~,b,v,g)
+      % CLOSEUI  Prompts to see if user really wants to close window
+      
+      switch src.UserData.CloseReqFcn
+         case 'Check' % Prompt user to close
+            str = questdlg('Close scoring UI?','Exit','Yes','No','Yes');
+            switch str
+               case 'Yes'
+                  src.UserData.CloseReqFcn = 'Force';
+                  delete(src);
+                  delete(b);
+                  delete(v);
+                  delete(g);
+               case 'No'
+                  return;
+            end
+         case 'Force' % Automatically delete without checking
+            delete(src);
+            delete(b);
+            delete(v);
+            delete(g);
+         otherwise
+            delete(src);
+            delete(b);
+            delete(v);
+            delete(g);
+      end
+   end
+
+   function hotKey(src,evt,v,b)
+      % HOTKEY  Function cases for different keyboard inputs
+      %
+      %  fig.WindowKeyPressFcn = {@hotKey,vidInfoObj,behaviorInfoObj};
+      %
+      %  hotkey(src,evt,v,b):
+      %     src -- Source object (figure for scoring UI)
+      %     evt -- Keypress eventdata, which has evt.Key for the name of
+      %              the key pressed and evt.Modifier for any other key,
+      %              such as 'alt' or 'ctrl' that was pressed concurrently.
+      %     v -- nigeLab.libs.vidInfo class object that tracks video frame
+      %           timing and offset info, etc.
+      %     b -- nigeLab.libs.behaviorInfo class object that tracks event
+      %           data from scoring etc.
+      
+      if isempty(evt.Modifier)
+         src.UserData.KeyPressFcn(evt,v,b);
+         switch evt.Key
+            case 'escape' % Close scoring UI
+               close(src);
+            case 'h'
+               src.UserData.KeyPressHelpFcn();
+         end
+      elseif strcmpi(evt.Modifier,'Control')
+         if strcmpi(evt.Modifier,evt.Key)
+            return;
+         end
+         if ~iscell(evt.Key)
+            key_help = {evt.Key};
+         else
+            key_help = evt.Key;
+         end
+         src.UserData.KeyPressHelpFcn(key_help);
+      else
+         src.UserData.KeyPressFcn(evt,v,b);
+      end
+   end
+
+end

@@ -12,7 +12,7 @@ function flag = linkTime(blockObj)
 %%
 flag = false;
 updateflag = false;
-fprintf(1,'\nLinking Time field...000%%\n');
+nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Time'),'Time');
 counter = 0;
 fName = fullfile(blockObj.Paths.Time.file);
    

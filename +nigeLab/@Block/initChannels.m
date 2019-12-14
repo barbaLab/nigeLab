@@ -31,11 +31,12 @@ switch blockObj.FileExt
                blockObj.Meta.(ff{:}) = header.info.(ff{:});
             end
          end
+         
       end
       
    case '.mat'
       blockObj.RecType='Matfile';
-       header = blockObj.ReadMatInfoFile(blockObj.RecFile); 
+      header = blockObj.MatFileWorkflow.ReadFcn(blockObj.RecFile); 
    otherwise
       blockObj.RecType='other';
       warning('Not a recognized file extension: %s',blockObj.FileExt);
@@ -44,7 +45,8 @@ end
 
 %% ASSIGN DATA FIELDS USING HEADER INFO
 blockObj.Channels = header.raw_channels;
-blockObj.Meta.Header = fixNamingConvention(header);
+blockObj.RecSystem = nigeLab.utils.AcqSystem(header.acqsys);
+blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
 
 if ~blockObj.parseProbeNumbers % Depends on recording system
    warning('Could not properly parse probe identifiers.');
@@ -59,7 +61,9 @@ blockObj.Samples = header.num_raw_samples;
 
 %% SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
 parseChannelID(blockObj);
-if isempty(blockObj.Mask)
+if isfield(header,'Mask')
+   blockObj.Mask = reshape(find(header.Mask),1,numel(header.Mask));
+elseif isempty(blockObj.Mask)
    blockObj.Mask = 1:blockObj.NumChannels;
 else
    blockObj.Mask(blockObj.Mask > blockObj.NumChannels) = [];
@@ -68,20 +72,5 @@ else
 end
 
 flag = true;
-
-function header_out = fixNamingConvention(header_in)
-%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
-
-header_out = struct;
-f = fieldnames(header_in);
-for iF = 1:numel(f)
-   str = strsplit(f{iF},'_');
-   for iS = 1:numel(str)
-      str{iS}(1) = upper(str{iS}(1));
-   end
-   str = strjoin(str,'');
-   header_out.(str) = header_in.(f{iF});
-end
-end
 
 end

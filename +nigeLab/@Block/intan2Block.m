@@ -41,17 +41,7 @@ if nargin < 3 % If 2 inputs, need to specify default paths struct
 end
 
 if nargin < 2 % If 1 input, need to specify default fields
-   switch blockObj.FileExt
-      case '.rhd'
-         fields = {'Time','Raw','DigIO','AnalogIO'};
-         
-      case '.rhs'
-         fields = {'Time','Raw','DigIO','AnalogIO','Stim','DC'};
-      otherwise
-         warning('Intan extraction not setup for %s files. Canceled.',...
-            blockObj.FileExt);
-         return;
-   end
+   fields = blockObj.RecSystem.Fields;
 else % otherwise just make sure it is correct orientation
    fields = reshape(fields,1,numel(fields));
 end
@@ -89,7 +79,7 @@ switch blockObj.FileExt
       adc_offset = 32768;
 end
 
-blockObj.Meta.Header = fixNamingConvention(header);
+blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
 
 if ~blockObj.Meta.Header.DataPresent
    warning('No data found in %s.',recFile);
@@ -110,70 +100,70 @@ for f = fields
       warning('Field: %s is invalid. Skipped its extraction.',f);
       continue;
    else
-      this = blockObj.Fields{idx}; % Make sure case syntax is correct
+      curDataField = blockObj.Fields{idx}; % Make sure case syntax is correct
    end
    
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
          info = blockObj.Meta.Header.RawChannels;
-         infoname = fullfile(paths.(this).info);
+         infoname = fullfile(paths.(curDataField).info);
          save(fullfile(infoname),'info','-v7.3');
          % One file per probe and channel
-         Files.(this) = cell(blockObj.NumChannels,1);
-         nCh.(this) = blockObj.NumChannels;
+         Files.(curDataField) = cell(blockObj.NumChannels,1);
+         nCh.(curDataField) = blockObj.NumChannels;
          diskPars.class = 'single';
-         for iCh = 1:nCh.(this)
+         for iCh = 1:nCh.(curDataField)
             pNum  = num2str(info(iCh).port_number);
             chNum = info(iCh).custom_channel_name(...
                regexp(info(iCh).custom_channel_name, '\d'));
-            fName = sprintf(strrep(paths.(this).file,'\','/'), pNum, chNum);
-            diskPars = struct('format',blockObj.getFileType(this),...
+            fName = sprintf(strrep(paths.(curDataField).file,'\','/'), pNum, chNum);
+            diskPars = struct('format',blockObj.getFileType(curDataField),...
                'name',fullfile(fName),...
                'size',[1 blockObj.Meta.Header.NumRawSamples],...
                'access','w',...
                'class','single');
-            Files.(this){iCh} = makeDiskFile(diskPars);
-            pct = floor(iCh/nCh.(this) * 100);
-            reportProgress(blockObj,[this ' info'], pct);
-%             notifyUser(blockObj,this,'info',iCh,nCh.(this))
+            Files.(curDataField){iCh} = nigeLab.utils.makeDiskFile(diskPars);
+            pct = floor(iCh/nCh.(curDataField) * 100);
+            reportProgress(blockObj,[curDataField ' info'], pct);
          end
       case 'Events'
-         fName = sprintf(strrep(paths.(this).file,'\','/'), this);
-         diskPars = struct('format',blockObj.getFileType(this),...
+         fName = sprintf(strrep(paths.(curDataField).file,'\','/'), curDataField);
+         diskPars = struct('format',blockObj.getFileType(curDataField),...
             'name',fullfile(fName),...
             'size',[inf inf],...
             'access','w',...
             'class','single');
          
-         if strcmp(this,'Stim')
+         if strcmp(curDataField,'Stim')
             info = blockObj.Meta.Header.SpikeTriggers;
-            Files.(this)(1:numel(info))= {(makeDiskFile(diskPars))};
-            nCh.(this) = numel(info);
+            Files.(curDataField)(1:numel(info))= {(nigeLab.utils.makeDiskFile(diskPars))};
+            nCh.(curDataField) = numel(info);
          else
-           Files.(this)(1)= {(makeDiskFile(diskPars))};
-            nCh.(this) = 1;
+           Files.(curDataField)(1)= {(nigeLab.utils.makeDiskFile(diskPars))};
+            nCh.(curDataField) = 1;
          end
 
          % {{{ To be added: Automate event extraction HERE }}}
          
       case 'Meta' % Each "Meta" file should only have one "channel"
-         fName = sprintf(strrep(paths.(this).file,'\','/'),[this '.mat']);
-         diskPars = struct('format',blockObj.getFileType(this),...
+         fName = sprintf(strrep(paths.(curDataField).file,'\','/'),[curDataField '.mat']);
+         diskPars = struct('format',blockObj.getFileType(curDataField),...
             'name',fullfile(fName),...
             'size',[1 blockObj.Meta.Header.NumRawSamples],...
             'access','w',...
             'class','int32');
-         Files.(this){1} = makeDiskFile(diskPars);
+         Files.(curDataField){1} = nigeLab.utils.makeDiskFile(diskPars);
          
       case 'Streams'
-         infofield = [this 'Channels'];
+         infofield = [curDataField 'Channels'];
          info = blockObj.Meta.Header.(infofield);
-         infoname = fullfile(paths.(this).info);
+         infoname = fullfile(paths.(curDataField).info);
          save(fullfile(infoname),'info','-v7.3');
          
          % Get unique subtypes of streams
-         [U,~,iU] = unique({info.signal_type});
+         sig = [info.signal];
+         [U,~,iU] = unique({sig.type});
          
          for ii = 1:numel(U)
             % Each "signal group" has its own file struct
@@ -189,12 +179,12 @@ for f = fields
             chCount = 0;
             for iCh = chIdx
                chCount = chCount + 1;
-               sampleField = ['Num' info(iCh).signal_type 'Samples'];
+               sampleField = ['Num' info(iCh).signal.type 'Samples'];
                nSamples = blockObj.Meta.Header.(sampleField);
                chName = info(iCh).custom_channel_name;
-               fName = sprintf(strrep(paths.(this).file,'\','/'), ...
-                  info(iCh).signal_type,chName);
-               diskPars = struct('format',blockObj.getFileType(this),...
+               fName = sprintf(strrep(paths.(curDataField).file,'\','/'), ...
+                  info(iCh).signal.type,chName);
+               diskPars = struct('format',blockObj.getFileType(curDataField),...
                   'name',fullfile(fName),...
                   'size',[1 nSamples],...
                   'access','w',...
@@ -202,7 +192,7 @@ for f = fields
                if strncmpi(U{ii},'dig',3) % DIG files are int8
                   diskPars.class = 'int8';
                end
-               Files.(U{ii}){chCount} = makeDiskFile(diskPars);
+               Files.(U{ii}){chCount} = nigeLab.utils.makeDiskFile(diskPars);
             end
          end
          
@@ -404,70 +394,38 @@ fclose(fid);
 
 %% Linking data to blockObj
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% DiskData makes it easy to access data stored in matfies.
+% DiskData makes it easy to access data stored in matfiles.
 % Assigning each file to the right channel
-% infoNames = fieldnames(Files);
-% for f = 1:numel(fields)
-%     idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
-%     switch blockObj.FieldType{idx}
-%         case 'Channels'
-%             ChIdx = 1:numel(Files.(infoNames{f}));
-%         case 'Streams'
-%             sigTypes = {blockObj.Streams.signal_type};
-%             ChIdx = find(strcmp(sigTypes,infoNames{f}));
+dataField = fieldnames(Files);
+for f = 1:numel(fields)
+    idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
+    switch blockObj.FieldType{idx}
+        case 'Channels'
+            ChIdx = 1:numel(Files.(dataField{f}));
+            for iCh = 1:numel(Files.(dataField{f}))
+               blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(dataField{f}) = lockData(Files.(dataField{f}){iCh});
+            end
+            
+        case 'Streams'
+            sig = [blockObj.Streams.signal];
+            sigTypes = {sig.type};
+            ChIdx = find(strcmp(sigTypes,dataField{f}));
+            for iCh = 1:numel(Files.(dataField{f}))
+               blockObj.(blockObj.FieldType{idx}).(dataField{f})(ChIdx(iCh)).data = lockData(Files.(dataField{f}){iCh});
+            end
 %         case 'Meta'
-%             ChIdx = 1:numel(Files.(infoNames{f}));
+%             ChIdx = 1:numel(Files.(dataField{f}));
 %         case 'Events'
-%             ChIdx = 1:numel(Files.(infoNames{f}));
-%     end
-%     for iCh = 1:numel(Files.(infoNames{f}))
-%         
-%         blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(infoNames{f}) = lockData(Files.(infoNames{f}){iCh});
-%     end
-%    reportProgress(blockObj,'Linking data',pct);
-%    evtData = nigeLab.evt.channelCompleteEventData(iCh,pct,blockObj.NumChannels);
-%    notify(blockObj,channelCompleteEvent,evtData);
-% end
+%             ChIdx = 1:numel(Files.(dataField{f}));
+    end
+    
+   reportProgress(blockObj,'Linking data',pct);
+end
 blockObj.linkToData;  
 
-% % % % % % % % % % % % % % % % % % % % % %
-% if ~isnan(myJob(1))
-%    set(myJob,'Tag',sprintf('%s: Raw Extraction complete.',blockObj.Name));
-% end
-
 flag = true;
-updateStatus(blockObj,'Raw',true(1,blockObj.NumChannels));
+% updateStatus(blockObj,'Raw',true(1,blockObj.NumChannels));
 
-end
-
-function header_out = fixNamingConvention(header_in)
-%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
-
-header_out = struct;
-f = fieldnames(header_in);
-for iF = 1:numel(f)
-   str = strsplit(f{iF},'_');
-   for iS = 1:numel(str)
-      str{iS}(1) = upper(str{iS}(1));
-   end
-   str = strjoin(str,'');
-   header_out.(str) = header_in.(f{iF});
-end
-end
-
-function diskFile = makeDiskFile(diskPars)
-%% MAKEDISKFILE   Short-hand function to create file on disk
-% Check if file exists; if it does, remove it
-if exist(diskPars.name,'file')
-   delete(diskPars.name)
-end
-% Then create new pre-allocated diskFile
-diskFile = nigeLab.libs.DiskData(...
-   diskPars.format,...
-   diskPars.name,...
-   'class',diskPars.class,...
-   'size',diskPars.size,...
-   'access',diskPars.access);
 end
 
 function availableMemory = getMemory(pctToAllocate)
@@ -526,7 +484,8 @@ function writeDigData(dataBuffer,Files,buffer,info,field,dataPointsToRead)
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
 
 data = dataBuffer(buffer.(field)(1:dataPointsToRead));
-dataIdx = ismember({info.DigIOChannels.signal_type},field);
+sig = [info.DigIOChannels.signal];
+dataIdx = ismember({sig.type},field);
 dataIdx = find(dataIdx);
 if isempty(dataIdx)
    return;

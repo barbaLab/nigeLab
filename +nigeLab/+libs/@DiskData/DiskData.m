@@ -52,6 +52,9 @@ classdef DiskData < handle
    %     DiskData - Class constructor.
    %
    % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+   
+   % Note that these properties are just to show up what is in "Event"
+   % style
    properties (GetAccess = public, SetAccess = private)
       type     % Event type
       value    % Value associated with event (e.g. spike cluster class)
@@ -73,7 +76,7 @@ classdef DiskData < handle
       writable_         % Whether file is writable
    end
    
-   methods
+   methods (Access = public)
       function obj = DiskData(varargin)
          %% DISKDATA   Constructor
          %
@@ -506,15 +509,18 @@ classdef DiskData < handle
                         switch lower(S(1).subs)
                            case 'type'
                               varargout = {data(:,1)};
-                           case 'value'
+                           case {'value','index','group','ind','idx',...
+                                 'clus','cluster','clusters','id'}
                               varargout = {data(:,2)};
-                           case 'tag'
+                           case {'tag','label','mask'}
                               varargout = {data(:,3)};
-                           case 'ts'
+                           case {'ts','t','times','time','timestamp','timestamps'}
                               varargout = {data(:,4)};
-                           case 'snippet'
+                           case {'snippet','x','rate','lfp','aligned','snippets',...
+                                 'snip','snips','wave','waveform','waves',...
+                                 'meta','metadata'}
                               varargout = {data(:,5:end)};
-                           case 'data'
+                           case {'data','all'}
                               varargout = {data};
                            otherwise
                               error('%s is not supported for Events type.',...
@@ -601,78 +607,168 @@ classdef DiskData < handle
       end
       
       function obj = subsasgn(obj,S,b)
-         %% SUBSASGN    Overloaded function for DiskData array assignment
+         % SUBSASGN    Overloaded function for DiskData array assignment
          if ~obj.writable_
-            error('Improper assignment. DiskData object constructed as read-only.');
+            warning('Improper assignment.');
+            nigeLab.utils.cprintf('Keywords','For reference:\n'); ...
+            ulck_str = nigeLab.utils.getNigeLink(...
+               'nigeLab.libs.DiskData','unlockData','unlockData');
+            lck_str = nigeLab.utils.getNigeLink(...
+               'nigeLab.libs.DiskData','lockData','lockData');
+            fprintf(1,'-->\t%s\n-->\t%s\n',ulck_str,lck_str); 
+            error('DiskData object constructed as read-only.');
          end
          
          tmp = obj.diskfile_.(obj.name_);
          for ii=1:numel(S)
             switch S(ii).type
                case '()'
-                  nArgs=numel(S(ii).subs);
-                  if nArgs==1
-                     [~,I]=max(size(obj));
-                     tmp_=S(ii).subs{1};
-                     S(ii).subs(1:numel(size(obj)))={1};
-                     S(ii).subs{I}=tmp_;
-                     clear('tmp_');
-                  end
-                  if isempty(tmp)
-                     clear('tmp');
-                     tmp(S(ii).subs{:})=b;
-                  else
-                     %                      tmp(S.subs{:})=b; % switched -MM
-                     tmp(S.subs{1})=b;  % (Federico, this probably isn't
-                     %  I just switched it so it will
-                     %  temporarily work -MM.)
+                  switch obj.type_
+                     case 'Event'
+                        if numel(S) > 1
+                           [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
+                        end
+                        tmp(iRow,iCol) = b;
+                     otherwise
+                        nSubs=numel(S(ii).subs);
+                        % If there is only one subscript (e.g. ':'), then
+                        % handle things to handle cases where the saved
+                        % 'data' is oriented "strangely"
+                        if nSubs==1
+                           % Get largest dimension index
+                           [~,I]=max(size(obj)); 
+                           tmp_=S(ii).subs{1};
+                           S(ii).subs(1:numel(size(obj)))={1};
+                           S(ii).subs{I}=tmp_;
+                           clear('tmp_');
+                        end
+                        % If there is nothing in the file to begin with
+                        if isempty(tmp)
+                           % Clear it, and just make a fresh variable
+                           clear('tmp');
+                           tmp(S(ii).subs{:})=b;
+                        else
+                           tmp = builtin('subsasgn',tmp,S,b);
+
+                        end
                   end
                   
                case '.'
                   switch obj.type_
                      case 'Event'
                         n = size(tmp,1); % Number of rows must match
-                        if size(b,1) ~= n
-                           error('Input data number of rows (%d) does not match existing file (%d).',...
-                              size(b,1),n);
+                        if numel(S)==1
+                           if (size(b,1) ~= n) && (numel(b)>1)
+                              error('Input data number of rows (%d) does not match existing file (%d).',...
+                                 size(b,1),n);
+                           end
                         end
-                        switch lower(S.subs)
-                           case 'data'
-                              tmp = b;
+                        
+                        
+                        propName = lower(S(1).subs);
+                        switch propName
+                           case {'data','all'}
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
+                              end
+                              
+                              nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                 propName,nan);
+                              % Guarantee that it has at least the 5 basic
+                              % columns. There is inefficiency here, but
+                              % since these are smaller files anyways in
+                              % general, this should be ok.
+                              
+                              if numel(S) > 1
+                                 nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                    @isnumeric);
+                                 tmp(iRow,iCol) = b;
+                              else
+                                 nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                    {@isnumeric,@(x)(size(x,2)>=5)});
+                                 tmp = b;
+                              end
                            case 'type'
-                              m = size(b,2);
-                              if m ~= 1
-                                 error('Input data number of columns (%d) does not match for TYPE (1).',m);
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
                               end
-                              tmp(:,1) = b;
-                           case 'value'
-                              m = size(b,2);
-                              if m ~= 1
-                                 error('Input data number of columns (%d) does not match for VALUE (1).',m);
+                              nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                 propName,1);
+                              % As of 2019-11-24, range of 'type' is [0,2]
+                              nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                 {@isnumeric,@(x)all((x>=0)&(x<=2))});
+                              if numel(S) > 1
+                                 tmp(iRow,iCol) = b;
+                              else
+                                 tmp(:,1) = b;
                               end
-                              tmp(:,2) = b;
-                           case 'tag'
-                              m = size(b,2);
-                              if m ~= 1
-                                 error('Input data number of columns (%d) does not match for TAG (1).',m);
+                           case {'value','group','index','ind','idx',...
+                                 'clus','cluster','clusters','id'}
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
                               end
-                              tmp(:,3) = b;
-                           case 'ts'
-                              m = size(b,2);
-                              if m ~= 1
-                                 error('Input data number of columns (%d) does not match for TS (1).',m);
+                              nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                 propName,1);
+                              nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                 @isnumeric);
+                              if numel(S) > 1
+                                 tmp(iRow,2) = b;
+                              else
+                                 tmp(:,2) = b;
                               end
-                              tmp(:,4) = b;
-                           case 'snippet'
-                              m = size(b,2);
+                           case {'tag','label','mask'}
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
+                              end
+                              nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                 propName,1);
+                              nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                 @isnumeric);
+                              if numel(S) > 1
+                                 tmp(iRow,3) = b;
+                              else
+                                 tmp(:,3) = b;
+                              end
+                           case {'ts','t','time','times','timestamps'}
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp);
+                              end
+                              nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                 propName,1);
+                              nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                 @isnumeric);
+                              if numel(S) > 1
+                                 tmp(iRow,4) = b;
+                              else
+                                 tmp(:,4) = b;
+                              end
+                           case {'snippet','snip','snips','wave','waveform','waves','feat','features',...
+                                 'x','rate','aligned','lfp','meta','metadata'}
+                              % Check size and type of data
+                              if numel(S) > 1
+                                 [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),tmp,4);
+                              end
                               M = size(tmp,2)-4;
-                              if m ~= M
-                                 error('Input data number of columns (%d) does not match for TYPE (%d).',m,M);
+                              nigeLab.libs.DiskData.validateEventDataRange(b,...
+                                    @isnumeric);
+                              if numel(S) > 1
+                                 % Assumes that given column is indexed
+                                 % from start of 'snippet'
+                                 tmp(iRow,iCol+4) = b;
+                              else
+                                 nigeLab.libs.DiskData.validateEventDataSize(b,...
+                                    S.subs,M);
+                                 tmp(:,5:end) = b;
                               end
-                              tmp(:,5:end) = b;
                            otherwise
                               error('%s not supported by Events type.',S.subs);
                         end
+                        break;
                      otherwise
                         tmp.(S.subs{:}) = b;
                   end
@@ -856,6 +952,8 @@ classdef DiskData < handle
       
       function obj = lockData(obj)
          %% LOCKDATA    Method to set write access to read-only
+         %
+         % obj = lockData(obj); Sets write access to read-only
          
          obj.writable_ = false;
          obj.access_ = 'r';
@@ -865,6 +963,8 @@ classdef DiskData < handle
       
       function obj = unlockData(obj)
          %% UNLOCKDATA    Method to allow write access
+         %
+         % obj = unlockData(obj); Sets write access to read/write
          
          obj.writable_ = true;
          obj.access_ = 'w';
@@ -895,6 +995,87 @@ classdef DiskData < handle
             end
          end
          obj.size_ = size(a);
+      end
+   end
+   
+   % Private static method to validate data for 'Event' DiskData.type_
+   methods (Access = private, Static = true)
+      function validateEventDataRange(b,validFunHandle)
+         % VALIDATEEVENTDATARANGE  Ensures that 'propName' data is in range
+         
+         if nargin < 2
+            % Then nothing to validate
+            return;
+         end
+         
+         if iscell(validFunHandle)
+            for i = 1:numel(validFunHandle)
+               nigeLab.libs.validateEventDataRange(b,validFunHandle{i});
+            end
+            return;
+         end
+         
+         p = inputParser;
+         addRequired(p,'b',validFunHandle);
+         parse(p,b);
+      end
+      
+      function validateEventDataSize(b,propName,M)
+         % VALIDATEEVENTDATASIZE  Ensures that 'propName' data size is good
+         
+         if nargin < 3
+            M = 1;
+         elseif isnan(M)
+            % Then no requirements on size: return
+            return;
+         end
+         m = size(b,2);
+         if m ~= M
+            error('Input data number of columns (%d) does not match for %s (%g).',...
+               m,upper(propName),M);
+         end
+
+      end
+   end
+   
+   methods (Static = true)
+      function [iRow,iCol] = parseRowColumnIndices(S,tmp,colOffset)
+         % PARSEROWCOLUMNINDICES  Get row and column indexes based on
+         %                        subsasgn struct S
+         %
+         %  [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(...
+         %                 S,tmp,colOffset);
+         %
+         %  inputs: 
+         %  S  --  Struct from substruct function
+         %  tmp  --  DiskData diskfile data or whatever matrix that is
+         %              being accessed.
+         %  colOffset  --  (Optional) For example, for 'snippet' this might
+         %                    be set to 4 to account for the fact that the
+         %                    first 4 columns are removed.
+         
+         if nargin < 3
+            colOffset = 0;
+         end
+         
+         if isnumeric(S.subs{1})
+            iRow = S.subs{1};
+         elseif strcmpi(S.subs{1},':')
+            iRow = 1:size(tmp,1);
+         elseif strcmpi(S.subs{1},'end')
+            iRow = size(tmp,1);
+         end
+         if numel(S.subs) > 1
+            if isnumeric(S.subs{2})
+               iCol = S.subs{2};
+            elseif strcmpi(S.subs{2},':')
+               iCol = 1:(size(tmp,2) - colOffset);
+            elseif strcmpi(S.subs{2},'end')
+               iCol = size(tmp,2) - colOffset;
+            end
+         else 
+            iCol = 1;
+         end
       end
    end
 end

@@ -44,7 +44,7 @@ filesize = s.bytes;
 %% Read the file header
 
 header = ReadRHDHeader('FID',fid);
-blockObj.Meta.Header = fixNamingConvention(header);
+blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -73,7 +73,7 @@ Files = struct;
 
 fprintf(1, 'Allocating memory for data...\n');
 diskPars.name = fullfile(paths.Time.info);
-Files.Time = makeDiskFile(diskPars);
+Files.Time = nigeLab.utils.makeDiskFile(diskPars);
 
 if (num_raw_channels > 0)
    if exist('myJob','var')~=0
@@ -494,32 +494,4 @@ updateStatus(blockObj,'Raw',true);
 
 end
 
-function header_out = fixNamingConvention(header_in)
-%% FIXNAMINGCONVENTION  Remove '_' and switch to CamelCase
-
-header_out = struct;
-f = fieldnames(header_in);
-for iF = 1:numel(f)
-   str = strsplit(f{iF},'_');
-   for iS = 1:numel(str)
-      str{iS}(1) = upper(str{iS}(1));
-   end
-   str = strjoin(str,'');
-   header_out.(str) = header_in.(f{iF});
-end
-end
-
-function diskFile = makeDiskFile(diskPars)
-%% MAKEDISKFILE   Short-hand function to create file on disk
-% Check if file exists; if it does, remove it
-if exist(diskPars.name,'file')
-   delete(diskPars.name)
-end
-% Then create new pre-allocated diskFile
-diskFile = nigeLab.libs.DiskData(...
-   diskPars.format,...
-   diskPars.name,...
-   'class',diskPars.class,...
-   'size',diskPars.size,...
-   'access',diskPars.access);
 end

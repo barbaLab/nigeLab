@@ -1,8 +1,9 @@
-function flag = updateParams(blockObj,paramType)
+function [flag,p] = updateParams(blockObj,paramType)
 %% UPDATEPARAMS   Update the parameters struct property for paramType
 %
 %  flag = updateParams(blockObj);
 %  flag = updateParams(blockObj,paramType);
+%  [flag,p] = udpdateParams(__); Returns updated parameters as well
 %
 %  --------
 %   INPUTS
@@ -45,13 +46,6 @@ elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
    flag = blockObj.updateParams(paramType);
    return;
 elseif iscell(paramType) % Use recursion to run if cell array is given
-
-   %       flag = false(size(paramType));
-   %       for i = 1:numel(paramType)
-   %          flag(i) = blockObj.updateParams(paramType{i});
-   %       end
-   %       return;
-   % ;) Max do you like it? -- good job
    N = numel(paramType);
    if N==0
       flag = true;
@@ -82,14 +76,18 @@ else
    else % even if it does, make sure it has correct syntax...
       paramType = tmp{idx};
    end
+   
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
 propString = [paramType 'Pars'];
-blockObj.(propString) = nigeLab.defaults.(paramType)();
 blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 
+blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
 flag = true;
+if nargout > 1
+   p = blockObj.Pars.(paramType);
+end
 
 %% SUB-FUNCTIONS
    function idx = promptForParamType(str_options)

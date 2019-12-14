@@ -1,21 +1,34 @@
-function [pars,Fields] = Block()
+function [pars,Fields] = Block(name)
 %% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = nigeLab.defaults.Block();
+%  pars = nigeLab.defaults.Block('parName');
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Modify all properties here
+% NOTE: Capitalization is important here, as some of the properties are
+%        added from this struct to the BLOCK object and will not be
+%        correctly incorporated unless the capitalization matches BLOCK
+%        property.
 % Define general values used when parsing metadata from file name and
 % structure:
 pars             = struct;
 
 pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
-pars.ReadMatInfoFile = @nigeLab.utils.ReadMatInfo;  % if you're using already extracted data personalize the fnction here linked to get the header information fro them!
-pars.RecLocDefault  = 'R:/Rat';
+% If you have pre-extracted data, the workflow can be customized here
+% pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
+pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
+% pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
+pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
+% pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
+pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
+% pars.RecLocDefault  = 'R:/Rat';
+pars.RecLocDefault = 'C:\MyRepos\shared\pkg\dev\oldFormat\RC-05_2012_06_25';
 
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
-pars.AnimalLocDefault = 'P:/Rat';
+% pars.AnimalLocDefault = 'P:/Rat';
+pars.AnimalLocDefault = 'C:\MyRepos\shared\pkg\dev\newFormat\RC-05';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
@@ -36,9 +49,12 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    [pars.Delimiter '%s', ...
    pars.Delimiter '%s', ...
    pars.Delimiter 'Stream.mat'];
+TAG.Videos = ... % Videos: behavioral videos
+   [pars.Delimiter '%s', ...
+    pars.Delimiter '%g.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
 
 
-%% Here You can specify the naming format of your block recording
+%% Explanation of DynamicVarExp and NamingConvention pars fields
 % The block name will be splitted using Delimiter (defined above) and each
 % segment will be assigned to the property definied here.
 % Using namingConvention you can define to what varible each piece of the
@@ -90,9 +106,10 @@ pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTi
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
+pars.IncludeChar='$';
+pars.DiscardChar='~';
 
-% _____________________________
-% Many animals in one block
+%% Many animals in one block 
 %
 % Modern recording amplifiers usually have the capabilities to record from
 % many channels  simultaneously. This can be exploited to record from many
@@ -119,12 +136,14 @@ Fields =  { ...
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
-   'Video';          % 13
-   'Stim';           % 14 - hard-coded for extraction in RHS
-   'DC';             % 15 - hard-coded for extraction in RHS
+   'VidStreams';     % 13
+%    'Stim';           % 14 - hard-coded for extraction in RHS
+%    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
+   'Video';          % 19
+   'ScoredEvents';   % 20 - for manually-scored sync and alignment
    };
 
 FieldType = { ...
@@ -140,12 +159,14 @@ FieldType = { ...
    'Streams';  % 10
    'Streams';  % 11
    'Events';   % 12
-   'Streams';  % 13
-   'Events';   % 14
-   'Channels'; % 15
+   'Videos';  % 13
+%    'Events';   % 14
+%    'Channels'; % 15
    'Meta';     % 16
 %    'Meta';     % 17
    'Meta'      % 18
+   'Videos';   % 19  -- 2019-11-21 Introduce new FieldType for Videos
+   'Events';   % 20
    };
 
 OldNames       =  { ...
@@ -160,13 +181,15 @@ OldNames       =  { ...
    {'*sort*'};                      % 9
    {'*DIG*'};                       % 10
    {'*ANA*'};                       % 11
-   {'*Scoring.mat'};                % 12
+   {'*Press.mat';'*Beam.mat'};      % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
-   {'*STIM*'};                      % 14
-   {'*DC*'};                        % 15
+%    {'*STIM*'};                      % 14
+%    {'*DC*'};                        % 15
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
    {'*probes.xlsx'};                % 18
+   {'*.mp4','*.avi'};               % 19
+   {'*Scoring*','*VideoAlignment*'} % 20
    };
 
 FolderNames     = {  ...
@@ -182,12 +205,14 @@ FolderNames     = {  ...
    'Digital';           % 10
    'Digital';           % 11
    'Digital';           % 12
-   'Video';             % 13
-   'StimData';          % 14
-   'StimData';          % 15
+   'Video';             % 13 - for streams parsed from Video
+%    'StimData';          % 14
+%    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
-   'Metadata'           % 18
+   'Metadata';          % 18
+   'Video';             % 19 - for actual Video
+   'Video';             % 20 - Events from behavioral scoring
    };
 
 FileNames =  { ...
@@ -203,12 +228,14 @@ FileNames =  { ...
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
-   'Video';          % 13
-   'Stim';           % 14 - hard-coded for extraction in RHS
-   'DC';             % 15 - hard-coded for extraction in RHS
+   'VidStream';          % 13 - for streams parsed from Videos
+%   'Stim';           % 14 - hard-coded for extraction in RHS
+%   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
+   'Video';          % 19 - for actual Videos
+   'Curated';        % 20 - from behavioral scoring or manual alignment 
    };
 
 FileType = { ...
@@ -225,11 +252,13 @@ FileType = { ...
    'Hybrid';   % 11
    'Event';    % 12
    'Hybrid';   % 13
-   'Event';    % 14
-   'Hybrid';   % 15
+%    'Event';    % 14
+%    'Hybrid';   % 15
    'Hybrid';   % 16
 %    'Other';    % 17
    'Other';    % 18
+   'Other';    % 19
+   'Hybrid';   % 20
    };
 
 %% DO ERROR PARSING
@@ -252,14 +281,56 @@ pars.FileType = FileType;
 pars.FieldType = FieldType;
 
 % Check that FieldType is viable
-VIABLE_FIELDS = fieldnames(TAG);
-idx = ~cellfun(@(x)ismember(x,VIABLE_FIELDS),FieldType);
+pars.ViableFieldTypes = fieldnames(TAG);
+idx = ~cellfun(@(x)ismember(x,pars.ViableFieldTypes),FieldType);
 if sum(idx)>0
    idx = find(idx);
    warning('\nInvalid: FieldType{%d} (%s)\n',idx,FieldType{idx});
    pars = [];
    Fields = [];
    return;
+end
+
+% Check that if "HasVideo" and/or "HasVidStreams" are true, the appropriate
+% fields and corresponding values are present
+hasVideo = nigeLab.defaults.Video('HasVideo');
+hasVidStreams = nigeLab.defaults.Video('HasVidStreams');
+if hasVideo
+   % Check that there is a 'Video' Field, since Videos defaults assumes
+   % there is (hasVideo is true)
+   idx = find(ismember(Fields,'Video'));
+   if numel(idx) ~= 1
+      error('Not properly configured for Video recordings. Check +defaults.Video');
+   end
+   % Check that FieldType corresponding to 'Video' Field is correct
+   if ~strcmp(FieldType{idx},'Videos')
+      error('Invalid FieldType for Field ''Video'': ''%s''',FieldType{idx});
+   end
+   % Check that FileType corresponding to 'Video' Field is correct
+   if ~strcmp(FileType{idx},'Other')
+      error('Invalid FileType for Field ''Video'': ''%s''',FileType{idx});
+   end
+   % Check dynamic variables expression here and in defaults.Video
+   dyVar = cellfun(@(x)x(2:end),nigeLab.defaults.Video('DynamicVars'),...
+      'UniformOutput',false);
+   if ~any(ismember(pars.NamingConvention,dyVar))
+      error('No matching entries of NamingConvention (metadata field names) and DynamicVars in +defaults.Video');
+   end
+end
+
+if hasVidStreams
+   % defaults.Video is configured to assume there are data streams
+   % associated with the video. Check that there is appropriate Fields
+   % entry for 'VidStreams'
+   idx = find(ismember(Fields,'VidStreams'));
+   if numel(idx) ~= 1
+      error('Not properly configured for parsing VidStreams. Check +defaults.Video');
+   end
+   % Make sure that the FieldType corresponding to that entry is correctly
+   % labeled as 'Streams'
+   if ~strcmp(FieldType{idx},'Videos')
+      error('Invalid FieldType for Field ''VidStreams'': ''%s''',FieldType{idx});
+   end
 end
 
 %% MAKE DIRECTORY PARAMETERS STRUCT
@@ -271,6 +342,15 @@ for ii=1:numel(Fields)
    pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
    pars.BlockPars.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
    pars.BlockPars.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
+end
+
+if nargin > 0
+   if isfield(pars,name)
+      pars = pars.(name);
+      return;
+   else
+      error('Bad pars field: %s',name);
+   end
 end
 
 end

@@ -1,7 +1,7 @@
-function fType = getFileType(blockObj,field)
+function fileType = getFileType(blockObj,field)
 %% GETFILETYPE       Return file type corresponding to that field
 %
-%  fType = blockObj.getFileType(field);
+%  fileType = blockObj.getFileType(field);
 %
 %  --------
 %   INPUTS
@@ -14,7 +14,7 @@ function fType = getFileType(blockObj,field)
 %  --------
 %   OUTPUT
 %  --------
-%   fType         :     File type {'Hybrid';'MatFile';'Event'}
+%   fileType         :     File type {'Hybrid';'MatFile';'Event'}
 %                          corresponding to files associated with that
 %                          field.
 %
@@ -24,7 +24,11 @@ function fType = getFileType(blockObj,field)
 N_CHARS_TO_COMPARE = 7;
 
 %% Simple code but for readability
-fType = blockObj.FileType{strncmpi(blockObj.Fields,field,N_CHARS_TO_COMPARE)};
+idx = strncmpi(blockObj.Fields,field,N_CHARS_TO_COMPARE);
+if sum(idx) == 0
+   error('Not a valid field name: %s',field);
+end
+fileType = blockObj.FileType{idx};
 
 
 end
