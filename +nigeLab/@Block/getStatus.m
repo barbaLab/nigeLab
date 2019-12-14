@@ -41,7 +41,13 @@ if ~isscalar(blockObj)
          for i = 1:numel(blockObj)
             status{i} = blockObj(i).getStatus;
          end
+         return;
       case 2
+         if isempty(field)
+            status = getStatus(blockObj,blockObj(1).Fields);
+            return;
+         end
+         
          switch blockObj.getFieldType(field)
             case 'Channels'
                if iscell(field)
@@ -90,6 +96,12 @@ switch nargin
       
    case 2 % field is given (2 inputs, including blockObj)
       
+      % If given [] field input, return all fields
+      if isempty(field)
+         status = getStatus(blockObj,blockObj.Fields);
+         return;         
+      end
+      
       status = parseStatus(blockObj,field);
       if iscell(field)
          if numel(field)==1
@@ -99,7 +111,7 @@ switch nargin
          end
          return;
       end
-      if isfield(blockObj.Pars,'Video') && status
+      if isfield(blockObj.Pars,'Video') && strcmp(field,'Video')
          if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
             switch field
                case blockObj.Pars.Video.ScoringEventFieldname

@@ -24,7 +24,7 @@ switch nargin
       switch input
          case {'primary','g','green',1}
             Col = [30, 185, 128]./255;   % green
-         case {'secondary','dg','darkgreen',2}
+         case {'secondary','dg','darkgreen','button',2}
             Col = [4, 93, 86]./255;      % dark green
          case {'tertiary','o','orange',3}
             Col = [255, 104, 89]./255;   % orange
@@ -32,7 +32,7 @@ switch nargin
             Col = [255, 207, 68]./255;   % yellow
          case {'onprimary','k','black',1.1}
             Col = [0, 0, 0]./255; % black
-         case {'onsecondary','w','white',2.1} 
+         case {'onsecondary','w','white','onbutton',2.1} 
             Col = [255, 255, 255]./255; % white
          case {'ontertiary',3.1}
             Col = [0, 0, 0]./255; % black

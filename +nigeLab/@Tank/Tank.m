@@ -50,36 +50,41 @@ classdef Tank < handle
 %
 %     Empty - Create an Empty TANK object or array
 
-   %% PUBLIC PROPERTIES
-   properties (GetAccess = public, SetAccess = public)
+   %% PROPERTIES
+   % Public get & set, SetObservable as well
+   properties (GetAccess = public, SetAccess = public, SetObservable)
       Name    char               % Name of experiment (TANK)
       Animals nigeLab.Animal     % Handle array to Children
    end
 
+   % Has to be set by method of Tank, but can be accessed publically
    properties (SetAccess = private, GetAccess = public)
-      Paths  struct             % Detailed paths specifications for all the saved files
-      
+      Fields         cell      % Specific things to record
+      FieldType      cell      % "Types" corresponding to Fields elements
+      Paths          struct    % Detailed paths specifications for all the saved files
    end
    
-   %% PRIVATE PROPERTIES
+   % Various parameters that may be useful to access publically but cannot
+   % be set externally and don't populate the normal list of properties
    properties (GetAccess = public, SetAccess = private, Hidden = true) %debugging purposes, is private
       RecDir                  char     % Directory of the TANK
       SaveLoc                 char     % Top folder
       Pars                    struct   % Parameters struct
-      
-%       BlockNameVars           % Metadata variables from BLOCK names
-%       DefaultSaveLoc          % Default for save location
-%       DefaultTankLoc          % Default for UI TANK selection
-%       Delimiter               % Filename metadata delimiter
-%       RecType                 % Acquisition system used for this Tank
-%                               % Currently supported formats
-%                               % ---------------------------
-%                               % Intan  ('Intan')
-%                               % TDT    ('TDT')         
-%                               
    end
    
-   %% PUBLIC METHODS
+   % Private - Listeners & Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
+      PropListener    event.listener  % Array of handles that listen for key event changes
+      
+      % Flags
+      IsEmpty = true  % Is this an empty tank
+   end
+
+  
+   %% METHODS
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % Class constructor
       function tankObj = Tank(tankRecPath,tankSavePath,varargin)
@@ -122,6 +127,7 @@ classdef Tank < handle
                tankObj = repmat(tankObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Ensure not just all the same handle
                      tankObj(i,k) = copy(tankObj(1,1));
                   end
                end
@@ -132,6 +138,8 @@ classdef Tank < handle
             end
          end
          
+         % At this point it will be initialized "normally"
+         tankObj.IsEmpty = false;
          if nargin < 2
             tankObj.SaveLoc = [];
          else
@@ -139,8 +147,10 @@ classdef Tank < handle
          end
          
          % Load default settings
-         tankObj.updateParams('Tank');
+         tankObj.updateParams('Tank'); % old maybe
          tankObj.updateParams('all');
+         tankObj.updateParams('init');
+         tankObj.addListeners();
          
          % Can specify properties on construct
          for iV = 1:2:numel(varargin) 
@@ -176,63 +186,26 @@ classdef Tank < handle
          
       end
       
-      % Method to add animals to Tank
-      function addAnimal(tankObj,animalPath,idx)
-         % ADDANIMAL  Method to add animal to nigeLab.Tank Animals property
+      % Make sure listeners are deleted when tankObj is destroyed
+      function delete(tankObj)
+         % DELETE  Ensures listener handles are properly destroyed
          %
-         %  tankObj.addAnimal();
-         %     --> Allows selection of animals from UI
-         %  tankObj.addAnimal('AnimalFolder'); 
-         %     --> Adds animal corresponding to 'AnimalFolder'
-         %  tankObj.addAnimal({'aFolder1','aFolder2',...});
-         %     --> Adds multiple animals from cell array of folder chars
-         %  tankObj.addAnimal(animalObj);
-         %     --> Adds animalObj directly, which could be a scalar
-         %         animalObj or an array.
-         %  tankObj.addAnimal(animalObj,idx);
-         %     --> Specifies the array index to add the animal to
+         %  delete(tankObj);
          
-         % Check inputs
-         if nargin<2
-            animalPath = '';
-         end
-         
-         if iscell(animalPath)
-            for i = 1:numel(animalPath)
-               tankObj.addAnimal(animalPath{i});
+         if numel(tankObj) > 1
+            for i = 1:numel(tankObj)
+               delete(tankObj(i));
             end
             return;
          end
          
-         if isa(animalPath,'nigeLab.Animal')
-            if numel(animalPath) > 1
-               animalObj = reshape(animalPath,1,numel(animalPath));
-            else
-               animalObj = animalPath;
+         for i = 1:numel(tankObj.PropListener)
+            if isvalid(tankObj.PropListener(i))
+               delete(tankObj.PropListener(i));
             end
-         else
-            % Parse AnimalFolder from UI
-            if isempty(animalPath)
-               animalPath = uigetdir(tankObj.RecDir,...
-                  'Select animal folder');
-               if animalPath == 0
-                  error(['nigeLab:' mfilename ':NoAnimalSelection'],...
-                     'No ANIMAL selected. Object not created.');
-               end
-            else
-               if exist(animalPath,'dir')==0
-                  error(['nigeLab:', mfilename ':invalidAnimalPath'],...
-                     '%s is not a valid ANIMAL directory.',animalPath);
-               end
-            end
-            animalObj = nigeLab.Animal(animalPath,tankObj.Paths.SaveLoc);
          end
-         animalObj.setTank(tankObj); % Set "parent" tank
-         if nargin < 3
-            tankObj.Animals = [tankObj.Animals animalObj];
-         else
-            tankObj.Animals(idx) = animalObj;
-         end
+         
+         delete(tankObj.Animals);
       end
       
       % Overload to 'end' indexing operator
@@ -251,6 +224,28 @@ classdef Tank < handle
          end
       end
       
+      % Overload to 'isempty' 
+      function tf = isempty(tankObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If tankObj is array, then returns an
+         %          array of true or false for each element of tankObj.
+         
+         if numel(tankObj) == 0
+            tf = true;
+            return;
+         end
+         
+         if ~isscalar(tankObj)
+            tf = false(size(tankObj));
+            for i = 1:numel(tankObj)
+               tf(i) = isempty(tankObj(i));
+            end
+            return;
+         end
+         
+         tf = tankObj.IsEmpty || builtin('isempty',tankObj);
+      end
+      
       % Method used for saving TANK object
       function save(tankObj)
          % SAVE  Method to save a nigeLab.Tank class object
@@ -267,6 +262,7 @@ classdef Tank < handle
 
          % Save all Animals associated with tank
          A = tankObj.Animals; % Since tankObj.Animals(:) = []; in saveobj
+         pL = tankObj.PropListener;
          for a = tankObj.Animals
             a.save;
          end
@@ -276,7 +272,9 @@ classdef Tank < handle
          tankFile = nigeLab.utils.getUNCPath(...
                      fullfile([tankObj.Paths.SaveLoc '_Tank.mat']));
          save(tankFile,'tankObj','-v7');
-         tankObj.Animals = A; % so pointer is still good after saving         
+         % so pointers are still good after saving: 
+         tankObj.Animals = A;         
+         tankObj.PropListener = pL;
          
          % Save tank "ID" for convenience of identifying this folder as a
          % "nigelTank" in the future.
@@ -297,7 +295,8 @@ classdef Tank < handle
          %          that tankObj.Animals does not save Animal objects
          %          redundantly.
          
-         tankObj.Animals(:) = [];         
+         tankObj.Animals(:) = [];       
+         tankObj.PropListener(:) = [];
       end
       
       % Returns the status of a operation/animal for each unique pairing
@@ -308,13 +307,23 @@ classdef Tank < handle
          %            status element (for that animal) is returned as
          %            false.
          %
-         %  Status = tankObj.getStatus(); Returns status for ALL operations
+         %  Status = tankObj.getStatus();
+         %  --> Return list of status that have been completed for each
+         %      ANIMAL
+         %
+         %  Status = tankObj.getStatus([]);
+         %  --> Return matrix of logical values for ALL fields
+         %
          %  Status = tankObj.getStatus(operation); Returns specific
          %                                         operation status
          
          if nargin <2
             tmp = tankObj.list;
             Status = tmp.Status;
+         elseif isempty(operation)
+            operation = tankObj.Pars.Block.Fields;
+            Status = getStatus(tankObj,operation);
+            return;
          else
             % Ensure operation is a cell
             if ~iscell(operation)
@@ -331,83 +340,13 @@ classdef Tank < handle
             end
          end
       end
-
-      % Overloaded function for referencing ANIMAL/BLOCK using {}
-      function varargout = subsref(tankObj,S)
-         % SUBSREF  Overloaded function modified so that BLOCK can be
-         %          referenced by indexing from ANIMAL using {} operator.
-         %          Everything with {} referencing refers to the
-         %          tankObj.Animals property.
-         %
-         %  childBlockArray = tankObj{[2,1;1,4;3,1]}
-         %  --> childBlockArray is the 1st Child Block of 2nd Animal in
-         %     array, 4th Block of 1st Animal, and 1st Block of 3rd Animal,
-         %     concatenated into a horizontal array [b21, b14, b31]
-         %
-         %  --> equivalent to calling tankObj{[2,1,3],[1,4,1]};
-         %
-         %  ** NOTE ** that calling
-         %  tankObj{[2,1,3],[1,2,4,5]} would only return a single
-         %  element for each animalObj [b21, b12, b34], NOT the 1st, 2nd,
-         %  4th, and 5th block from each animal.
-         %
-         %  childBlock = tankObj{1,1}
-         %  --> returns 1st child of 1st animal in tankObj.Animals
-         %
-         %  childBlockArray = tankObj{1}
-         %  --> Returns first animal in tankObj.Animals
-         %
-         %  ** NOTE ** tankObj{end} references the last Animal in
-         %             tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{:}
-         %  --> Returns all animals in tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{2,:}
-         %  --> Returns all children of 2nd animal in tankObj.Animals.
-         %
-         %  childBlockArray = tankObj{:,1}
-         %  --> Returns first child Block of each animal in tankObj.Animals
-         %
-         %  ** NOTE ** tankObj{idx1,end} references the last Block in each
-         %             element of tankObj.Animals indexed by idx1.
-         
-         if isempty(tankObj.Animals)
-            error(['nigeLab:' mfilename ':indexOutOfBounds'],...
-               'tankObj.Animals is empty');
-         end
-         
-         
-         subs = S(1).subs;
-         
-         switch S(1).type
-            case '{}'
-               varargout = cell(1,nargout);
-               switch numel(subs)
-                  % If only 1 subscript, then it indexes Animals
-                  case 1
-                     s = substruct('()',subs);
-                     varargout{1} = subsref(tankObj.Animals,s);
-                  case 2
-                     s = substruct('{}',subs);
-                     varargout{1} = subsref(tankObj.Animals,s);
-                     
-                  otherwise
-                     error(['nigeLab:' mfilename ':tooManyInputs'],...
-                        'Too many subscript indexing args (%g) given.',...
-                        numel(subs));
-               end
-               return;
-               
-            % If not {} index, use normal behavior
-            otherwise
-               [varargout{1:nargout}] = builtin('subsref',tankObj,S);
-         end
-      end
    end   
    
-   % PUBLIC methods (to be catalogued using contents.m)
+   % PUBLIC
+   % Methods (to be catalogued using contents.m)
    methods (Access = public)
+      addAnimal(tankObj,animalPath,idx) % Add child Animals to Tank
+      
       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
@@ -420,7 +359,9 @@ classdef Tank < handle
       runFun(tankObj,f) % Run function f on all child blocks in tank
       
    end
-   %% PRIVATE METHODS
+   
+   % PRIVATE
+   % To be added to 'Contents.m'
    methods (Access = public, Hidden = true)
       flag = init(tankObj)                 % Initializes the TANK object.
       flag = genPaths(animalObj,tankPath) % Generate paths property struct
@@ -431,8 +372,118 @@ classdef Tank < handle
 %       LocalConvert(tankObj)
 %       SlowConvert(tankObj)
       clearSpace(tankObj,ask)   % Clear space in all Animals/Blocks
+      
+      removeAnimal(tankObj,ind) % remove the animalObj at index ind
+   end
+   
+   % PRIVATE
+   % Used during initialization
+   methods (Access = private)
+      % Add property listeners to 'Animals' 
+      function addListeners(tankObj)
+         % ADDLISTENERS  Adds property listeners to tankObj on init
+         %
+         %  tankObj.addListeners();
+         
+         obj.PropListener(1) = addlistener(tankObj,...
+            'Animals','PostSet',...
+            @(~,~)tankObj.CheckAnimalsForClones);
+            
+      end
+   end
+   
+   % PRIVATE
+   % Listener callbacks
+   methods (Access = private, Hidden = true)
+      % Remove Animals from the array at a given index (event listener) if
+      % that animal object is destroyed for some reason.
+      function AssignNULL(tankObj)
+         % ASSIGNNULL  Remove assignment of a given Animal from
+         %             tankObj.Animals, so we don't keep handles to deleted
+         %             objects in that array. Event listener for
+         %             'ObjectDestroyed' event of nigeLab.Animal.
+         
+         tankObj.Animals(~isvalid(tankObj.Animals)) = [];
+      end
+      
+      % Event listener callback to make sure that duplicate Animals are not
+      % added and if they are duplicated, that upon removal there are not
+      % "lost" Child Blocks.
+      function CheckAnimalsForClones(tankObj)
+         % CHECKANIMALSFORCLONES  Event listener callback invoked when a
+         %                        new Animal is added to tankObj.Animals.
+         %
+         %  tankObj.CheckAnimalsForClones;  Ensure no redundancies in
+         %                                   tankObj.Animals.
+         
+         % If no animals or only 1 animal, no need to check
+         a = tankObj.Animals;
+         if sum(isempty(a)) == 1
+            return;
+         else
+            idx = ~isempty(a);
+            a = a(idx);
+         end
+         % Get names for comparison
+         cname = {a.Name};
+         % look for animals with the same name
+         comparisons_cell = cellfun(@(s) strcmp(s,cname),...
+            cname,...
+            'UniformOutput',false);
+         comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
+                                    eye(numel(cname))));
+         rmvec = any(comparisons_mat,1);
+         if ~any(rmvec)
+            return;
+         end
+         
+         % cycle through each animal, removing animals and adding any
+         % associated blocks to the "kept" animal Blocks property
+         ii=1;
+         while ~isempty(comparisons_mat)
+            % Current row contains all comparisons to other Animals in
+            % tankObj.Animals
+            animalIsSame = comparisons_mat(1,:);
+            comparisons_mat(1,:) = []; % ensure this row is dropped
+            
+            % ii indexes current "good" Animal
+            animalObj = a(ii); 
+            ii = ii + 1; % ensure it is incremented
+            
+            % If no redundancies, then continue. 
+            if ~any(animalIsSame)
+               continue;
+            end
+            
+            % To prevent weird case where you have a 1x0 array
+            if isempty(animalIsSame)
+               continue;
+            end
+            
+            % Add child blocks from removed animals to this animal to
+            % ensure they aren't accidentally discarded
+            aidx = find(animalIsSame);
+            B = a{aidx,:}; %#ok<*FNDSB>
+            addChildBlock(animalObj,B); 
+            
+            % Now, remove redundant animals from array and also remove them
+            % from the comparisons matrix since we don't need to redo them
+            mask = find(idx);
+            tankObj.Animals(mask(animalIsSame)) = []; % Remove from property
+            a(animalIsSame) = []; % Remove them from consideration in the array
+            idx(animalIsSame) = []; % Remove corresponding indexes
+            
+            % Lastly, update the comparisons matrices
+            iRow = animalIsSame(2:end); % To account for previously-removed row of comparisons
+            comparisons_mat(iRow,:) = [];
+            % Columns are not removed, since the original animal is kept in
+            % the array and we should account for its index.
+            comparisons_mat(:,animalIsSame) = []; 
+         end
+      end
    end
 
+   % STATIC
    methods (Static)
       % Method to create Empty TANK object or array
       function tankObj = Empty(n)
@@ -442,7 +493,7 @@ classdef Tank < handle
          %  tankObj = nigeLab.Tank.Empty(n); % Make n-element array Tank
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)
@@ -460,6 +511,7 @@ classdef Tank < handle
          %  tankObj = loadObj(tankObj);
          
          if ~isfield(a.Paths,'SaveLoc')
+            a.addListeners();
             b = a;
             return;
          end
@@ -474,9 +526,11 @@ classdef Tank < handle
                in = load(fullfile(A(ii).folder,A(ii).name));
                a.addAnimal(in.animalObj,ii);
             end
+            a.addListeners();
             b = a;
             return;
          else
+            a.addListeners();
             b = a;
             return;
          end

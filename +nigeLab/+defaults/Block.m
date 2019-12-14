@@ -17,8 +17,8 @@ pars             = struct;
 % If you have pre-extracted data, the workflow can be customized here
 % pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
 pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
-% pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
-pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
+pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
+% pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
 % pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
 pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
 % pars.RecLocDefault  = 'R:/Rat';
@@ -94,15 +94,16 @@ TAG.Videos = ... % Videos: behavioral videos
 
 %% Common DynamicVarExp values
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
+% pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
+pars.DynamicVarExp = '$AnimalID $RecID $RecDate $RecTime'; % IIT intan
 
 %% Common NamingConvention values
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
-pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
+% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
-% pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 pars.IncludeChar='$';
 pars.DiscardChar='~';
@@ -118,7 +119,7 @@ pars.DiscardChar='~';
 %
 % Example 
 % R18-68&&R18-69_180724_141203.rhd
-pars.ManyAnimalsChar='&&';
+pars.MultiAnimalsChar='&&';
 
 %%
 Fields =  { ...

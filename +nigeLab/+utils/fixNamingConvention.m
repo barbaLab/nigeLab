@@ -27,9 +27,17 @@ switch class(header)
    case 'struct' % Actually probably is "header" struct
       header_ = struct;
       f = fieldnames(header);
+      if isempty(f)
+         return;
+      end
+      if isempty(header)
+         header_ = struct([]);
+         return;
+      end
       for iF = 1:numel(f)
          str = fixName(f{iF},delim);
          header_.(str) = header.(f{iF});
+
       end
       return;
       

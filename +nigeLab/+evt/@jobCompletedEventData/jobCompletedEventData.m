@@ -3,20 +3,32 @@ classdef (ConstructOnLoad) jobCompletedEventData < event.EventData
 %                         JOB is completed.
 
 %% Properties
-   properties
-      progBar   nigeLab.libs.nigelProgress  % nigelProgressObj
-      data                                  % UserData from nigelProgressObj
+   properties (Access = public)
+      Bar                 nigeLab.libs.nigelProgress  % nigelProgressObj
+      BarIndex            double   % Index of bar into remote monitor 'bars' array
+      BlockSelectionIndex double   % Index of [animal block] from tank{} ref
+      IsComplete          logical  % Was the job completed
+      IsRemote            logical  % Was job run remotely?
    end
    
 %% Methods
-   methods
-      function evtData = jobCompletedEventData(nigelProgressObj)
+   methods (Access = public)
+      function evt = jobCompletedEventData(bar)
          %%JOBCOMPLETEDEVENTDATA   Event issued by 
          %                         nigeLab.libs.remoteMonitor when a
          %                         JOB is completed.
+         %
+         %  evt = nigeLab.evt.jobCompletedEventData(bar);
+         %
+         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
+         %
+         %  evt  --  EventData that can be passed via `notify` function
          
-         evtData.bar = nigelProgressObj;
-         evtData.data = nigelProgressObj.UserData;
+         evt.Bar = bar;
+         evt.BarIndex = bar.BarIndex;
+         evt.BlockSelectionIndex = bar.BlockSelectionIndex;
+         evt.IsComplete = bar.IsComplete;
+         evt.IsRemote = bar.IsRemote;
       end
    end
    

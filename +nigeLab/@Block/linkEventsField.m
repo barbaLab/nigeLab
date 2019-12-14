@@ -20,7 +20,8 @@ end
 
 updateFlag = false(1,numel(blockObj.Events.(field)));
 
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+blockObj.reportProgress(str,0);
 counter = 0;
 for i = 1:numel(blockObj.Events.(field))  
    % Get file name
@@ -40,7 +41,7 @@ for i = 1:numel(blockObj.Events.(field))
    % Increment counter and print to command window
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100))
+   blockObj.reportProgress(str,pct);
 end
 % Update the status for each linked file (number depends on the Field)
 blockObj.updateStatus(field,updateFlag);

@@ -144,6 +144,8 @@ end
       %                  struct_in, and assigns field values from struct_in
       %                  to the corresponding field of channel_struct_
       
+      
+      
       fn = fieldnames(struct_in);
       fn_reduced = fieldnames(channel_struct_);
       tmp = nigeLab.utils.fixNamingConvention(struct_in);
@@ -151,18 +153,24 @@ end
       fn_reduced_ = nigeLab.utils.fixNamingConvention(fieldnames(channel_struct_));
       
       for i = 1:numel(fn)
+         if isempty(struct_in)
+            data_assign = [];
+         else
+            data_assign = struct_in.(fn{i});
+         end
+         
          if ismember(fn{i},fn_reduced) % If it's a member, assign it
-            channel_struct_.(fn{i}) = struct_in.(fn{i});
+            channel_struct_.(fn{i}) = data_assign;
             
          else % If not, check for match agnostic to capitalization
             i_match = find(ismember(lower(fn_reduced),lower(fn{i})),1,'first');
             if numel(i_match) == 1
-               channel_struct_.(fn_reduced{i_match}) = struct_in.(fn{i});
+               channel_struct_.(fn_reduced{i_match}) = data_assign;
                
             else % If still no, fix naming convention and check for match
                i_match = find(ismember(fn_reduced_,fn_{i}),1,'first');
                if numel(i_match) == 1
-                  channel_struct_.(fn_reduced{i_match}) = struct_in.(fn{i});
+                  channel_struct_.(fn_reduced{i_match}) = data_assign;
                end % If still no, then it is not a field to match
             end            
          end

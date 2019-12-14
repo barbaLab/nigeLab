@@ -1,63 +1,113 @@
-function str = reportProgress(blockObj, string, pct ) %#ok<INUSL>
-%%
+function str = reportProgress(blockObj, str_expr, pct, notification_mode) 
+% REPORTPROGRESS  Utility function to report progress on block operations.
+%
+%  str = blockObj.reportProgress(string,pct);
+%
+%  inputs:
+%  blockObj  --  nigeLab.Block object
+%
+%  str_expr  --  <a> tag to define hyperlinks </a>
+%                <strong> to define bold </strong>
+%
+%  pct  --  Current percentage to update as associated with the string.
+%           --> If not provided, defaults to 0 (assume that this is the
+%               first declaration of the string (outside the loop for
+%               example).
+%
+%  mode  --  Default: 'toWindow' (print to window)
+%            Can set as 'toEvent' (notifies with event instead)
+%
+%  Description:
+%       It uses the notification string specified in defaults.Notification,
+%       where you can specify what metadata it should be printed on screen
+%       along with the *string* input and the percentage.
+%
+%  2019-12-11: Added copy to nigeLab.utils to start replacing block method
+%              version with calls to the utility function. Note that THIS
+%              version (the block method) will trigger the block
+%              'ProgressUpdated' event.
 
-pars = nigeLab.defaults.Notifications;
+if nargin < 4
+   notification_mode = 'toWindow';
+end
+
+if nargin < 3
+   pct = 0;
+end
+
+pars = blockObj.Pars.Notifications;
+
+
+switch lower(notification_mode)
+   case {'towindow','cmd','commandwindow','window'}
+      pct = round(pct);
+      % Continue
+   case {'toevent','event','evt','notify'}
+
+      evtData = nigeLab.evt.progressChangedEventData(str_expr,pct);
+      notify(blockObj,'ProgressChanged',evtData);
+      str = [];
+      return;
+
+   otherwise
+      % Behave as if 'toWindow'
+end
 
 if ~nigeLab.utils.checkForWorker % serial execution on localhost
-    metas = cell(1, numel(pars.NotifyString.Vars));
-    for ii=1:numel(pars.NotifyString.Vars),metas{ii} = eval(pars.NotifyString.Vars{ii});end
-        str = sprintf(pars.NotifyString.String,metas{:},...         % constant part of the message
-            string,floor(pct));                                     % variable part of the message
-        if nargout == 1,return;end
-        
-        if ~floor(mod(pct,pars.MinIncrement)) % only increment counter by a certain amount defined in defaults.
-           
-            lastDisplText = getLastDispText(numel(str)+3);
-            
-            lastDisplText = regexprep(lastDisplText,'>> ','');
-            strtIndx = regexp(lastDisplText,[eval(pars.NotifyString.Vars{1})]);
-            lastDisplText = lastDisplText(strtIndx:end);
-            nextDisplText = regexprep(lastDisplText,'\d*%',sprintf('%.3d%%%%\n',pct));
-            nextDisplText = regexprep(nextDisplText,'\n*','\\n');
-            nextDisplText = regexprep(nextDisplText,'\r','\\r');
-            nextDisplText = regexprep(nextDisplText,'\t','\\t');
-            nextDisplText = regexprep(nextDisplText,'\v','\\v');
-
-            stringMatch = regexp(lastDisplText,string,'ONCE');
-            if ~isempty(stringMatch)
-                try
-                fprintf(1,[repmat('\b',1,length(lastDisplText)) nextDisplText]);
-                catch
-                    fprintf(1,'\n');
-                    fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
-                        string,floor(pct));
-                end
-            else     
-                
-                fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
-                    string,floor(pct));                                     % variable part of the message
-            end
-            
-        end
-    
+   metas = cell(1, numel(pars.NotifyString.Vars));
+   for ii=1:numel(pars.NotifyString.Vars)
+      metas{ii} = eval(pars.NotifyString.Vars{ii});
+   end
+   str = sprintf(pars.NotifyString.String,metas{:},...         % constant part of the message
+      str_expr,floor(pct));                                     % variable part of the message
+   if nargout == 1
+      return;
+   end
+   
+   % only increment counter by a certain amount defined in defaults.
+   if ~floor(mod(pct,pars.MinIncrement))
+      % This is only entered if % is an even multiple of pars.MinIncrement   
+      
+      tmpstr = regexprep(str,'<.*?>','');
+      lastDisplText = nigeLab.utils.getLastDispText(numel(tmpstr)+1);
+      
+      lastDisplText = regexprep(lastDisplText,'>> ','');
+      strtIndx = regexp(lastDisplText,[eval(pars.NotifyString.Vars{1})]);
+      lastDisplText = lastDisplText(strtIndx:end);
+      nextDisplText = regexprep(str,'\d*%',sprintf('%.3d%%%%\n',pct));
+      nextDisplText = regexprep(nextDisplText,'\\','\\\\');
+      
+      stringMatch = regexp(lastDisplText,regexprep(str_expr,'<.*?>',''),'ONCE');
+      if ~isempty(stringMatch)
+         try
+            tmpstr = regexprep(sprintf(nextDisplText),'<.*?>','');
+            fprintf(1,[repmat('\b',1,length(tmpstr)) nextDisplText]);
+         catch
+            fprintf(1,'\n');
+            fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
+               str_expr,floor(pct));
+         end
+      else
+         
+         fprintf(1,pars.NotifyString.String,metas{:},...             % constant part of the message
+            str_expr,floor(pct));                                     % variable part of the message
+         fprintf(1,'\n');
+      end
+   end
+   
 else % we are in worker environment
-    job = getCurrentJob;
-    metas = cell(1, numel(pars.TagString.Vars));
-    for ii=1:numel(pars.TagString.Vars),metas{ii} = eval(pars.TagString.Vars{ii});end
-    str = sprintf(pars.TagString.String,metas{:},...                     % variable part of the message
-        string,floor(pct));
-    if nargout == 1,return;end
-    set(job,'Tag',...
-        str);                                             % constant part of the message);
+   str_expr = regexprep(sprintf(str_expr),'<.*?>','');
+   job = getCurrentJob;
+   metas = cell(1, numel(pars.TagString.Vars));
+   for ii=1:numel(pars.TagString.Vars)
+      metas{ii} = eval(pars.TagString.Vars{ii});
+   end
+   str = sprintf(pars.TagString.String,metas{:},...                     % variable part of the message
+      str_expr,floor(pct));
+   if nargout == 1
+      return;
+   end
+   set(job,'Tag',str);    % constant part of the message;
 end
 
-end
-
-function txt = getLastDispText(nChars)
-[cmdWin]=com.mathworks.mde.cmdwin.CmdWin.getInstance;
-cmdWin_comps=get(cmdWin,'Components');
-subcomps=get(cmdWin_comps(1),'Components');
-text_container=get(subcomps(1),'Components');
-output_string=get(text_container(1),'text');
-txt = output_string(end-nChars:end);
 end

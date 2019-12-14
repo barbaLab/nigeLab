@@ -6,9 +6,14 @@ classdef nigelProgress < handle
 %
 %   bar  --  output handle to nigeLab.libs.nigelProgress object
 %
+%   parent -- parent container
 %   name  --  char array that is descriptor of thing to monitor
+%   sel  --  index referencing the animal/block combination
+%            associated with this bar
+%   idx  --  index associated with bar that references the
+%            remoteMonitor 'bars' property array
+%   starttime  --  Start time (clock()) can be assigned optionally
 %   job  --  Matlab job object
-%   UserData  --  Any data to associate with the bar
 %
 %  PROPERTIES:
 %     Parent - Parent (container) object
@@ -29,24 +34,53 @@ classdef nigelProgress < handle
    
    properties (Access = public, SetObservable = true)
       Position  double   % Position of "container" but updates graphics
+      job
    end
 
    properties (SetAccess = private, GetAccess = public)
-      Name      char                          % Name of bar
       Parent    matlab.ui.container.Panel     % Parent Panel object
       Children  cell                          % Array of Child objects
-      UserData
+   end
+   
+   properties (Access = {?nigeLab.libs.remoteMonitor, ...
+                         ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.libs.DashBoard}, SetObservable = true)
+      
+      BarIndex = nan                % Index of this bar in remoteMonitor
+      IsRemote  logical             % Flag indicating if bar is remote
+      Name      char                % Name of bar
+      Progress  double              % From 0 to 100, progress of bar
+      Status   = ''                 % Currently-displayed status
+   end
+   
+   properties (Access = private, SetObservable = true)
+      Visible  char   % 'on' or 'off'
+   end
+   
+   properties (Access = {?nigeLab.libs.remoteMonitor, ...
+                         ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.libs.DashBoard})
+      BlockSelectionIndex  double   % Index of the [animal block]
+      IsComplete    =      false    % Flag indicating completion status
+      
    end
    
    properties (Access = public, Hidden = true)
-      idx
-      job
       starttime
    end
    
-   methods (Access = public)
+   properties (Access = private)
+      listeners   event.listener
+   end
+   
+   events
+      JobCanceled
+   end
+   
+   methods (Access = {?nigeLab.libs.remoteMonitor, ...
+                      ?nigeLab.libs.DashBoard})
       % Class constructor for NIGELPROGRESS class
-      function bar = nigelProgress(parent,name,job,idx,UserData,starttime)
+      function bar = nigelProgress(parent,name,sel)
          % NIGELPROGRESS    Create a bar allowing graphical tracking of
          %                  completion status via the bar progress.
          %
@@ -56,10 +90,8 @@ classdef nigelProgress < handle
          %
          %   parent -- parent container
          %   name  --  char array that is descriptor of thing to monitor
-         %   job  --  Matlab job object
-         %   idx  --  index associated with this bar
-         %   UserData  --  Any data to associate with the bar
-         %   starttime  --  Start time (clock()) can be assigned optionally
+         %   sel  --  index referencing the animal/block combination
+         %            associated with this bar
          %
          %  bar = nigeLab.libs.nigelProgress(5);
          %  --> Return an empty column array of 5 nigelProgres bars
@@ -83,35 +115,11 @@ classdef nigelProgress < handle
             end
          end
          
-         if nargin < 2
-            name = '';
-         end
-         
-         if nargin < 3
-            job = [];
-         end
-         
-         if nargin < 4
-            idx = 1;
-         end
-         
-         if nargin < 5
-            UserData = [];
-         end
-         
-         if nargin < 6
-            starttime = clock();
-         end
-         
          %% Assign basic properties
          bar.Name = name;
          bar.Parent = parent;
-         bar.UserData = UserData;
-         bar.Position = [0 0 1 1];
-         
-         bar.idx = idx;
-         bar.job = job;
-         bar.starttime = starttime;
+         bar.Position = parent.Position;
+         bar.BlockSelectionIndex = sel;
          
          %% Build Children graphics
          bar.Children = cell(6,1);
@@ -124,43 +132,45 @@ classdef nigelProgress < handle
             'ytick', [], ...
             'xtick', [],...
             'Tag','prog_axes',...
-            'UserData',idx);
-         
-         bar.Children{2} = text(bar.Children{1},...
-            0.01, 0.5, name, ...
-            'HorizontalAlignment', 'Left', ...
-            'FontUnits', 'Normalized', ...
-            'FontSize', 0.7,...
-            'Color',nigeLab.defaults.nigelColors('onsurface'),...
-            'FontName','Droid Sans',...
-            'Tag','progname_label');
+            'Color','none',...
+            'XColor','none',...
+            'YColor','none');
          
          bar.Children{3} = patch(bar.Children{1}, ...
-            'XData', [0.5 0.5 0.5 0.5], ...
+            'XData', [0   0   0   0  ], ...
             'YData', [0   0   1   1  ],...
             'FaceColor',nigeLab.defaults.nigelColors(1),...
             'Tag','progbar_patch');
          
-         patch(bar.Children{1}, ...
-            'XData', [0 0.5 0.5 0], ...
-            'YData', [0 0   1   1],...
-            'FaceColor',nigeLab.defaults.nigelColors('surface'),...
-            'EdgeColor',nigeLab.defaults.nigelColors('surface'));
+         bar.Children{2} = text(bar.Children{1},...
+            0.01, 0.5, name, ...
+            'HorizontalAlignment', 'Left', ...
+            'VerticalAlignment','middle',...
+            'FontUnits', 'Normalized', ...
+            'FontSize', 0.35,...
+            'Color',nigeLab.defaults.nigelColors('onsurface'),...
+            'FontName','Droid Sans',...
+            'BackgroundColor','none',...
+            'Tag','progname_label');
          
          bar.Children{4} = text(bar.Children{1},...
             0.99, 0.5, '0%', ...
             'HorizontalAlignment', 'Right', ...
+            'VerticalAlignment','middle',...
             'FontUnits', 'Normalized', ...
-            'FontSize', 0.7,...
+            'FontSize', 0.35,...
             'FontName','Droid Sans',...
+            'BackgroundColor','none',...
             'Tag','progpct_label');
          
          bar.Children{5} = text(bar.Children{1},...
             0.52, 0.5, '', ...
             'HorizontalAlignment', 'Left', ...
+            'VerticalAlignment','middle',...
             'FontUnits', 'Normalized', ...
-            'FontSize', 0.7,...
+            'FontSize', 0.35,...
             'FontName','Droid Sans',...
+            'BackgroundColor','none',...
             'Tag','progstatus_label');
          
          %%%% Design and plot the cancel button
@@ -172,7 +182,12 @@ classdef nigelProgress < handle
             'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
             'ForegroundColor',nigeLab.defaults.nigelColors(3),...
             'String','X',...
-            'Tag','progX_btn');
+            'Tag','progX_btn',...
+            'UserData',bar);
+         
+         %% Add property listeners
+         bar.listeners = addPropertyListeners(bar);
+         bar.job = [];
       end
       
       % Things to do on delete function
@@ -180,6 +195,43 @@ classdef nigelProgress < handle
          % DELETE  Additional things to delete when 'delete' is called
          
          delete(bar.Parent);
+         % If the job is valid to delete, then do so
+         if ~isempty(bar.job)
+            if isvalid(bar.job)
+               cancel(bar.job);
+               delete(bar.job);
+            end
+         end
+         
+         % Delete listener handles
+         if ~isempty(bar.listeners)
+            for lh = bar.listeners
+               if isvalid(lh)
+                  delete(lh);
+               end
+            end
+         end
+         
+      end
+      
+      % Returns bar based on sel from list of monitorObj bars
+      function bar = getBar(barArray,sel)
+         % GETBAR  Returns a single bar object based on selection from list
+         %         array barArray. References the 'BlockSelectionIndex'
+         %         property.
+         %
+         %  bar = getBar(barArray,sel);
+         %
+         %  sel  --  [1 x 2] array [animalIndex blockIndex]
+         
+         for bar = barArray
+            if all(bar.BlockSelectionIndex == sel)
+               return;
+            end
+         end
+         
+         % If outside loop, returns empty
+         bar = [];
          
       end
       
@@ -206,7 +258,7 @@ classdef nigelProgress < handle
                h = bar.Children{6};
             case {'status','progstatus_label','progstatus'}
                h = bar.Children{5};
-            case {'progbar_patch','patch','progbar','bar'}
+            case {'progbar_patch','patch','progbar','bar','progress'}
                h = bar.Children{3};
             case {'progpct_label','pct','progpct'}
                h = bar.Children{4};
@@ -225,6 +277,39 @@ classdef nigelProgress < handle
                   propName,tag);
             end
          end
+      end
+      
+      % Overloaded minus function to change indexing
+      function C = minus(A,B)
+         % MINUS  Overloaded minus function to change indexing
+         %
+         %  barArray - bar;  Sets bar BarIndex to NaN and subtracts 1 from
+         %                   all other BarIndex of other elements.
+         
+         % Only apply this if both are nigelProgress objects
+         if ~isa(A,'nigeLab.libs.nigelProgress') || ...
+               ~isa(B,'nigeLab.libs.nigelProgress')
+            C = builtin('minus',A,B);
+            return;
+         end
+         
+         cur = B.BarIndex;
+         for barObj = A
+            if barObj.BarIndex > cur
+               barObj.BarIndex = barObj.BarIndex - 1;
+            elseif barObj.BarIndex == cur
+               barObj.BarIndex = nan;
+            end
+         end
+         C = A;
+      end
+      
+      % Callback to get current state of bar (progress, status)
+      function getState(bar,~,evt)
+         % GETSTATE  Callback for getting current state of bar         
+         curStatus = evt.status;
+         curProgress = evt.progress;
+         bar.setState(curProgress,curStatus);
       end
       
       % Set child object property based on tag
@@ -266,14 +351,180 @@ classdef nigelProgress < handle
                propName,tag);
          end
       end
-
-      % Update status
-      function updateStatus(bar,str)
-         % UPDATESTATUS  Update status string
+      
+      % Set current state of the bar
+      function setState(bar,curProgress,curStatus)
+         % SETSTATE  Sets the current state of the bar
          %
-         %  bar.updateStatus('statusText');
+         %  bar.setState(curProgress, curStatus);
+         %
+         %  curProgress - Progress [0 to 100] updates .Progress
+         %  curStatus - Status (char array) updates .Status
+         
+         bar.Progress = curProgress;
+         if nargin > 2
+            bar.Status = curStatus;
+         end
+      end
+      
+   end
+   
+   methods (Access = private)
+      % Internal function to add property listeners to bar on init
+      function lh = addPropertyListeners(bar)
+         % ADDPROPERTYLISTENERS  Add array of property listeners that
+         %                       listen for 'PostSet' events of 'job' (to
+         %                       identify whether this is local or remote
+         %                       job) and 'BarIndex' (to set the position
+         %                       and visibility correctly) as well as
+         %                       'Visible' (to update child graphic
+         %                       visibility correctly) and 'IsRemote'
+         %                       properties.
+         %
+         %  lh = addPropertyListeners(bar);  Returns array of listeners
+         
+         lh = addlistener(bar,'job','PostSet',@(~,~)bar.toggleIsRemote);
+         lh = [lh, addlistener(bar,'BarIndex','PostSet',...
+                          @(~,~)bar.setVisualQueuePosition)];
+         lh = [lh, addlistener(bar,'Visible','PostSet',...
+                        @(~,~)bar.toggleVisible)];
+         lh = [lh, addlistener(bar,'IsRemote','PostSet',...
+                        @(~,~)bar.toggleColor)];
+         lh = [lh, addlistener(bar,'Position','PostSet',...
+                        @(~,~)bar.updatePosition)];
+         lh = [lh, addlistener(bar,'Progress','PostSet',...
+                        @(~,~)bar.updateProgress)];
+         lh = [lh, addlistener(bar,'Status','PostSet',...
+                        @(~,~)bar.updateStatus)];
+         lh = [lh, addlistener(bar,'Name','PostSet',...
+                        @(~,~)bar.updateName)];
+      end
+      
+      % LISTENER CALLBACK: Update "visual" position in queue from index
+      function setVisualQueuePosition(bar)
+         % SETVISUALQUEUEPOSITION  Sets the position of bar depending on
+         %                         its value of .BarIndex. If BarIndex is
+         %                         NaN, then set Visible to 'off'
+         
+         if isnan(bar.BarIndex)
+            bar.Visible = 'off';
+            return;
+         else
+            bar.Visible = 'on';
+            if bar.BarIndex == 1
+               bar.starttime = clock(); % Start the clock if it is top
+            end
+         end
+         
+         h = bar.Position(4);
+         y = bar.Position(2);
+         offset = 0.005;
+         yNew = 1 - (bar.BarIndex * (h + offset));
+         bar.Position(2) = yNew;
+      end
+      
+      % LISTENER CALLBACK: Switches bar color depending on remote state
+      function toggleColor(bar)
+         % TOGGLECOLOR  Switches bar color depending on value of IsRemote
+         %
+         %  addlistener(bar,'IsRemote','PostSet',@(~,~)bar.toggleColor());
+         
+         if bar.IsRemote
+            bar.setChild('progbar','FaceColor',...
+               nigeLab.defaults.nigelColors('g'));
+         else
+            bar.setChild('progbar','FaceColor',...
+               nigeLab.defaults.nigelColors('b'));
+         end
+         
+      end
+      
+      % LISTENER CALLBACK: Switches remote depending on value of job
+      function toggleIsRemote(bar)
+         % TOGGLEISREMOTE  Changes remote status depending on job
+         %
+         %  addlistener(bar,'job','PostSet',@(~,~)bar.toggleIsRemote);
+         
+         if isempty(bar.job)
+            bar.IsRemote = false;
+         else
+            bar.IsRemote = true;
+         end
+      end
+      
+      % LISTENER CALLBACK: Toggle visibilty of all child objects
+      function toggleVisible(bar)
+         % TOGGLEVISIBLE  Toggle visibility of all child objects
+         %
+         %  addlistener(bar,'Visible','PostSet',@(~,~)bar.toggleVisible());
+         
+         ax = bar.getChild('ax');
+         ax.Visible = bar.Visible;
+         set(ax.Children,'Visible',bar.Visible);
+         bar.Parent.Visible = bar.Visible;
+      end
+      
+      % LISTENER CALLBACK: Update parent panel position from Position prop
+      function updatePosition(bar)
+         % UPDATEPOSITION  Updates the parent panel position when
+         %                 'Position' property is changed.
+         %
+         %  addlistener(bar,'Position','PostSet',@(~,~)bar.updatePosition);
+         
+         bar.Parent.Position = bar.Position;
+      end
+      
+      % LISTENER CALLBACK: Update bar graphics when 'Name' is changed
+      function updateName(bar)
+         % UPDATENAME  Update bar graphics when 'Name' property is changed
+         %
+         %  addlistener(bar,'Name','PostSet',@(~,~)bar.updateName);
+         
+         bar.setChild('name','String',bar.Name);
+      end
+      
+      % LISTENER CALLBACK: Update bar whenever progress is changed
+      function updateProgress(bar)
+         % UPDATEPROGRESS  Update bar graphic when 'Progress' property
+         %                 changes.
+         %  
+         %  addlistener(bar,'Progress','PostSet',@(~,~)bar.updateProgress);
+         
+         pct = bar.Progress;
+         
+         % Get the offset of the progressbar from the left of the panel
+         xStart = getChild(bar,'progress','XData');
+         xStart = xStart(1);
+
+         % Compute how far the bar should be filled based on the percent
+         % completion, accounting for offset from left of panel
+         xStop = xStart + (1-xStart) * (pct/100);
+         bar.setChild('progbar','XData',[xStart, xStop, xStop, xStart]);
+         bar.setChild('pct','String',sprintf('%.3g%%',pct));
+         drawnow;
+         
+         bar.IsComplete = pct >= 100;
+      end
+
+      % LISTENER CALLBACK: Update bar status string when prop is changed
+      function updateStatus(bar)
+         % UPDATESTATUS  Update status graphic string when 'Status'
+         %               property is changed
+         %
+         %  addlistener(bar,'Status','PostSet',@(~,~)bar.updateStatus);
+         
+         str = bar.Status;
+%          disp(['-->Status: ' str]);
          
          bar.setChild('status','String',str);
+         switch lower(strrep(str,'.',''))
+            case {'done','complete','finished','over'}
+               % Ensure that it is at 100%
+               bar.setProgress(100);
+               
+            otherwise
+               % Do nothing
+         end
       end
       
    end

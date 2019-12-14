@@ -76,8 +76,7 @@ classdef Block < matlab.mixin.Copyable
    %% PROPERTIES
    % Public properties that are SetObservable
    properties (Access = public, SetObservable = true)
-      Name     char        % Name of the recording block
-      Animal   nigeLab.Animal  % nigeLab.Animal "Parent" object
+      Name     char            % Name of the recording block
    end
    
    % Public properties that can be modified externally
@@ -156,9 +155,9 @@ classdef Block < matlab.mixin.Copyable
       IncludeChar             char        % Character indicating included name elements
       DiscardChar             char        % Character indicating discarded name elements
       
-      ManyAnimalsChar         char                 % Character indicating the presence of many animals in the recording
-      ManyAnimals = false;                         % Flag indicating that multiple animals were used in the same recording Block
-      ManyAnimalsLinkedBlocks    nigeLab.Block     % [1 x nLinkedBlock] array of nigeLab.Block objects ("pointers")
+      MultiAnimalsChar  % Character indicating the presence of many animals in the recording
+      MultiAnimals = 0; % flag for many animals contained in one block
+      MultiAnimalsLinkedBlocks % Pointer to the splitted blocks. 
 %                 In conjuction with the multianimals flag keeps track of
 %                 where the data is temporary saved.
       
@@ -178,13 +177,27 @@ classdef Block < matlab.mixin.Copyable
 
    end
 
+   % Private - Listeners & Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
+      Listener  event.listener       % Scalar event.listener associated with this Block
+      
+      % Flags
+      IsEmpty = true   % True if no data in this (e.g. Empty() method used)
+   end
+  
+   
+   %% EVENTS
    events
       channelCompleteEvent
       processCompleteEvent
+      ProgressChanged
+      MethodCanceled
    end
    
    %% METHODS
-   % BLOCK class constructor
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % BLOCK class constructor
       function blockObj = Block(blockPath,animalPath,varargin)
@@ -214,6 +227,7 @@ classdef Block < matlab.mixin.Copyable
                blockObj = repmat(blockObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Make sure they aren't just all the same handle
                      blockObj(i,k) = copy(blockObj(1,1));
                   end
                end
@@ -226,6 +240,8 @@ classdef Block < matlab.mixin.Copyable
             end
          end
          
+         % At this point it will be initialized "normally"
+         blockObj.IsEmpty = false;
          if nargin < 2
             blockObj.AnimalLoc = [];
          else
@@ -279,62 +295,58 @@ classdef Block < matlab.mixin.Copyable
          end
          
       end
-   end
-   
-   % "PUBLIC" methods
-   methods (Access = public)
-      % Add "Parent" Animal to this Block
-      function setAnimal(blockObj,animalObj)
-         % SETANIMAL  Sets the "Parent" nigeLab.Animal to this Block
+      
+      % Overloaded DELETE method for BLOCK to ensure listeners are deleted
+      % properly.
+      function delete(blockObj)
+         % DELETE  Delete blockObj.Listener and other objects that we don't
+         %           want floating around in the background after the Block
+         %           itself is deleted.
          %
-         %  blockObj.setAnimal(animalObj);
-         
-         if ~isa(animalObj,'nigeLab.Animal')
-            error(['nigeLab:' mfilename ':badInputType1'],...
-               'Bad animalObj input type: %s',class(animalObj));
-         end
-         
-         if ~isscalar(animalObj)
-            error(['nigeLab:' mfilename ':badInputType2'],...
-               'animalObj must be scalar.');
-         end
+         %  delete(blockObj);
          
          if numel(blockObj) > 1
             for i = 1:numel(blockObj)
-               blockObj(i).setAnimal(animalObj);
+               delete(blockObj(i));
             end
             return;
          end
          
-         blockObj.Animal = animalObj;
-      end
-   end
-   
-   % OVERLOADED or OVERRIDDEN methods
-   methods (Access = public)
-      % Overloaded RELOAD method for loading a BLOCK matfile
-      function reload(blockObj)
-         % RELOAD  Load block (related to multi-animal stuff?)
-         %
-         %  blockObj.reload;
-         
-         % Probably it's that blockObj.Paths.SaveLoc.dir is different from
-         % the identical value of the child Block. But in that case, why
-         % don't we just make a copy of the child Block?
-         c = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']),...
-            'blockObj');
-%          ff=fieldnames(c.blockObj);
-%          for f=1:numel(ff)
-%             blockObj.(ff{f}) = c.blockObj.(ff{f});
-%          end
-         if ~isa(c.blockObj,'nigeLab.Block')
-            error(['nigeLab:' mfilename ':badChildBlockType'],...
-               'Bad child Block type: %s',class(c.blockObj));
+         if isvalid(blockObj.Listener)
+            delete(blockObj.Listener)
          end
-         blockObj = copy(c.blockObj);
       end
       
-      % Overloaded SAVE method to save a BLOCK matfile
+      % "Cancels" method execution
+      function invokeCancel(blockObj)
+         notify(blockObj,'MethodCanceled');
+      end
+      
+      % Overload to 'isempty' 
+      function tf = isempty(blockObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If blockObj is array, then returns an
+         %          array of true or false for each element of blockObj.
+         
+         if numel(blockObj) == 0
+            tf = true;
+            return;
+         end
+         
+         if ~isscalar(blockObj)
+            tf = false(size(blockObj));
+            for i = 1:numel(blockObj)
+               tf(i) = isempty(blockObj(i));
+            end
+            return;
+         end
+         
+         tf = blockObj.IsEmpty || builtin('isempty',blockObj);
+      end
+      
+      % Overloaded SAVE method for BLOCK to handle child objects such as
+      % listener handles, as well as to deal with splitting multi-block
+      % cases etc.
       function flag = save(blockObj)
          % SAVE  Overloaded SAVE method for BLOCK
          %
@@ -360,9 +372,9 @@ classdef Block < matlab.mixin.Copyable
           % Save blockObj
           blockFile = nigeLab.utils.getUNCPath(...
              [blockObj.Paths.SaveLoc.dir '_Block.mat']);
-          A = blockObj.Animal;
+          lh = blockObj.Listener;
           save(blockFile,'blockObj','-v7');
-          blockObj.Animal = A; % Reassign after save, so pointer is valid
+          blockObj.Listener = lh;
           
           % Save "nigelBlock" file for convenience of identifying this
           % folder as a "BLOCK" folder in the future
@@ -374,10 +386,10 @@ classdef Block < matlab.mixin.Copyable
           fclose(fid);
 
           % save multianimals if present
-          if blockObj.ManyAnimals
-             for bl = blockObj.ManyAnimalsLinkedBlocks 
-                  bl.ManyAnimalsLinkedBlocks(:) = [];
-                  bl.ManyAnimals = false;
+          if blockObj.MultiAnimals
+             for bl = blockObj.MultiAnimalsLinkedBlocks 
+                  bl.MultiAnimalsLinkedBlocks(:) = [];
+                  bl.MultiAnimals = false;
                   bl.save();
              end
           end
@@ -385,131 +397,16 @@ classdef Block < matlab.mixin.Copyable
           flag = true;
 
       end
-      
-      % Overloaded SAVEOBJ method to "unlink" Parent
-      function blockObj = saveobj(blockObj)
-         blockObj.Animal(:) = [];
-      end
-      
-      % Overloaded SUBSREF method for indexing shortcuts on BLOCK
-      function varargout = subsref(blockObj,s)
-         % SUBSREF  Overload indexing operators for BLOCK
-         %
-         %  varargout = subsref(blockObj,s); 
-         %
-         %  s: Struct returned by SUBSTRUCT function
-         
-         Shrt = nigeLab.defaults.Shortcuts();
-         switch s(1).type
-            case '.'
-               
-               idx = find(ismember(Shrt(:,1),s(1).subs),1,'first');
-               if ~isempty(idx)
-                  varargout = {};
-                  iRow = blockObj.subs2idx(s(2).subs{1},blockObj.NumChannels); 
-                  iCol = blockObj.subs2idx(s(2).subs{2},blockObj.Samples);
-                  
-                  out = nan(numel(s(2).subs{1}),numel(s(2).subs{2}));
-                  expr = sprintf('blockObj.%s;',Shrt{idx,2});
-                  
-                  for i = 1:numel(iRow)
-                     tmp = eval(sprintf(expr,iRow(i)));
-                     out(i,:) = tmp(iCol);
-                  end                  
-                  
-                  varargout{1} = out;
-                  return;
-               else
-                  if numel(blockObj) > 1
-                     varargout = cell(1,nargout);
-                     for i = 1:numel(blockObj)
-                        varargout{1} = [varargout{1}; ...
-                           subsref(blockObj(i),s)];
-                     end
-                     return;
-                  end
-                  
-                  [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-                  return;
-               end
-            case '()'
 
-               [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-               return;
-               
-            % Move "shortcut" referencing onto {} indexing, since it isn't
-            % being used anyways. Simplifies everything.
-            case '{}'
-               if isscalar(blockObj) && ~isnumeric(s(1).subs{1})
-                  s(1).subs=[{1} s(1).subs];
-               end
-               if length(s) == 1                  
-                  nargsi=numel(s(1).subs);
-                  nargo = 1;
-                  
-                  
-                  iAll = 1:blockObj.NumChannels;
-                  if nargsi == 1
-                     if isnumeric(s.subs{1})
-                        Out = sprintf('blockObj.Channels(%d).Raw;\n',s.subs{1});
-                     elseif ismember(s.subs{1},Shrt(:,1))
-                        Out = sprintf('blockObj.Channels(%d).%s;\n',iAll,s.subs{1});
-                     else
-                        Out = sprintf('blockObj.Channels(%d).Raw;\n',iAll);                        
-                     end
-                  end
-                  
-%                   if nargsi == 2
-%                      if isnumeric(s.subs{1
-%                   end
-                  
-                  if nargsi > 2
-                     
-                     
-                     if ischar( s(1).subs{2} )
-                        longCommand = sprintf(Shrt{strcmp(Shrt(:,1),s(1).subs{2}),2},s(1).subs{3});
-                     
-                     elseif isnumeric( s(1).subs{1} )
-                        if s(1).subs{1} > size(Shrt,1)
-                           warning('Possible reference error.');
-                           varargout{1} = builtin('subsref',blockObj,s);
-                           return;
-                        end
-                        longCommand = sprintf(Shrt{s(1).subs{1},2},s(1).subs{2});
-                     end
-                     
-                     Out = sprintf('%s.%s',Out,longCommand);
-                     indx = ':';
-                     
-                     if nargsi > 3
-                        indx = sprintf('[%s]',num2str(s(1).subs{4}));                        
-                     end
-                     Out = sprintf('%s(%s)',Out,indx);
-                  end
-                  
-                  if size(Out,1) > 1
-                     varargout = cell(1,size(Out,1));
-                     for i = 1:size(Out,1)
-                        varargout{i} = eval(Out(i,:));
-                     end
-                  else
-                     [varargout{1:nargo}] = eval(Out);
-                  end
-                  
-                  
-%                elseif length(s) == 2 && strcmp(s(2).type,'.')
-%                % Implement obj(ind).PropertyName
-%                ...
-%                elseif length(s) == 3 && strcmp(s(2).type,'.') && strcmp(s(3).type,'()')
-%                % Implement obj(indices).PropertyName(indices)
-%                ...
-               else
-                  % Use built-in for any other expression
-                  [varargout{1:nargout}] = builtin('subsref',blockObj,s);
-               end
-            otherwise
-               error('Not a valid indexing expression')
-         end
+      % Overloaded SAVE method to ensure that additional object handles
+      % don't save with the object
+      function blockObj = saveobj(blockObj)
+         % SAVEOBJ  Overloaded saveobj method to ensure that additional
+         %          object handles do not save with the object
+         %
+         %  blockObj.saveobj();
+         
+         blockObj.Listener(:) = [];
       end
       
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
@@ -531,11 +428,32 @@ classdef Block < matlab.mixin.Copyable
                calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
                n = numel(mc.MethodList(calledmethod).OutputNames);
             else
-               n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+               n = builtin('numArgumentsFromSubscript',...
+                  blockObj,s,indexingContext);
             end
          else
-            n = builtin('numArgumentsFromSubscript',blockObj,s,indexingContext);
+            n = builtin('numArgumentsFromSubscript',...
+               blockObj,s,indexingContext);
          end
+      end
+      
+      % Overloaded RELOAD method for loading a BLOCK matfile
+      function reload(blockObj,field)
+         % RELOAD  Load block (related to multi-animal stuff?)
+         
+         if nargin < 2
+            field = 'all';
+         end
+         
+          obj = load(fullfile([blockObj.Paths.SaveLoc.dir '_Block.mat']));
+          ff=fieldnames(obj.blockObj);
+          if strcmpi(field,'all')
+             field = ff;
+          end
+          indx = find(ismember(ff,field))';
+          for f=indx
+              blockObj.(ff{f}) = obj.blockObj.(ff{f});
+          end
       end
    end
    
@@ -597,7 +515,7 @@ classdef Block < matlab.mixin.Copyable
       flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
       % Methods for associating/displaying info about blocks:
-      L = list(blockObj) % List of current associated files for field or fields
+      L = list(blockObj,keyIdx) % List of current associated files for field or fields
       flag = updateVidInfo(blockObj) % Update video info
       flag = linkToData(blockObj,suppressWarning) % Link to existing data
       flag = linkField(blockObj,fieldIndex)     % Link field to data
@@ -627,7 +545,7 @@ classdef Block < matlab.mixin.Copyable
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
-      str = reportProgress(blockObj, string, pct ) % Update the user of progress
+      str = reportProgress(blockObj,str_expr,pct,notification_mode) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
       idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
@@ -664,6 +582,11 @@ classdef Block < matlab.mixin.Copyable
    
    % Static methods for multiple animals
    methods (Static)
+      % Method to "cancel" execution of a function evaluation
+      function cancelExecution()
+         evalin('caller','return;');
+      end
+      
       % Method to instantiate "Empty" Blocks from constructor
       function blockObj = Empty(n)
          % EMPTY  Creates "empty" block or block array
@@ -672,7 +595,7 @@ classdef Block < matlab.mixin.Copyable
          %  blockObj = nigeLab.Block.Empty(n); % Make n-element array Block
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)
@@ -687,42 +610,24 @@ classdef Block < matlab.mixin.Copyable
       function b = loadobj(a)
          % LOADOBJ  Overloaded method called when loading BLOCK.
          %
-         %  Has to be called when there ManyAnimals is true because the
+         %  Has to be called when there MultiAnimals is true because the
          %  BLOCKS are removed from parent objects in that case during
          %  saving.
          %
          %  blockObj = loadobj(blockObj);
          
-         if ~a.ManyAnimals
+         if ~a.MultiAnimals
             b = a;
             return;
          end
 
-         % blockObj has "pointer" to 'ManyAnimalsLinkedBlocks' but until
+         % blockObj has "pointer" to 'MultiAnimalsLinkedBlocks' but until
          % they are "reloaded" the "pointer" is bad (references bl in
          % the wrong place, essentially?)
-         for bl=a.ManyAnimalsLinkedBlocks
+         for bl=a.MultiAnimalsLinkedBlocks
             bl.reload();
          end
          b = a;
-      end
-      
-      % Static method for converting subs to index
-      function idx = subs2idx(subs,n)
-         % SUBS2IDX  Converts subscripts to indices
-         
-         if ischar(subs)
-            switch subs
-               case ':'
-                  idx = 1:n;
-               case 'end'
-                  idx = n;
-               otherwise
-                  idx = [];
-            end
-         else
-            idx = subs;
-         end
       end
    end
 end

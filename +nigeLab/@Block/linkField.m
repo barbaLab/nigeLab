@@ -45,7 +45,11 @@ switch blockObj.FieldType{fieldIndex}
       % 'type', 'value', 'tag', 'ts', 'snippet'
       flag = blockObj.linkEventsField(field);
    case 'Videos'
-      flag = blockObj.linkVideosField(field);
+      if blockObj.Pars.Video.HasVideo
+         flag = blockObj.linkVideosField(field);
+      else
+         flag = true;
+      end
    case 'Meta'
       % Metadata are special cases, basically
       switch lower(field)

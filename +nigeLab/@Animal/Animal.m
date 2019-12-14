@@ -23,7 +23,7 @@ classdef Animal < matlab.mixin.Copyable
 %  ANIMAL Methods:
 %     Animal - Class constructor
 %
-%     addBlock - Add Blocks to Animal object
+%     addChildBlock - Add Blocks to Animal object
 %
 %     getStatus - Returns status of each Operation/Block pairing
 %
@@ -33,37 +33,60 @@ classdef Animal < matlab.mixin.Copyable
 %
 %     Empty - Create an Empty ANIMAL object or array
    
-   %% PUBLIC PROPERTIES
+   %% PROPERTIES
+   % Can get and set publically; SetObservable is true for these.
    properties (GetAccess = public, SetAccess = public, SetObservable)
       Name     char          % Animal identification code
-      Tank     nigeLab.Tank  % Parent (nigeLab.Tank object)
       Probes   struct        % Electrode configuration structure
       Blocks   nigeLab.Block % Children (nigeLab.Block objects)
    end
    
+   % Cannot set but may want to see it publically. SetObservable.
    properties (GetAccess = public, SetAccess = private, SetObservable)
       Mask     double        % Channel "Mask" vector (for all recordings)
    end
    
-   %% HIDDEN OR PRIVATE PROPERTIES
+   % More likely to externally reference
    properties (SetAccess = private, GetAccess = public)
       Paths   struct      % Path to Animal folder
    end
-      
+   
+   properties (Access = public)
+      UserData   % User-defined field
+   end
+   
+   % Less-likely but possible to externally reference
    properties (GetAccess = public, SetAccess = private, Hidden = true)
-      Pars           struct      % parameters struct for templates from nigeLab.defaults
+      Pars                       struct      % parameters struct for templates from nigeLab.defaults
+      TankLoc                    char        % directory for saving Animal
+      RecDir                     char        % directory with raw binary data in intan format
+      ExtractFlag                logical     % flag status of extraction for each block
+      MultiAnimals = false                      % flag to signal if it's a single animal or a joined animal recording
+      MultiAnimalsLinkedAnimals  nigeLab.Block  % Array of "linked" blocks
+   end
+   
+   % Default parameters
+   properties  (SetAccess = private, GetAccess = private)
+      Fields           cell     % Specific fields for recording
+      FieldType        cell     % "Types" of data corresponding to Fields
+      RecLocDefault    char     % Default location of raw binary recording
+      TankLocDefault   char     % Default location of BLOCK
+   end
+   
+   % Listeners and Flags
+   properties (SetAccess = public, GetAccess = private, Hidden = true)
+      % Listeners
+      Listener         event.listener  % Scalar event.listener associated with this ANIMAL
+      PropListener     event.listener  % Array of handles listening to ANIMAL property changes
       
-      TankLoc        char        % directory for saving Animal
-      RecDir         char        % directory with raw binary data in intan format
-      ExtractFlag    logical     % flag status of extraction for each block
+      % Flags
+      IsEmpty = true  % Flag to indicate whether block is EMPTY
    end
    
-   properties  (SetAccess = private, GetAccess = private) 
-       RecLocDefault    char     % Default location of raw binary recording
-       TankLocDefault   char     % Default location of BLOCK
-   end
    
-   %% PUBLIC METHODS
+   %% METHODS
+   % PUBLIC
+   % Class constructor and overloaded methods
    methods (Access = public)
       % Class constructor
       function animalObj = Animal(animalPath,tankPath,varargin)
@@ -80,11 +103,10 @@ classdef Animal < matlab.mixin.Copyable
          %  animalObj = nigeLab.Animal(__,'PropName',propValue,...);
          %     --> set properties in the constructor
          
-         animalObj.updateParams('Animal');
+         animalObj.updateParams('Animal'); % old possibly
          animalObj.updateParams('all');
-         
-         addlistener(animalObj,'Name','PostSet',...
-            @animalObj.updateAnimalNameInChildBlocks);
+         animalObj.updateParams('init');
+         animalObj.addListeners();
          
          % Parse input arguments
          if nargin < 1
@@ -98,6 +120,7 @@ classdef Animal < matlab.mixin.Copyable
                animalObj = repmat(animalObj,dims);
                for i = 1:dims(1)
                   for k = 1:dims(2)
+                     % Make sure they aren't all pointers to the same thing
                      animalObj(i,k) = copy(animalObj(1,1));
                   end
                end
@@ -110,6 +133,8 @@ classdef Animal < matlab.mixin.Copyable
             end
          end
          
+         % At this point it will be initialized "normally"
+         animalObj.IsEmpty = false;
          if nargin < 2
             animalObj.TankLoc = '';
          else
@@ -145,20 +170,20 @@ classdef Animal < matlab.mixin.Copyable
          
          animalObj.RecDir = nigeLab.utils.getUNCPath(animalObj.RecDir);
          animalObj.init;
-         
+       
       end
       
       % Add Blocks to Animal object
-      function addBlock(animalObj,blockPath,idx)
+      function addChildBlock(animalObj,blockPath,idx)
          % ADDBLOCK  Add Block "Children" to Blocks property
          %
-         %  animalObj.addBlock('blockPath'); 
+         %  animalObj.addChildBlock('blockPath'); 
          %  --> Adds block located at 'BlockPath'
          %
-         %  animalObj.addBlock(blockObj);
+         %  animalObj.addChildBlock(blockObj);
          %  --> Adds the block directly to 'Blocks'
          %
-         %  animalObj.addBlock(blockObj,idx);
+         %  animalObj.addChildBlock(blockObj,idx);
          %  --> Adds the block to the array element indexed by idx
 
          if nargin < 2
@@ -173,7 +198,7 @@ classdef Animal < matlab.mixin.Copyable
          switch class(blockPath)
             case 'char'
                % Create the Children Block objects
-               blockObj = nigeLab.Block(blockPath);
+               blockObj = nigeLab.Block(blockPath,animalObj.Paths.SaveLoc);
                
             case 'nigeLab.Block'
                % Load them directly as Children
@@ -192,14 +217,50 @@ classdef Animal < matlab.mixin.Copyable
                error(['nigeLab:' mfilename ':badInputType1'],...
                   'Bad blockPath input type: %s',class(blockPath));
          end
-         blockObj.setAnimal(animalObj);
+         
+         
+         
          if nargin < 3
+            idx = numel(animalObj.Blocks);
             animalObj.Blocks = [animalObj.Blocks blockObj];
+            idx = idx:numel(animalObj.Blocks);
          else
             S = substruct('()',{1,idx});
             animalObj.Blocks = builtin('subsasgn',animalObj.Blocks,...
                                           S,blockObj);
          end
+         for i = 1:numel(blockObj)
+            blockObj(i).Listener = ...
+                  addlistener(blockObj(i),...
+                     'ObjectBeingDestroyed',...
+                     @(~,~)animalObj.AssignNULL);
+         end
+      end
+      
+      % Make sure listeners are deleted when animalObj is destroyed
+      function delete(animalObj)
+         % DELETE  Ensures listener handles are properly destroyed
+         %
+         %  delete(animalObj);
+         
+         if numel(animalObj) > 1
+            for i = 1:numel(animalObj)
+               delete(animalObj(i));
+            end
+            return;
+         end
+         
+         for i = 1:numel(animalObj.PropListener)
+            if isvalid(animalObj.PropListener(i))
+               delete(animalObj.PropListener(i));
+            end
+         end
+         
+         if isvalid(animalObj.Listener)
+            delete(animalObj.Listener)
+         end
+         
+         delete(animalObj.Blocks);
       end
       
       % Modify behavior of 'end' keyword in indexing expressions
@@ -233,8 +294,36 @@ classdef Animal < matlab.mixin.Copyable
          if nargin < 2
             opField = [];
          end
-         
+         if numel(animalObj) > 1
+            flag = [];
+            for i = 1:numel(animalObj)
+               flag = [flag; getStatus(animalObj(i).Blocks,opField)]; %#ok<*AGROW>
+            end
+            return;
+         end
          flag = getStatus(animalObj.Blocks,opField);
+      end
+      
+      % Overload to 'isempty' 
+      function tf = isempty(animalObj)
+         % ISEMPTY  Returns true if .IsEmpty is true or if builtin isempty
+         %          returns true. If animalObj is array, then returns an
+         %          array of true or false for each element of animalObj.
+         
+         if numel(animalObj) == 0
+            tf = true;
+            return;
+         end
+         
+         if ~isscalar(animalObj)
+            tf = false(size(animalObj));
+            for i = 1:numel(animalObj)
+               tf(i) = isempty(animalObj(i));
+            end
+            return;
+         end
+         
+         tf = animalObj.IsEmpty || builtin('isempty',animalObj);
       end
       
       % Save Animal object
@@ -257,6 +346,7 @@ classdef Animal < matlab.mixin.Copyable
          % this causes the copy to be "updated" and the "correct" copy is
          % then assigned to animalObj.Blocks after the save. 
          B = animalObj.Blocks; % Since animalObj.Blocks(:) = [] in saveobj
+         pL = animalObj.PropListener;
          for b = animalObj.Blocks
             b.save;
          end
@@ -265,10 +355,11 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.updateParams('Animal');
          animalFile = nigeLab.utils.getUNCPath(...
                      fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
-         T = animalObj.Tank;
          save(animalFile,'animalObj','-v7');
-         animalObj.Tank = T;   % Reassign after save, so pointer is valid
-         animalObj.Blocks = B; % Reassign after save, so pointer is valid
+         
+         % Reassign after save, so pointer is valid
+         animalObj.Blocks = B; 
+         animalObj.PropListener = pL;
          
          % Save "nigelAnimal" file for convenience of identifying this
          % folder as an "ANIMAL" folder in the future
@@ -281,25 +372,6 @@ classdef Animal < matlab.mixin.Copyable
          fclose(fid);
       end
       
-      % Set "Parent" Tank object
-      function setTank(animalObj,tankObj)
-         % SETTANK  Sets the "parent" Tank object
-         %
-         %  animalObj.setTank(tankObj);  Sets the 'Tank' property
-         
-         if ~isa(tankObj,'nigeLab.Tank')
-            error(['nigeLab:', mfilename, ':BadTypeInput1'],...
-               'tankObj must be nigeLab.Tank, not %s',class(tankObj));
-         end
-         
-         if ~isscalar(tankObj)
-            error(['nigeLab:', mfilename, ':BadTypeInput2'],...
-               'tankObj must be scalar');
-         end
-         
-         animalObj.Tank = tankObj;
-      end
-      
       % Overloaded function that is called when ANIMAL is being saved.
       function animalObj = saveobj(animalObj)
          % SAVEOBJ  Used when ANIMAL is being saved. Writes the returned
@@ -307,231 +379,16 @@ classdef Animal < matlab.mixin.Copyable
          %          animalObj does not save Block objects redundantly.
          
          animalObj.Blocks(:) = [];     
-         animalObj.Tank(:) = [];
+         animalObj.PropListener(:) = [];
+         animalObj.Listener(:) = [];
       end
       
-      % Overloaded function for referencing BLOCK of a given ANIMAL
-      function varargout = subsref(animalObj,S)
-         % SUBSREF  Overloaded function modified so that BLOCK can be
-         %          referenced by indexing from ANIMAL using {} operator.
-         %
-         %  childBlockArray = animalObjArray{[2,1;1,4;3,1]}
-         %  --> childBlockArray is the 1st Child Block of 2nd Animal in
-         %     array, 4th Block of 1st Animal, and 1st Block of 3rd Animal,
-         %     concatenated into a horizontal array [b21, b14, b31]
-         %
-         %  --> equivalent to calling animalObjArray{[2,1,3],[1,4,1]};
-         %
-         %  ** NOTE ** that calling
-         %  animalObjArray{[2,1,3],[1,2,4,5]} would only return a single
-         %  element for each animalObj [b21, b12, b34], NOT the 1st, 2nd,
-         %  4th, and 5th block from each animal.
-         %
-         %  childBlock = animalObjArray{1,1}
-         %  --> returns 1st child of 1st animal in array
-         %
-         %  childBlockArray = animalObjArray{1}
-         %  --> Returns all children of the 1st animal in array
-         %
-         %  childBlock = animalObj{1}
-         %  --> Returns 1st block of that animal
-         %
-         %  childBlockArray = animalObj{:}
-         %  --> Returns all children of that animal object
-         %
-         %  childBlockArray = animalObjArray{:}
-         %  --> Returns all children of all animals in array
-         %
-         %  childBlockArray = animalObjArray{2,:}
-         %  --> Returns all children of 2nd animal in array
-         %
-         %  childBlockArray = animalObjArray{:,1}
-         %  --> Returns first child of all animals in array
-         
-         subs = S(1).subs;
-         switch S(1).type
-            case '{}'
-               % If referencing a single animal, the behavior is different
-               % if a single vector of subscripts is given.
-               if isscalar(animalObj)
-                  
-                  % If only one argument given to subscripts (e.g. no ',')
-                  if numel(subs) == 1
-                     subs = subs{:};
-                     
-                     % If only referencing child objects using a vector
-                     % (not referencing animalObj, since animalObj is
-                     %  already a scalar!)
-                     if size(subs,2) == 1
-                        S = substruct('{}',{1, subs});
-                        varargout = {subsref(animalObj,S)};
-                        return;
-                        
-                     % Otherwise, if using a matrix to reference   
-                     elseif size(subs,2) == 2 
-                        S = substruct('{}',{subs(:,1),subs(:,2)});
-                        varargout = {subsref(animalObj,S)};
-                        return;
-                        
-                     % Otherwise, could be using 'end'
-                     else
-                        if ~ischar(subs)
-                           error(['nigeLab:' mfilename ':badReference'],...
-                              'Matrix references should be nChild x 2');
-                        end
-                        if strcmpi(subs,'end')
-                           varargout = {animalObj.Block(...
-                              animalObj.getNumBlocks)};
-                           return;
-                        else
-                           error(['nigeLab:' mfilename ':badReference'],...
-                              'Unrecognized index: %s',subs);
-                        end
-                     end
-                     
-                  % Otherwise, subscript for Animal and Block both given
-                  elseif numel(subs) == 2
-                     if ~ischar(subs{1})
-                        if any(subs{1} > 1) % since this is a scalar animalObj
-                           error(['nigeLab:' mfilename ':indexOutOfBounds'],...
-                              'Bad indexing expression, animalObj is scalar.');
-                        end
-                     end
-                     S = substruct('()',{ones(size(subs,1),1),subs{2}});
-                     varargout = {subsref(animalObj.Blocks,S)};
-                     return;
-                     
-                  % Otherwise, too many subscript args were given
-                  else
-                     error(['nigeLab:' mfilename ':tooManyInputs'],...
-                        'Too many subscript indexing args (%g) given.',...
-                        numel(subs));
-                  end
-                  
-               % If more than one animalObj in array
-               else
-                  switch numel(subs)
-                     case 1
-                        subs = subs{:};
-                        
-                        % If only character input is given, it references
-                        % either all of the blocks or all blocks of the
-                        % last animal.
-                        if ischar(subs)
-                           switch subs                                 
-                              % Return all children of all animals
-                              case ':'
-                                 varargout = cell(1,nargout);
-                                 for i = 1:numel(animalObj)
-                                    varargout{1} = [varargout{1},...
-                                       animalObj(i).Blocks];
-                                 end
-                              otherwise
-                                 error(['nigeLab:' mfilename ':badReference'],...
-                                    'Unrecognized index keyword: %s',subs);
-                           end
-                           return;
-                        end
-                        % Otherwise, the input is numeric
-                        % If it is a vector, then get all blocks of the
-                        % corresponding animals.
-                        if size(subs,2) == 1
-                           varargout = {[]};
-                           for i = 1:numel(subs)
-                              varargout{1} = [varargout{1},...
-                                 animalObj(subs(i)).Blocks];
-                           end
-                           return;
-                           
-                        % If it is a matrix, reformat and make call back to
-                        % subsref
-                        elseif size(subs,2) == 2
-                           S = substruct('{}',{subs(:,1),subs(:,2)});
-                           varargout = {subsref(animalObj,S)};
-                           return;
-                           
-                        % Otherwise, it's a bad expression
-                        else
-                           error(['nigeLab:' mfilename ':badReference'],...
-                              'Matrix references should be nChild x 2');
-                        end
-                        
-                     % If there are two input arguments given to animalObj
-                     % array for subscripting
-                     case 2
-                        
-                        % If the first indexing element is a character,
-                        % then get the corresponding ANIMAL according to
-                        % that character index
-                        if ischar(subs{1})
-                           switch lower(subs{1})
-                              % For each animalObj in array, return the
-                              % corresponding blocks.
-                              case ':'
-                                 varargout = cell(1,nargout);
-                                 for i = 1:numel(animalObj)
-                                    if ischar(subs{2})
-                                       switch lower(subs{2})
-                                          case ':'
-                                             idx2 = 1:getNumBlocks(animalObj(i));
-                                          otherwise
-                                             error(['nigeLab:' mfilename ':badReference'],...
-                                                'Unrecognized index keyword: %s',subs);
-                                       end
-                                    else
-                                       idx2 = subs{2}(i);
-                                    end
-                                    varargout{1} = [varargout{1},...
-                                       animalObj(i).Blocks(idx2)];
-                                 end
-                                 
-                              otherwise
-                                 error(['nigeLab:' mfilename ':badReference'],...
-                                    'Unrecognized index keyword: %s',subs);
-                           end
-                           return;                           
-                        end
-                        
-                        % For an animalObj array, this means the indexing
-                        % inputs must be numeric and of the form
-                        % {animalObjIndex,blockObjIndex}
-                        idx1 = subs{1};
-                        varargout = cell(1,numel(idx1));
-                        
-                        for i = 1:numel(idx1)
-                           if ischar(subs{2})
-                              switch lower(subs{2})
-                                 case ':'
-                                    idx2 = 1:getNumBlocks(animalObj(i));
-                                 otherwise
-                                    error(['nigeLab:' mfilename ':badReference'],...
-                                       'Unrecognized index keyword: %s',subs);
-                              end
-                           else
-                              idx2 = subs{2}(i);
-                           end
-                           varargout{1} = [varargout{1},...
-                              animalObj(idx1(i)).Blocks(idx2)];
-                        end
-                        return;
-                        
-                     % Otherwise too many input arguments given to
-                     % animalObj array
-                     otherwise
-                        error(['nigeLab:' mfilename ':tooManyInputs'],...
-                           'Too many subscript indexing args (%g) given.',...
-                           numel(subs));
-                  end                  
-               end
-            otherwise
-               [varargout{1:nargout}] = builtin('subsref',animalObj,S);
-         end
-      end
    end
    
-   % PUBLIC methods (to go in Contents.m)
+   % PUBLIC 
+   % Methods that should go in Contents.m eventually
    methods (Access = public)
-      table = list(animalObj)               % List of recordings currently associated with the animal
+      table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       
@@ -550,7 +407,8 @@ classdef Animal < matlab.mixin.Copyable
       flag = splitMultiAnimals(blockObj,tabpanel) % Split recordings that have multiple animals to separate recs
    end
    
-   % "HIDDEN" PUBLIC methods
+   % PUBLIC
+   % "Hidden" methods that shouldn't typically be used
    methods (Access = public, Hidden = true)
       clearSpace(animalObj,ask,usrchoice) % Remove files from disk
       updateNotes(blockObj,str) % Update notes for a recording
@@ -562,13 +420,88 @@ classdef Animal < matlab.mixin.Copyable
       
       N = getNumBlocks(animalObj); % Gets total number of blocks 
    end
-   
-   %% PRIVATE METHODS
-   methods (Access = 'private')
+    
+   % PRIVATE 
+   % To be catalogued in 'Contents.m'
+   methods (Access = private, Hidden = false)
       init(animalObj)         % Initializes the ANIMAL object
-      def_params(animalObj)   % Default parameters for ANIMAL (deprecated)
+   end
+   
+   % PRIVATE
+   % Used during Initialization
+   methods (Access = 'private')
+      % Adds listener handles to array property of animalObj
+      function addListeners(animalObj)
+         % ADDLISTENERS  Called on initialization to build PropListener
+         %               property array.
+         %
+         %  animalObj.addListeners();
+         %
+         %  --> Creates 2-element vector of property listeners
+         
+         animalObj.PropListener(1) = ...
+            addlistener(animalObj,'Name','PostSet',...
+            @(~,~)animalObj.updateAnimalNameInChildBlocks);
+         
+         animalObj.PropListener(2) = ...
+            addlistener(animalObj,'Blocks','PostSet',...
+            @(~,~)animalObj.CheckBlocksForClones);
+      end
+   end
+   
+   % PRIVATE
+   % Listener callbacks
+   methods (Access = private, Hidden = true) 
+      % Callback for when a "child" Block is moved or otherwise destroyed
+      function AssignNULL(animalObj)
+         % ASSIGNNULL  Does null assignment to remove a block of a
+         %             corresponding index from the animalObj.Blocks
+         %             property array, for example, if that Block is
+         %             destroyed or moved to a different animalObj. Useful
+         %             as a callback for an event listener handle.
+         
+         animalObj.Blocks(~isvalid(animalObj.Blocks)) = [];
+      end
       
-      function updateAnimalNameInChildBlocks(animalObj,~,~)
+      % Ensure that there are not redundant Blocks in animalObj.Blocks
+      % based on the .Name property of each member Block object
+      function CheckBlocksForClones(animalObj)
+         % CHECKBLOCKSFORCLONES  Creates an nBlock x nBlock logical matrix
+         %                       comparing each Block in animalObj.Blocks
+         %                       to the Name of every other such Block.
+         %                       After subtracting the main diagonal of
+         %                       this matrix, any row with redundant
+         
+         % If no Blocks (or only 1 "non-empty" block) then there are no
+         % clones in the array.
+         b = animalObj.Blocks;
+         if sum(isempty(b)) <= 1
+            return;
+         else
+            idx = find(~isempty(b));
+            b = b(idx);
+         end
+         
+         cname = {b.Name};
+         
+         % look for animals with the same name
+         comparisons_cell = cellfun(... % check each element name against 
+            @(s) strcmp(s,cname),... 
+            cname,... % all other elements
+            'UniformOutput',false);     % return result in cells
+         
+         % Use upper triangle portion only, so that at least 1 member is
+         % kept from any matched pair
+         comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
+                                   eye(numel(cname))));
+         rmvec = any(comparisons_mat,1);
+         animalObj.Blocks(idx(rmvec))=[];
+
+      end
+      
+      % Callback for when the Animal name is changed, to update all "child"
+      % block objects.
+      function updateAnimalNameInChildBlocks(animalObj)
          % UPDATEANIMALNAMEINCHILDBLOCKS  Updates the animal Name in any
          %                                Children, whenever that property
          %                                is modified. This way, Children
@@ -584,7 +517,9 @@ classdef Animal < matlab.mixin.Copyable
       end
    end
    
+   % STATIC
    methods (Static)
+      % Static method to construct empty Animal object
       function animalObj = Empty(n)
          % EMPTY  Creates "empty" Animal or Animal array
          %
@@ -592,7 +527,7 @@ classdef Animal < matlab.mixin.Copyable
          %  nigeLab.Animal.Empty(n); % Make n-element array of Animal
          
          if nargin < 1
-            n = 1;
+            n = [1, 1];
          else
             n = nanmax(n,1);
             if isscalar(n)
@@ -603,6 +538,7 @@ classdef Animal < matlab.mixin.Copyable
          animalObj = nigeLab.Animal(n);
       end
       
+      % Method invoked any time animalObj is loaded
       function b = loadobj(a)
          % LOADOBJ  Method to load ANIMAL objects
          %
@@ -611,7 +547,10 @@ classdef Animal < matlab.mixin.Copyable
          %  Just makes sure that a is correct, and returns it on loading as
          %  b to avoid infinite recursion.
          
+         
+         
          if ~isfield(a.Paths,'SaveLoc')
+            a.addListeners();
             b = a;
             return;
          end
@@ -622,18 +561,18 @@ classdef Animal < matlab.mixin.Copyable
 
             for ii=1:numel(BL)
                in = load(fullfile(BL(ii).folder,BL(ii).name));
-               a.addBlock(in.blockObj,ii);
+               a.addChildBlock(in.blockObj,ii);
             end
+            a.addListeners(); % Add listeners after all blocks back in
             b = a;
             return;
          else
+            a.addListeners();
             b = a;
             return;
          end
          
       end
-      
-      
-   end
+   end 
    
 end

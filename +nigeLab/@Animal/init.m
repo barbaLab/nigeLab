@@ -16,7 +16,7 @@ if ~animalObj.getSaveLocation(animalObj.TankLoc)
    return;
 end
 
-supportedFormats = animalObj.Pars.SupportedFormats;
+supportedFormats = animalObj.Pars.Animal.SupportedFormats;
 
 %% GET BLOCKS
 % Remove other folder names
@@ -33,18 +33,18 @@ for bb=1:numel(Recordings)
    [~,~,ext] = fileparts(Recordings(bb).name);
    
    % Cases where block is to be added will toggle this flag
-   addBlock = false;
+   addThisBlock = false;
    if Recordings(bb).isdir
       
       % handling tdt case
       if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev')))
-         addBlock = true;
+         addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
          RecFile = fullfile(tmp.folder,tmp.name);
          
       % handling already extracted to matfile case
       elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
-         addBlock = true;
+         addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
          RecFile = fullfile(tmp.folder,tmp.name);
       
@@ -54,7 +54,7 @@ for bb=1:numel(Recordings)
                animalObj.RecDir,Recordings(bb).name,...
                nigeLab.defaults.Block('FolderIdentifier')));
          if exist(RecFile,'file')~=0
-            addBlock = true;
+            addThisBlock = true;
             RecFile = nigeLab.utils.getUNCPath(...
                animalObj.RecDir,Recordings(bb).name);
             blockFileName = [Recordings(bb).name '_Block.mat'];
@@ -67,7 +67,7 @@ for bb=1:numel(Recordings)
                RecFile = blockObj;
             end
          elseif animalObj.Pars.OnlyBlockFoldersAtAnimalLevel
-            addBlock = true;
+            addThisBlock = true;
             % Don't "double-count" Block from Folder and _Block.mat
             tmpName = {Recordings.name};
             blockFileName = [Recordings(bb).name '_Block.mat'];
@@ -85,22 +85,22 @@ for bb=1:numel(Recordings)
       end
       
    elseif any(strcmp(ext,supportedFormats))
-      addBlock = true;
+      addThisBlock = true;
       RecFile = fullfile(Recordings(bb).folder,Recordings(bb).name);
 
    elseif strcmp(ext,'.mat')
-      addBlock = true;
+      addThisBlock = true;
       load(fullfile(Recordings(bb).folder,Recordings(bb).name),'blockObj');
       RecFile = blockObj;
 
    end
    
-   if  addBlock
-      animalObj.addBlock(RecFile,bb);
+   if  addThisBlock
+      animalObj.addChildBlock(RecFile,bb);
+      animalObj.MultiAnimals = any([animalObj.Blocks.MultiAnimals]);
    end
-   skipVec(bb) = ~addBlock;
+   skipVec(bb) = ~addThisBlock;
 end
-animalObj.Blocks(skipVec) = [];
+animalObj.Blocks(isempty(animalObj.Blocks)) = [];
 animalObj.save;
 end
-
