@@ -35,17 +35,24 @@ classdef nigelButton < handle
 %           (fcn) should be provided as a function handle for ButtonDownFcn
    
    properties (Access = public, SetObservable = true)
-      ButtonDownFcn    % Function executed by button
+      Fcn     function_handle  % Function to be executed
+      Fcn_Args    cell         % (Optional) function arguments
    end
    
    properties (GetAccess = public, SetAccess = private)
-      Parent  matlab.graphics.axis.Axes  % Axes container
+      Selected = 'off'   % Is this button currently clicked
       Button  matlab.graphics.primitive.Rectangle  % Curved rectangle
       Label   matlab.graphics.primitive.Text  % Text to display
    end
    
+   properties (GetAccess = public, SetAccess = immutable)
+      Figure  matlab.ui.Figure           % Figure containing the object
+      Group   matlab.graphics.primitive.Group  % "Container" object
+      Parent  matlab.graphics.axis.Axes  % Axes container
+   end
+   
    properties (Access = private)
-      Group     matlab.graphics.primitive.Group  % "Container" object
+      Border    matlab.graphics.primitive.Rectangle  % Border of "button"
       Listener  event.listener                   % Property event listener
    end
    
@@ -53,14 +60,15 @@ classdef nigelButton < handle
    % Class constructor and overloaded methods
    methods
       % Class constructor
-      function b = nigelButton(container,buttonPropPairs,labPropPairs,fcn)
+      function b = nigelButton(container,buttonPropPairs,labPropPairs,varargin)
          %NIGELBUTTON   Buttons in format of nigeLab interface
          %
          %  b = nigeLab.libs.nigelButton(); Add to current axes
          %  b = nigeLab.libs.nigelButton(nigelPanelObj); Add to nigelPanel
          %  b = nigeLab.libs.nigelButton(ax);  Add to axes
          %  b = nigeLab.libs.nigelButton(__,buttonPropPairs,labPropPairs);
-         %  b = nigeLab.libs.nigelButton(__,pos,string,buttonDownFcn);
+         %  b = nigeLab.libs.nigelButton(__,pos,string,@ButtonDownFcn);
+         %  b = nigeLab.libs.nigelButton(__,@ButtonDownFcn,{arg1,...,argk});
          %
          %  container can be:
          %  -> nigeLab.libs.nigelPanel
@@ -90,10 +98,6 @@ classdef nigelButton < handle
          %  >> b = nigeLab.libs.nigelButton(ax,bPos,'test2',...
          %           @(~,~)disp('test2'));
          
-         if nargin < 4
-            fcn = [];
-         end
-         
          if nargin < 3
             labPropPairs = {};
          end
@@ -103,17 +107,28 @@ classdef nigelButton < handle
          end
          
          if nargin < 1
-            b.Parent = gca;
-         else
-            b.Parent = nigeLab.libs.nigelButton.parseContainer(container);
+            container = gca;
          end
          
+         % Set immutable properties in constructor
+         b.Parent = nigeLab.libs.nigelButton.parseContainer(container);
          b.Group = hggroup(b.Parent);
+         b.Figure = b.parseFigure(); 
          
+         % Set Function handle and input arguments
+         if nargin > 3
+            b.Fcn = varargin{1};
+         end
+         
+         if nargin > 4
+            b.Fcn_Args = varargin(2:end);
+         end
+         
+         % Initialize rest of graphics
          b.Label = text(b.Group);
          b.buildGraphic(buttonPropPairs,'Button');
          b.buildGraphic(labPropPairs,'Label');
-         b.Listener = b.completeGroup(fcn);
+         b.completeGroup;
          
       end
       
@@ -150,6 +165,38 @@ classdef nigelButton < handle
    % PRIVATE
    % Initialization methods
    methods (Access = private, Hidden = true)
+      % Button click graphic
+      function ButtonClickGraphic(b)
+         % BUTTONCLICKGRAPHIC  Crude method to show the highlight border of
+         %                       button that was clicked.
+         
+         b.Border.Visible = 'on';
+         b.Selected = 'on';
+      end
+      
+      % Button click graphic
+      function ButtonUpFcn(b,UserData)
+         % BUTTONUPFCN  Crude method to show the highlight border of
+         %                       button that was clicked on a left-click,
+         %                       and then execute current button callback.
+         
+         if strcmpi(b.Selected,'off')
+            return;
+         end
+         % If button is released, turn off "highlight border"
+         b.Border.Visible = 'off';
+         b.Selected = 'off';
+         switch lower(UserData)
+            case 'normal'
+               if ~isempty(b.Fcn)
+                  feval(b.Fcn,b.Fcn_Args{:});
+               end
+               
+            otherwise 
+               ... % nothing
+         end
+      end
+      
       % Initialize a given graphic property object
       function buildGraphic(b,propPairsIn,propName)
          % BUILDGRAPHIC  Builds the specified graphic
@@ -173,7 +220,34 @@ classdef nigelButton < handle
                      'Curvature',[.1 .4],...
                      'FaceColor',nigeLab.defaults.nigelColors('button'),...
                      'EdgeColor','none',...
-                     'Tag','Button');
+                     'LineWidth',3,...
+                     'Tag','Button',...
+                     'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
+                  b.Border = rectangle(b.Group,...
+                     'Position',[1 1 2 1],...
+                     'Curvature',[.1 .4],...
+                     'FaceColor','none',...
+                     'EdgeColor',nigeLab.defaults.nigelColors('onbutton'),...
+                     'LineWidth',3,...
+                     'Tag','Border',...
+                     'Visible','off',...
+                     'HitTest','off');
+                  
+                  % Make the border follow select property values of Button
+                  b.Listener = [b.Listener, ...
+                     addlistener(b.Button,'Position','PostSet',...
+                        @(~,evt)set(b.Border,'Position',...
+                           evt.AffectedObject.Position))];
+                  b.Listener = [b.Listener, ...
+                     addlistener(b.Button,'LineWidth','PostSet',...
+                        @(~,evt)set(b.Border,'LineWidth',...
+                           evt.AffectedObject.LineWidth))];
+                        
+                  % Figure UserData will be set on Figure ButtonUpFcn
+                  b.Listener = [b.Listener, addlistener(b.Figure,...
+                     'UserData','PostSet',...
+                     @(~,evt)b.ButtonUpFcn(evt.AffectedObject.UserData))];
+                     
                else
                   % Reset position
                   pos = get(b.Button,'Position');
@@ -191,7 +265,8 @@ classdef nigelButton < handle
                   'FontSize',13,...
                   'Tag','Label',...
                   'HorizontalAlignment','center',...
-                  'VerticalAlignment','middle');
+                  'VerticalAlignment','middle',...
+                  'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
                
                % Add listener so it stays in the middle of the button
                b.Listener = [b.Listener, ...
@@ -214,6 +289,9 @@ classdef nigelButton < handle
                ob = metaclass(b.(propName));
                allPropList = {ob.PropertyList.Name};
                allPropList = allPropList(~[ob.PropertyList.Hidden]);
+               
+               % Don't let the ButtonDownFcn be set (it should be fixed)
+               allPropList = setdiff(allPropList,'ButtonDownFcn'); 
                for i = 1:2:numel(propPairsIn)
                   % Do it this way to allow mismatch on case syntax
                   idx = find(...
@@ -228,8 +306,8 @@ classdef nigelButton < handle
                % If this was associated with the wrong set of pairs, redo
                % the button.
                if strcmp(propName,'Label')
-                  b.buildGraphic(propPairsIn,'Button');
-                  return;
+                  error(['nigeLab:' mfilename ':badInputType3'],...
+                     'Check order of position and label text inputs.');
                end
                
                % Can set position directly
@@ -239,7 +317,8 @@ classdef nigelButton < handle
                % If this was associated with the wrong set of pairs, redo
                % the label
                if strcmp(propName,'Button')
-                  b.buildGraphic(propPairsIn,'Label');
+                  error(['nigeLab:' mfilename ':badInputType3'],...
+                     'Check order of position and label text inputs.');
                end
                
                % Can set label text directly
@@ -254,7 +333,7 @@ classdef nigelButton < handle
       end
       
       % Complete the 'Group' hggroup property
-      function lh = completeGroup(b,fcn)
+      function completeGroup(b)
          % COMPLETEGROUP  Complete the 'Group' hggroup property
          %
          %  lh = b.completeGroup();
@@ -262,43 +341,31 @@ classdef nigelButton < handle
          %  fcn  --  Function handle
          %  lh  --  Property 'ButtonDownFcn' PostSet listener object
          
-         if nargin < 2
-            fcn = [];
-         end
-         
          b.Group.Tag = b.Label.String;
          b.Group.DisplayName = b.Label.String;
          
          % Make it not show up in legends:
          b.Group.Annotation.LegendInformation.IconDisplayStyle = 'off';
+
+      end
+      
+      % Parses "parent figure" from parent
+      function fig = parseFigure(b)
+         % PARSEFIGURE Parses "parent figure" from parent container
+         %
+         %  fig = b.parseFigure();
          
-         % If fcn is empty, parse ButtonDownFcn from Children
-         if isempty(fcn)
-            % Ensure that clicks on both the text and on the button do the
-            % same thing.
-            for i = 1:numel(b.Group.Children)
-               btnDownFcnHandle = b.Group.Children(i).ButtonDownFcn;
-               if ~isempty(btnDownFcnHandle)
-                  break;
-               end
-            end
-         else
-            % Otherwise assign directly
-            btnDownFcnHandle = fcn;
+         fig = b.Parent.Parent;
+         while ~isa(fig,'matlab.ui.Figure')
+            fig = fig.Parent;
          end
-
-         % Add property listener and then modify the property
-         lh = addlistener(b,'ButtonDownFcn','PostSet',...
-                     @(~,evt)set(evt.AffectedObject.Group.Children,...
-                                    'ButtonDownFcn',...
-                                    evt.AffectedObject.ButtonDownFcn));
-                                
-         b.ButtonDownFcn = btnDownFcnHandle;
-
+         set(fig,'WindowButtonUpFcn',...
+            @(src,~)set(fig,'UserData',src.SelectionType));
       end
    end
    
    % STATIC methods
+   % PRIVATE
    methods (Access = private, Static = true)
       % Return the center coordinates based on position
       function txt_pos = getCenter(pos)
@@ -321,6 +388,9 @@ classdef nigelButton < handle
          %                 correct container for the nigelButton.
          %
          %  ax = nigeLab.libs.nigelButton.parseContainer(container);
+         %
+         %  ax is always output as a matlab.graphics.axis.Axes class
+         %  object.
          
          switch builtin('class',container)
             case 'nigeLab.libs.nigelPanel'

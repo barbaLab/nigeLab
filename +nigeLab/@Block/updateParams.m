@@ -87,8 +87,6 @@ if isempty(blockObj.Pars)
    blockObj.Pars = struct;
 end
 blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
-
-blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
 flag = true;
 if nargout > 1
    p = blockObj.Pars.(paramType);

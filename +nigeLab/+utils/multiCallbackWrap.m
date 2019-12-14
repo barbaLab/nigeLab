@@ -1,10 +1,10 @@
-function multiCallbackWrap(ObjH, EventData, fcnList)
-%% wrapper to define multiple funtions in a single callback
+function multiCallbackWrap(ObjH, EventData,fcnList)
+% MULTICALLBACKWRAP  Wraps multiple funtions into a single callback
 % usage :
 % fcnList = {@myfunc0, @myfunc1, @myfunc2};
 % obj = uicontrol(...
 %     'Callback', {@nigeLab.Utils.multiCallbackWrap, fcnList});
-% 
+%
 % or if input arguments are needed
 %
 % fcnList = {{@(x1,...xn)myfunc0(x1,...xn),arg00,arg01,...,arg0n},
@@ -14,13 +14,30 @@ function multiCallbackWrap(ObjH, EventData, fcnList)
 % obj = uicontrol(...
 %     'Callback', {@nigeLab.Utils.multiCallbackWrap, fcnList});
 
-for iFcn = 1:length(fcnList)
-    if iscell(fcnList{iFcn})
-        thisFunction = fcnList{iFcn};
-    else
-        thisFunction = fcnList(iFcn);
-    end
-    feval(thisFunction{1}, ObjH, EventData,thisFunction{2:end});
+if ~isscalar(fcnList)
+   for iFcn = 1:numel(fcnList)
+      nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{iFcn});
+   end
+   return;
 end
+
+if iscell(fcnList)
+   thisFunction = fcnList{1};
+   argsIn = fcnList;
+   argsIn(1) = [];
+else
+   thisFunction = fcnList;
+   argsIn = {};
+end
+
+% If function handle is empty, continue
+if isempty(thisFunction)
+   return;
+end   
+
+feval(thisFunction, ObjH, EventData, argsIn{:});
+   
+end
+
 
 end
