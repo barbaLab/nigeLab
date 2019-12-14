@@ -1,4 +1,4 @@
-function L = list(blockObj)
+function L = list(blockObj,keyIdx)
 % LIST  Give list of current files associated with field.
 %
 %  L = blockObj.LIST;
@@ -12,6 +12,19 @@ function L = list(blockObj)
 %   OUTPUT
 %  --------
 %     L     :     Table with information about blockObj.
+
+%% Handle array input
+if nargin < 2
+   keyIdx = 1;
+end
+
+if numel(blockObj) > 1
+   L = [];
+   for i = 1:numel(blockObj)
+      L = [L; list(blockObj(i),i)]; %#ok<*AGROW>
+   end
+   return;
+end
 
 %% PARSE DATE AND TIME INFO
 Format = '';
@@ -30,7 +43,8 @@ DateTime=datetime(str,'InputFormat',Format);
 catch
    DateTime=NaT;
 end
-                
+
+info.Key = {num2str(keyIdx)};
 info.Recording_date=DateTime;
 info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 
@@ -70,11 +84,11 @@ info.Status = sprintf([repmat('%s,',1,numel(St)) '\b'],St{:});
 L_=struct2table(info,'AsArray',true);
 for ii=1:length(L_.Properties.VariableNames)
     switch L_.Properties.VariableNames{ii}
-        case 'Corresponding_animal' % Deprecated I think ? -MM
+        case 'Corresponding_animal' 
             L_.Properties.VariableNames{ii}='Animal';
         case 'RecType'
             L_.Properties.VariableNames{ii}='RecordingType';
-        case 'numChannels' % Deprecated as well? -MM
+        case 'numChannels' 
             L_.Properties.VariableNames{ii}='NumberOfChannels';
     end
 end

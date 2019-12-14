@@ -16,7 +16,7 @@ if ~animalObj.getSaveLocation(animalObj.TankLoc)
    return;
 end
 
-supportedFormats = animalObj.Pars.SupportedFormats;
+supportedFormats = animalObj.Pars.Animal.SupportedFormats;
 
 %% GET BLOCKS
 % Remove other folder names

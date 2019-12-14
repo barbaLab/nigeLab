@@ -403,7 +403,6 @@ fclose(fid);
 % Link to data
 blockObj.reportProgress('Linking Data.',95,'toEvent');
 blockObj.linkToData();
-delete(lh);
 flag = true;
 
 end

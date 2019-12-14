@@ -59,7 +59,9 @@ classdef Tank < handle
 
    % Has to be set by method of Tank, but can be accessed publically
    properties (SetAccess = private, GetAccess = public)
-      Paths  struct             % Detailed paths specifications for all the saved files
+      Fields         cell      % Specific things to record
+      FieldType      cell      % "Types" corresponding to Fields elements
+      Paths          struct    % Detailed paths specifications for all the saved files
    end
    
    % Various parameters that may be useful to access publically but cannot
@@ -145,8 +147,9 @@ classdef Tank < handle
          end
          
          % Load default settings
-         tankObj.updateParams('Tank');
+         tankObj.updateParams('Tank'); % old maybe
          tankObj.updateParams('all');
+         tankObj.updateParams('init');
          tankObj.addListeners();
          
          % Can specify properties on construct
@@ -304,13 +307,23 @@ classdef Tank < handle
          %            status element (for that animal) is returned as
          %            false.
          %
-         %  Status = tankObj.getStatus(); Returns status for ALL operations
+         %  Status = tankObj.getStatus();
+         %  --> Return list of status that have been completed for each
+         %      ANIMAL
+         %
+         %  Status = tankObj.getStatus([]);
+         %  --> Return matrix of logical values for ALL fields
+         %
          %  Status = tankObj.getStatus(operation); Returns specific
          %                                         operation status
          
          if nargin <2
             tmp = tankObj.list;
             Status = tmp.Status;
+         elseif isempty(operation)
+            operation = tankObj.Pars.Block.Fields;
+            Status = getStatus(tankObj,operation);
+            return;
          else
             % Ensure operation is a cell
             if ~iscell(operation)

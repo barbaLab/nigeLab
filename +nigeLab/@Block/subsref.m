@@ -26,7 +26,7 @@ function varargout = subsref(blockObj,S)
 %                                              as a separate cell array.
 
 % Shrt: cell array of shortcuts
-Shrt = nigeLab.defaults.Shortcuts();
+Shrt = nigeLab.defaults.Shortcuts('cell');
 switch S(1).type
    case '.'
       %% Handle '.' subscripted references

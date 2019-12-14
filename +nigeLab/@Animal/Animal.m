@@ -51,6 +51,10 @@ classdef Animal < matlab.mixin.Copyable
       Paths   struct      % Path to Animal folder
    end
    
+   properties (Access = public)
+      UserData   % User-defined field
+   end
+   
    % Less-likely but possible to externally reference
    properties (GetAccess = public, SetAccess = private, Hidden = true)
       Pars                       struct      % parameters struct for templates from nigeLab.defaults
@@ -62,10 +66,12 @@ classdef Animal < matlab.mixin.Copyable
    end
    
    % Default parameters
-   properties  (SetAccess = private, GetAccess = private) 
-       RecLocDefault    char     % Default location of raw binary recording
-       TankLocDefault   char     % Default location of BLOCK
-   end  
+   properties  (SetAccess = private, GetAccess = private)
+      Fields           cell     % Specific fields for recording
+      FieldType        cell     % "Types" of data corresponding to Fields
+      RecLocDefault    char     % Default location of raw binary recording
+      TankLocDefault   char     % Default location of BLOCK
+   end
    
    % Listeners and Flags
    properties (SetAccess = public, GetAccess = private, Hidden = true)
@@ -97,8 +103,9 @@ classdef Animal < matlab.mixin.Copyable
          %  animalObj = nigeLab.Animal(__,'PropName',propValue,...);
          %     --> set properties in the constructor
          
-         animalObj.updateParams('Animal');
+         animalObj.updateParams('Animal'); % old possibly
          animalObj.updateParams('all');
+         animalObj.updateParams('init');
          animalObj.addListeners();
          
          % Parse input arguments
@@ -229,7 +236,7 @@ classdef Animal < matlab.mixin.Copyable
                      @(~,~)animalObj.AssignNULL);
          end
       end
-         
+      
       % Make sure listeners are deleted when animalObj is destroyed
       function delete(animalObj)
          % DELETE  Ensures listener handles are properly destroyed
@@ -287,7 +294,13 @@ classdef Animal < matlab.mixin.Copyable
          if nargin < 2
             opField = [];
          end
-         
+         if numel(animalObj) > 1
+            flag = [];
+            for i = 1:numel(animalObj)
+               flag = [flag; getStatus(animalObj(i).Blocks,opField)]; %#ok<*AGROW>
+            end
+            return;
+         end
          flag = getStatus(animalObj.Blocks,opField);
       end
       
@@ -375,7 +388,7 @@ classdef Animal < matlab.mixin.Copyable
    % PUBLIC 
    % Methods that should go in Contents.m eventually
    methods (Access = public)
-      table = list(animalObj)               % List of recordings currently associated with the animal
+      table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       

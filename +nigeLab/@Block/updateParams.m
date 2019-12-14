@@ -40,11 +40,7 @@ if nargin < 2 % if not supplied, select from list...
 
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
-elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
-
-   paramType = tmp;
-   flag = blockObj.updateParams(paramType);
-   return;
+   
 elseif iscell(paramType) % Use recursion to run if cell array is given
    N = numel(paramType);
    if N==0
@@ -54,6 +50,12 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
    paramType = paramType(:); % just in case it wasn't a vector for some reason;
    flag = blockObj.updateParams(paramType{1}) && blockObj.updateParams(paramType(2:N));
    return;
+elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
+
+   paramType = tmp;
+   flag = blockObj.updateParams(paramType);
+   return;
+   
 elseif any(ismember(paramType,ConstructProps))
      ... Right now no action is required here
    pars = nigeLab.defaults.(paramType)();
@@ -65,6 +67,7 @@ elseif any(ismember(paramType,ConstructProps))
          blockObj.(name_{:}) = pars.(name_{:});
       end
    end
+   blockObj.Pars.(paramType) = pars;
    flag = true;
    return;
 else

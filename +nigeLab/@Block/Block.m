@@ -515,7 +515,7 @@ classdef Block < matlab.mixin.Copyable
       flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
       % Methods for associating/displaying info about blocks:
-      L = list(blockObj) % List of current associated files for field or fields
+      L = list(blockObj,keyIdx) % List of current associated files for field or fields
       flag = updateVidInfo(blockObj) % Update video info
       flag = linkToData(blockObj,suppressWarning) % Link to existing data
       flag = linkField(blockObj,fieldIndex)     % Link field to data

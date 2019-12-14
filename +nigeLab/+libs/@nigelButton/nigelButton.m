@@ -35,7 +35,7 @@ classdef nigelButton < handle
 %           (fcn) should be provided as a function handle for ButtonDownFcn
    
    properties (Access = public, SetObservable = true)
-      ButtonDownFcn  function_handle  % Function executed by button
+      ButtonDownFcn    % Function executed by button
    end
    
    properties (GetAccess = public, SetAccess = private)
@@ -292,8 +292,9 @@ classdef nigelButton < handle
                      @(~,evt)set(evt.AffectedObject.Group.Children,...
                                     'ButtonDownFcn',...
                                     evt.AffectedObject.ButtonDownFcn));
-         b.ButtonDownFcn(:) = btnDownFcnHandle;
-         
+                                
+         b.ButtonDownFcn = btnDownFcnHandle;
+
       end
    end
    
