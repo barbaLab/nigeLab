@@ -34,12 +34,16 @@ classdef nigelButton < handle
 %           string to go into the button. In this case, the fourth input
 %           (fcn) should be provided as a function handle for ButtonDownFcn
    
-   properties (Access = public, SetObservable = true)
+   properties (Access = public,SetObservable = true)
+      Enable = 'on'  % Is the button enabled
+   end
+
+   properties (Access = public, SetObservable = false)
       Fcn     function_handle  % Function to be executed
       Fcn_Args    cell         % (Optional) function arguments
    end
    
-   properties (GetAccess = public, SetAccess = private)
+   properties (GetAccess = public,SetAccess = private,SetObservable = true)
       Selected = 'off'   % Is this button currently clicked
       Button  matlab.graphics.primitive.Rectangle  % Curved rectangle
       Label   matlab.graphics.primitive.Text  % Text to display
@@ -58,7 +62,7 @@ classdef nigelButton < handle
    
    % PUBLIC
    % Class constructor and overloaded methods
-   methods
+   methods (Access = public)
       % Class constructor
       function b = nigelButton(container,buttonPropPairs,labPropPairs,varargin)
          %NIGELBUTTON   Buttons in format of nigeLab interface
@@ -125,10 +129,10 @@ classdef nigelButton < handle
          end
          
          % Initialize rest of graphics
-         b.Label = text(b.Group);
          b.buildGraphic(buttonPropPairs,'Button');
          b.buildGraphic(labPropPairs,'Label');
-         b.completeGroup;
+         b.completeGroup();
+         b.addListeners();
          
       end
       
@@ -160,18 +164,113 @@ classdef nigelButton < handle
             end
          end
       end
+      
+      % Return the correct button from an array
+      function b = getButton(bArray,name)
+         % GETBUTTON  Return the correct button from an array by specifying
+         %            its name, which is the char array on the text label
+         %
+         %  b = getButton(bArray,'labelString');  Returns the button with
+         %                                        'labelString' on it, or
+         %                                        else returns empty array
+         
+         idx = ismember(lower(get([bArray.Label],'String')),lower(name));
+         b = bArray(idx);
+      end
+      
+      % Return the correct button from an array
+      function setButton(bArray,name,propName,propval)
+         % GETBUTTON  Return the correct button from an array by specifying
+         %            its name, which is the char array on the text label
+         %
+         %  setButton(bArray,'labelString','propName',propVal);  
+         %  
+         %  Set the value of the button in array with label 'labelString'
+         %  for 'propName' to propVal.
+         %
+         %  setButton(bArray,[],...); Sets all elements of bArray
+         %
+         %  setButton(bArray,logical(ones(size(bArray)))); Can use logical
+         %           or numeric indexing
+         
+         if ischar(name)
+            idx = ismember(lower(get([bArray.Label],'String')),lower(name));
+         elseif isnumeric(name)
+            if ~isempty(name)
+               idx = name;
+            else
+               idx = 1:numel(bArray);
+            end
+         elseif islogical(name)
+            idx = name;
+         else
+            error(['nigeLab:' mfilename ':badInputType2'],...
+               'Unexpected input class for "name" (%s)',class(name));
+         end
+            
+         B = bArray(idx);
+         for i = 1:numel(B)
+            B.(propName) = propval;
+         end
+      end
    end
    
    % PRIVATE
    % Initialization methods
    methods (Access = private, Hidden = true)
+      function addListeners(b)
+         % ADDLISTENERS  Adds all listeners to propertly .Listener
+         %
+         %  b.addListeners();
+         
+         % Make the border follow select property values of Button
+         b.Listener = [b.Listener, ...
+            addlistener(b.Button,'Position','PostSet',...
+               @(~,evt)set(b.Border,'Position',...
+                  evt.AffectedObject.Position))];
+         b.Listener = [b.Listener, ...
+            addlistener(b.Button,'LineWidth','PostSet',...
+               @(~,evt)set(b.Border,'LineWidth',...
+                  evt.AffectedObject.LineWidth))];
+         b.Border.Position = b.Button.Position;
+         b.Border.LineWidth = b.Button.LineWidth;
+
+         % Figure UserData will be set on Figure ButtonUpFcn
+         b.Listener = [b.Listener, addlistener(b.Figure,...
+            'UserData','PostSet',...
+            @(~,evt)b.ButtonUpFcn(evt.AffectedObject.UserData))];
+         
+         % Add listener so text label stays in middle of button
+         b.Listener = [b.Listener, ...
+            addlistener(b.Button,'Position','PostSet',...
+             @(~,evt)set(b.Label,'Position',...
+                        b.getCenter(evt.AffectedObject.Position)))];
+                     
+         % Add listeners for SetObservable properties
+         b.Listener = [b.Listener, ...
+            addlistener(b,'Enable','PostSet',...
+            @(~,evt)b.setEnable(evt.AffectedObject.Enable))];
+      end
+      
       % Button click graphic
       function ButtonClickGraphic(b)
          % BUTTONCLICKGRAPHIC  Crude method to show the highlight border of
          %                       button that was clicked.
          
+         if numel(b) > 1
+            for i = 1:numel(b)
+               ButtonClickGraphic(b(i));
+            end
+            return;
+         end
+         
+         if strcmpi(b.Enable,'off')
+            return;
+         end
+         
          b.Border.Visible = 'on';
          b.Selected = 'on';
+         b.Label.FontWeight = 'bold';
       end
       
       % Button click graphic
@@ -180,12 +279,22 @@ classdef nigelButton < handle
          %                       button that was clicked on a left-click,
          %                       and then execute current button callback.
          
+         if numel(b) > 1
+            for i = 1:numel(b)
+               ButtonUpFcn(b(i),UserData);
+            end
+            return;
+         end
+         
          if strcmpi(b.Selected,'off')
+            return;
+         elseif strcmpi(b.Enable,'off')
             return;
          end
          % If button is released, turn off "highlight border"
          b.Border.Visible = 'off';
          b.Selected = 'off';
+         b.Label.FontWeight = 'normal';
          switch lower(UserData)
             case 'normal'
                if ~isempty(b.Fcn)
@@ -214,65 +323,53 @@ classdef nigelButton < handle
          
          switch propName
             case 'Button'
-               if isempty(b.Button)
-                  b.Button = rectangle(b.Group,...
-                     'Position',[1 1 2 1],...
-                     'Curvature',[.1 .4],...
-                     'FaceColor',nigeLab.defaults.nigelColors('button'),...
-                     'EdgeColor','none',...
-                     'LineWidth',3,...
-                     'Tag','Button',...
-                     'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
-                  b.Border = rectangle(b.Group,...
-                     'Position',[1 1 2 1],...
-                     'Curvature',[.1 .4],...
-                     'FaceColor','none',...
-                     'EdgeColor',nigeLab.defaults.nigelColors('onbutton'),...
-                     'LineWidth',3,...
-                     'Tag','Border',...
-                     'Visible','off',...
-                     'HitTest','off');
-                  
-                  % Make the border follow select property values of Button
-                  b.Listener = [b.Listener, ...
-                     addlistener(b.Button,'Position','PostSet',...
-                        @(~,evt)set(b.Border,'Position',...
-                           evt.AffectedObject.Position))];
-                  b.Listener = [b.Listener, ...
-                     addlistener(b.Button,'LineWidth','PostSet',...
-                        @(~,evt)set(b.Border,'LineWidth',...
-                           evt.AffectedObject.LineWidth))];
-                        
-                  % Figure UserData will be set on Figure ButtonUpFcn
-                  b.Listener = [b.Listener, addlistener(b.Figure,...
-                     'UserData','PostSet',...
-                     @(~,evt)b.ButtonUpFcn(evt.AffectedObject.UserData))];
-                     
-               else
-                  % Reset position
-                  pos = get(b.Button,'Position');
-                  b.Button.Position = [0 0 1 1];
-                  set(b.Button,'Position',pos);
+               % Do not make additional button graphics
+               if ~isempty(b.Button)
+                  if isvalid(b.Button)
+                     return;
+                  end
                end
                
+               b.Button = rectangle(b.Group,...
+                  'Position',[0.15 0.10 0.70 0.275],...
+                  'Curvature',[.2 .6],...
+                  'FaceColor',nigeLab.defaults.nigelColors('button'),...
+                  'EdgeColor','none',...
+                  'LineWidth',3,...
+                  'Tag','Button',...
+                  'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
+               b.Border = rectangle(b.Group,...
+                  'Position',[0.15 0.10 0.70 0.275],...
+                  'Curvature',[.2 .6],...
+                  'FaceColor','none',...
+                  'EdgeColor',nigeLab.defaults.nigelColors('highlight'),...
+                  'LineWidth',3,...
+                  'Tag','Border',...
+                  'Visible','off',...
+                  'HitTest','off');
+
+               
             case 'Label'
+               % Do not make additional label graphics
+               if ~isempty(b.Label)
+                  if isvalid(b.Label)
+                     return;
+                  end
+               end
+               
                % By default put it in the middle of the button
                pos = b.getCenter(b.Button.Position);
-               
                b.Label = text(b.Group,pos(1),pos(2),'',...
                   'Color',nigeLab.defaults.nigelColors('onbutton'),...
                   'FontName','Droid Sans',...
-                  'FontSize',13,...
+                  'Units','normalized',...
+                  'FontUnits','normalized',...
+                  'FontSize',0.8 * b.Button.Position(4),...
                   'Tag','Label',...
                   'HorizontalAlignment','center',...
                   'VerticalAlignment','middle',...
                   'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
                
-               % Add listener so it stays in the middle of the button
-               b.Listener = [b.Listener, ...
-                  addlistener(b.Button,'Position','PostSet',...
-                   @(~,evt)set(b.Label,'Position',...
-                              b.getCenter(evt.AffectedObject.Position)))];
             otherwise
                error(['nigeLab:' mfilename ':badInputType4'],...
                 'Unexpected graphics property name: %s',propName);
@@ -312,7 +409,6 @@ classdef nigelButton < handle
                
                % Can set position directly
                b.Button.Position = propPairsIn;
-               
             case 'char'
                % If this was associated with the wrong set of pairs, redo
                % the label
@@ -362,22 +458,46 @@ classdef nigelButton < handle
          set(fig,'WindowButtonUpFcn',...
             @(src,~)set(fig,'UserData',src.SelectionType));
       end
+      
+      % Toggles enable status
+      function setEnable(b,enable)
+         
+         switch lower(enable)
+            case 'on'
+               b.Button.FaceColor = nigeLab.defaults.nigelColors('enable');
+               b.Label.Color = nigeLab.defaults.nigelColors('enabletext');
+            case 'off'
+               b.Button.FaceColor = nigeLab.defaults.nigelColors('disable');
+               b.Label.Color = nigeLab.defaults.nigelColors('disabletext');
+         end
+      end
    end
    
    % STATIC methods
    % PRIVATE
    methods (Access = private, Static = true)
       % Return the center coordinates based on position
-      function txt_pos = getCenter(pos)
+      function txt_pos = getCenter(pos,xoff,yoff)
          % GETTEXTPOS  Returns the coordinates for text to go in center
          %
          %  txt_pos = nigeLab.libs.nigelButton.getCenter(pos);
          %
+         %  txt_pos = nigeLab.libs.nigelButton.getCenter(pos,xoff,yoff);
+         %  --> add x offset and y offset (defaults for both are zero)
+         %
          %  pos -- 4-element position vector for object in 2D axes
          %  txt_pos  -- 3-element position vector for text annotation
          
-         x = pos(1) + pos(3)/2;
-         y = pos(2) + pos(4)/2;
+         if nargin < 2
+            xoff = 0;
+         end
+         
+         if nargin < 3
+            yoff = 0;
+         end
+         
+         x = pos(1) + pos(3)/2 + xoff;
+         y = pos(2) + pos(4)/2 + yoff;
          txt_pos = [x,y,0];
          
       end
@@ -399,7 +519,7 @@ classdef nigelButton < handle
                if isempty(ax)
                   pos = container.InnerPosition;
                   pos = [pos(1) + pos(3) / 2, ...
-                     pos(2), ...
+                     pos(2) + 0.05, ...
                      pos(3) / 2, ...
                      pos(4) * 0.15];
                   ax = axes('Units','normalized', ...
@@ -408,6 +528,12 @@ classdef nigelButton < handle
                      'Color','none',...
                      'XColor','none',...
                      'YColor','none',...
+                     'NextPlot','add',...
+                     'XLimMode','manual',...
+                     'XLimMode','manual',...
+                     'XLim',[0 1],...
+                     'YLimMode','manual',...
+                     'YLim',[0 1],...
                      'FontName',container.FontName);
                   container.nestObj(ax,'ButtonAxes');
                end
@@ -428,7 +554,7 @@ classdef nigelButton < handle
                if isempty(ax)
                   pos = container.InnerPosition;
                   pos = [pos(1) + pos(3) / 2, ...
-                     pos(2), ...
+                     pos(2) + 0.05, ...
                      pos(3) / 2, ...
                      pos(4) * 0.15];
                   ax = axes(container,...
@@ -438,6 +564,11 @@ classdef nigelButton < handle
                      'Color','none',...
                      'XColor','none',...
                      'YColor','none',...
+                     'NextPlot','add',...
+                     'XLimMode','manual',...
+                     'XLim',[0 1],...
+                     'YLimMode','manual',...
+                     'YLim',[0 1],...
                      'FontName',container.FontName);
                end
             otherwise

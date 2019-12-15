@@ -14,6 +14,7 @@ classdef DashBoard < handle
    properties(SetAccess = private, GetAccess = public, SetObservable)
       nigelGUI       matlab.ui.Figure    % matlab.ui.Figure handle to user interface figure
       Color          struct              % Struct referencing colors
+      SelectionIndex = [1 0 0]     % indexing of currently-selected items
    end
    
    % PUBLIC
@@ -134,10 +135,9 @@ classdef DashBoard < handle
          
          % Delete anything associated with multianimals UI
          if ~isempty(obj.splitMultiAnimalsUI)
-            if isvalid(obj.splitMultiAnimalsUI.Fig)
-               delete(obj.splitMultiAnimalsUI.Fig);
+            if isvalid(obj.splitMultiAnimalsUI)
+               delete(obj.splitMultiAnimalsUI);
             end
-            delete(obj.splitMultiAnimalsUI);
          end
          
          % Delete buttons
@@ -155,11 +155,7 @@ classdef DashBoard < handle
                delete(obj.remoteMonitor);
             end
          end
-         
-         % Delete this interface
-         if isvalid(obj.nigelGUI)
-            delete(obj.nigelGUI);
-         end
+
       end
       
       % Return the panel corresponding to a given tag
@@ -352,7 +348,7 @@ classdef DashBoard < handle
          % Make button axes for this nigelPanelObj (Tree panel)
          pos = nigelPanelObj.InnerPosition;
          pos = [pos(1) + pos(3) / 2, ...
-            pos(2), ...
+            pos(2) + 0.05, ...
             pos(3) / 2, ...
             pos(4) * 0.15];
          ax = axes('Units','normalized', ...
@@ -361,19 +357,35 @@ classdef DashBoard < handle
             'Color',obj.Color.panel,...
             'XColor','none',...
             'YColor','none',...
+            'NextPlot','add',...
+            'XLimMode','manual',...
+            'XLim',[0 1],...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
             'FontName',nigelPanelObj.FontName);
          nigelPanelObj.nestObj(ax,'ButtonAxes');
          p = nigelPanelObj; % For shorter reference
          
          % Create array of nigelButtons
          obj.nigelButtons = [obj.nigelButtons, ...
-            nigeLab.libs.nigelButton(p, [1 1 2 1],'Add'), ... 
-            ... % Add handle to 'ADD' function here  ^
-            nigeLab.libs.nigelButton(p, [1 2.3 2 1],'Save'), ... 
-            ... % Add handle to 'SAVE' function here ^
-            nigeLab.libs.nigelButton(p, [1 3.6 2 1],'Split',...
+            nigeLab.libs.nigelButton(p, [0.15 0.10 0.70 0.275],'Add'), ... 
+            ... % Add handle to 'ADD' function here               ^
+            nigeLab.libs.nigelButton(p, [0.15 0.40 0.70 0.275],'Save'), ... 
+            ... % Add handle to 'SAVE' function here              ^
+            nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Split',...
                @obj.toggleSplitMultiAnimalsUI,'start',true)];
-         pbaspect([1,1,1]);
+         
+         setButton(obj.nigelButtons,'Add','Enable','off');  % (WIP)
+         setButton(obj.nigelButtons,'Save','Enable','off'); % (WIP)
+         if obj.SelectionIndex(1,2) == 0
+            setButton(obj.nigelButtons,'Split','Enable','off');
+         else
+            setButton(obj.nigelButtons,'Split','Enable','on');
+         end
+         
+         obj.Listener = [obj.Listener, ...
+            addlistener(obj,'SelectionIndex','PostSet',...
+               @(~,~)obj.toggleSplitUIMenuEnable)];
          
       end
       
@@ -399,7 +411,8 @@ classdef DashBoard < handle
                'Position',[0.1 0.1 0.8 0.8],...
                'Color',obj.Color.fig,...
                'ToolBar','none',...
-               'MenuBar','none');
+               'MenuBar','none',...
+               'DeleteFcn',@(~,~)obj.delete);
          end
          
          %% Tree Panel
@@ -933,6 +946,43 @@ classdef DashBoard < handle
          
       end
       
+      % Translates "SelectedItems" (nodes UserData) to "selection index"
+      function sel = selectedItems2Index(obj,items)
+         % SELECTEDITEMS2INDEX  Returns the "indexing" for SelectedItems
+         %                       from UserData of nodes on obj.Tree
+         %
+         %  sel = obj.selectedItems2Index(items);
+         
+         % tankObj
+         if isempty(items)
+            sel = [1 0 0]; 
+            return;
+         end
+         
+         % animalObj
+         if size(items,2) == 1
+            sel = ones(size(items,1),3);
+            A = obj.Tank.Animals;
+            k = 0;
+            for i = 1:size(items,1)
+               a = A(items(i));
+               B = a.Blocks;
+               for ii = 1:numel(B)
+                  k = k + 1;
+                  sel(k,[2,3]) = [items(i), ii];
+               end
+            end
+            return;
+         end
+         
+         % blockObj
+         if size(items,2) == 2
+            sel = ones(size(items,1),3);
+            sel(:,[2,3]) = items;
+            return;
+         end
+      end
+      
       % Function for interfacing with the tree based on current selection
       function treeSelectionFcn(obj,Tree,Nodes)
          % TREESELECTIONFCN  Interfaces with the Tree based on the current
@@ -957,10 +1007,12 @@ classdef DashBoard < handle
          % Get UserData indexing ALL nodes
          AllNodeType =  cellfun(@(x) numel(x), {Nodes.Nodes.UserData});
          
-%          NodesToRemove = not(AllNodeType==OldNodeType);
-%          Tree.SelectedNodes(NodesToRemove) = [];
+         % Prevent bad concatenation things
+         NodesToRemove = not(AllNodeType==OldNodeType);
+         Tree.SelectedNodes(NodesToRemove) = [];
          
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
+         obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
          switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
             case 0  % tank
                setTankTable(obj);
@@ -1014,8 +1066,32 @@ classdef DashBoard < handle
             end
             
 
-        end
+      end
       
+      % Toggles the split UI menu button depending on nodes that are click
+      function toggleSplitUIMenuEnable(obj)
+         % TOGGLESPLITUIMENUENABLE  Toggles the split UI menu depending on
+         %                          what is clicked.
+         %
+         %  Syntax:
+         %  addlistener(obj,'SelectionIndex','PostSet',...
+         %                 @(~,~)obj.toggleSplitUIMenuEnable);
+         
+         % If TANK is clicked, disable
+         if obj.SelectionIndex(1,2) == 0
+            setButton(obj.nigelButtons,'Split','Enable','off');
+            return;
+         end
+
+         A = obj.Tank.Animals;
+         if all([A(obj.SelectionIndex(:,2)).MultiAnimals])
+            % Only enable the button if ALL are multi-animals
+            setButton(obj.nigelButtons,'Split','Enable','on');
+         else
+            setButton(obj.nigelButtons,'Split','Enable','off');
+         end
+      end
+           
       function setUIContextMenuVisibility(obj,src,evt)
          % SETUICONTEXTMENUVISIBILITY  Set UI Context menu Visibility
          
@@ -1069,6 +1145,9 @@ classdef DashBoard < handle
                      obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
                   case 1  % animal
 
+                     % If this animal is a "multi-animal" Animal, then
+                     % cycle through its children, finding "multi-animal"
+                     % blocks.
                      if obj.Tank.Animals(SelectedItems).MultiAnimals
                         obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
                      else
@@ -1084,7 +1163,7 @@ classdef DashBoard < handle
                      end % if ~MultiAnimals
                end % case
                
-
+               % Ensure that only 1 "child" object is selected at a time
                obj.getChild('TreePanel').getChild('Tree').SelectionType = 'single';
                if isvalid(obj.splitMultiAnimalsUI)
                   obj.splitMultiAnimalsUI.toggleVisibility;
@@ -1108,6 +1187,7 @@ classdef DashBoard < handle
                end
                
             case 'init'
+               % The multiAnimalsUI must be opened
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
                switch  unique(cellfun(@(x) numel(x),...
                      {obj.Tree.SelectedNodes.UserData}))
@@ -1652,7 +1732,7 @@ classdef DashBoard < handle
    end
    
    % STATIC/public functions
-   methods (Access = public, Static = true)
+   methods (Access = public, Static = true)      
       % Update status
       function updateStatus(bar,str)
          % UPDATESTATUS  Update status string
