@@ -25,7 +25,7 @@ if ~blockObj.updateParams('SD')
    return;
 end
 
-pars = blockObj.SDPars;
+pars = blockObj.Pars.SD;
 pars.FS = blockObj.SampleRate;
 
 %% UPDATE STATUS FOR THESE STAGES
@@ -64,24 +64,24 @@ for iCh = blockObj.Mask
    
    % Do the detection:
    if (iCh == 1)
-      [spk,feat,art,blockObj.SDPars] = PerChannelDetection(data,pars);
+      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars);
    else
-      [spk,feat,art] = PerChannelDetection(data,blockObj.SDPars);
+      [spk,feat,art] = PerChannelDetection(data,blockObj.Pars.SD);
    end
    
    if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
       error('Could not save spiking events for channel %d.',iCh);
    end
    
-   % Initialize Clusters files (could be modified later):
-   if exist(fullfile(fNameClus),'file')==0
-      blockObj.getClus(iCh,true);
-   end
-   
-   % Initialize Sorted files:
-   if exist(fullfile(fNameSort),'file')==0
-      blockObj.getSort(iCh,true);
-   end
+%    % Initialize Clusters files (could be modified later):
+%    if exist(fullfile(fNameClus),'file')==0
+%       blockObj.getClus(iCh,true);
+%    end
+%    
+%    % Initialize Sorted files:
+%    if exist(fullfile(fNameSort),'file')==0
+%       blockObj.getSort(iCh,true);
+%    end
    blockObj.updateStatus('Spikes',true,iCh);
 %    blockObj.notifyUser('doSD','Per-Channel Detection',iCh,max(blockObj.Mask));
    

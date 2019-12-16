@@ -104,8 +104,8 @@ pars.VidStreamName = {'Paw_Likelihood'}; % KUMC: "RC"
 %                        'LED_L_Trial_Sync','LED_R_Trial_Sync'}};
    
 % Stream Groups: 'Marker' or 'Sync' (only 2 so far)
-% pars.VidStreamGroup = []; % For "no video streams" case
-pars.VidStreamGroup = {'Marker'}; % KUMC: "RC" (only 1 cell level because only 1 camera on recording)
+pars.VidStreamGroup = []; % For "no video streams" case
+% pars.VidStreamGroup = {'Marker'}; % KUMC: "RC" (only 1 cell level because only 1 camera on recording)
 % pars.VidStreamGroup = {{'Marker','Marker','Marker','Marker',... 
 %                        'Marker','Marker','Marker','Marker',...
 %                        'Marker','Marker','Marker','Marker',... % KUMC: "Murphy"
@@ -121,8 +121,8 @@ pars.VidStreamGroup = {'Marker'}; % KUMC: "RC" (only 1 cell level because only 1
 
 % SubGroups: 'p', 'x', 'y', 'z' (Marker) and 'discrete' or 'analog' (Sync)
 
-% pars.VidStreamSubGroup = []; % For "no video streams" case
-pars.VidStreamSubGroup = {'p'}; % KUMC: "RC" (No 2nd cell if CameraSourceVar is [])
+pars.VidStreamSubGroup = []; % For "no video streams" case
+% pars.VidStreamSubGroup = {'p'}; % KUMC: "RC" (No 2nd cell if CameraSourceVar is [])
 % pars.VidStreamSubGroup = {{'p','x','y','z',... % KUMC: "Murphy"
 %                           'p','x','y','z',...
 %                           'p','x','y','z',...

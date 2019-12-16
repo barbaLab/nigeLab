@@ -19,7 +19,7 @@ if ~blockObj.updateParams('Filt')
    warning('Could not update filter parameters.');
    return;
 else
-   pars = blockObj.FiltPars;
+   pars = blockObj.Pars.Filt;
 end
 reportProgress(blockObj,'Filtering',0);
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};

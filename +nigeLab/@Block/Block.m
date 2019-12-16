@@ -151,7 +151,7 @@ classdef Block < matlab.mixin.Copyable
       
       FolderIdentifier        char        % ID '.nigelBlock' to denote a folder is a BLOCK
       Delimiter               char        % Delimiter for name metadata for dynamic variables
-      DynamicVarExp           char        % Expression for parsing BLOCK names from raw file
+      DynamicVarExp           cell        % Expression for parsing BLOCK names from raw file
       IncludeChar             char        % Character indicating included name elements
       DiscardChar             char        % Character indicating discarded name elements
       

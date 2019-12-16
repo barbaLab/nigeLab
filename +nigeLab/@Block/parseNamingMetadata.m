@@ -31,6 +31,7 @@ regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
    blockObj.IncludeChar,...
    blockObj.DiscardChar);
 splitStr = regexp(blockObj.DynamicVarExp,regExpStr,'match');
+splitStr = [splitStr{:}];
 
 % Find which delimited elements correspond to variables that should be 
 % included by looking at the leading character from the defaults.Block

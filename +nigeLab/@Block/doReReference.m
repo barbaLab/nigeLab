@@ -32,8 +32,8 @@ nSamples = length(blockObj.Channels(1).Filt);
 nProbes = numel(probe);
 refMean = zeros(nProbes,nSamples);
 
-doSuppression = blockObj.FiltPars.STIM_SUPPRESS;
-stimProbeChannel     = blockObj.FiltPars.STIM_P_CH;
+doSuppression = blockObj.Pars.Filt.STIM_SUPPRESS;
+stimProbeChannel     = blockObj.Pars.Filt.STIM_P_CH;
 
 if doSuppression % Note: this part is probably deprecated
    if isnan(stimProbeChannel(1))
@@ -105,8 +105,7 @@ for iCh = blockObj.Mask
    % Update user
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
-   blockObj.notifyUser('doReReference','Mean Subtract',...
-      max(blockObj.Mask)+iCh,max(blockObj.Mask)*2);
+   blockObj.reportProgress('ReReferencing',pct);
 end
 
 fprintf(1,'\b\b\b\bDone.\n');
