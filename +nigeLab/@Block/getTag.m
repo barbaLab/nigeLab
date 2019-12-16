@@ -52,7 +52,7 @@ if numel(blockObj) > 1
 end
 
 %% RETURN VALUES FROM SINGLE BLOCK OBJECT
-if isempty(blockObj.SortPars)
+if isempty(blockObj.Pars.Sort)
    tag = [];
    str = [];
    return;

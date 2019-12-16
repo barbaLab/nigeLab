@@ -49,7 +49,7 @@ flag = true;
    function featName = parseFeatNames(sortObj)
       % Get feature names from parameters struct or generate them if they
       % do not already exist (from an old version of SD code)
-      pars = sortObj.Blocks(1).SDPars;
+      pars = sortObj.Blocks(1).Pars.SD;
       n = size(sortObj.spk.feat{1},2);
       featName = cell(1,n);
       

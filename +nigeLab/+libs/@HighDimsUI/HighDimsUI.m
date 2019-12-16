@@ -88,8 +88,8 @@ classdef HighDimsUI < handle
             
             if ~isempty(obj.panels) && all(isvalid(obj.panels))
                for ii = (obj.num_dims-1):obj.maxDim
-                  obj.panels(ii).Visible = false;
-                  obj.panels(ii+15).Visible = false;                    
+                  obj.panels(ii).Visible = 'off';
+                  obj.panels(ii+15).Visible = 'off';                    
                end
                
                obj.Figure.WindowButtonUpFcn = {stopRot,obj.axesMain };
