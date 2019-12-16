@@ -16,7 +16,7 @@ function flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)
 
 %%
 flag = false;
-
+blockObj.checkActionIsValid();
 blockObj.updateParams('Video');
 f = blockObj.Pars.Video.ScoringEventFieldName;
 

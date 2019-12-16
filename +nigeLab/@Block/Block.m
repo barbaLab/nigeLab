@@ -469,6 +469,7 @@ classdef Block < matlab.mixin.Copyable
       info = getScoringMetadata(blockObj,fieldName,hashID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
+      checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = doEventDetection(blockObj,behaviorData,vidOffset) % Detect "Trials" for candidate behavioral Events
       flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)  % Create "Header" for behavioral Events
