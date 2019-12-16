@@ -5,7 +5,18 @@ par = nigeLab.defaults.AutoClustering;
 %% runs automatic clustering algorithms
 switch nargin
     case 1
-        chan = unique([animalObj.Blocks.Mask]);
+        chan = animalObj.Blocks(1).Mask;
+        for ii=2:numel(animalObj.Blocks)
+            [chan,~,iB] = intersect(chan,animalObj.Blocks(ii).Mask);
+            if numel(iB)<numel(animalObj.Blocks(ii).Mask)
+                warningFlag{ii-1} = {ii,setdiff(animalObj.Blocks(ii).Mask,animalObj.Blocks(ii).Mask(iB))};
+            end
+        end
+        if ~isempty(warningFlag)
+            nigeLab.utils.cprintf('Masks between blocks are not uniform.\n');
+            nigeLab.utils.cprintf('The following channels in the following blocks will not be scored:\n');
+            cellfun(@(x) nigeLab.utils.cprintf('UnterminatedStrings','\tBlock %s,\n\t\tChannels %s\b\n',animalObj.Blocks(x{1}).Name,num2str(x{2}(:)','%d,')),warningFlag)
+        end
         unit = 'all';
     case 2
         unit = 'all';
@@ -15,6 +26,7 @@ if strcmpi(unit,'all')
     unit = 0:par.NMaxClus;
 end
 
+fprintf(1,'%.3d%%',0)
 for iCh = chan
     
     [inspk,classes,BlInd,subsetIndex]= gatherSpikesFromAllBlocks(animalObj,iCh,unit);
@@ -97,7 +109,7 @@ function [inspk,classes,BlInd,subsetIndex]= gatherSpikesFromAllBlocks(animalObj,
 inspk = [];
 classes = [];
 BlInd = [];
-subsetIndex = [];
+subsetIndex = false(0);
 
 for bb=1:numel(animalObj.Blocks)
     blockObj = animalObj.Blocks(bb);

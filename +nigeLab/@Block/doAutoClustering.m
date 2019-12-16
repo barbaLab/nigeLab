@@ -31,36 +31,36 @@ switch nargin
 end
 
 if strcmpi(unit,'all')
-    unit = 0:par.NCLUS_MAX;
+    unit = 0:par.NMaxClus;
 end
 blockObj.reportProgress('AutoClustering',0);
 for iCh = chan
     % load spikes and classes
-    inspk = blockObj.getSpikes(iCh);
+    inspk = blockObj.getSpikes(iCh,unit,'feat');
     SuppressText = true;
     classes =  blockObj.getClus(iCh,SuppressText);
     
     % if unit is porvided, match sikes and classes with the unit
     SubsetIndx = ismember(classes,unit);
-    inspkSubset = inspk(SubsetIndx,:);
     classesSubset = classes(SubsetIndx);
     
     % make sure not to overwrite/assign already used labels
     allLabels = 1:par.NMaxClus;
-    usedLabels = unique(classesSubset);
-    freeLabels = allLabels(~ismember(allLabels, usedLabels));
+    usedLabels = setdiff(classes,unit);
+    freeLabels = setdiff(allLabels, usedLabels);
+    par.NMaxClus = numel(freeLabels);
     
     % actually do the clustering
     switch par.MethodName
         case 'KMEANS'
-           [classes_,temp] = runKMEANSclustering(inspkSubset,par);
+           [classes_,temp] = runKMEANSclustering(inspk,par);
         case 'SPC'
-            [classes_,temp] = runSPCclustering(inspkSubset,par);
+            [classes_,temp] = runSPCclustering(inspk,par);
         otherwise
     end
     
     % Attach correct/free labels to newly clusterd spks
-    newLabels = unique(classesSubset);
+    newLabels = unique(classes_);
     for ii = 1:numel(newLabels)
         classes_(classes_== newLabels(ii))= freeLabels(ii);
     end
@@ -70,10 +70,10 @@ for iCh = chan
     saveClusters(blockObj,classes,iCh,temp);
     
     % report progress to the user
-    pct = numel(iCh > chan)./numel(chan) * 100;
+    pct = sum(iCh > chan)./numel(chan) * 100;
     blockObj.reportProgress('AutoClustering',pct);
-
 end
+blockObj.save;
 flag = true;
 end
 
@@ -82,11 +82,11 @@ function [classes,temp] = runSPCclustering(inspk,par)
 end
 
 function [classes,temp] = runKMEANSclustering(inspk,par)
-warnign off
+warning off
 GPUavailable = false;
 if par.KMEANS.UseGPU
     try
-        inspk = gpuArray(inspk(:));     % we need inspk as column for KMENAS
+        inspk = gpuArray(inspk(:,:));     % we need inspk as column for KMENAS
         GPUavailable = true;
     catch
         warning('gpuArray non available. Computing on CPU;');
@@ -116,7 +116,7 @@ switch par.KMEANS.NClus
         end
         
     case 'max'
-        Klist = pars.MaxNClus;
+        Klist = min(size(inspk,1),par.NMaxClus);
         if GPUavailable
             % sadly evalcluster is broken with gpuArrays, at least on 2017a
             % workarouund, compute the cluster solution outside evalclust and
