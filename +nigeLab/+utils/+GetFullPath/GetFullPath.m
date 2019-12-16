@@ -106,14 +106,14 @@ end
 % under Windows this would shadow the fast C-Mex.
 if isa(File, 'cell')
    for iC = 1:numel(File)
-      File{iC} = GetFullPath(File{iC}, Style);
+      File{iC} = nigeLab.utils.GetFullPath.GetFullPath(File{iC}, Style);
    end
    return;
 end
 
 % Check this once only:
 isWIN    = strncmpi(computer, 'PC', 2);
-MAX_PATH = 260;
+MAX_PATH = 1;
 
 % Warn once per session (disable this under Linux/MacOS):
 persistent hasDataRead

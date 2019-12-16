@@ -12,7 +12,7 @@ function flag = doSD(blockObj)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 flag = false;
-
+checkActionIsValid(blockObj);
 nigeLab.utils.checkForWorker('config');
 
 

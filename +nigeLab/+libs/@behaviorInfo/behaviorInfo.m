@@ -11,6 +11,11 @@ classdef behaviorInfo < handle
 %        associated graphics objects into.
    
    %% Properties
+   properties (SetAccess = immutable, GetAccess = public)
+      Block  % Pointer to block object handle
+      Panel  % Pointer to nigelPanel container
+   end
+   
    properties(Access = public)
       varVal            % 1 x k vector of scalar values for a single trial
       varType           % 1 x k vector of scalar indicators of varVal type
@@ -37,8 +42,7 @@ classdef behaviorInfo < handle
       
       N       % Total number of trials
       
-      VideoStart = 0; % Default to 0 offset
-      Block % Pointer to block object handle
+      offset = 0; % Default to 0 offset
       
    end
    
@@ -76,32 +80,43 @@ classdef behaviorInfo < handle
    
    %% Events
    events % These correspond to different scoring events
-      update      % When a value is modified during scoring
-      newTrial    % Switch to a new trial
-      load        % When a behavior file is loaded
+      scoredValueChanged      % When a value is modified during scoring
+      trialChanged            % Switch to a new trial
       saveFile    % When file is saved
       closeReq    % When UI is requested to close
       countIsZero % No pellets are on platform, or pellet not present
-      nSuccessChanged % # successful trials changed
+      nSuccessChanged         % # successful trials changed
    end
    
    %% Methods
    methods (Access = public)
       % Construct the behaviorInfo object
-      function obj = behaviorInfo(figH,blockObj,container)
+      function obj = behaviorInfo(blockObj,nigelPanelObj)
          % BEHAVIORINFO  Class for behavior data tracking in manual scoring
          %
-         %  obj = nigeLab.libs.behaviorInfo(figH,blockObj);
+         %  obj = nigeLab.libs.behaviorInfo(blockObj);
          %  --> Builds object that tracks Block Events data and issues
          %        notifications when that data is changed. This is also in
          %        charge of "writing" the events data to disk files.
          %
-         %  obj = nigeLab.libs.behaviorInfo(figH,blockObj,container);
-         %  --> Specifies a container (such as uipanel) to put the
-         %        associated graphics objects into.
+         %  obj = nigeLab.libs.behaviorInfo(blockObj,nigelPanelObj);
+         %  --> Specifies a nigelPanel to put the behaviorInfo-associated
+         %        graphics into.
          
-         % Key property to set is the Block pointer
+         % Key properties to set are Block and Panel in constructor
+         if ~isa(blockObj,'nigeLab.Block')
+            error('First input argument must be class nigeLab.Block');
+         end
          obj.Block = blockObj;
+         
+         if nargin < 2
+            nigelPanelObj = nigeLab.libs.nigelPanel(...
+               'Units','Normalized',...
+               'Position',[0 0 1 1],...
+               'Scrollable','off',...
+               'Tag','behaviorInfo');
+         end
+         obj.Panel = nigelPanelObj;
          
          % Parse properties for convenience based on Block
          obj.parseBlockProperties;
@@ -112,17 +127,9 @@ classdef behaviorInfo < handle
          obj.misc = struct; % initialize this struct that holds misc data
                             % it can be used by ad hoc function to store a
                             % "past" value of a scoring or etc
-         obj.parent = figH;
          
          obj.setScoringMetadata; % initializes hashID as well
          
-         
-         % Build graphics
-         if exist('container','var')==0
-            obj.buildContainer;
-         else
-            obj.buildContainer(container);
-         end
          obj.buildVideoControlPanel;
          obj.buildProgressTracker;
          
@@ -282,17 +289,18 @@ classdef behaviorInfo < handle
          %     * successTracker_label --> obj.ScoringTracker_lab
          %     * trialPopup_display --> obj.trialPop
          %     * editArray_display --> {obj.editArray}
-         %     * behavior_panel --> obj.panel
+         %     * behavior_panel --> obj.Panel
          %     * behavior_conPanel --> obj.conPanel
          %     * behavior_trkPanel --> obj.trkPanel
          
-         graphics = struct('trialTracker_display',obj.ScoringTracker_im,...
+         graphics = struct('animalName_display',obj.Panel,...
+            'trialTracker_display',obj.ScoringTracker_im,...
             'trialTracker_displayOverlay',obj.ScoringTracker_line,...
             'trialTracker_label',obj.ScoringTracker_lab,...
             'successTracker_label',obj.SuccessTracker_lab,...
             'trialPopup_display',obj.trialPop,...
             'editArray_display',{obj.editArray},...
-            'behavior_panel',obj.panel,...
+            'behavior_panel',obj.Panel,...
             'behavior_conPanel',obj.conPanel,...
             'behavior_trkPanel',obj.trkPanel);
       end
@@ -442,9 +450,9 @@ classdef behaviorInfo < handle
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.behaviorInfo',...
                'setTrial');
-            fprintf(1,'-->\tnewTrial event issued: %s\n',s);
+            fprintf(1,'-->\ttrialChanged event issued: %s\n',s);
          end 
-         notify(obj,'newTrial');
+         notify(obj,'trialChanged');
 
       end
       
@@ -462,6 +470,12 @@ classdef behaviorInfo < handle
       % Set all associated values
       function setValueAll(obj,idx,val)
          % SETVALUEALL  Set all associated values of behavior
+         %
+         %  obj.setValueAll(idx,val);
+         %  
+         %  idx  --  Trial index to set.
+         %  val  --  New values to update obj.varVal (the current trial's
+         %              values for each variable to be scored).
          
          vec = (1:obj.N).';
          obj.varVal(idx) = val;
@@ -470,9 +484,9 @@ classdef behaviorInfo < handle
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.behaviorInfo',...
                'setValueAll');
-            fprintf(1,'-->\tupdate event issued: %s\n',s);
+            fprintf(1,'-->\tscoredValueChanged event issued: %s\n',s);
          end
-         notify(obj,'update'); % Update first to display it
+         notify(obj,'scoredValueChanged'); % Update first to display it
          if strcmpi(obj.getCurVarType,'Meta')
             colIdx = find(obj.idx,1,'first')+1;
             val = repmat(val,numel(vec),1);
@@ -610,6 +624,7 @@ classdef behaviorInfo < handle
          % OFFSET  Gets the video offset (seconds) for each video
          
          offset = getEventData(obj.Block,obj.fieldName,'ts','Header');
+         offset(isnan(offset)) = 0; % Set any "NaN" offset to zero
       end
       
       % Quick reference for Outcome
@@ -677,20 +692,6 @@ classdef behaviorInfo < handle
    % functions that shouldn't be called from outside of methods of this
    % class.
    methods (Access = private)
-      % Build panel that contains graphics for this object
-      function buildContainer(obj,container)
-         % BUILDCONTAINER  Builds panel to contain graphics for this object
-         
-         if exist('container','var')==0
-            obj.panel = uipanel(obj.parent,...
-               'Units','Normalized',...
-               'BackgroundColor','k',...
-               'Position',[0.75 0 0.25 1]);
-         else
-            obj.panel = container;
-         end
-      end
-      
       % Construct the scoring progress tracker graphics objects
       function buildProgressTracker(obj)
          % BUILDPROGRESSTRACKER  Builds socring progress tracker graphics
@@ -705,15 +706,19 @@ classdef behaviorInfo < handle
          y = [0 1];
          
          % Put these things into a separate panel
-         obj.trkPanel = uipanel(obj.panel,...
+         obj.trkPanel = nigeLab.libs.nigelPanel(obj.Panel,...
             'Units','Normalized',...
-            'BackgroundColor','k',...
-            'Position',[0 0.75 1 0.25]);
+            'Position',[0 0.75 1 0.25],...
+            'TitleBarColor',nigeLab.defaults.nigelColors('surface'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onsurface'),...
+            'Tag','trkPanel');
+         obj.Panel.nestObj(obj.trkPanel,'trkPanel');
          
          % Create axes that will display "progress" image
-         obj.ScoringTracker_ax = axes(obj.trkPanel,...
+         obj.ScoringTracker_ax = axes(obj.trkPanel.Panel,...
             'Units','Normalized',...
             'Position',[0.025 0.025 0.95 0.5],...
+            'Color','none',...
             'NextPlot','replacechildren',...
             'XLim',[0 1],...
             'YLim',[0 1],...
@@ -722,28 +727,31 @@ classdef behaviorInfo < handle
             'YDir','reverse',...
             'XTick',[],...
             'YTick',[],...
-            'XColor','k',...
-            'YColor','k');
+            'XColor','none',...
+            'YColor','none');
          
-         obj.ScoringTracker_lab = annotation(obj.trkPanel, ...
+         obj.ScoringTracker_lab = annotation(obj.trkPanel.Panel, ...
             'textbox',[0.025 0.600 0.95 0.125],...
             'Units', 'Normalized', ...
             'Position', [0.025 0.600 0.95 0.125], ...
-            'FontName','Arial',...
-            'FontSize',22,...
+            'FontName','DroidSans',...
+            'FontSize',13,...
             'FontWeight','bold',...
             'Color','w',...
+            'EdgeColor','none',...
             'String','Progress Indicator');
          
-         obj.SuccessTracker_lab = annotation(obj.trkPanel, ...
+         obj.SuccessTracker_lab = annotation(obj.trkPanel.Panel, ...
             'textbox',[0.025 0.825 0.95 0.125],...
             'Units', 'Normalized', ...
             'Position', [0.025 0.825 0.95 0.125], ...
-            'FontName','Arial',...
-            'FontSize',22,...
+            'FontName','DroidSans',...
+            'FontSize',13,...
             'FontWeight','bold',...
             'Color','w',...
-            'String',sprintf('%g Successful Trials',nansum(obj.Outcome(obj.TrialMask))));
+            'EdgeColor','none',...
+            'String',sprintf('%g Successful Trials',...
+                     nansum(obj.Outcome(obj.TrialMask))));
          
          % Make the progress image and an overlay line to indicate
          % current trial.
@@ -762,14 +770,16 @@ classdef behaviorInfo < handle
          %  different Trials or to select different cameras.
          
          % Need a panel to separate this stuff from other
-         obj.conPanel = uipanel(obj.panel,...
+         obj.conPanel = nigeLab.libs.nigelPanel(obj.Panel,...
             'Units','Normalized',...
-            'BackgroundColor','k',...
+            'String','Trial Metadata',...
+            'TitleFontSize',16,...
             'Position',[0 0 1 0.75]);
          
          % Make text labels for controls
          labs = reshape(obj.varName,numel(obj.varName),1);
-         [~,yPos,~,H] = uiMakeLabels(obj.conPanel,['Trials'; labs]);
+         [~,yPos,~,H] = nigeLab.utils.uiMakeLabels(...
+            obj.conPanel.Panel,['Trials'; labs]);
          
          % Make controller for switching between trials
          str = cellstr(num2str(obj.Trial(1)));
@@ -777,7 +787,7 @@ classdef behaviorInfo < handle
          str = cellfun(@(x) strrep(x,' ',''),str,'UniformOutput',false);
          
          % Make box for selecting current trial
-         obj.trialPop = uicontrol(obj.conPanel,'Style','popupmenu',...
+         obj.trialPop = uicontrol(obj.conPanel.Panel,'Style','popupmenu',...
             'Units','Normalized',...
             'Position',[0.5 yPos(1)-H/2 0.475 H],... % div by 2 to center
             'FontName','Arial',...
@@ -787,14 +797,15 @@ classdef behaviorInfo < handle
             'Callback',@obj.setTrial);
          
          % Add separator
-         annotation(obj.conPanel,'line',...
+         annotation(obj.conPanel.Panel,'line',...
             [0.025 0.975],[yPos(1) yPos(1)]+H,...
             'Color',[0.75 0.75 0.75],...
             'LineStyle','-',...
             'LineWidth',3);
          
          % Make "disabled" edit boxes to display trial scoring data
-         obj.editArray = uiMakeEditArray(obj.conPanel,yPos(2:end),...
+         obj.editArray = nigeLab.utils.uiMakeEditArray(...
+            obj.conPanel.Panel,yPos(2:end),...
             'H',H,'TAG',obj.varName);
       end
       
@@ -861,7 +872,11 @@ classdef behaviorInfo < handle
       
       % Get key "Events" properties for quick reference
       function parseEventProperties(obj)
-         obj.VideoStart = obj.Offset;
+         % PARSEEVENTPROPERTIES  Get key "Events" properties for quick ref
+         %
+         %  obj.parseEventProperties;
+         
+         obj.offset = obj.Offset(); % note that obj.Offset is a METHOD
          obj.N = numel(obj.Trial);
          obj.varVal = obj.getCurrentTrialData;
       end

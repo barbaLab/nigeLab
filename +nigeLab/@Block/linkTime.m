@@ -4,14 +4,15 @@ function flag = linkTime(blockObj)
 %  b = nigeLab.Block;
 %  flag = LINKTIME(b,field);
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+% flag is returned as true if there is no 'Time' file found.
+%  This method automatically updates the 'Time' Status, and requires 'Time'
+%  as an element of nigeLab.defaults.Block('Fields').
 
 %%
 flag = false;
 updateflag = false;
+blockObj.checkCompatibility('Time');
+
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Time'),'Time');
 counter = 0;
 fName = fullfile(blockObj.Paths.Time.file);
@@ -20,7 +21,7 @@ fName = fullfile(blockObj.Paths.Time.file);
 if ~exist(fullfile(fName),'file')
    flag = true;
 else
-    updateflag = true;
+   updateflag = true;
    blockObj.Time = nigeLab.libs.DiskData('Hybrid',fName);
 end
 fprintf(1,'\b\b\b\b\b%.3d%%\n',100)

@@ -11,12 +11,9 @@ classdef NotesUI < matlab.apps.AppBase
       Notes
    end
    
-   
    properties (Access = private)
-      SavedState = false; % Description
-      Default = 'P:\';
+      Default = 'P:\';    % Default location for notes creation
    end
-   
    
    methods (Access = private)
       
@@ -27,18 +24,19 @@ classdef NotesUI < matlab.apps.AppBase
             fprintf(fid,'%s\n',app.NotesTextArea.Value{ii});
          end
          fclose(fid);
-         app.SavedState = true;
+         app.UIFigure.UserData = true;
          if ~isempty(app.Parent)
             app.Parent.parseNotes(app.NotesTextArea.Value);
          end
          %%%%%% I understand the goal of this dialog, i agree on its
          %%%%%% usefulness but it's freaking annoying
-%          selection = questdlg('Save successful. Finished taking notes?',...
-%             'Close Request',...
-%             'Exit','Cancel','Exit');
-%          if strcmp(selection,'Exit')
+         % ^ then remove 'Notes' from Fields in defaults.Block -- MM
+         selection = questdlg('Save successful. Finished taking notes?',...
+            'Close Request',...
+            'Exit','Cancel','Exit');
+         if strcmp(selection,'Exit')
             ExitNotes(app);
-%          end
+         end
       end
       
       % Button pushed function: ExitButton
@@ -49,7 +47,13 @@ classdef NotesUI < matlab.apps.AppBase
       
       % Close request function: UIFigure
       function CheckSavedState(app, ~)
-         if ~app.SavedState
+         if isempty(app.UIFigure)
+            delete(app);
+         end
+         if ~isvalid(app.UIFigure)
+            delete(app);
+         end
+         if ~app.UIFigure.UserData
             selection = questdlg('Current note changes unsaved. Save before exit?',...
                'Close Request Function',...
                'Save','Cancel','Exit','Save');
@@ -165,6 +169,7 @@ classdef NotesUI < matlab.apps.AppBase
          
          % Register the app with App Designer
          registerApp(app, app.UIFigure)
+         app.UIFigure.UserData = false;
          
          if nargout == 0
             clear app

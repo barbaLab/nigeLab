@@ -14,40 +14,12 @@ function flag = doRawExtraction(blockObj)
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
 flag = false;
-
+blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
-end
-
-%% Check for MultiAnimals
-% More than one animal can be recorded simultaneously in one single file. 
-% This eventuality is explicitely handled here. The init process looks for a
-% special char string in the block ID (defined in defaults), if detected
-% the flag ManyAnimals is set true. 
-% The function splitMultiAnimals prompts the user to assign channels and
-% other inputs to the different animals. When this is done two or more
-% children blocks are initialized and stored in the ManyAnimalsLinkedBlocks
-% field.
-ManyAnimals = false;
-flag = [blockObj.ManyAnimals ~isempty(blockObj.ManyAnimalsLinkedBlocks)];
-if all(flag == [false true]) 
-    % child block. Call rawExtraction on Parent
-    blockObj.ManyAnimalsLinkedBlocks.doRawExtraction;
-elseif all(flag == [true false]) 
-    % Parent block without childern.
-    % Go on with extraction and move files at
-    % the end.
-    ManyAnimals = true;
-elseif all(flag == [true true])  
-    % Parent block with children.
-    % Go on with extraction and move files at
-    % the end.
-    ManyAnimals = true;
-else
-    ...
 end
 
 %% extraction
@@ -86,16 +58,6 @@ switch blockObj.RecType
       warning('%s is not a supported (case-sensitive).',...
          blockObj.RecType);
       return;
-end
-
-%% If this is a ManyAnimals case, move the blocks and files to the appropriate path
-if ManyAnimals
-    blockObj.splitMultiAnimals;
-   for bl = blockObj.ManyAnimalsLinkedBlocks
-       bl.updatePaths(bl.Paths.SaveLoc);
-       bl.updateStatus('Raw', blockObj.Status.Raw);
-       bl.save;
-   end
 end
 
 %% Update status and save

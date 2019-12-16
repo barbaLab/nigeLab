@@ -1,8 +1,12 @@
-function [header] = ReadTDTHeader(varargin)
-%% Reads TDT header file. For now uses TDT own functions.
-% TODO reimplement everything since TDT code is... well TDT code.
-%								^ @ FB <-- LOL // MM 2019-01-07
+function header = ReadTDTHeader(varargin)
+% READTDTHEADER  Uses TDT "Block" data struct to format a header into the
+%                nigeLab standardized formats.
 %
+%  header = ReadTDTHeader;
+%  header = ReadTDTHeader('NAME',value,...);
+
+%%
+acqsys = 'TDT';
 
 acqsys = 'TDT';
 
@@ -100,6 +104,7 @@ for pb = 1:num_probes
    Chans = unique(heads.stores.(wav_data{pb}).chan);
    for iCh = 1:numel(Chans)
       ind = numel(raw_channels)+1;
+      raw_channels(ind).name = sprintf('%c%.3d',probes(pb),iCh);
       raw_channels(ind).custom_channel_name = sprintf('%c%.3d',probes(pb),iCh);
       raw_channels(ind).native_channel_name = sprintf('%c-%.3d',probes(pb),Chans(iCh));
       raw_channels(ind).native_order = iCh;
@@ -114,6 +119,7 @@ for pb = 1:num_probes
       raw_channels(ind).electrode_impedance_phase = nan;
       [raw_channels(ind).chNum,raw_channels(ind).chStr] = nigeLab.utils.getChannelNum(...
          raw_channels(ind).native_channel_name);
+      raw_channels(ind).fs = sample_rate;
    end
 end
 

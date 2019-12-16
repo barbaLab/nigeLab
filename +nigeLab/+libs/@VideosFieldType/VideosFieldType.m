@@ -109,6 +109,7 @@ classdef VideosFieldType
       % Return "vid_F" dir struct for all objects in array
       function vid_F = getVid_F(varargin)
          % GETVID_F  Return "dir" struct for all objects in array
+         
          if numel(varargin{1}) > 1
             vid_F = [];
             for i = 1:numel(obj)

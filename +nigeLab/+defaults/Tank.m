@@ -19,6 +19,7 @@ pars.Delimiter = '_';
 pars.RecType = 'Intan';
 pars.ParallelFlag = 'Local pool';
 pars.SupportedFormats = {'rhs','rhd','tdt'};
+pars.FolderIdentifier = '.nigelTank';
 
 end
 

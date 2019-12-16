@@ -21,6 +21,7 @@ function flag = doVidInfoExtraction(blockObj,vidFileName)
 
 %% DEFAULTS
 flag = false;
+blockObj.checkActionIsValid();
 blockObj.VideoPars = nigeLab.defaults.Video;
 if exist(blockObj.VideoPars.Root,'dir')~=0
    defPath = blockObj.VideoPars.Root;

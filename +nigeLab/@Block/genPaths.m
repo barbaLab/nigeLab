@@ -1,42 +1,34 @@
 function flag = genPaths(blockObj,animalLoc)
-%% GENPATHS    Set some useful path variables to file locations
+% GENPATHS    Set some useful path variables to file locations
 %
 %  flag = GENPATHS(blockObj);
 %  flag = GENPATHS(blockObj,animalLoc);
-%  flag = GENPATHS(blockObj,animalLoc,useRemote);
 %
 %     Here are defined all the paths where data will be saved.
 %     The folder tree is also created here(if not already existing)
 %
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+%  blockObj.Paths is updated in this method.
 
-%% 
+%% Check input; if animalLoc is given, update blockObj property
 flag = false;
 if (nargin > 1)
    blockObj.AnimalLoc = animalLoc;
-%    if isempty(blockObj.Paths)
-%       paths.Animal_ext = {animalLoc};
-%       paths.Animal_idx = 1;
-%    else
-%       paths.Animal_ext = [blockObj.Paths.Animal_ext; {animalLoc}];
-%       paths.Animal_idx = numel(blockObj.Paths.Animal_ext);
-%    end
-% else
-%    paths.Animal     = fullfile(blockObj.AnimalLoc);
-%    paths.Animal_ext = {fullfile(blockObj.AnimalLoc)};
-%    paths.Animal_idx = 1;
 end
 
-% if nargin < 3
-%    useRemote = false;
-% end
+%% Update paths struct
+% Initialize paths struct
+paths = struct;
+paths.SaveLoc = struct;
 
-% paths.Animal.dir = blockObj.AnimalLoc;
-paths.SaveLoc.dir = fullfile(blockObj.AnimalLoc,blockObj.Name);
+
+paths.SaveLoc.dir = nigeLab.utils.getUNCPath(blockObj.AnimalLoc,...
+   blockObj.Name);
 paths = blockObj.getFolderTree(paths);
-F=fields(paths);
+
+% Iterate on all the fieldnames, making the folder if it doesn't exist yet
+F = fieldnames(paths);
 for ff=1:numel(F)
-   if ~exist(paths.(F{ff}).dir,'dir')
+   if exist(paths.(F{ff}).dir,'dir')==0
       mkdir(paths.(F{ff}).dir);
    end 
 end

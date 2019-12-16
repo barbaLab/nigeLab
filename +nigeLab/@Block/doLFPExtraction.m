@@ -9,7 +9,7 @@ function flag = doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false;
-
+blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
 
 if ~genPaths(blockObj)

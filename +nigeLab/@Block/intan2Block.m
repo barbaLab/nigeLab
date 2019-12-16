@@ -50,7 +50,9 @@ end
 fid = fopen(blockObj.RecFile, 'r');
 s = dir(blockObj.RecFile);
 if isempty(s)
-   warning(1,'No files found! Extraction aborted.');
+   blockObj.reportProgress('<strong>No files found!</strong> Extraction aborted ::',100);
+   blockObj.reportProgress('',100,'toEvent');
+   delete(lh);
    return;
 end
 filesize = s.bytes;
@@ -86,6 +88,9 @@ if ~blockObj.Meta.Header.DataPresent
    return;
 end
 
+% Header --> 10%
+blockObj.reportProgress('Parsed header.',10,'toEvent');
+
 %% PRE-ALLOCATE MEMORY FOR WRITING RECORDED VARIABLES TO DISK FILES
 % preallocates matfiles for varible that otherwise would require
 % nChannles*nSamples matrices
@@ -97,7 +102,8 @@ nCh = struct;
 for f = fields
    idx = find(strcmpi(blockObj.Fields,f),1,'first');
    if isempty(idx)
-      warning('Field: %s is invalid. Skipped its extraction.',f);
+      nigeLab.utils.cprintf('UnterminatedStrings','Field: ''%s'' is invalid.\n',f{:});...
+      nigeLab.utils.cprintf('Text','-->\tSkipped its extraction.\n');
       continue;
    else
       curDataField = blockObj.Fields{idx}; % Make sure case syntax is correct
@@ -163,7 +169,10 @@ for f = fields
          
          % Get unique subtypes of streams
          sig = [info.signal];
-         [U,~,iU] = unique({sig.type});
+         if isempty(sig)
+            continue;
+         end
+         [U,~,iU] = unique({sig.Source});
          
          for ii = 1:numel(U)
             % Each "signal group" has its own file struct
@@ -179,7 +188,10 @@ for f = fields
             chCount = 0;
             for iCh = chIdx
                chCount = chCount + 1;
-               sampleField = ['Num' info(iCh).signal.type 'Samples'];
+               sampleField = ['Num' info(iCh).signal.Source 'Samples'];
+               if ~isfield(blockObj.Meta.Header,sampleField)
+                  continue;
+               end
                nSamples = blockObj.Meta.Header.(sampleField);
                chName = info(iCh).custom_channel_name;
                fName = sprintf(strrep(paths.(curDataField).file,'\','/'), ...
@@ -203,6 +215,8 @@ for f = fields
    end
    
 end
+% Memory --> 30%
+blockObj.reportProgress('Memory Allocated.',30,'toEvent');
 
 %% INITIALIZE INDEXING VECTORS FOR READING CHUNKS OF DATA FROM FILE
 
@@ -317,6 +331,8 @@ end
 if end_~=nDataPoints
    error('Error during the extraction process(buffer size doesn''t match the datablock size), the data file might be corrupted.'); 
 end
+blockObj.reportProgress('Indexing complete.',40,'toEvent');
+
 %% READ BINARY DATA
 progress=0;
 num_gaps = 0;
@@ -326,19 +342,11 @@ deBounce = false; % This just for the update job Tag part
 F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
-fprintf(1,'File too long to safely lolad in memory.\nSplitted in %d blocks',ceil(info.NumDataBlocks/nBlocks));
+fprintf(1,'File too long to safely load in memory.\n');
+fprintf(1, '-->\tSplit into %d blocks',ceil(info.NumDataBlocks/nBlocks));
+NB = ceil(info.NumDataBlocks/nBlocks);
+for iBlock=1:NB
 
-for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
-   pct = round(iBlock/nBlocks*100);
-   if rem(pct,5)==0 && ~deBounce
-%       if ~isnan(myJob(1))
-%          set(myJob,'Tag',sprintf('%s: Saving DATA %g%%',blockObj.Name,pct));
-%       end
-      deBounce = true;
-   elseif rem(pct+1,5)==0 && deBounce
-      deBounce = false;
-   end
-   
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
    %%% Read binary data.
    blocksToread = min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
@@ -358,20 +366,22 @@ for iBlock=1:ceil(info.NumDataBlocks/nBlocks)
    
    % Write data to file
    for iF = 1:numel(F)
-      writeData(dataBuffer,...
-         Files,buffer,formatDataFun,F{iF},dataPointsToRead);
+      PCT = (iBlock-1)/nBlocks + (iF/numel(F))/nBlocks/2; % Block completion percent
+      writeData(blockObj,dataBuffer,...
+         Files,buffer,formatDataFun,F{iF},dataPointsToRead,PCT);
    end
    
    for iD = 1:numel(D)
-      writeDigData(dataBuffer,...
-         Files,digBuffer,info,D{iD},dataPointsToRead);
+      PCT = (iBlock-1)/nBlocks + 1/(NB*2) + (iD/numel(D))/(NB*2); % Block completion percent
+      writeDigData(blockObj,dataBuffer,...
+         Files,digBuffer,info,D{iD},dataPointsToRead,PCT);
+      
    end
    
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
    pct = floor(100 * (progress / info.NumDataBlocks));
-   reportProgress(blockObj,'Extracting',pct);
-
+   reportProgress(blockObj,'Extracting',pct,'toWindow');
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.
@@ -390,41 +400,10 @@ end
 % Close data file.
 fclose(fid);
 
-
-
-%% Linking data to blockObj
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% DiskData makes it easy to access data stored in matfiles.
-% Assigning each file to the right channel
-dataField = fieldnames(Files);
-for f = 1:numel(fields)
-    idx = find(strcmpi(blockObj.Fields,fields(f) ),1,'first');
-    switch blockObj.FieldType{idx}
-        case 'Channels'
-            ChIdx = 1:numel(Files.(dataField{f}));
-            for iCh = 1:numel(Files.(dataField{f}))
-               blockObj.(blockObj.FieldType{idx})(ChIdx(iCh)).(dataField{f}) = lockData(Files.(dataField{f}){iCh});
-            end
-            
-        case 'Streams'
-            sig = [blockObj.Streams.signal];
-            sigTypes = {sig.type};
-            ChIdx = find(strcmp(sigTypes,dataField{f}));
-            for iCh = 1:numel(Files.(dataField{f}))
-               blockObj.(blockObj.FieldType{idx}).(dataField{f})(ChIdx(iCh)).data = lockData(Files.(dataField{f}){iCh});
-            end
-%         case 'Meta'
-%             ChIdx = 1:numel(Files.(dataField{f}));
-%         case 'Events'
-%             ChIdx = 1:numel(Files.(dataField{f}));
-    end
-    
-   reportProgress(blockObj,'Linking data',pct);
-end
-blockObj.linkToData;  
-
+% Link to data
+blockObj.reportProgress('Linking Data.',95,'toEvent');
+blockObj.linkToData();
 flag = true;
-% updateStatus(blockObj,'Raw',true(1,blockObj.NumChannels));
 
 end
 
@@ -464,9 +443,17 @@ idx(index)=true;
 idx=repmat(idx,1,nBlocks);
 end
 
-function writeData(dataBuffer,Files,buffer,scaleFun,field,dataPointsToRead)
+function writeData(blockObj,dataBuffer,Files,buffer,scaleFun,field,dataPointsToRead,PCT)
 %% WRITEDATA   Write data from buffer to DiskData file
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
+
+if nargin < 8
+   PCT = 1;
+end
+
+if ~isfield(Files,field) || ~isfield(buffer,field)
+   return;
+end
 
 nChan = numel(Files.(field));
 for iCh=1:nChan % units = microvolts
@@ -475,14 +462,17 @@ for iCh=1:nChan % units = microvolts
           single(dataBuffer(...
                  buffer.(field)(1:dataPointsToRead)==iCh)),iCh)));
    
-   pct = 100 * (iCh /nChan);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
+   pct = iCh /nChan;
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100 * pct));
+   blockObj.reportProgress('Writing Data.',40 + round(50 * pct * PCT) ,'toEvent');
 end
 end
 
-function writeDigData(dataBuffer,Files,buffer,info,field,dataPointsToRead)
+function writeDigData(blockObj,dataBuffer,Files,buffer,info,field,dataPointsToRead,PCT)
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
-
+if nargin < 8
+   PCT = 1;
+end
 data = dataBuffer(buffer.(field)(1:dataPointsToRead));
 sig = [info.DigIOChannels.signal];
 dataIdx = ismember({sig.type},field);
@@ -499,10 +489,10 @@ for iCh = dataIdx
    mask = uint16(2^(info.DigIOChannels(iCh).native_order) * ones(size(data)));
    Files.(field){dataCount}.append(int8(bitand(data, mask) > 0));
    
-   pct = 100 * (dataCount / numel(dataIdx));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
+   pct = dataCount / numel(dataIdx);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100 * pct));
+   blockObj.reportProgress('Writing Data.',40 + round(50 * pct * PCT) ,'toEvent');
 end
-
 end
 
 function formatteData = scaleStimData(stim_data,stim_step_size,fs,iCh)

@@ -13,12 +13,12 @@ function flag = linkVideosField(blockObj,field)
 
 %%
 flag = false;
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 
 [~,updateFlags] = getFile(blockObj.Videos,field);
 blockObj.updateStatus(field,updateFlags);
 pct = round((sum(updateFlags)/numel(updateFlags)) * 100);
-fprintf(1,'\b\b\b\b\b\b%03g%%\n',pct);
+blockObj.reportProgress(str,pct);
 
 flag = true;
 

@@ -1,6 +1,8 @@
 function flag = doAutoClustering(blockObj,chan,unit)
 flag = false;
 
+blockObj.checkActionIsValid();
+
 job = getCurrentJob;
 if ~isempty(job) % we are on a remote worker
     configW;     % run the programmatically generated configuration script

@@ -147,8 +147,8 @@ spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 
 % Create structure arrays for each type of data channel.
 raw_channels = utils.initChannelStruct('Channels',1); 
-analogIO_channels = utils.initChannelStruct('Channels',1); 
-digIO_channels = utils.initChannelStruct('Channels',1); 
+analogIO_channels = utils.initChannelStruct('Streams',0); 
+digIO_channels = utils.initChannelStruct('Streams',0); 
 
 raw_index = 1;
 analogIO_index = 1;
@@ -183,6 +183,7 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).port_number = signal_group;
          new_channel(1).native_channel_name = nigeLab.utils.fread_QString(FID);
          new_channel(1).custom_channel_name = nigeLab.utils.fread_QString(FID);
+         new_channel(1).name = new_channel(1).custom_channel_name;
          new_channel(1).native_order = fread(FID, 1, 'int16');
          new_channel(1).custom_order = fread(FID, 1, 'int16');
          signal_type = fread(FID, 1, 'int16');
@@ -203,32 +204,43 @@ for signal_group = 1:number_of_signal_groups
          if (channel_enabled)
             switch (signal_type)
                case 0
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Raw');
                   raw_channels(raw_index) = new_channel;
                   spike_triggers(raw_index) = new_trigger_channel;
                   raw_index = raw_index + 1;
                case 1
+                  new_channel(1).fs = sample_rate / 4;
                   new_channel(1).signal = nigeLab.utils.signal('Aux');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   aux_input_index = aux_input_index + 1;
                case 2
+                  new_channel(1).fs = frequency_parameters.supply_voltage_sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Supply');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   supply_voltage_index = supply_voltage_index + 1;
                case 3
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Adc');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   analogIO_index = analogIO_index + 1;
                   board_adc_index = board_adc_index + 1;
                case 4
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigIn');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_in_index = board_dig_in_index + 1;
                case 5
+                  new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigOut');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
                   digIO_index = digIO_index + 1;
                   board_dig_out_index = board_dig_out_index + 1;

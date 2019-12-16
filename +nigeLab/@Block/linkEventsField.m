@@ -1,19 +1,17 @@
 function flag = linkEventsField(blockObj,field)
-%% LINKEVENTSFIELD  Connect data to Events, return true if missing a file
+% LINKEVENTSFIELD  Connect data to Events, return true if missing a file
 %
-%  b = nigeLab.Block;
-%  flag = LINKEVENTSFIELD(b,field);
+%  blockObj = nigeLab.Block;
+%  flag = LINKEVENTSFIELD(blockObj,field);
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
+%  Creates nigeLab.libs.DiskData "pointers" to the "Events" FieldType data
+%  files associated with the nigeLab.Block object.
 %
-%  Returns true if a file was not detected during linking.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+%  Returns true if any file was not detected during linking.
 
 %%
 flag = false;
-evtIdx = ismember(blockObj.EventPars.Fields,field);
+evtIdx = ismember(blockObj.Pars.Event.Fields,field);
 N = sum(evtIdx);
 if N == 0
    flag = true;
@@ -22,17 +20,18 @@ end
 
 updateFlag = false(1,numel(blockObj.Events.(field)));
 
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+blockObj.reportProgress(str,0);
 counter = 0;
 for i = 1:numel(blockObj.Events.(field))  
    % Get file name
-   fName = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(field).dir,...
-      sprintf(blockObj.BlockPars.(field).File, ...
-              blockObj.Events.(field)(i).name)));
+   fName = nigeLab.utils.getUNCPath(blockObj.Paths.(field).dir,...
+                            sprintf(blockObj.Paths.(field).f_expr, ...
+                                    blockObj.Events.(field)(i).name));
    
    % If file is not detected
    if ~exist(fName,'file')
-      flag = true; % Denote that something wasn't linked correctly
+      flag = true;
    else
       % If file is detected, link it
       updateFlag(i) = true;
@@ -42,7 +41,7 @@ for i = 1:numel(blockObj.Events.(field))
    % Increment counter and print to command window
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100))
+   blockObj.reportProgress(str,pct);
 end
 % Update the status for each linked file (number depends on the Field)
 blockObj.updateStatus(field,updateFlag);

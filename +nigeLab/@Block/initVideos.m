@@ -5,14 +5,14 @@ function flag = initVideos(blockObj)
 
 %% Get parameters associated with video
 flag = false; % Initialize to false
-[~,p] = blockObj.updateParams('Video');
-if ~p.HasVideo
+[~,pars] = blockObj.updateParams('Video');
+if ~pars.HasVideo
    flag = true;
    return;
 end
 
 %% Get string for parsing matched video file names
-dynamicVars = cellfun(@(x)x(2:end),p.DynamicVars,'UniformOutput',false);
+dynamicVars = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
 idx = find(ismember(dynamicVars,fieldnames(blockObj.Meta)));
 if isempty(idx)
    error('Could not find any metadata fields to use for parsing Video filenames.');
@@ -22,13 +22,13 @@ matchStr = '*';
 for i = 1:numel(idx)
    matchStr = [matchStr, blockObj.Meta.(dynamicVars{idx(i)}) '*']; %#ok<*AGROW>
 end
-matchStr = [matchStr, p.FileExt];
+matchStr = [matchStr, pars.FileExt];
 
 %% Look for video files. Stop after first path where videos are found.
 i = 0;
-while i < numel(p.VidFilePath)
+while i < numel(pars.VidFilePath)
    i = i + 1;
-   F = dir(nigeLab.utils.getUNCPath(fullfile(p.VidFilePath{i},matchStr)));
+   F = dir(nigeLab.utils.getUNCPath(fullfile(pars.VidFilePath{i},matchStr)));
    if ~isempty(F)
       break;
    end
@@ -40,7 +40,7 @@ if isempty(F)
 end
 
 % Make "Videos" fieldtype object or array
-vidFieldObj = nigeLab.libs.VideosFieldType(F,p);
+vidFieldObj = nigeLab.libs.VideosFieldType(F,pars);
 
 %% Initialize "VidStreams" if it is a Field (special case)
 if ~ismember('VidStreams',blockObj.Fields)
@@ -48,8 +48,8 @@ if ~ismember('VidStreams',blockObj.Fields)
    return;
 end
 
-if isempty(p.CameraSourceVar) % Should have same streams for all videos
-   vidStreamSignals = p.VidStream;
+if isempty(pars.CameraSourceVar) % Should have same streams for all videos
+   vidStreamSignals = pars.VidStream;
    blockObj.Videos = nigeLab.libs.VidStreamsType(...
       vidFieldObj,vidStreamSignals);
    
@@ -59,14 +59,14 @@ else % If different videos contain different streams (for example, TOP vs DOOR)
    
    for iVid = 1:nVid
       [source,signalIndex] = blockObj.Videos(iVid).getVideoSourceInfo;
-      source = repmat({source},1,numel(p.VidStreamGroup{signalIndex}));
+      source = repmat({source},1,numel(pars.VidStreamGroup{signalIndex}));
       vidStreamSignals = nigeLab.utils.signal(...
-         p.VidStreamGroup{signalIndex},...
-         p.VidStreamField{signalIndex},...
-         p.VidStreamFieldType{signalIndex},...
+         pars.VidStreamGroup{signalIndex},...
+         pars.VidStreamField{signalIndex},...
+         pars.VidStreamFieldType{signalIndex},...
          source,...
-         p.VidStreamName{signalIndex},...
-         p.VidStreamSubGroup{signalIndex});
+         pars.VidStreamName{signalIndex},...
+         pars.VidStreamSubGroup{signalIndex});
       
       blockObj.Videos(iVid) = nigeLab.libs.VidStreamsType(...
          vidFieldObj(iVid),vidStreamSignals);

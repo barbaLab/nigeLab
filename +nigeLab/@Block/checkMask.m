@@ -1,9 +1,7 @@
 function checkMask(blockObj)
-%% CHECKMASK   Check to ensure that the channel mask matches extracted data
+% CHECKMASK   Check to ensure that the channel mask matches extracted data
 %
 %  blockObj.CHECKMASK;
-%
-% By: Max Murphy  v1.0  2019-07-11  Original version (R2017a)
 
 %%
 channelMask = blockObj.Mask;

@@ -31,7 +31,8 @@ function L = list(tankObj)
 %    
 % end
 
-VariableNames = {'Animals';
+VariableNames = {'Key';
+                 'Animals';
                  'Recording_date';
                  'RecordingType';
                  'NumberOfBlocks';
@@ -39,11 +40,12 @@ VariableNames = {'Animals';
                  'Status';
                     };
                 
-GatherFunction = { @(an) an.Name;
+GatherFunction = { @(an) {num2str(an.UserData)};
+                   @(an) an.Name;
                    @(an) getAnimalDate(an)
-                   @(an) [unique({an.Blocks.RecType}), unique({an.Blocks.FileExt})];
+                   @(an) getRecDate(an);
                    @(an) numel(an.Blocks);
-                   @(an) {unique(cat(1,an.Blocks.NumChannels))};
+                   @(an) getNChannel(an);
                    @(an) getAnimalStatus(an);
     };
 
@@ -51,6 +53,7 @@ Lstruc=cell2struct(cell(1,numel(VariableNames)),VariableNames,2);
 
 for ii=1:numel(tankObj.Animals)
     an=tankObj.Animals(ii);
+    an.UserData = ii;
     if isempty(an.Blocks)
        Lstruc(ii).(VariableNames{1}) = GatherFunction{1}(an);
        Lstruc(ii).(VariableNames{2}) = 'Empty';
@@ -91,4 +94,16 @@ function D = getAnimalDate(animalObj)
    catch
       D = NaT;
    end
+end
+
+function N = getNChannel(animalObj)
+b = animalObj.Blocks;
+N = {unique(cat(1,b.NumChannels))};
+end
+
+function R = getRecDate(animalObj)
+b = animalObj.Blocks;
+rt = unique({b.RecType});
+fe = unique({b.FileExt});
+R = [rt, fe];
 end

@@ -40,41 +40,29 @@ if nargin < 2
 end
 
 blockObj.updateParams('Block');
-F = fieldnames(blockObj.BlockPars);
+F = fieldnames(blockObj.PathExpr);
 del = blockObj.Delimiter;
 
 for iF = 1:numel(F) % For each field, update field type
-   p = blockObj.BlockPars.(F{iF});
+   p = blockObj.PathExpr.(F{iF});
    
    if contains(p.Folder,'%s') % Parse for spikes stuff
       p.Folder = sprintf(strrep(p.Folder,'\','/'),...
-         blockObj.SDPars.ID.(F{iF}));
+         blockObj.Pars.SD.ID.(F{iF}));
    end
    
    % Set folder name for this particular Field
-   paths.(F{iF}).dir = fullfile(paths.SaveLoc.dir,...
+   paths.(F{iF}).dir = nigeLab.utils.getUNCPath(paths.SaveLoc.dir,...
       [p.Folder]);
-%    if useRemote
-%       paths.(F{iF}).q = fullfile(paths.Saveloc.q, [p.Folder]);
-%    end
    
    % Parse for both old and new versions of file naming convention
-   
-   %%%%%%%%%%% 07/09/19 Removed redundancy in the naming scheme. 
-   %%%%%%%%%%% FIXME,Breaks all backwards compatibility
-%    paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[blockObj.Name del p.File]);
-%    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}));
-%    paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[blockObj.Name del p.Info]);
-
-   paths.(F{iF}).file = fullfile(paths.(F{iF}).dir,[p.File]);
+   paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
+      paths.(F{iF}).dir,[p.File]);
+   paths.(F{iF}).f_expr = p.File;
    paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
-   paths.(F{iF}).info = fullfile(paths.(F{iF}).dir,[p.Info]);
+   paths.(F{iF}).info = nigeLab.utils.getUNCPath(...
+      paths.(F{iF}).dir,[p.Info]);
    
-%    if useRemote
-%       paths.(F{iF}).qfile = fullfile(paths.(F{iF}).q,[p.File]);
-%       paths.(F{iF}).qold = getOldFiles(p,paths.(F{iF}),'q');
-%       paths.(F{iF}).qinfo = fullfile(paths.(F{iF}).q,[p.Info]);
-%    end
 end
 end
 

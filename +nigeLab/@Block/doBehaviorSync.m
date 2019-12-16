@@ -19,6 +19,8 @@ function flag = doBehaviorSync(blockObj)
 
 %% DEFAULTS
 flag = false;
+blockObj.checkActionIsValid();
+
 blockObj.SyncPars = nigeLab.defaults.Sync();
 blockObj.SyncPars.File = fullfile(sprintf(blockObj.paths.DW_N,...
                                     blockObj.SyncPars.ID));

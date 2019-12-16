@@ -5,8 +5,6 @@ function flag = initStreams(blockObj)
 %
 %  flag: Returns false if initialized correctly; otherwise, returns true
 %        (so it is really "warningFlag")
-%
-% By: Max Murphy  v1.0  2019/01/11  Original version (R2017a)
 
 %%
 flag = false;
@@ -21,18 +19,22 @@ end
 blockObj.Streams = struct;
 headerFields = fieldnames(blockObj.Meta.Header);
 
-% MM modified 2019-11-20
-tmp = repmat({nigeLab.utils.initChannelStruct('Streams',0)},1,nStreamTypes);
 for ii = 1:nStreamTypes
    name = fields{ii};
 
    headerStructName = [name 'Channels'];
+   if isempty(blockObj.Meta.Header.(headerStructName))
+      warning('Empty header for %s. Check that defaults match your experiment.',name);
+      blockObj.Streams.(name) = nigeLab.utils.initChannelStruct('Streams',0);
+      continue;
+   end
    if ismember(headerStructName,headerFields)
-      blockObj.Streams.(name) = blockObj.Meta.Header.(headerStructName);
+      blockObj.Streams.(name) = nigeLab.utils.initChannelStruct('Streams',...
+         blockObj.Meta.Header.(headerStructName));
    else
       warning('Missing header: %s',headerStructName); 
       fprintf(1,'Initializing empty Streams struct: %s\n',headerStructName);
-      blockObj.Streams.(name) = nigeLab.utils.initChannels('Streams',0);
+      blockObj.Streams.(name) = nigeLab.utils.initChannelStruct('Streams',0);
    end
 end
 flag = true;
