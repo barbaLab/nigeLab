@@ -111,7 +111,7 @@ switch nargin
          end
          return;
       end
-      if isfield(blockObj.Pars,'Video') && strcmp(field,'Video')
+      if isfield(blockObj.Pars,'Video') & status
          if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
             switch field
                case blockObj.Pars.Video.ScoringEventFieldname
