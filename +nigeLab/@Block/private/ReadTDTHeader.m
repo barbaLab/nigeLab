@@ -8,6 +8,8 @@ function header = ReadTDTHeader(varargin)
 %%
 acqsys = 'TDT';
 
+acqsys = 'TDT';
+
 if nargin >0
    VERBOSE = false;
 else

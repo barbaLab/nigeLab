@@ -1,56 +1,83 @@
 function Tree = splitMultiAnimals(blockObj,varargin)
+% SPLITMULTIANIMALS  Returns a uiw.widget.Tree object with the split
+%                    blocks depending on what is contained in the
+%                    'MultiAnimalsLinkedBlocks' Property pointer for
+%                    splitting recordings (Blocks) that have 2 or more
+%                    animals in them.
+%
+%  Tree = blockObj.splitMultiAnimals();
+%  Tree = blockObj.splitMultiAnimals(Tree);
+%  Tree = blockObj.splitMultiAnimals('noGui');
+%  Tree = blockObj.splitMultiAnimals('Gui');
+%  Tree = blockObj.splitMultiAnimals('init');
 
-if nargin < 2
-    ...
-elseif nargin < 3
-    switch class(varargin{1})
-        case  'uiw.widget.Tree'
+%% Check inputs
+switch nargin
+   case 0
+      error(['nigeLab:' mfilename ':tooFewInputs'],...
+         'Not enough input arguments (0 provided, minimum 1 required)');
+      
+   case 1
+      % Nothing here
+      ...
+         
+   case 2
+      % Depends on varargin{1}
+      switch class(varargin{1})
+         case  'uiw.widget.Tree'
             Tree = varargin{1};
-
+            
             % Makes sure all correct properties are assigned to the first block
             if ~isfield(blockObj.MultiAnimalsLinkedBlocks(1).Channels,'Raw')
-                assignPropsToFirstChild(blockObj);
+               assignPropsToFirstChild(blockObj);
             end
-
+            
             ApplyChanges(Tree);
             return;
-        case 'char'
+         case 'char'
             
             if ~(blockObj.MultiAnimals)
-                warning('No multi animals recording detected');
-                return;
+               warning('No multi animals recording detected');
+               return;
             end
             
             if strcmpi(varargin{1},'noGui')
-                
-                if isempty(blockObj.MultiAnimalsLinkedBlocks)
-                    CreateChildrenBlocks(blockObj);
-                end
-
-                RawFlag = all(blockObj.getStatus('Raw'));
-                if ~RawFlag
-                    blockObj.doRawExtraction;
-                end
-
-                assignPropsToFirstChild(blockObj)
-
-
+               
+               if isempty(blockObj.MultiAnimalsLinkedBlocks)
+                  CreateChildrenBlocks(blockObj);
+               end
+               
+               RawFlag = all(blockObj.getStatus('Raw'));
+               if ~RawFlag
+                  blockObj.doRawExtraction;
+               end
+               
+               assignPropsToFirstChild(blockObj)
+               
+               
             elseif strcmpi(varargin{1},'Gui')
-                ...
+               ...
             elseif strcmpi(varargin{1},'init')
-
+            
             CreateChildrenBlocks(blockObj);
             assignPropsToFirstChild(blockObj);
             end
-        otherwise
-            error('Undefined function ''splitMultiAnimals'' for input arguments of type ''%s'' ',class(varargin{1}));
-
-    end % switch
-end %fi nargin
+         otherwise
+            error(['nigeLab:' mfilename ':badInputType2'],...
+               'Undefined function ''splitMultiAnimals'' for input arguments of type ''%s'' ',...
+               class(varargin{1}));
+            
+      end % switch
+end
 end % function
 
+% Helper assignment function
 function assignPropsToFirstChild(blockObj)
-% Assign all properties to the first block
+% ASSIGNPROPSTOFIRSTCHILD   Assign all properties to the first block
+%
+%  assignPropsToFirstChild(blockObj);  Just a helper function to assign
+%                                      hard-coded subset of properties
+
 blockObj.MultiAnimalsLinkedBlocks(1).Mask = blockObj.Mask;
 blockObj.MultiAnimalsLinkedBlocks(1).Channels = blockObj.Channels;
 blockObj.MultiAnimalsLinkedBlocks(1).Streams = blockObj.Streams;
@@ -62,7 +89,12 @@ blockObj.MultiAnimalsLinkedBlocks(2).Channels = blockObj.Channels([]);
 blockObj.MultiAnimalsLinkedBlocks(2).Status = blockObj.Status;
 end
 
+% Creates the new "child" blocks from splitting
 function CreateChildrenBlocks(blockObj)
+% CREATECHILDRENBLOCKS  Create the new "child" blocks from splitting
+%
+%  CreateChildrenBlocks(blockObj);  
+
 ff = fieldnames(blockObj.Meta)';
 ff = ff(~strcmp(ff,'Header'));
 types =  structfun(@(x) class(x),blockObj.Meta,'UniformOutput',false);
@@ -132,7 +164,11 @@ for ii =1:numel(blockObj.MultiAnimalsLinkedBlocks)
 end
 end
 
+% Find things to move and move them to correct location
 function ApplyChanges(Tree_)
+% APPLYCHANGES  Find things to move and move them to correct location
+%
+%  ApplyChanges(Tree_);
 
 for kk=1:size(Tree_,1)
     % get what needs to be moved and where
@@ -186,8 +222,15 @@ end
 % populateTree(Tree_);
 end
 
+% Fix ports and numbering that are messed up due to splitting
 function fixPortsAndNumbers(bl)
-%% port_number
+% FIXPORTSANDNUMBERS   Ports and Numbering will be messed up since some may
+%                       start with "Port C" but that is actually equivalent
+%                       to configuration where "Port A" is plugged in,
+%                       since it is just the second rat of the two.
+%
+%  fixPortsAndNumbers(bl);
+
 PN = [bl.Channels.port_number];
 OldPN = unique(PN);
 % NewPn = 1:numel(OldPN);
@@ -200,7 +243,11 @@ if isempty(bl.Mask),bl.Mask=1:bl.NumChannels;else
 end
 end
 
+% Update the channels due to change in masking etc
 function [trgtStuff,trgtMask]=getUpdateChans(trgtBlck,Stff,Tree,ii)
+% GETUPDATECHANS  Get the updated channels depending on what has been
+%                 assigned to which animal, since now the masks will change
+%                 (because mask is based on Animal).
 
 index = cat(1,Stff.UserData);
 
@@ -231,7 +278,9 @@ end
 
 end
 
+% Updates Events
 function [trgtStuff,trgtMask]=getUpdatedEvnts(trgtBlck,Stff,Tree,ii)
+% GETUPDATEDEVNTS  Return the updated events (same as Channels)
 
 index = cat(1,Stff.UserData);
 
@@ -260,7 +309,12 @@ end
 
 end
 
+% Updates Streams
 function [trgtStuff] = getUpdatedStreams(trgtBlck,Stff,Tree,ii)
+% GETUPDATEDSTREAMS  Return the appropriate Streams since there is a subset
+%                    of "sync" behavior streams associated with each box
+%                    that should be assigned to each block after splitting.
+
 trgtStuff = struct();
 StreamsTypes = {Stff.Name};
 for jj=1:numel(StreamsTypes)

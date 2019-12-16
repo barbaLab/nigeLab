@@ -4,6 +4,12 @@ function init(animalObj)
 %  animalObj.init;
 
 %%
+if ~isscalar(animalObj)
+   error(['nigeLab:' mfilename ':badInitConditions'],...
+      'nigelab.Animal should only be initialized as a scalar.');
+end
+
+%%
 [~,animalName] = fileparts(animalObj.RecDir);
 animalObj.Name = animalName;
 
@@ -101,6 +107,8 @@ for bb=1:numel(Recordings)
    end
    skipVec(bb) = ~addThisBlock;
 end
+% Remove any empty Blocks that were not initialized
 animalObj.Blocks(isempty(animalObj.Blocks)) = [];
+
 animalObj.save;
 end

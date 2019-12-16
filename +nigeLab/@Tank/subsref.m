@@ -11,10 +11,14 @@ function varargout = subsref(tankObj,S)
 %
 %  --> equivalent to calling tankObj{[2,1,3],[1,4,1]};
 %
-%  ** NOTE ** that calling
-%  tankObj{[2,1,3],[1,2,4,5]} would only return a single
-%  element for each animalObj [b21, b12, b34], NOT the 1st, 2nd,
+%  ** NOTE 1 ** calling tankObj{[2,1,3],[1,2,4,5]} would only return a 
+%  single element for each animalObj [b21, b12, b34], NOT the 1st, 2nd,
 %  4th, and 5th block from each animal.
+%
+%  ** NOTE 2 ** calling tankObj{1:2} would return the 2nd block of the
+%               first  animal, whereas calling tankObj{(1:2)'} would return
+%               an array with the first and second animals, so be careful
+%               about that part.
 %
 %  childBlock = tankObj{1,1}
 %  --> returns 1st child of 1st animal in tankObj.Animals
@@ -53,6 +57,12 @@ switch S(1).type
             if size(subs{1},2) > 1
                s = substruct('{}',subs);
             else
+               % If "return all" make sure it is in row vector format
+               if ischar(subs{1})
+                  if strcmp(subs{1},':')
+                     subs = [1, subs];
+                  end
+               end
                s = substruct('()',subs);
             end
             varargout{1} = subsref(tankObj.Animals,s);

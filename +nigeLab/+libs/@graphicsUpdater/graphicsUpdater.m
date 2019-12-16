@@ -335,6 +335,16 @@ classdef graphicsUpdater < handle
          obj.tVid = src.getTime('vid');
          obj.tNeu = src.getTime('neu');
          
+         if obj.verbose
+            s = nigeLab.utils.getNigeLink(...
+               'nigeLab.libs.graphicsUpdater',...
+               'frameChangedVidCB');
+            fprintf(1,'-->\tframeChanged event triggered: %s\n',s);
+            fprintf(1,'\t-->\tsource class: %s\n',class(src));
+         end
+         neu_t = src.getTime('neu');
+         vid_t = src.getTime('vid');
+         
          set(obj.neuTime_display,'String',...
             sprintf('Neural Time: %0.3f',obj.tNeu));
          set(obj.vidTime_display,'String',...

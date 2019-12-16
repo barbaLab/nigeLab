@@ -22,18 +22,22 @@ switch nargin
       end
       if iscell(input),Col=nigeLab.defaults.nigelColors(input{1});return;end
       switch input
-         case {'primary','g','green',1}
+         case {'primary','g','green','highlight','hl',1}
             Col = [30, 185, 128]./255;   % green
-         case {'secondary','dg','darkgreen','button',2}
+         case {'secondary','dg','darkgreen','button','enable',2}
             Col = [4, 93, 86]./255;      % dark green
+         case {'disable','ddg','darkergreen',2.5}
+            Col = [4, 55, 32]./255;      % dark green
          case {'tertiary','o','orange',3}
             Col = [255, 104, 89]./255;   % orange
          case {'quaternary','y','yellow',4}
             Col = [255, 207, 68]./255;   % yellow
          case {'onprimary','k','black',1.1}
             Col = [0, 0, 0]./255; % black
-         case {'onsecondary','w','white','onbutton',2.1} 
+         case {'onsecondary','w','white','onbutton','enabletext',2.1} 
             Col = [255, 255, 255]./255; % white
+         case {'disabletext','med_gray','med_grey','med'}
+            Col = [125, 125, 125]./255;
          case {'ontertiary',3.1}
             Col = [0, 0, 0]./255; % black
          case {'onquaternary',4.1}

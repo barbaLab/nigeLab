@@ -14,6 +14,7 @@ classdef DashBoard < handle
    properties(SetAccess = private, GetAccess = public, SetObservable)
       nigelGUI       matlab.ui.Figure    % matlab.ui.Figure handle to user interface figure
       Color          struct              % Struct referencing colors
+      SelectionIndex = [1 0 0]     % indexing of currently-selected items
    end
    
    % PUBLIC
@@ -41,6 +42,13 @@ classdef DashBoard < handle
       splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI % interface to split multiple animals
       treeContextMenu  matlab.ui.container.ContextMenu  % UI context menu for launching "do" actions
       Listener  event.listener    % Array of event listeners to delete on destruction
+   end
+   
+   % RESTRICTED
+   % For interaction with splitMultiAnimalsUI
+   properties (Access = ?nigeLab.libs.splitMultiAnimalsUI, SetObservable)
+      toSplit   % Struct array of Block and corresponding Animal to split
+      toAdd     % Struct array of Block and corresponding Animal to add
    end
    
    %% EVENTS
@@ -134,10 +142,9 @@ classdef DashBoard < handle
          
          % Delete anything associated with multianimals UI
          if ~isempty(obj.splitMultiAnimalsUI)
-            if isvalid(obj.splitMultiAnimalsUI.Fig)
-               delete(obj.splitMultiAnimalsUI.Fig);
+            if isvalid(obj.splitMultiAnimalsUI)
+               delete(obj.splitMultiAnimalsUI);
             end
-            delete(obj.splitMultiAnimalsUI);
          end
          
          % Delete buttons
@@ -155,11 +162,7 @@ classdef DashBoard < handle
                delete(obj.remoteMonitor);
             end
          end
-         
-         % Delete this interface
-         if isvalid(obj.nigelGUI)
-            delete(obj.nigelGUI);
-         end
+
       end
       
       % Return the panel corresponding to a given tag
@@ -208,7 +211,9 @@ classdef DashBoard < handle
          %        * Can be 'name'
          %
          %  Returns Block and Animal objects corresponding to the selected
-         %  Nodes.
+         %  Nodes (default). If a different mode is specified, such as
+         %  'index' or 'name' then those corresponding properties are
+         %  returned instead of the object handle arrays.
          
          if nargin < 2
             mode = 'obj';
@@ -217,29 +222,44 @@ classdef DashBoard < handle
             case 'obj'
                block = [];
                animal = [];
+               % SelectedItems will always have consistent # columns, since
+               % "unlike" nodes are de-selected during treeSelectionFcn
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               switch  unique(cellfun(@(x) numel(x), {obj.Tree.SelectedNodes.UserData}))
+               nCol = size(SelectedItems,2);
+               switch  nCol
                   case 0  % tank
+                     animal = obj.Tank{:};
+                     block = obj.Tank{:,:};
                      
                   case 1  % animal
-                     for ii=1:size(SelectedItems,1)
-                        animal =[animal, ...
-                           obj.Tank.Animals(SelectedItems(ii,1))];
-                        block = [block, ...
-                           obj.Tank.Animals(SelectedItems(ii,1)).Blocks];
-                     end
+                     animal = obj.Tank{SelectedItems};
+                     block = obj.Tank{SelectedItems,:};
+                     
                   case 2  % block
-                     for ii = 1:size(SelectedItems,1)
-                        animal =[animal, ...
-                           obj.Tank.Animals(SelectedItems(ii,1))];                               
-                        block = [block, ...
-                           obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2))];    
-                     end
+                     animalIdx = unique(SelectedItems(:,1));
+                     animal = obj.Tank{animalIdx};
+                     block = obj.Tank{SelectedItems};
                end
             case 'index'
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
             case 'name'
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+               [B,A] = obj.getSelectedItems('obj');
+               for i = 1:numel(B)               
+                  if isfield(B(i).Meta,'AnimalID') && ...
+                        isfield(B(i).Meta,'RecID')
+                     blockName = sprintf('%s.%s',...
+                        B(i).Meta.AnimalID,...
+                        B(i).Meta.RecID);
+                  else
+                     warning(['Missing AnimalID or RecID Meta fields. ' ...
+                        'Using Block.Name instead.']);
+                     blockName = strrep(B(i).Name,'_','.');
+                  end
+                  % target is nigelab.Block
+                  blockName = blockName(1:min(end,...
+                     B(i).Pars.Notifications.NMaxNameChars));
+               end
+               animal = {A.Name};
             otherwise
                error(['nigeLab:' mfilename ':badInputType3'],...
                   ['Unexpected "mode" value: ''%s''\n' ...
@@ -352,7 +372,7 @@ classdef DashBoard < handle
          % Make button axes for this nigelPanelObj (Tree panel)
          pos = nigelPanelObj.InnerPosition;
          pos = [pos(1) + pos(3) / 2, ...
-            pos(2), ...
+            pos(2) + 0.05, ...
             pos(3) / 2, ...
             pos(4) * 0.15];
          ax = axes('Units','normalized', ...
@@ -361,19 +381,35 @@ classdef DashBoard < handle
             'Color',obj.Color.panel,...
             'XColor','none',...
             'YColor','none',...
+            'NextPlot','add',...
+            'XLimMode','manual',...
+            'XLim',[0 1],...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
             'FontName',nigelPanelObj.FontName);
          nigelPanelObj.nestObj(ax,'ButtonAxes');
          p = nigelPanelObj; % For shorter reference
          
          % Create array of nigelButtons
          obj.nigelButtons = [obj.nigelButtons, ...
-            nigeLab.libs.nigelButton(p, [1 1 2 1],   'Add', ...
-            []), ... % Add handle to 'ADD' function here
-            nigeLab.libs.nigelButton(p, [1 2.3 2 1], 'Save', ...
-            []), ... % Add handle to 'SAVE' function here
-            nigeLab.libs.nigelButton(p, [1 3.6 2 1],'Split',...
-             {@(~,~,split_mode,is_cb)obj.toggleSplitMultiAnimalsUI(split_mode,is_cb),'start',true})];
-         pbaspect([1,1,1]);
+            nigeLab.libs.nigelButton(p, [0.15 0.10 0.70 0.275],'Add'), ... 
+            ... % Add handle to 'ADD' function here               ^
+            nigeLab.libs.nigelButton(p, [0.15 0.40 0.70 0.275],'Save'), ... 
+            ... % Add handle to 'SAVE' function here              ^
+            nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Split',...
+               @obj.toggleSplitMultiAnimalsUI,'start')];
+         
+         setButton(obj.nigelButtons,'Add','Enable','off');  % (WIP)
+         setButton(obj.nigelButtons,'Save','Enable','off'); % (WIP)
+         if obj.SelectionIndex(1,2) == 0
+            setButton(obj.nigelButtons,'Split','Enable','off');
+         else
+            setButton(obj.nigelButtons,'Split','Enable','on');
+         end
+         
+         obj.Listener = [obj.Listener, ...
+            addlistener(obj,'SelectionIndex','PostSet',...
+               @(~,~)obj.toggleSplitUIMenuEnable)];
          
       end
       
@@ -399,7 +435,8 @@ classdef DashBoard < handle
                'Position',[0.1 0.1 0.8 0.8],...
                'Color',obj.Color.fig,...
                'ToolBar','none',...
-               'MenuBar','none');
+               'MenuBar','none',...
+               'DeleteFcn',@(~,~)obj.delete);
          end
          
          %% Tree Panel
@@ -933,6 +970,43 @@ classdef DashBoard < handle
          
       end
       
+      % Translates "SelectedItems" (nodes UserData) to "selection index"
+      function sel = selectedItems2Index(obj,items)
+         % SELECTEDITEMS2INDEX  Returns the "indexing" for SelectedItems
+         %                       from UserData of nodes on obj.Tree
+         %
+         %  sel = obj.selectedItems2Index(items);
+         
+         % tankObj
+         if isempty(items)
+            sel = [1 0 0]; 
+            return;
+         end
+         
+         % animalObj
+         if size(items,2) == 1
+            sel = ones(size(items,1),3);
+            A = obj.Tank.Animals;
+            k = 0;
+            for i = 1:size(items,1)
+               a = A(items(i));
+               B = a.Blocks;
+               for ii = 1:numel(B)
+                  k = k + 1;
+                  sel(k,[2,3]) = [items(i), ii];
+               end
+            end
+            return;
+         end
+         
+         % blockObj
+         if size(items,2) == 2
+            sel = ones(size(items,1),3);
+            sel(:,[2,3]) = items;
+            return;
+         end
+      end
+      
       % Function for interfacing with the tree based on current selection
       function treeSelectionFcn(obj,Tree,Nodes)
          % TREESELECTIONFCN  Interfaces with the Tree based on the current
@@ -957,10 +1031,12 @@ classdef DashBoard < handle
          % Get UserData indexing ALL nodes
          AllNodeType =  cellfun(@(x) numel(x), {Nodes.Nodes.UserData});
          
-%          NodesToRemove = not(AllNodeType==OldNodeType);
-%          Tree.SelectedNodes(NodesToRemove) = [];
+         % Prevent bad concatenation things
+         NodesToRemove = not(AllNodeType==OldNodeType);
+         Tree.SelectedNodes(NodesToRemove) = [];
          
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
+         obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
          switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
             case 0  % tank
                setTankTable(obj);
@@ -1014,8 +1090,32 @@ classdef DashBoard < handle
             end
             
 
-        end
+      end
       
+      % Toggles the split UI menu button depending on nodes that are click
+      function toggleSplitUIMenuEnable(obj)
+         % TOGGLESPLITUIMENUENABLE  Toggles the split UI menu depending on
+         %                          what is clicked.
+         %
+         %  Syntax:
+         %  addlistener(obj,'SelectionIndex','PostSet',...
+         %                 @(~,~)obj.toggleSplitUIMenuEnable);
+         
+         % If TANK is clicked, disable
+         if obj.SelectionIndex(1,2) == 0
+            setButton(obj.nigelButtons,'Split','Enable','off');
+            return;
+         end
+
+         A = obj.Tank.Animals;
+         if all([A(obj.SelectionIndex(:,2)).MultiAnimals])
+            % Only enable the button if ALL are multi-animals
+            setButton(obj.nigelButtons,'Split','Enable','on');
+         else
+            setButton(obj.nigelButtons,'Split','Enable','off');
+         end
+      end
+           
       function setUIContextMenuVisibility(obj,src,evt)
          % SETUICONTEXTMENUVISIBILITY  Set UI Context menu Visibility
          
@@ -1045,7 +1145,7 @@ classdef DashBoard < handle
    % MultiAnimals methods
    methods (Access = ?nigeLab.libs.splitMultiAnimalsUI)
       % Callback that toggles the split multi animals UI on or off
-      function toggleSplitMultiAnimalsUI(obj,mode,isCallback)
+      function toggleSplitMultiAnimalsUI(obj,mode)
          % TOGGLESPLITMULTIANIMALSUI  Toggle the split multi animals UI on
          %                            or off.
          %
@@ -1056,10 +1156,6 @@ classdef DashBoard < handle
          %  Where 'start' corresponds to a fixed instantiation of "mode"
          %  input, as desired for the application.
          
-         if nargin < 3
-            isCallback = true;
-         end
-         
          switch mode
             case 'start'
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
@@ -1069,6 +1165,9 @@ classdef DashBoard < handle
                      obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
                   case 1  % animal
 
+                     % If this animal is a "multi-animal" Animal, then
+                     % cycle through its children, finding "multi-animal"
+                     % blocks.
                      if obj.Tank.Animals(SelectedItems).MultiAnimals
                         obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
                      else
@@ -1084,14 +1183,14 @@ classdef DashBoard < handle
                      end % if ~MultiAnimals
                end % case
                
-
+               % Ensure that only 1 "child" object is selected at a time
                obj.getChild('TreePanel').getChild('Tree').SelectionType = 'single';
                if isvalid(obj.splitMultiAnimalsUI)
                   obj.splitMultiAnimalsUI.toggleVisibility;
                   return;
                else
                   % 'start' is only entered via button-click
-                  toggleSplitMultiAnimalsUI(obj,'init',true);
+                  toggleSplitMultiAnimalsUI(obj,'init');
                end % if isvalid
 
                % TODO disable nodes without multiAnimal flag!
@@ -1108,31 +1207,58 @@ classdef DashBoard < handle
                end
                
             case 'init'
+               % First, make sure the selection is valid
+               
+               % The multiAnimalsUI must be opened
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               switch  unique(cellfun(@(x) numel(x),...
-                     {obj.Tree.SelectedNodes.UserData}))
+               % Note that SelectedItems only contains nodes of a specific
+               % type, based on exclusion done in `treeSelectionFcn`.
+               % Therefore the vertical concatenation above is always valid
+               nCol = size(SelectedItems,2);
+               switch  nCol
                   case 0  % tank
-                     idx = find([obj.Tank.Animals.MultiAnimals],1);
-                     if idx
-                        obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
-                     end
+                     % Cannot be invoked at "TANK" level
+                     error(['nigeLab:' mfilename ':badCase'],...
+                        'Should not be able to enter split UI from TANK level.');
                   case 1  % animal
-                     if isCallback
-                        if obj.Tank.Animals(SelectedItems).MultiAnimals
-                           obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
-                        else
-                           errordlg('This is not a multiAnimal!');
-                           return;
-                        end % if MultiAnimals
-                     end % if isCallback
-                  case 2  % block
-                     if ~obj.Tank.Animals(SelectedItems(1)).Blocks(SelectedItems(2)).MultiAnimals
-                        errordlg('This is not a multiAnimal!');
-                        return;
+                     % Gets all blocks of selected animals
+                     A = nigeLab.Animal.Empty();
+                     B = nigeLab.Block.Empty();
+                     for i = 1:numel(SelectedItems)
+                        b = obj.Tank{SelectedItems(i),:};
+                        B = [B, b];
+                        A = [A, ...
+                           repmat(obj.Tank{SelectedItems(i)},1,numel(b))];
                      end
-                     
-               end % switch # elements in UserData
-               obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(obj);
+                     A = obj.Tank{SelectedItems};
+                     B = obj.Tank{SelectedItems,:};
+
+                  case 2  % block
+                     % Get specific subset of block or blocks
+                     A = obj.Tank{SelectedItems(:,1)};
+                     B = obj.Tank{SelectedItems};                     
+               end % switch nCol
+               
+               if ~all([A.MultiAnimals])
+                  error(['nigeLab:' mfilename ':badSelection'],...
+                     'One or more selected ANIMALS is not multi-animal.');
+               end
+               
+               if ~all([B.MultiAnimals])
+                  error(['nigeLab:' mfilename ':badSelection'],...
+                     'One or more selected BLOCKS is not multi-animal (should not be possible).');
+               end
+               
+               obj.toSplit = struct('Animal',cell(numel(A),1),...
+                                    'Block',cell(numel(B),1));
+               for i = 1:numel(obj.toSplit)
+                  obj.toSplit(i).Animal = A(i);
+                  obj.toSplit(i).Block = B(i);
+               end
+               obj.toAdd = struct('Animal',{},'Block',{});
+               
+               obj.splitMultiAnimalsUI = ...
+                  nigeLab.libs.splitMultiAnimalsUI(obj);
                
          end % switch mode
       end
@@ -1356,7 +1482,7 @@ classdef DashBoard < handle
          uit.ColumnWidth{3} = width*0.725;
          
          % init splitmultianimals interface
-         toggleSplitMultiAnimalsUI(obj,'init',false);
+         toggleSplitMultiAnimalsUI(obj,'init');
          
       end
       
@@ -1652,7 +1778,7 @@ classdef DashBoard < handle
    end
    
    % STATIC/public functions
-   methods (Access = public, Static = true)
+   methods (Access = public, Static = true)      
       % Update status
       function updateStatus(bar,str)
          % UPDATESTATUS  Update status string
