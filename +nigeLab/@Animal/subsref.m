@@ -189,7 +189,7 @@ switch S(1).type
                   if ischar(subs{2})
                      switch lower(subs{2})
                         case ':'
-                           idx2 = 1:getNumBlocks(animalObj(i));
+                           idx2 = 1:getNumBlocks(animalObj(idx1(i)));
                         otherwise
                            error(['nigeLab:' mfilename ':badReference'],...
                               'Unrecognized index keyword: %s',subs);

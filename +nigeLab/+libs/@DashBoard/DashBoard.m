@@ -954,8 +954,18 @@ classdef DashBoard < handle
                   bar = obj.remoteMonitor.startBar(barName,sel);
                   lh = addlistener(bar,'JobCanceled',...
                      @(~,~)target.invokeCancel);
-                  flag = feval(operation,target);
-                  delete(lh);
+                  try
+                     feval(operation,target);
+                     flag = true;
+                  catch me
+                     flag = false;
+                     warning('Task failed with following error:');
+                     disp(me);
+                     obj.remoteMonitor.stopBar(bar);
+                  end
+                  if flag
+                     delete(lh);
+                  end
                   % Since it is SERIAL, bar will be updated
                   if flag
                      obj.remoteMonitor.stopBar(bar);
@@ -1222,17 +1232,15 @@ classdef DashBoard < handle
                         'Should not be able to enter split UI from TANK level.');
                   case 1  % animal
                      % Gets all blocks of selected animals
-                     A = nigeLab.Animal.Empty();
-                     B = nigeLab.Block.Empty();
+                     B = obj.Tank{SelectedItems(1),:};
+                     A = repmat(obj.Tank{SelectedItems(1)},1,numel(B));
                      for i = 1:numel(SelectedItems)
                         b = obj.Tank{SelectedItems(i),:};
                         B = [B, b];
                         A = [A, ...
                            repmat(obj.Tank{SelectedItems(i)},1,numel(b))];
                      end
-                     A = obj.Tank{SelectedItems};
-                     B = obj.Tank{SelectedItems,:};
-
+                     
                   case 2  % block
                      % Get specific subset of block or blocks
                      A = obj.Tank{SelectedItems(:,1)};

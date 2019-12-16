@@ -8,6 +8,7 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
+blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
    
 if ~genPaths(blockObj,blockObj.AnimalLoc)

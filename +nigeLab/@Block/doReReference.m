@@ -9,6 +9,7 @@ function flag = doReReference(blockObj)
 
 %% CHECK FOR PROBLEMS
 flag = false; % Create flag for reporting successful execution
+blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
 
 

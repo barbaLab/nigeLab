@@ -19,6 +19,7 @@ flag = false;
 nigeLab.utils.checkForWorker('config');
 par = nigeLab.defaults.AutoClustering;
 
+blockObj.checkActionIsValid();
 
 %% runs automatic clustering algorithms
 switch nargin

@@ -11,6 +11,7 @@ function flag = doEventDetection(blockObj,behaviorData,vidOffset)
 
 %%
 flag = false;
+blockObj.checkActionIsValid();
 blockObj.updateParams('Video');
 blockObj.updateParams('Event');
 

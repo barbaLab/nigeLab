@@ -21,6 +21,7 @@ function flag = doVidSyncExtraction(blockObj)
 
 %% DEFAULTS
 flag = false;
+blockObj.checkActionIsValid();
 
 % Code here will probably focus on isolating an ROI that contains an LED
 % blinker. Therefore the defaults template could contain parameters

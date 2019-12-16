@@ -13,7 +13,7 @@ function flag = linkVideosField(blockObj,field)
 
 %%
 flag = false;
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 if isempty(blockObj.Videos),return;end
 [~,updateFlags] = getFile(blockObj.Videos,field);
 blockObj.updateStatus(field,updateFlags);
