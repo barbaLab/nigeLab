@@ -44,6 +44,13 @@ classdef DashBoard < handle
       Listener  event.listener    % Array of event listeners to delete on destruction
    end
    
+   % RESTRICTED
+   % For interaction with splitMultiAnimalsUI
+   properties (Access = ?nigeLab.libs.splitMultiAnimalsUI)
+      A_split  nigeLab.Animal   % Animals to split
+      B_split  nigeLab.Block    % Blocks to split
+   end
+   
    %% EVENTS
    
    events
@@ -373,7 +380,7 @@ classdef DashBoard < handle
             nigeLab.libs.nigelButton(p, [0.15 0.40 0.70 0.275],'Save'), ... 
             ... % Add handle to 'SAVE' function here              ^
             nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Split',...
-               @obj.toggleSplitMultiAnimalsUI,'start',true)];
+               @obj.toggleSplitMultiAnimalsUI,'start')];
          
          setButton(obj.nigelButtons,'Add','Enable','off');  % (WIP)
          setButton(obj.nigelButtons,'Save','Enable','off'); % (WIP)
@@ -1121,7 +1128,7 @@ classdef DashBoard < handle
    % MultiAnimals methods
    methods (Access = ?nigeLab.libs.splitMultiAnimalsUI)
       % Callback that toggles the split multi animals UI on or off
-      function toggleSplitMultiAnimalsUI(obj,mode,isCallback)
+      function toggleSplitMultiAnimalsUI(obj,mode)
          % TOGGLESPLITMULTIANIMALSUI  Toggle the split multi animals UI on
          %                            or off.
          %
@@ -1131,10 +1138,6 @@ classdef DashBoard < handle
          %
          %  Where 'start' corresponds to a fixed instantiation of "mode"
          %  input, as desired for the application.
-         
-         if nargin < 3
-            isCallback = true;
-         end
          
          switch mode
             case 'start'
@@ -1170,7 +1173,7 @@ classdef DashBoard < handle
                   return;
                else
                   % 'start' is only entered via button-click
-                  toggleSplitMultiAnimalsUI(obj,'init',true);
+                  toggleSplitMultiAnimalsUI(obj,'init');
                end % if isvalid
 
                % TODO disable nodes without multiAnimal flag!
@@ -1187,32 +1190,46 @@ classdef DashBoard < handle
                end
                
             case 'init'
+               % First, make sure the selection is valid
+               
                % The multiAnimalsUI must be opened
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               switch  unique(cellfun(@(x) numel(x),...
-                     {obj.Tree.SelectedNodes.UserData}))
+               % Note that SelectedItems only contains nodes of a specific
+               % type, based on exclusion done in `treeSelectionFcn`.
+               % Therefore the vertical concatenation above is always valid
+               nCol = size(SelectedItems,2);
+               switch  nCol
                   case 0  % tank
-                     idx = find([obj.Tank.Animals.MultiAnimals],1);
-                     if idx
-                        obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
-                     end
+                     % Cannot be invoked at "TANK" level
+                     error(['nigeLab:' mfilename ':badCase'],...
+                        'Should not be able to enter split UI from TANK level.');
                   case 1  % animal
-                     if isCallback
-                        if obj.Tank.Animals(SelectedItems).MultiAnimals
-                           obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
-                        else
-                           errordlg('This is not a multiAnimal!');
-                           return;
-                        end % if MultiAnimals
-                     end % if isCallback
+                     % Gets all blocks of selected animals
+                     A = obj.Tank{SelectedItems};
+                     B = obj.Tank{SelectedItems,:};
+
                   case 2  % block
-                     if ~obj.Tank.Animals(SelectedItems(1)).Blocks(SelectedItems(2)).MultiAnimals
-                        errordlg('This is not a multiAnimal!');
-                        return;
-                     end
-                     
-               end % switch # elements in UserData
-               obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(obj);
+                     % Get specific subset of block or blocks
+                     animIdx = unique(SelectedItems(:,1));
+                     A = obj.Tank{animIdx};
+                     B = obj.Tank{SelectedItems};                     
+               end % switch nCol
+               
+               if ~all([A.MultiAnimals])
+                  error(['nigeLab:' mfilename ':badSelection'],...
+                     'One or more selected ANIMALS is not multi-animal.');
+               end
+               
+               if ~all([B.MultiAnimals])
+                  error(['nigeLab:' mfilename ':badSelection'],...
+                     'One or more selected BLOCKS is not multi-animal (should not be possible).');
+               end
+               
+               obj.A_split = A;
+               obj.B_split = B;
+               
+               obj.splitMultiAnimalsUI = ...
+                  nigeLab.libs.splitMultiAnimalsUI(obj);
                
          end % switch mode
       end
@@ -1436,7 +1453,7 @@ classdef DashBoard < handle
          uit.ColumnWidth{3} = width*0.725;
          
          % init splitmultianimals interface
-         toggleSplitMultiAnimalsUI(obj,'init',false);
+         toggleSplitMultiAnimalsUI(obj,'init');
          
       end
       

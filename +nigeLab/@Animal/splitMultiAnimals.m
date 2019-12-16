@@ -12,6 +12,7 @@ function flag = splitMultiAnimals(animalObj,varargin)
 %  --> Does something ... ?
 
 %% Check inputs
+flag = false;
 switch nargin
    case 0
       error(['nigeLab:' mfilename ':tooFewInputs'],...
@@ -31,12 +32,15 @@ switch nargin
             return;
             
          case 'string'
-            if strcmpi(varargin{1},'noGui')
-               % Not sure the intention here, probably to provide
-               % "command-line-only" style interface.
-               
-            else
-               
+            switch lower(varargin{1})
+               case 'init'
+                  % This is invoked from 
+                  
+               case {'nogui','cmd'}
+                  
+               otherwise
+                  error(['nigeLab:' mfilename ':unexpectedCase'],...
+                     'Unexpected splitMultiAnimals case: %s',varargin{1});
             end
          otherwise
             % Nothing here
@@ -74,6 +78,7 @@ if isempty(animalObj.MultiAnimalsLinkedAnimals)
     animalObj.MultiAnimalsLinkedAnimals = splittedAnimals;
     animalObj.save;
 end %fi
+flag = true;
 end %function
 
 function ApplyChanges(animalObj,Tree)

@@ -36,43 +36,25 @@ classdef splitMultiAnimalsUI < handle
          % SPLITMULTIANIMALSUI  Class constructor for UI to split
          %                       multi-animals recording blocks.
          %
-         %  obj.splitMultiAnimalsUI(DashObj);
+         %  obj.splitMultiAnimalsUI(DashObj,animalObj,blockObj);
+         %
+         %  DashObj  --  nigeLab.libs.DashBoard
          
+         % DashObj has special restricted properties: 
+         %  --> A_split  :: Animals to split
+         %  --> B_split  :: Blocks to split
          obj.DashObj = DashObj;
+         
+         % Build user interface figure and panels
          obj.Fig = obj.buildGUI();
          
-         
-         % creates buttons
-         
-         UserdataStruct = struct();
-         UserdataStruct.yesToAll = false;
-         UserdataStruct.reviewedBlocks = false;
-         obj.AcceptBtn = uicontrol('Style','pushbutton',...
-            'Position',[450 5 50 20],...
-            'Callback',{@(h,e) obj.ApplyCallback(h,e)},...
-            'String','Accept','Enable','off',...
-            'Parent',obj.btnPanel,...
-            'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
-            'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'),...
-            'UserData',UserdataStruct);
-         
-         obj.ApplyToAllBtn = uicontrol('Style','pushbutton',...
-            'Position',[380 5 50 20],...
-            'Callback',{@(h,e,x) obj.copyChangesToAll(h,e)},...
-            'String','Copy to all','Enable','off',...
-            'Parent',obj.btnPanel,...
-            'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
-            'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
+         % Create buttons
+         obj.addButtons();
          
          % define useful event listeners
-         obj.SelectionChangedListener = addlistener(obj.DashObj,...
-            'TreeSelectionChanged',...
-            @(~,~)obj.changeVisibility);
-         obj.SelectionChangedListener.Enabled = false;
-         obj.PropListener = addlistener(obj,'animalObj','PostSet',...
-            @(~,~)obj.init);
+         obj.addListeners();
          
-         % last, assign the close request function since init has worked
+         % Assign the close request function since init has worked
          obj.Fig.CloseRequestFcn = ...
             {@(~,~,str)obj.DashObj.toggleSplitMultiAnimalsUI(str),'stop'};
          
@@ -127,7 +109,10 @@ classdef splitMultiAnimalsUI < handle
             end
          end
          
+         % Set visibility of figure
          obj.Fig.Visible = vis_mode;
+         
+         % Listener only executes callback if figure is visible
          obj.SelectionChangedListener.Enabled = strcmp(vis_mode,'on');
          if ~obj.SelectionChangedListener.Enabled
             return;
@@ -155,8 +140,58 @@ classdef splitMultiAnimalsUI < handle
    end % methods public
    
    methods (Access=private)
-      % Initialize the splitting process
-      function init(obj)
+      % Add buttons to interface
+      function addButtons(obj)
+         % ADDBUTTONS  Add buttons to user interface
+         %
+         %  obj.addButtons();   Should be called once in constructor
+         
+         % creates buttons
+         UserdataStruct = struct();
+         UserdataStruct.yesToAll = false;
+         UserdataStruct.reviewedBlocks = false;
+         obj.AcceptBtn = uicontrol('Style','pushbutton',...
+            'Position',[450 5 50 20],...
+            'Callback',{@(h,e) obj.ApplyCallback(h,e)},...
+            'String','Accept','Enable','off',...
+            'Parent',obj.btnPanel,...
+            'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+            'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'),...
+            'UserData',UserdataStruct);
+         
+         obj.ApplyToAllBtn = uicontrol('Style','pushbutton',...
+            'Position',[380 5 50 20],...
+            'Callback',{@(h,e,x) obj.copyChangesToAll(h,e)},...
+            'String','Copy to all','Enable','off',...
+            'Parent',obj.btnPanel,...
+            'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+            'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
+      end
+      
+      % Add listeners to interface
+      function addListeners(obj)
+         % ADDLISTENERS  Add listeners to interface
+         %
+         %  obj.addListeners();  Should be called once in constructor
+         
+         obj.SelectionChangedListener = addlistener(obj.DashObj,...
+            'TreeSelectionChanged',...
+            @(~,~)obj.changeVisibility);
+         obj.SelectionChangedListener.Enabled = false;
+         obj.PropListener = addlistener(obj,'animalObj','PostSet',...
+            @(~,~)obj.beginSplit);
+      end
+      
+      % LISTENER CALLBACK: Initialize the splitting process
+      function beginSplit(obj)
+         % BEGINSPLIT  Initialize the splitting process
+         %
+         %  obj.beginSplit(); 
+         %
+         %  Syntax:
+         %  obj.PropListener = addlistener(obj,'animalObj','PostSet',...
+         %                       @(~,~)obj.beginSplit);
+         
          % TODO case where only blockobj is initialized
          obj.animalObj.splitMultiAnimals('init');
          obj.Tree = obj.buildBlocksTrees();
@@ -228,7 +263,9 @@ classdef splitMultiAnimalsUI < handle
                'Visible','off');
          end
          
+         % Add a panel that will display the actual block data trees
          obj.panel = uipanel(fig,...
+            'Tag','DataPanel',...
             'UserData',obj.blockObj,...
             'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
             'Units','normalized',...
@@ -236,7 +273,9 @@ classdef splitMultiAnimalsUI < handle
          jp=nigeLab.utils.findjobj(obj.panel);
          jp.setBorder(javax.swing.BorderFactory.createEmptyBorder)
          
+         % Add a panel for interface control buttons
          obj.btnPanel = uipanel(fig,...
+            'Tag','ButtonPanel',...
             'UserData',obj.blockObj,...
             'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
             'Units','normalized','Position',[.01 0 .98 .1]);

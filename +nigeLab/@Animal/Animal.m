@@ -324,8 +324,8 @@ classdef Animal < matlab.mixin.Copyable
          end
          
          tf = animalObj.IsEmpty || builtin('isempty',animalObj);
-      end
-      
+      end         
+         
       % Save Animal object
       function save(animalObj)
          % SAVE  Allows saving of the ANIMAL object
@@ -573,6 +573,7 @@ classdef Animal < matlab.mixin.Copyable
          end
          
       end
+
    end 
    
 end
