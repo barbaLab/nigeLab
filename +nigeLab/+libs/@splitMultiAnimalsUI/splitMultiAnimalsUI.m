@@ -43,6 +43,7 @@ classdef splitMultiAnimalsUI < handle
          % DashObj has special restricted properties: 
          %  --> A_split  :: Animals to split
          %  --> B_split  :: Blocks to split
+         
          obj.DashObj = DashObj;
          
          % Build user interface figure and panels
@@ -193,20 +194,23 @@ classdef splitMultiAnimalsUI < handle
          %                       @(~,~)obj.beginSplit);
          
          % TODO case where only blockobj is initialized
+         obj.Tree = obj.buildBlockTrees();
+         obj.AcceptBtn.UserData.reviewedBlocks = false(1,...
+            numel(obj.animalObj.Blocks));
          obj.animalObj.splitMultiAnimals('init');
-         obj.Tree = obj.buildBlocksTrees();
-         obj.AcceptBtn.UserData.reviewedBlocks = false(1,numel(obj.animalObj.Blocks));
-         
          
       end
       
       % Build trees for individual block properties to "drag" to each other
-      function Tree = buildBlocksTrees(obj)
+      function Tree = buildBlockTrees(obj)
          % BUILDBLOCKTREES  Builds trees for individual block properties to
          %                    "drag" to each other.
          %
-         %  Tree = obj.buildBlocksTrees();
+         %  Tree = obj.buildBlockTrees();
          
+         Tree = gobjects(numel(obj.DashObj.B_split),...
+                         numel(obj.blockObj.MultiAnimalsLinkedBlocks));
+                      
          for jj = 1:numel(obj.animalObj.Blocks)
             thisBlock = obj.animalObj.Blocks(jj);
             if thisBlock == obj.blockObj
@@ -439,10 +443,12 @@ classdef splitMultiAnimalsUI < handle
       
       % Changes the visibility of a given set of blocks or animals
       function changeVisibility(obj)
-         % CHANGEVISIBILITY  Changes the visibility of a given set of
-         %                   blocks/animals.
+         % CHANGEVISIBILITY  Invoked when `toggleVisibility` is set to 'on'
          %
          %  obj.changeVisibility();
+         %
+         %  Get all the currently selected animals and blocks from
+         %  DashBoard, so that they can be used in the splitting interface.
          
          [obj.blockObj,obj.animalObj]= obj.DashObj.getSelectedItems;
          indx = obj.animalObj.Blocks == obj.blockObj;

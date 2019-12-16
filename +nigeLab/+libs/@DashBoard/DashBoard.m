@@ -46,9 +46,9 @@ classdef DashBoard < handle
    
    % RESTRICTED
    % For interaction with splitMultiAnimalsUI
-   properties (Access = ?nigeLab.libs.splitMultiAnimalsUI)
-      A_split  nigeLab.Animal   % Animals to split
-      B_split  nigeLab.Block    % Blocks to split
+   properties (Access = ?nigeLab.libs.splitMultiAnimalsUI, SetObservable)
+      toSplit   % Struct array of Block and corresponding Animal to split
+      toAdd     % Struct array of Block and corresponding Animal to add
    end
    
    %% EVENTS
@@ -211,7 +211,9 @@ classdef DashBoard < handle
          %        * Can be 'name'
          %
          %  Returns Block and Animal objects corresponding to the selected
-         %  Nodes.
+         %  Nodes (default). If a different mode is specified, such as
+         %  'index' or 'name' then those corresponding properties are
+         %  returned instead of the object handle arrays.
          
          if nargin < 2
             mode = 'obj';
@@ -220,29 +222,44 @@ classdef DashBoard < handle
             case 'obj'
                block = [];
                animal = [];
+               % SelectedItems will always have consistent # columns, since
+               % "unlike" nodes are de-selected during treeSelectionFcn
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               switch  unique(cellfun(@(x) numel(x), {obj.Tree.SelectedNodes.UserData}))
+               nCol = size(SelectedItems,2);
+               switch  nCol
                   case 0  % tank
+                     animal = obj.Tank{:};
+                     block = obj.Tank{:,:};
                      
                   case 1  % animal
-                     for ii=1:size(SelectedItems,1)
-                        animal =[animal, ...
-                           obj.Tank.Animals(SelectedItems(ii,1))];
-                        block = [block, ...
-                           obj.Tank.Animals(SelectedItems(ii,1)).Blocks];
-                     end
+                     animal = obj.Tank{SelectedItems};
+                     block = obj.Tank{SelectedItems,:};
+                     
                   case 2  % block
-                     for ii = 1:size(SelectedItems,1)
-                        animal =[animal, ...
-                           obj.Tank.Animals(SelectedItems(ii,1))];                               
-                        block = [block, ...
-                           obj.Tank.Animals(SelectedItems(ii,1)).Blocks(SelectedItems(ii,2))];    
-                     end
+                     animalIdx = unique(SelectedItems(:,1));
+                     animal = obj.Tank{animalIdx};
+                     block = obj.Tank{SelectedItems};
                end
             case 'index'
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
             case 'name'
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+               [B,A] = obj.getSelectedItems('obj');
+               for i = 1:numel(B)               
+                  if isfield(B(i).Meta,'AnimalID') && ...
+                        isfield(B(i).Meta,'RecID')
+                     blockName = sprintf('%s.%s',...
+                        B(i).Meta.AnimalID,...
+                        B(i).Meta.RecID);
+                  else
+                     warning(['Missing AnimalID or RecID Meta fields. ' ...
+                        'Using Block.Name instead.']);
+                     blockName = strrep(B(i).Name,'_','.');
+                  end
+                  % target is nigelab.Block
+                  blockName = blockName(1:min(end,...
+                     B(i).Pars.Notifications.NMaxNameChars));
+               end
+               animal = {A.Name};
             otherwise
                error(['nigeLab:' mfilename ':badInputType3'],...
                   ['Unexpected "mode" value: ''%s''\n' ...
@@ -1205,13 +1222,20 @@ classdef DashBoard < handle
                         'Should not be able to enter split UI from TANK level.');
                   case 1  % animal
                      % Gets all blocks of selected animals
+                     A = nigeLab.Animal.Empty();
+                     B = nigeLab.Block.Empty();
+                     for i = 1:numel(SelectedItems)
+                        b = obj.Tank{SelectedItems(i),:};
+                        B = [B, b];
+                        A = [A, ...
+                           repmat(obj.Tank{SelectedItems(i)},1,numel(b))];
+                     end
                      A = obj.Tank{SelectedItems};
                      B = obj.Tank{SelectedItems,:};
 
                   case 2  % block
                      % Get specific subset of block or blocks
-                     animIdx = unique(SelectedItems(:,1));
-                     A = obj.Tank{animIdx};
+                     A = obj.Tank{SelectedItems(:,1)};
                      B = obj.Tank{SelectedItems};                     
                end % switch nCol
                
@@ -1225,8 +1249,13 @@ classdef DashBoard < handle
                      'One or more selected BLOCKS is not multi-animal (should not be possible).');
                end
                
-               obj.A_split = A;
-               obj.B_split = B;
+               obj.toSplit = struct('Animal',cell(numel(A),1),...
+                                    'Block',cell(numel(B),1));
+               for i = 1:numel(obj.toSplit)
+                  obj.toSplit(i).Animal = A(i);
+                  obj.toSplit(i).Block = B(i);
+               end
+               obj.toAdd = struct('Animal',{},'Block',{});
                
                obj.splitMultiAnimalsUI = ...
                   nigeLab.libs.splitMultiAnimalsUI(obj);

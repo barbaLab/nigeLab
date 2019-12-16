@@ -61,8 +61,8 @@ classdef Animal < matlab.mixin.Copyable
       TankLoc                    char        % directory for saving Animal
       RecDir                     char        % directory with raw binary data in intan format
       ExtractFlag                logical     % flag status of extraction for each block
-      MultiAnimals = false                      % flag to signal if it's a single animal or a joined animal recording
-      MultiAnimalsLinkedAnimals  nigeLab.Block  % Array of "linked" blocks
+      MultiAnimals = false                       % flag to signal if it's a single animal or a joined animal recording
+      MultiAnimalsLinkedAnimals  nigeLab.Animal  % Array of "linked" animals
    end
    
    % Default parameters
