@@ -1,5 +1,5 @@
 function [flag,p] = updateParams(blockObj,paramType)
-%% UPDATEPARAMS   Update the parameters struct property for paramType
+% UPDATEPARAMS   Update the parameters struct property for paramType
 %
 %  flag = updateParams(blockObj);
 %  flag = updateParams(blockObj,paramType);
@@ -27,7 +27,7 @@ function [flag,p] = updateParams(blockObj,paramType)
 %% PARSE INPUT
 flag = false;
 ConstructProps = {'Block','Shortcuts','Animal','Tank'};
-PropsToSkip ={'nigelColors','Tempdir','Notifications'};
+PropsToSkip ={'nigelColors','Tempdir'};
 
 % Make sure a valid parameter type is selected:
 tmp = dir(fullfile(nigeLab.utils.getNigelPath('UNC'),'+nigeLab','+defaults','*.m'));
@@ -40,11 +40,7 @@ if nargin < 2 % if not supplied, select from list...
 
    idx = promptForParamType(tmp);
    paramType = tmp{idx};
-elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
-
-    paramType = tmp;
-   flag = blockObj.updateParams(paramType);
-   return;
+   
 elseif iscell(paramType) % Use recursion to run if cell array is given
    N = numel(paramType);
    if N==0
@@ -54,9 +50,15 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
    paramType = paramType(:); % just in case it wasn't a vector for some reason;
    flag = blockObj.updateParams(paramType{1}) && blockObj.updateParams(paramType(2:N));
    return;
+elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
+
+   paramType = tmp;
+   flag = blockObj.updateParams(paramType);
+   return;
+   
 elseif any(ismember(paramType,ConstructProps))
      ... Right now no action is required here
-      [pars,~] = nigeLab.defaults.(paramType)();
+   pars = nigeLab.defaults.(paramType)();
    allNames = fieldnames(pars);
    allNames = reshape(allNames,1,numel(allNames));
    for name_ = allNames
@@ -65,6 +67,7 @@ elseif any(ismember(paramType,ConstructProps))
          blockObj.(name_{:}) = pars.(name_{:});
       end
    end
+   blockObj.Pars.(paramType) = pars;
    flag = true;
    return;
 else
@@ -80,12 +83,10 @@ else
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-propString = [paramType 'Pars'];
-blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
-
-if isprop(blockObj,propString)
-    blockObj.(propString) = blockObj.Pars.(paramType); % For compatibility
+if isempty(blockObj.Pars)
+   blockObj.Pars = struct;
 end
+blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 flag = true;
 if nargout > 1
    p = blockObj.Pars.(paramType);

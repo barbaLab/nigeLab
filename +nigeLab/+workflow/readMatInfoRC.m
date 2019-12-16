@@ -19,11 +19,11 @@ function header = readMatInfoRC(channelInfoFile)
 
 %% Check that input is valid
 acqsys = 'TDT';
-digFields = {'Paw','Beam'};
+digFields = {'Beam'};
 if exist(channelInfoFile,'file')==0
    error('Bad filename: %s',channelInfoFile);
 else
-   [path,fname,ext] = fileparts(channelInfoFile);
+   [pathName,fname,ext] = fileparts(channelInfoFile);
 end
 in = load(channelInfoFile);
 if ~ismember('info',fieldnames(in))
@@ -33,7 +33,7 @@ else
    ChannelInfo = in.info;
    data_present = true;
    fnameEpoc = strrep(fname,'_ChannelInfo','_EpocSnipInfo');
-   epocSnipInfoFile = fullfile(path,[fnameEpoc ext]);
+   epocSnipInfoFile = fullfile(pathName,[fnameEpoc ext]);
    
    if exist(epocSnipInfoFile,'file')~=0
       in = load(epocSnipInfoFile,'block');
@@ -78,7 +78,7 @@ num_analogIO_channels = 0;
 probes = [1;2];
 num_probes = 2;
 
-N = getNumSamples(path,blockName);
+N = getNumSamples(pathName,blockName);
 num_raw_samples = N;
 num_analogIO_samples = 0;
 num_digIO_samples = N;
@@ -97,7 +97,7 @@ for fieldOut = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    header.(fieldOut{:}) = fieldOutVal;
 end
 
-fChannelMask = fullfile(path,[blockName '_ChannelMask.mat']);
+fChannelMask = fullfile(pathName,[blockName '_ChannelMask.mat']);
 if exist(fChannelMask,'file')~=0
    in = load(fChannelMask,'ChannelMask');
    if isfield(in,'ChannelMask')
@@ -127,6 +127,7 @@ end
          ch = info(i).channel;
          ab = probe{p}; % 'A' or 'B' depending on probe number
          name = sprintf('%s-%03g',ab,ch);
+         c(i).name = name;
          c(i).native_channel_name = name;
          c(i).custom_channel_name = name;
          c(i).native_order = ch;
@@ -175,16 +176,14 @@ end
                   'signal',nigeLab.utils.signal('Raw'),...
                   'ml',cell(1,n),...
                   'icms',cell(1,n),...
-                  'area',cell(1,n));
+                  'area',cell(1,n),...
+                  'fs',24414.0625); % Known TDT FS
          case 'Streams'
             c = nigeLab.utils.initChannelStruct(FieldType,n,...
-                  'board_stream',0,...
                   'port_name',{'Board Digital Inputs'},...
                   'port_prefix',{'DIN'},...
-                  'port_number',6,...
-                  'electrode_impedance_magnitude',0,...
-                  'electrode_impedance_phase',0,...
-                  'signal',nigeLab.utils.signal('DigIn'));
+                  'signal',nigeLab.utils.signal('DigIn'),...
+                  'fs',24414.0625/2); % From TDT FS
          otherwise
             error('Unrecognized FieldType: %s',FieldType);
       end
@@ -199,9 +198,7 @@ end
       for i = 1:numel(names)    
          c(i).native_channel_name = sprintf('DIN-%02g',i);
          c(i).custom_channel_name = names{i};
-         c(i).native_order = i;
-         c(i).custom_order = i;
-         c(i).chip_channel = i;
+         c(i).name = names{i};
       end
 
    end

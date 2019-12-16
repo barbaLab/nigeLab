@@ -9,8 +9,6 @@ function flag = linkStreamsField(blockObj,field)
 %
 % Note: This is useful when you already have formatted data,
 %       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Parse input
 if nargin < 2
@@ -29,29 +27,36 @@ end
 
 %%
 flag = false;
-nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
+blockObj.reportProgress(str,0);
 
-updateFlag = false(1,numel(blockObj.Streams));
+% updateFlag corresponds to blockObj.Streams.(field)
+updateFlag = false(1,numel(blockObj.Streams.(field)));
 
-[pname,fname,~] = fileparts(blockObj.Paths.(field).file);
-id = strsplit(fname,'%');
-F = dir(fullfile(pname,[id{1} '*'])); % by convention I try to use F for this 'dir' struct
+[pname,f_str,ext] = fileparts(nigeLab.utils.getUNCPath(blockObj.Paths.(field).file));
 counter = 0;
-for iF = 1:numel(F)
+for iStream = 1:numel(blockObj.Streams.(field))
    
-   % Parse info from channel struct
-   fName = fullfile(F(iF).folder,F(iF).name);
+   % Parse info from channel struct. Because INIT comes first, we want to
+   % use the file name conventions already established, so we don't use
+   % dir() or something like that here. If the file is missing, then this
+   % step will be flagged and the updateStatus will reflect that part.
+   dataFileName = nigeLab.utils.getUNCPath(fullfile(...
+      pname,...
+      [sprintf(f_str,blockObj.Streams.(field)(iStream).signal.Group,...
+      blockObj.Streams.(field)(iStream).name),ext]));
 
    % If file is not detected
-   if ~exist(fullfile(fName),'file')
+   if ~exist(fullfile(dataFileName),'file')
       flag = true;
    else
       counter = counter + 1;
-      updateFlag(iF) = true;
-      blockObj.Streams.(field)(iF).data = nigeLab.libs.DiskData('Hybrid',fName);
+      updateFlag(iStream) = true;
+      blockObj.Streams.(field)(iStream).data = ...
+         nigeLab.libs.DiskData('Hybrid',dataFileName);
    end
-   pct = 100 * (counter / numel(F)); 
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
+   pct = 100 * (counter / numel(blockObj.Streams.(field))); 
+   blockObj.reportProgress(str,pct);
 end
 
 blockObj.updateStatus(field,updateFlag);

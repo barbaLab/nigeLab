@@ -43,9 +43,9 @@ if ~animalExists
 end
 
 %% UPDATE ALL OTHER PATHS TO REFLECT CORRECT ROOT (ANIMAL) PATH
-F = fieldnames(blockObj.BlockPars);
+F = fieldnames(blockObj.PathExpr);
 for iF = 1:numel(F) % For each field, update field type
-   p = blockObj.BlockPars.(F{iF});
+   p = blockObj.PathExpr.(F{iF});
    
    if contains(p.Folder,'%s') % Parse for spikes stuff
       p.Folder = sprintf(strrep(p.Folder,'\','/'),...

@@ -1,32 +1,62 @@
-function flag = linkNotes(blockObj)
-%% LINKNOTES   Connect notes metadata saved on the disk to the structure
+function flag = linkNotes(blockObj,addNotes)
+% LINKNOTES   Connect notes metadata saved on the disk to the structure
 %
 %  b = nigeLab.Block;
-%  flag = LINKNOTES(b);
+%  flag = linkNotes(b);
 %
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
+%  flag = linkNotes(b,true); Force the save dialog open
 %
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
+% flag returns true if "Notes" were saved or already exist in that location
 
 %% PARSE EXPERIMENT METADATA
+if nargin < 2
+   addNotes = false;
+end
+
+blockObj.checkCompatibility({'Notes'});
+
 flag = false;
-notes = nigeLab.defaults.Experiment();
 blockObj.updateParams('Experiment');
-blockObj.Paths.Notes.name = fullfile(sprintf(strrep(...
-   blockObj.Paths.Notes.file,'\','/'),'Experiment.txt'));
+blockObj.Paths.Notes.name = nigeLab.utils.getUNCPath(...
+   fullfile(sprintf(strrep(...
+      blockObj.Paths.Notes.file,'\','/'),...
+      blockObj.Pars.Experiment.File)));
 
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Notes'),'Notes');
-if exist(blockObj.Paths.Notes.name,'file')==0
-   copyfile(fullfile(notes.Folder,notes.File),...
+if (exist(blockObj.Paths.Notes.name,'file')==0)
+   copyfile(nigeLab.utils.getUNCPath(...
+      fullfile(blockObj.Pars.Experiment.Folder,...
+               blockObj.Pars.Experiment.File)),...
       blockObj.Paths.Notes.name,'f');
-   flag = true;
+   addNotes = true;
 end
-h = blockObj.takeNotes;
-waitfor(h);
 
-fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
+if addNotes
+   handles = nigeLab.utils.uiHandle('flag',flag);
+   h = blockObj.takeNotes;
+   lh = event.listener(h.UIFigure,'ObjectBeingDestroyed',...
+      @(s,e)setFlagValue(s,e,handles));
+   waitfor(h);
+   delete(lh);
+   updateFlag = get(handles,'flag');
+   delete(handles);
+else
+   updateFlag = blockObj.Status.Notes;
+end
+blockObj.updateStatus('Notes',updateFlag);
+flag = ~updateFlag;
 
+fprintf(1,'\b\b\b\b\b%.3d%%\n',100);
+
+   function setFlagValue(src,~,handles)
+      % SETFLAGVALUE  Callback to update the 'flag' value depending on
+      %               whether the user actually saves the notes.
+      %
+      %  src  --  nigeLab.libs.NotesUI object
+      %  handles  -- nigeLab.utils.uiHandle with 'flag' data
+      
+      set(handles,'flag',src.UserData);
+   end
 
 
 end

@@ -1,5 +1,5 @@
 function status = getStatus(blockObj,field,channel)
-%% GETSTATUS  Returns the operations performed on the block to date
+% GETSTATUS  Returns the operations performed on the block to date
 %
 %  status = GETSTATUS(blockObj);
 %  status = GETSTATUS(blockObj,field);
@@ -32,15 +32,55 @@ function status = getStatus(blockObj,field,channel)
 %   status        :     Returns false if stage is incomplete, or true if
 %                          it's complete. If stage is invalid, Status is
 %                          returned as empty.
-%
-% By: FB & MM 2018 MAECI collaboration
 
-%%
+% Handle array of block objects
+if ~isscalar(blockObj)
+   switch nargin
+      case 1
+         status = cell(size(blockObj));
+         for i = 1:numel(blockObj)
+            status{i} = blockObj(i).getStatus;
+         end
+         return;
+      case 2
+         if isempty(field)
+            status = getStatus(blockObj,blockObj(1).Fields);
+            return;
+         end
+         
+         switch blockObj.getFieldType(field)
+            case 'Channels'
+               if iscell(field)
+                  status = false(numel(blockObj),numel(field));
+               else
+                  status = false(numel(blockObj),blockObj(1).NumChannels);
+               end
+               for i = 1:numel(blockObj)
+                  status(i,:) = blockObj(i).getStatus(field);
+               end
+            otherwise
+               
+         end
+      case 3
+         if iscell(field)
+            status = false(numel(blockObj),numel(field));
+         else
+            status = false(numel(blockObj),1);
+         end
+         for i = 1:numel(blockObj)
+            status(i,:) = blockObj(i).getStatus(field,channel);
+         end
+      otherwise
+         error(['nigeLab:' mfilename ':tooManyInputArgs'],...
+            'Too many input arguments (%d; max: 3).',nargin);
+   end
+   
+   return;
+end
+
+%% Behavior depends on total number of inputs
 switch nargin
-   case 0
-      error('Not enough input arguments provided.');
-      
-   case 1 % If no input provided
+   case 1 % Only blockObj is given (1 input)
       f = fieldnames(blockObj.Status);
       stat = false(size(f));
       for i = 1:numel(f)
@@ -54,10 +94,24 @@ switch nargin
          status={'none'};
       end
       
-   case 2 % If one input given
+   case 2 % field is given (2 inputs, including blockObj)
+      
+      % If given [] field input, return all fields
+      if isempty(field)
+         status = getStatus(blockObj,blockObj.Fields);
+         return;         
+      end
       
       status = parseStatus(blockObj,field);
-      if isfield(blockObj.Pars,'Video') && status
+      if iscell(field)
+         if numel(field)==1
+            field = field{:};
+         else
+            return;
+         end
+         return;
+      end
+      if isfield(blockObj.Pars,'Video') && strcmp(field,'Video')
          if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
             switch field
                case blockObj.Pars.Video.ScoringEventFieldname
@@ -88,34 +142,66 @@ switch nargin
          end
       end
       
-   case 3 % If channel is given
+   case 3 % If channel is given (3 inputs, including blockObj)
       status = parseStatus(blockObj,field);
       status = ~any(~status(channel));
       
    otherwise
-      error('Too many input arguments (%d; max: 3).',nargin);
+      error(['nigeLab:' mfilename ':tooManyInputArgs'],...
+         'Too many input arguments (%d; max: 3).',nargin);
 end
 
    function status = parseStatus(blockObj,stage)
-      %% PARSESTATUS  Check that it is a valid stage and return the output
+      % PARSESTATUS  Check that it is a valid stage and return the output
+      %
+      %  status = parseStatus(blockObj,stage);
+      %
+      %  stage  --  Char array or cell of char arrays
+      
+      % Ensure that stage is a cell so that checks return correct number of
+      % elements (one per "word")
       if ~iscell(stage)
          stage = {stage};
       end
       opInd=ismember(blockObj.Fields,stage);
       
+      % If "stage" doesn't belong, throw an error.
       if sum(opInd) < numel(stage)
-         warning('No computation stage with that name (%s).',stage{:});
+         warning('No Field with that name (%s).',stage{:});
          status = false;
+         
+      % Otherwise, if there are too many matches, that is also not good.
       elseif (sum(opInd) > numel(stage))
          warning('Stage name is ambiguous (%s).',stage{:});
          status = false;
+         
       else
-         status = false(size(stage));
-         if numel(stage) == 1 % If only one stage, return all channel status
-            status = blockObj.Status.(stage{1});
+         maskExists = ~isempty(blockObj.Mask);
+         % If only one stage, return all channel status
+         if numel(stage) == 1 
+            status = blockObj.Status.(stage{:});
+            if maskExists
+               vec = 1:numel(status);
+               % Masked channels are automatically true
+               status(setdiff(vec,blockObj.Mask)) = true;
+            end
          else
-            for ii = 1:numel(stage) % Otherwise, just get whether stages are complete
-               status(ii) = any(blockObj.Status.(stage{ii}));
+            status = false(size(stage));
+            status = reshape(status,1,numel(status));
+            % Otherwise, just get whether stages are complete
+            for ii = 1:numel(stage) 
+               channelStage = strcmp(blockObj.getFieldType(stage{ii}),...
+                                     'Channels');
+               flags = blockObj.Status.(stage{ii});
+               % If this is a 'Channels' FieldType Stage AND there is a
+               % Channel Mask specified, then require ALL elements to be
+               % true; otherwise, just require 'Any' element to be true
+               if channelStage && maskExists
+                  status(ii) = all(flags(blockObj.Mask));
+               else
+                  status(ii) = any(flags);
+               end
+               
             end
          end
       end

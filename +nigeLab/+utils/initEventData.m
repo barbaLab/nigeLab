@@ -15,7 +15,7 @@ end
 %%
 varargout = cell(nargout,1);
 for iV = 1:nargout
-   varargout{iV} = zeros(nEvent,max(nSnippet+4,5));
+   varargout{iV} = nan(nEvent,max(nSnippet+4,5));
    varargout{iV}(:,1) = type;
    if type == 1
       varargout{iV}(:,2) = (1:nEvent).';

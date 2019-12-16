@@ -1,30 +1,38 @@
 classdef vidInfo < handle
-% VIDINFO  Class to update HUD with video information
+% VIDINFO  Constructor for nigeLab.libs.vidInfo object
 %
-%  obj = nigeLab.libs.vidInfo(figH,display_container,blockObj);
+%  obj = nigeLab.libs.vidInfo(blockObj);
+%  obj = nigeLab.libs.vidInfo(blockObj,nigelPanelObj);
 %
 %  Inputs:
-%  figH -- Handle to parent figure 
-%  display_conatiner -- Container (typically a uipanel) within
-%                       figH that will hold video graphics
 %  blockObj -- nigeLab.Block class object that has all the
 %              event-related and video-related behavior linked to
 %              it.
+%  nigelPanelObj -- nigeLab.libs.nigelPanel custom panel class
+%                    that acts as a container for all graphics
+%                    associated with vidInfo object. If this is
+%                    not specified, a default nigelPanel container
+%                    is created that fills the current figure (or
+%                    creates a figure and fills it if there is no
+%                    current figure).
 
 %% Properties
+   properties (SetAccess = immutable, GetAccess = public)
+      Block    % nigeLab.Block class object handle
+      Panel    % nigeLab.libs.nigelPanel container for display graphics
+   end
+
    properties(SetAccess = public, GetAccess = public)
-      parent          % Parent figure
-      panel           % Container for display graphics
+      
       vidPanel        % Container for video
       
-      vidListIdx = 0    % Index of current video in use (from array)
+      cur = 1           % Index of current video in use (from array)
       frame = 0;        % Frame currently viewed
       playTimer         % Video playback timer
       
-      videoStart = 0  % Video offset from neural data (seconds)
-      vid_F           % Struct from 'dir' of videos associated with object
+      offset = 0  % Video offset from neural data (seconds)
+      vid_F       % Struct from 'dir' of videos associated with object
       
-      Block % nigeLab.Block class object handle
       f     % field name for scoring events ('ScoredEvents' by default)
    end
    
@@ -36,6 +44,7 @@ classdef vidInfo < handle
       NeuralTimeDisp % Graphics object: displays frame equivalent neural time
       AnimalNameDisp % Graphics object: displays name of animal
       HUDPanel % Graphics object: container for "heads-up-display"
+      TimeDisp % Graphics object: axes conatiner for Time annotations
       VidTimeDisp % Graphics object: displays frame equivalent video time
       VidSelectPanel % Graphics object: container for video selection lists
       VidSelectListBox % Graphics object: listbox for selecting specific video
@@ -53,7 +62,7 @@ classdef vidInfo < handle
 %% Events
    events
       frameChanged  % Emitted AFTER any frame changes
-      timesUpdated  % Emitted AFTER any video/neural times are updated
+      timesChanged  % Emitted AFTER any video/neural times are updated
       vidChanged    % Emitted AFTER video is changed
       offsetChanged % Emitted AFTER offset is changed
    end
@@ -61,23 +70,39 @@ classdef vidInfo < handle
 %% Methods
    methods (Access = public)
       % Create the video information object
-      function obj = vidInfo(figH,display_container,blockObj)
+      function obj = vidInfo(blockObj,nigelPanelObj)
          % VIDINFO  Constructor for nigeLab.libs.vidInfo object
          %
-         %  obj = nigeLab.libs.vidInfo(figH,display_container,blockObj);
+         %  obj = nigeLab.libs.vidInfo(blockObj);
+         %  obj = nigeLab.libs.vidInfo(blockObj,nigelPanelObj);
          %
          %  Inputs:
-         %  figH -- Handle to parent figure 
-         %  display_conatiner -- Container (typically a uipanel) within
-         %                       figH that will hold video graphics
          %  blockObj -- nigeLab.Block class object that has all the
          %              event-related and video-related behavior linked to
          %              it.
-         
+         %  nigelPanelObj -- nigeLab.libs.nigelPanel custom panel class
+         %                    that acts as a container for all graphics
+         %                    associated with vidInfo object. If this is
+         %                    not specified, a default nigelPanel container
+         %                    is created that fills the current figure (or
+         %                    creates a figure and fills it if there is no
+         %                    current figure).
+
          % Assign key properties in constructor
-         obj.parent = figH;
-         obj.panel = display_container;
+         if ~isa(blockObj,'nigeLab.Block')
+            error('First input argument must be class nigeLab.Block');
+         end
          obj.Block = blockObj;
+         
+         if nargin < 2
+            nigelPanelObj = nigeLab.libs.nigelPanel(...
+               'Units','Normalized',...
+               'Tag','vidInfo',...
+               'Position',[0 0 1 1],...
+               'Scrollable','off');
+         end
+         obj.Panel = nigelPanelObj;
+         
          obj.f = obj.Block.Pars.Video.ScoringEventFieldName;
          obj.vid_F = getVid_F(obj.Block.Videos.v); 
          
@@ -92,6 +117,17 @@ classdef vidInfo < handle
          obj.buildVidSelectionList;
       end
        
+      % Clean up TIMERS (no VIDEOREADER associated with VIDINFO)
+      function delete(obj)
+         % DELETE  Ensure TIMER is deleted on vidInfo object destruction
+         
+         if ~isempty(obj.playTimer)
+            if isvalid(obj.playTimer)
+               delete(obj.playTimer);
+            end
+         end
+      end
+      
       % Play or pause the video
       function playPauseVid(obj)
          % PLAYPAUSEVID  Toggle between stopping and starting the "play
@@ -107,11 +143,18 @@ classdef vidInfo < handle
       end
       
       % Function that runs while video is playing from timer object
-      function advanceFrame(obj,~,~) 
-         % ADVANCEFRAME Increment the current frame by 1
+      function advanceFrame(obj,n) 
+         % ADVANCEFRAME Increment the current frame by n frames
+         %
+         %  obj.advanceFrame;    Advance frame index by 1 frame
+         %  obj.advanceFrame(n); Advance frame index by n frames
+         
+         if nargin < 2
+            n = 1;
+         end
          
          %executed at each timer period, when playing the video
-         newFrame = obj.frame + 1;
+         newFrame = obj.frame + n;
          obj.setFrame(newFrame);
       end
       
@@ -119,7 +162,12 @@ classdef vidInfo < handle
       function retreatFrame(obj,n)
          % RETREATFRAME  Go backwards n frames
          %
-         %  obj.retreatFrame(n);
+         %  obj.retreatFrame;     Rewind frame index by 1 frame
+         %  obj.retreatFrame(n);  Rewind frame index by n frames
+         
+         if nargin < 2
+            n = 1;
+         end
          
          newFrame = obj.frame - n;
          obj.setFrame(newFrame);
@@ -134,8 +182,7 @@ classdef vidInfo < handle
          %
          %  graphics = obj.getGraphics;
          
-         graphics = struct('animalName_display',obj.AnimalNameDisp,...
-            'neuTime_display',obj.NeuralTimeDisp,...
+         graphics = struct('neuTime_display',obj.NeuralTimeDisp,...
             'vidTime_display',obj.VidTimeDisp,...
             'vidSelect_listBox',obj.VidSelectListBox,...
             'image_display',obj.VidIm,...
@@ -236,12 +283,12 @@ classdef vidInfo < handle
          
          % If the given video index value is the same as the current video 
          % index, don't update anything
-         if val == obj.vidListIdx % obj.vidListIdx is initialized to zero
+         if val == obj.cur % obj.cur is initialized to zero
             return;
          end
          
-         % Update value of vidListIdx and issue 'vidChanged' notification
-         obj.vidListIdx = val;
+         % Update value of cur and issue 'vidChanged' notification
+         obj.cur = val;
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
@@ -350,10 +397,10 @@ classdef vidInfo < handle
          end
          
          % Update offset value
-         obj.videoStart = new_offset;
+         obj.offset = new_offset;
          
          % Also update the actual offset between tNeu and tVid
-         obj.tNeu = obj.tVid + new_offset(max(obj.vidListIdx,1));
+         obj.tNeu = obj.tVid + new_offset(max(obj.cur,1));
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
@@ -361,23 +408,27 @@ classdef vidInfo < handle
             fprintf(1,'-->\toffsetChanged event issued: %s\n',s);
          end 
          notify(obj,'offsetChanged');
+         
+         obj.updateTime; % Update times to reflect changed offset
       end
       
       % Add information about a new video file
-      function setVideoInfo(obj,frameRate,nFrames)
+      function setVideoInfo(obj)
          % SETVIDEOINFO  Add information about new video file
          %
-         %  obj.setVideoInfo(frameRate,nFrames); 
-         %
-         %  inputs:
-         %  frameRate  --  Frames per second of video recording
-         %  nFrames  --  Total number of frames in video recording
-         
-         obj.FPS = frameRate; 
-         obj.maxFrame = nFrames;
+         %  obj.setVideoInfo(); 
+
+         obj.FPS = obj.Block.Videos(obj.cur).v.FS;
+         obj.maxFrame = obj.Block.Videos(obj.cur).v.NFrames;
 
          obj.TimerPeriod = 2*round(1000/obj.FPS)/1000;
-         obj.playTimer = timer('TimerFcn',@obj.advanceFrame, ...
+         if ~isempty(obj.playTimer)
+            if isvalid(obj.playTimer)
+               delete(obj.playTimer);
+            end
+         end
+         
+         obj.playTimer = timer('TimerFcn',@(~,~)obj.advanceFrame, ...
                                'ExecutionMode','fixedRate');
          setFrame(obj);
       end
@@ -412,48 +463,123 @@ classdef vidInfo < handle
          
          % Update private obj.tVid property
          obj.tVid = newVidTime;
-         % Update videoStart property
-         obj.videoStart(max(obj.vidListIdx,1)) = obj.tNeu - obj.tVid;
+         % Update offset property
+         obj.offset(max(obj.cur,1)) = obj.tNeu - obj.tVid;
          
+      end
+      
+   end
+   
+   % "CALLBACK" methods assigned as event listeners
+   methods (Access = public)
+      % Callback function for 'axesClick' notification from graphics
+      function axesClickCB(obj,src,~)
+         % AXESCLICKCB  Callback that listens for 'axesClick'
+         %
+         %  addlistener(graphicsUpdaterObj,...
+         %       'axesClick',@obj.axesClickCB);
+         %
+         %  src  -- graphicsUpdaterObj
+         
+         obj.setFrameFromTime(src.timeAtClickedPoint);
+      end
+      
+      % Callback function for 'offsetChanged' notification from graphics
+      function offsetChangedCB(obj,src,~)
+         % OFFSETCHANGEDCB  Callback that listens for 'offsetChanged'
+         %                  notification from nigeLab.libs.graphicsUpdater
+         %                  object. When it hears this event, it updates
+         %                  the offset between video and neural time.
+         
+         obj.setOffset(src.offset);
+      end
+      
+      % Callback function for 'trialChanged' notification from graphics
+      function trialChangedCB(obj,src,~)
+         % TRIALCHANGEDCB  Callback function executed on 'trialChanged'
+         %                 event notification issued by 'graphicsUpdater'
+         %                 object (src).
+         %
+         %  addlistener(graphicsUpdaterObj,'trialChanged',...
+         %     @vidInfoObj.trialChangedCB);
+         %
+         %  src  --  nigeLab.libs.graphicsUpdater object. 
+         %
+         %  Uses src.tVid to update the current frame from the video time.
+         
+         obj.setFrameFromTime(src.tVid);
+         
+      end
+      
+      % Change any graphics associated with a different video
+      function vidChangedCB(obj,src,~)
+         % VIDCHANGEDCB  Callback for when graphics object issues the
+         %               'vidChanged' event notification.
+         %
+         %  addlistener(graphicsUpdaterObj,'vidChanged',...
+         %     @obj.vidChangedCB);
+         
+         % Update metadata about new video
+         obj.setVideoInfo();
+         
+         % Update the image (in case dimensions are different)
+         src.updateImageObject();
+         src.updateZoom;
       end
    end
    
    % "BUILD" methods to be referenced within this class only
    methods (Access = private)
-      function buildHeadsUpDisplay(obj,fname)
-         obj.HUDPanel = uipanel(obj.panel,'Units','Normalized',...
-            'BackgroundColor','k',...
-            'Position',[0 0.75 0.75 0.25]);
-         obj.AnimalNameDisp = annotation(obj.HUDPanel,...
-            'textbox',[0.025 0.65 0.95 0.20],...
-            'Units', 'Normalized', ...
-            'Position', [0.025 0.65 0.95 0.20], ...
-            'Color','r',...
-            'FontName','Arial',...
-            'FontSize',28,...
-            'FontWeight','bold',...
-            'String', strrep(fname,'_','\_'));
+      % Build "Heads Up Display" (HUD)
+      function buildHeadsUpDisplay(obj,label)
+         % BUILDHEADSUPDISPLAY  Builds the "Heads-Up-Display" (HUD) that
+         %                      has the animal name, current video time,
+         %                      and corresponding sync'd neural time.
+         %
+         %  obj.buildHeadsUpDisplay(label); --> From method of vidInfo obj
+         %
+         %  label: String that goes at the top about the video. Typically
+         %           this is the video filename. If not given, defaults to
+         %           'Video'
          
-         obj.VidTimeDisp = annotation(obj.HUDPanel, ...
-            'textbox',[0.125 0.35 0.25 0.20],...
+         if nargin < 2
+            label = 'Video';
+         end
+         
+         obj.HUDPanel = nigeLab.libs.nigelPanel(obj.Panel,...
+            'Units','Normalized',...
+            'String',strrep(label,'_','\_'),...
+            'Position',[0 0.8 0.75 0.2],...
+            'TitleBarLocation','bottom',...
+            'TitleBarColor',nigeLab.defaults.nigelColors('surface'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onsurface'),...
+            'Tag','HUDPanel');
+         obj.Panel.nestObj(obj.HUDPanel,'HUDPanel');
+         
+         obj.TimeDisp = axes(obj.HUDPanel.Panel,...
+            'Units','Normalized',...
+            'Position',[0 0 1 1],...
+            'Color','none',...
+            'XColor','none',...
+            'YColor','none',...
+            'NextPlot','add');
+         obj.HUDPanel.nestObj(obj.TimeDisp,'TimeDisp');
+         
+         obj.VidTimeDisp = text(obj.TimeDisp, ...
+            0.125, 0.35, 'loading...', ...
             'Units', 'Normalized', ...
-            'Position', [0.125 0.35 0.25 0.20], ...
-            'FontName','Arial',...
+            'FontName','DroidSans',...
             'FontSize',24,...
             'FontWeight','bold',...
-            'Color','w',...
-            'String','loading...');
-         
-         
-         obj.NeuralTimeDisp = annotation(obj.HUDPanel,...
-            'textbox',[0.625 0.35 0.25 0.20],...
+            'Color',nigeLab.defaults.nigelColors('onsurface'));
+ 
+         obj.NeuralTimeDisp = text(obj.TimeDisp,...
+            0.625, 0.35, 'loading', ...
             'Units', 'Normalized', ...
-            'Position', [0.625 0.35 0.25 0.20], ...
-            'Color','w',...
-            'FontName','Arial',...
+            'Color',nigeLab.defaults.nigelColors('onsurface'),...
+            'FontName','DroidSans',...
             'FontSize',24,...
-            'FontWeight','bold',...
-            'String', 'loading...');
+            'FontWeight','bold');
       end
       
       % Build video display
@@ -463,7 +589,7 @@ classdef vidInfo < handle
          %  obj.buildVidDisplay;
          
          % Make image object container axes
-         obj.VidImAx=axes(obj.panel,...
+         obj.VidImAx=axes(obj.Panel.Panel,...
             'Units','Normalized',...
             'Position',[0 0 1 0.75],...
             'NextPlot','replacechildren',...
@@ -474,6 +600,7 @@ classdef vidInfo < handle
             'XLimMode','manual',...
             'YLimMode','manual',...
             'YDir','reverse');
+         obj.Panel.nestObj(obj.VidImAx,'VidImAx');
          
          % Make image object
          C=zeros(2,2); 
@@ -489,20 +616,30 @@ classdef vidInfo < handle
          %  obj.buildVidSelectionList;
          
          % Panel for selecting which video
-         obj.VidSelectPanel = uipanel(obj.panel,'Units','Normalized',...
-            'BackgroundColor','k',...
-            'Position',[0.75 0.75 0.25 0.25]);
+         obj.VidSelectPanel = nigeLab.libs.nigelPanel(obj.Panel,...
+            'Units','Normalized',...
+            'String','Video List',...
+            'TitleFontSize',8,...
+            'TitleFontWeight','normal',...
+            'TitleStringX',0.5,...
+            'TitleAlignment','center',...
+            'Position',[0.75 0.75 0.25 0.25],...
+            'TitleBarColor',nigeLab.defaults.nigelColors('secondary'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onsecondary'),...
+            'Tag','VidSelectPanel');
+         obj.Panel.nestObj(obj.VidSelectPanel,'VidSelectPanel');
          
          % List of videos
-         obj.VidSelectListBox = uicontrol(obj.VidSelectPanel,...
+         obj.VidSelectListBox = uicontrol(obj.VidSelectPanel.Panel,...
             'Style','listbox',...
             'Units','Normalized',...
-            'FontName','Arial',...
-            'FontSize',14,...
+            'FontName','DroidSans',...
+            'FontSize',13,...
             'Position',[0.025 0.025 0.95 0.95],...
             'Value',1,...
             'String',{obj.vid_F.name}.',...
             'Callback',@obj.setCurrentVideo);
+         obj.VidSelectPanel.nestObj(obj.VidSelectListBox,'VidSelectListBox');
       end
       
    end
@@ -515,7 +652,7 @@ classdef vidInfo < handle
          %
          %  neuTime = obj.toNeuTime(vid_t);  vid_t: Video timestamp
          
-         neuTime = vid_t + obj.videoStart(obj.vidListIdx);
+         neuTime = vid_t + obj.offset(obj.cur);
       end
       
       % Get "video time" from corresponding neural timestamp
@@ -524,7 +661,7 @@ classdef vidInfo < handle
          %
          %  vidTime = obj.toVidTime(neu_t);  neu_t: Neural timestamp
          
-         vidTime = neu_t - obj.videoStart(obj.vidListIdx);
+         vidTime = neu_t - obj.offset(obj.cur);
       end  
 
    end
@@ -539,18 +676,18 @@ classdef vidInfo < handle
          %  obj.updateTime;  Uses obj.frame, obj.FPS to set video time
          %                   (obj.tVid); after setting obj.tVid, updates
          %                   neural time (obj.tNeu) with known offset
-         %                   between video and neural data (obj.videoStart)
+         %                   between video and neural data (obj.offset)
          
          % obj.frame should be set prior to "updateTime"
          obj.tVid = obj.frame / obj.FPS;
-         obj.tNeu = obj.tVid + obj.videoStart;
+         obj.tNeu = obj.tVid + obj.offset;
          if obj.verbose
             s = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.vidInfo',...
                'updateTime');
-            fprintf(1,'-->\ttimesUpdated event issued: %s\n',s);
+            fprintf(1,'-->\ttimesChanged event issued: %s\n',s);
          end 
-         notify(obj,'timesUpdated');
+         notify(obj,'timesChanged');
       end
    end
    

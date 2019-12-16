@@ -4,8 +4,6 @@ function flag = doUnitFilter(animalObj)
 %  a = nigeLab.Animal();
 %  doRawExtraction(a);
 %  flag = doUnitFilter(a);
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% DO BANDPASS FILTER ON EACH BLOCK IN ANIMAL
 B=animalObj.Blocks;

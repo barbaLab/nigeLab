@@ -22,29 +22,43 @@ switch nargin
       end
       if iscell(input),Col=nigeLab.defaults.nigelColors(input{1});return;end
       switch input
-         case {'primary',1}
+         case {'primary','g','green','highlight','hl',1}
             Col = [30, 185, 128]./255;   % green
-         case {'secondary',2}
+         case {'secondary','dg','darkgreen','button','enable',2}
             Col = [4, 93, 86]./255;      % dark green
-         case {'tertiary',3}
+         case {'disable','ddg','darkergreen',2.5}
+            Col = [4, 55, 32]./255;      % dark green
+         case {'tertiary','o','orange',3}
             Col = [255, 104, 89]./255;   % orange
-         case {'quaternary',4}
+         case {'quaternary','y','yellow',4}
             Col = [255, 207, 68]./255;   % yellow
-         case {'onprimary',1.1}
-            Col = [0, 0, 0]./255;
-         case {'onsecondary',2.1}
-            Col = [255, 255, 255]./255;
+         case {'onprimary','k','black',1.1}
+            Col = [0, 0, 0]./255; % black
+         case {'onsecondary','w','white','onbutton','enabletext',2.1} 
+            Col = [255, 255, 255]./255; % white
+         case {'disabletext','med_gray','med_grey','med'}
+            Col = [125, 125, 125]./255;
          case {'ontertiary',3.1}
-            Col = [0, 0, 0]./255;
+            Col = [0, 0, 0]./255; % black
          case {'onquaternary',4.1}
-            Col = [0, 0, 0]./255;
+            Col = [0, 0, 0]./255; % black
          case {'background','bg',0}
-            Col = [18, 18, 18]./255;
-         case {'surface','sfc',0.1}
-            Col = [55, 56, 58]./255;
+            Col = [18, 18, 18]./255; % nearly black
+         case {'surface','sfc','dark_gray','dark_grey','dark',0.1}
+            Col = [55, 56, 58]./255; % dark grey
          case {'onsurface','onsfc',0.2}
-            Col = [255, 255, 255]./255;
-            
+            Col = [255, 255, 255]./255; % white
+         case {'r','red'}
+            Col = [240, 25, 25]./255; % red
+         case {'m','magenta'}
+            Col = [240, 25, 240]./255; % magenta
+         case {'b','blue'}
+            Col = [67 129 193]./255; % blue
+         case {'light_grey','light_gray','light'}
+            Col = [220, 220, 220]./255; % light grey
+         otherwise
+            Col = [0, 0, 0]./255;
+            warning('%s is not a recognized nigelColors option.',input);
       end
    case 2
       switch source

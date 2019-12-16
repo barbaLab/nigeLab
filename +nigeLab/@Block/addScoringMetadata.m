@@ -1,5 +1,5 @@
 function addScoringMetadata(blockObj,fieldName,info)
-%% ADDSCORINGMETADATA  Appends scoring metadata to Block record
+% ADDSCORINGMETADATA  Appends scoring metadata to Block record
 %
 %  blockObj.addScoringMetadata(fieldName,info);
 %  % Adds table row in 'info' to table in blockObj.Scoring.(fieldName)

@@ -1,10 +1,8 @@
 function [pars,Fields] = Block(name)
-%% defaults.Block  Sets default parameters for BLOCK object
+% defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = nigeLab.defaults.Block();
 %  pars = nigeLab.defaults.Block('parName');
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% Modify all properties here
 % NOTE: Capitalization is important here, as some of the properties are
@@ -15,12 +13,12 @@ function [pars,Fields] = Block(name)
 % structure:
 pars             = struct;
 
-pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
+% pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
 % If you have pre-extracted data, the workflow can be customized here
 % pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
 pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
-% pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
-pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
+pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT)
+% pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
 % pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
 pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
 % pars.RecLocDefault  = 'R:/Rat';
@@ -32,7 +30,7 @@ pars.AnimalLocDefault = 'C:\MyRepos\shared\pkg\dev\newFormat\RC-05';
 pars.ForceSaveLoc = true; % create directory if save location doesn't exist
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
-
+pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % Bookkeeping for tags to be appended to different FieldTypes. The total
 % number of fields of TAG determines the valid entries for FieldTypes.
 TAG = struct;
@@ -96,15 +94,16 @@ TAG.Videos = ... % Videos: behavioral videos
 
 %% Common DynamicVarExp values
 % pars.DynamicVarExp='&Tag $Animal_ID $Rec_ID'; % IIT
-pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
+% pars.DynamicVarExp='$AnimalID $Year $Month $Day'; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp='$AnimalID $RecDate $RecTime'; % KUMC R03
 % pars.DynamicVarExp='$AnimalID $RecID &info'; % iit chronics
+pars.DynamicVarExp = '$AnimalID $RecID $RecDate $RecTime'; % IIT intan
 
 %% Common NamingConvention values
 % pars.NamingConvention={'Animal_ID','Rec_ID'}; % IIT tdt
-pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
+% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
-% pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 pars.IncludeChar='$';
 pars.DiscardChar='~';
@@ -120,7 +119,7 @@ pars.DiscardChar='~';
 %
 % Example 
 % R18-68&&R18-69_180724_141203.rhd
-pars.ManyAnimalsChar='&&';
+pars.MultiAnimalsChar='&&';
 
 %%
 Fields =  { ...
@@ -137,7 +136,7 @@ Fields =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'VidStreams';     % 13
-%    'Stim';           % 14 - hard-coded for extraction in RHS
+   'Stim';           % 14 - hard-coded for extraction in RHS
 %    'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
@@ -160,7 +159,7 @@ FieldType = { ...
    'Streams';  % 11
    'Events';   % 12
    'Videos';  % 13
-%    'Events';   % 14
+   'Events';   % 14
 %    'Channels'; % 15
    'Meta';     % 16
 %    'Meta';     % 17
@@ -183,7 +182,7 @@ OldNames       =  { ...
    {'*ANA*'};                       % 11
    {'*Press.mat';'*Beam.mat'};      % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
-%    {'*STIM*'};                      % 14
+   {'*STIM*'};                      % 14
 %    {'*DC*'};                        % 15
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
@@ -206,7 +205,7 @@ FolderNames     = {  ...
    'Digital';           % 11
    'Digital';           % 12
    'Video';             % 13 - for streams parsed from Video
-%    'StimData';          % 14
+   'StimData';          % 14
 %    'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
@@ -229,7 +228,7 @@ FileNames =  { ...
    'AnalogIO';       % 11 - hard-coded for extraction
    'DigEvents';      % 12
    'VidStream';          % 13 - for streams parsed from Videos
-%   'Stim';           % 14 - hard-coded for extraction in RHS
+   'Stim';           % 14 - hard-coded for extraction in RHS
 %   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
@@ -252,7 +251,7 @@ FileType = { ...
    'Hybrid';   % 11
    'Event';    % 12
    'Hybrid';   % 13
-%    'Event';    % 14
+   'Event';    % 14
 %    'Hybrid';   % 15
    'Hybrid';   % 16
 %    'Other';    % 17
@@ -279,6 +278,14 @@ elseif numel(FileType)~=N
 end
 pars.FileType = FileType;
 pars.FieldType = FieldType;
+pars.Fields = Fields;
+
+iFields = ismember(Fields,fieldnames(pars));
+if any(iFields)
+   error(['nigeLab:' mfilename ':badFieldsName'],...
+      'Bad Fields name: %s\n',Fields{iFields});
+end
+
 
 % Check that FieldType is viable
 pars.ViableFieldTypes = fieldnames(TAG);
@@ -336,12 +343,12 @@ end
 %% MAKE DIRECTORY PARAMETERS STRUCT
 % Concatenate identifier for each file-type:
 Del = pars.Delimiter;
-pars.BlockPars = struct;
+pars.PathExpr = struct;
 for ii=1:numel(Fields)
-   pars.BlockPars.(Fields{ii}).Folder     = FolderNames{ii};
-   pars.BlockPars.(Fields{ii}).OldFile    = OldNames{ii};
-   pars.BlockPars.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
-   pars.BlockPars.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
+   pars.PathExpr.(Fields{ii}).Folder     = FolderNames{ii};
+   pars.PathExpr.(Fields{ii}).OldFile    = OldNames{ii};
+   pars.PathExpr.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
+   pars.PathExpr.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end
 
 if nargin > 0

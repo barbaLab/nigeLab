@@ -18,8 +18,11 @@ classdef uiHandle < handle
       end
    end
    
+   % OVERRIDDEN methods
    methods (Access = public)
       function disp(obj)
+         % DISP   Override to disp method for array of uiHandle objects
+         
          if numel(obj) > 1
             for i = 1:numel(obj)
                disp(obj(i));
@@ -32,6 +35,8 @@ classdef uiHandle < handle
       
       function varargout = get(obj,varargin)
          % GET Get 'name', value properties from fields of data
+         %
+         %  varargout = get(obj,'propName1',...,'propNameK');
          
          if nargin < 2
             varargin = fieldnames(obj.data);
@@ -65,6 +70,8 @@ classdef uiHandle < handle
       
       function set(obj,varargin)
          % SET  Set 'name', value properties for data
+         %
+         %  obj.set('propName1',value1,...,'propNameK',valueK);
          
          if numel(obj) > 1
             for i = 1:numel(obj)
@@ -82,4 +89,5 @@ classdef uiHandle < handle
          end
       end
    end
+   
 end
