@@ -107,10 +107,10 @@ for iCh = blockObj.Mask
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b%.3d%%',floor(pct))
    blockObj.reportProgress('ReReferencing',pct);
+blockObj.updateStatus('CAR',true,iCh);
 end
 
 fprintf(1,'\b\b\b\bDone.\n');
-blockObj.updateStatus('CAR',updateFlag);
 flag = true;
 
    function data = doCAR(channelData,reference)

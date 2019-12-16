@@ -1,8 +1,8 @@
-function linkToData(tankObj)
-
+function flag = linkToData(tankObj)
+flag = true;
 A=tankObj.Animals;
 for ii=1:numel(A)
-    A(ii).linkToData;
+    flag = flag && A(ii).linkToData;
 end
 tankObj.save;
 end

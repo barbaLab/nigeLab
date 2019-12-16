@@ -352,7 +352,7 @@ classdef Tank < handle
       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
       flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
       
-      linkToData(tankObj)           % Link TANK to data files on DISK
+      flag = linkToData(tankObj)           % Link TANK to data files on DISK
       blockList = list(tankObj)     % List Blocks in TANK    
       flag = updatePaths(tankObj,SaveLoc)    % Update PATHS to files
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
