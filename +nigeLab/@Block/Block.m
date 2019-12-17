@@ -381,9 +381,13 @@ classdef Block < matlab.mixin.Copyable
           blockIDFile = nigeLab.utils.getUNCPath(blockObj.Paths.SaveLoc.dir,...
                                                 blockObj.FolderIdentifier);
 
-          fid = fopen(blockIDFile,'w+');
-          fwrite(fid,['BLOCK|' blockObj.Name]);
-          fclose(fid);
+          if exist(blockIDFile,'file')==0
+             fid = fopen(blockIDFile,'w');
+             if fid > 0
+                fwrite(fid,['BLOCK|' blockObj.Name]);
+                fclose(fid);
+             end
+          end
 
           % save multianimals if present
           if blockObj.MultiAnimals

@@ -31,10 +31,10 @@ PropsToSkip ={'nigelColors','Tempdir'};
 
 % Make sure a valid parameter type is selected:
 tmp = dir(fullfile(nigeLab.utils.getNigelPath('UNC'),'+nigeLab','+defaults','*.m'));
-tmp = cellfun(@(x)x(1:(end-2)),{tmp.name},'UniformOutput',false);
+allProps = cellfun(@(x)x(1:(end-2)),{tmp.name},'UniformOutput',false);
 
 % The following properties do not apply or should be set in constructor:
-tmp = setdiff(tmp,[PropsToSkip,ConstructProps]);
+tmp = setdiff(allProps,[PropsToSkip,ConstructProps]);
 
 if nargin < 2 % if not supplied, select from list...
 
@@ -52,7 +52,7 @@ elseif iscell(paramType) % Use recursion to run if cell array is given
    return;
 elseif strcmpi(paramType,'all') % otherwise, if 'all' option is invoked:
 
-   paramType = tmp;
+   paramType = [tmp,'Block'];
    flag = blockObj.updateParams(paramType);
    return;
    
@@ -72,12 +72,12 @@ elseif any(ismember(paramType,ConstructProps))
    return;
 else
    % otherwise, check if not an appropriate member
-   idx = find(strncmpi(tmp,paramType,3),1,'first');
+   idx = find(strncmpi(allProps,paramType,3),1,'first');
    if isempty(idx)
-      idx = promptForParamType(tmp);
-      paramType = tmp{idx};
+      idx = promptForParamType(allProps);
+      paramType = allProps{idx};
    else % even if it does, make sure it has correct syntax...
-      paramType = tmp{idx};
+      paramType = allProps{idx};
    end
    
 end

@@ -281,10 +281,13 @@ classdef Tank < handle
          tankIDFile = nigeLab.utils.getUNCPath(...
                      fullfile(tankObj.Paths.SaveLoc,...
                               tankObj.Pars.FolderIdentifier));
-         
-         fid = fopen(tankIDFile,'w+');
-         fwrite(fid,['TANK|' tankObj.Name]);
-         fclose(fid);
+         if exist(tankIDFile,'file')==0
+            fid = fopen(tankIDFile,'w');
+            if fid > 0
+               fwrite(fid,['TANK|' tankObj.Name]);
+               fclose(fid);
+            end
+         end
          
       end
       

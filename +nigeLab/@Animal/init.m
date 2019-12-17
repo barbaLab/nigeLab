@@ -36,7 +36,25 @@ for bb=1:numel(Recordings)
       continue;
    end
    
-   [~,~,ext] = fileparts(Recordings(bb).name);
+   [~,fname,ext] = fileparts(Recordings(bb).name);
+   nameParts = strsplit(fname,animalObj.Pars.Block.VarExprDelimiter);
+   if isempty(fname) % If it is empty,
+      if ~Recordings(bb).isdir % but it is a file,
+         if ~strcmpi(fname,animalObj.Pars.Block.FolderIdentifier)
+            skipVec(bb) = true;
+            continue;
+         elseif numel(nameParts) ~= numel(animalObj.Pars.Block.DynamicVarExp)
+            nigeLab.utils.cprintf('UnterminatedStrings',...
+               ['Mismatch between number of parsed name variables (%g) ' ...
+                'and number of variables in DynamicVarExp (%g) for: %s (skipped)\n'],...
+                numel(nameParts),numel(animalObj.Pars.Block.DynamicVarExp),fname);
+             skipVec(bb) = true;
+             continue;
+         end
+      end
+   end   
+   
+   
    
    % Cases where block is to be added will toggle this flag
    addThisBlock = false;
@@ -46,19 +64,19 @@ for bb=1:numel(Recordings)
       if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev')))
          addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
-         RecFile = fullfile(tmp.folder,tmp.name);
+         RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
          
       % handling already extracted to matfile case
       elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
          addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
-         RecFile = fullfile(tmp.folder,tmp.name);
+         RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
       
       % handling already-extracted in nigelFormat case 
       else 
-         RecFile = nigeLab.utils.getUNCPath(fullfile(...
+         RecFile = nigeLab.utils.getUNCPath(...
                animalObj.RecDir,Recordings(bb).name,...
-               nigeLab.defaults.Block('FolderIdentifier')));
+               animalObj.Pars.Block.FolderIdentifier);
          if exist(RecFile,'file')~=0
             addThisBlock = true;
             RecFile = nigeLab.utils.getUNCPath(...
@@ -92,12 +110,24 @@ for bb=1:numel(Recordings)
       
    elseif any(strcmp(ext,supportedFormats))
       addThisBlock = true;
-      RecFile = fullfile(Recordings(bb).folder,Recordings(bb).name);
+      RecFile = nigeLab.utils.getUNCPath(Recordings(bb).folder,...
+                                         Recordings(bb).name);
 
    elseif strcmp(ext,'.mat')
-      addThisBlock = true;
-      load(fullfile(Recordings(bb).folder,Recordings(bb).name),'blockObj');
-      RecFile = blockObj;
+      if endsWith(Recordings(bb).name,'_Block.mat')
+         addThisBlock = true;
+         load(fullfile(Recordings(bb).folder,Recordings(bb).name),'blockObj');
+         RecFile = blockObj;
+      elseif endsWith(Recordings(bb).name,'Info.mat')
+         addThisBlock = true;
+         RecFile = nigeLab.utils.getUNCPath(Recordings(bb).folder,...
+                                            Recordings(bb).name);
+         % Then we are "inside" the block folder and should skip everything
+         % else.
+         skipVec((bb+1):end) = true;
+      else
+         addThisBlock = false;
+      end
 
    end
    

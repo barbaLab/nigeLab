@@ -367,9 +367,13 @@ classdef Animal < matlab.mixin.Copyable
                      fullfile(animalObj.Paths.SaveLoc,...
                               animalObj.Pars.FolderIdentifier));
          
-         fid = fopen(animalIDFile,'w+');
-         fwrite(fid,['ANIMAL|' animalObj.Name]);
-         fclose(fid);
+         if exist(animalIDFile,'file')==0
+            fid = fopen(animalIDFile,'w');
+            if fid > 0
+               fwrite(fid,['ANIMAL|' animalObj.Name]);
+               fclose(fid);
+            end
+         end
       end
       
       % Overloaded function that is called when ANIMAL is being saved.

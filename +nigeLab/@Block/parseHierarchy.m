@@ -16,20 +16,63 @@ if numel(blockObj) > 1
    return;
 end
 
-iChannels = find(blockObj.getFieldTypeIndex('Channels'),1,'first');
-if isempty(iChannels)
-   error(['nigeLab:' mfilename ':noChannelsFieldType'],...
-      'No Channels FieldType Fields; unable to parse hierarchy.');
-else
-   field = blockObj.Fields{iChannels};
-end
-
-F = dir(strrep(blockObj.Paths.(field).file,'%s','*'));
 header = struct;
-header.num_raw_channels = numel(F);
-c = nigeLab.utils.initChannelStruct('Channels',blockObj.NumChannels);
 portNames = blockObj.Pars.Experiment.StandardPortNames;
-for iCh = 1:blockObj.NumChannels
+
+for iField = 1:numel(blockObj.Fields)
+   field = blockObj.Fields{iField};
+   fieldType = blockObj.getFieldType(field);
+   fileType = blockObj.getFileType(field);
+   if ismember(lower(fieldType),{'videos','meta'})
+      continue; % Skip Videos and Meta fieldtypes here
+   end
+   
+   switch fieldType
+      case 'Channels'
+         F = dir(strrep(blockObj.Paths.(field).file,'%s','*'));
+         nSamplesFieldName = sprintf('num_%s_samples',lower(field));
+         nChannelsFieldName = sprintf('num_%s_channels',lower(field));
+         if isempty(F)
+            header.(nSamplesFieldName) = 0;
+            header.(nChannelsFieldName) = 0;
+            c = nigeLab.utils.initChannelStruct('Channels',0);
+         else
+            if ismember(fileType,'Hybrid')
+               m = matfile(fullfile(F(1).folder,F(1).name));
+               header.(nSamplesFieldName) = size(m.data,2);
+            end
+            header.(nChannelsFieldName) = numel(F);
+            c = parseChannelsHierarchy(F,portNames);
+         end   
+      case 'Streams'
+         
+         c = parseStreamsHierarchy(F);
+             
+      case 'Events'         
+         c = parseEventsHierarchy(F);
+         
+   end % case fieldType
+   
+   if strcmpi(field,'raw')
+      header.acqsys = blockObj.Pars.Experiment.DefaultAcquisitionSystem;
+      header.num_probes = numel(unique([c.probe]));
+   end
+   
+   channelFieldName = sprintf('%s_channels',lower(field));
+   header.(channelFieldName) = c;
+end % iField
+
+header.sample_rate = nan;
+header.samples = nan;
+
+
+end % function parseHierarchy
+
+function c = parseChannelsHierarchy(F,portNames)
+% PARSECHANNELSHIERARCHY  Parse hierarchy for CHANNELS field type
+
+c = nigeLab.utils.initChannelStruct('Channels',numel(F));
+for iCh = 1:numel(F)
    name = F(iCh).name;
    iNum = regexp(name,'\d');
    p = str2double(name(iNum(1)));
@@ -49,11 +92,59 @@ for iCh = 1:blockObj.NumChannels
    c(iCh).electrode_impedance_magnitude = nan;
    c(iCh).electrode_impedance_phase = nan;
 end
-header.acqsys = nigeLab.Pars.Experiment.DefaultAcquisitionSystem;
-header.num_probes = numel(unique([c.probe]));
 
-header.sample_rate = nan;
-header.samples = nan;
-header.raw_chanels = c;
+end % function parseChannelsHierarchy
 
+function c = parseStreamsHierarchy(F)
+% PARSESTREAMSHIERARCHY  Parse hierarchy for STREAMS field type
+
+c = nigeLab.utils.initChannelStruct('Streams',0);
+
+for iCh = 1:numel(F)
+   [~,fname,~] = fileparts(F(iCh).name);
+   strInfo = strsplit(fname,'_');
+   if ~ismember(strInfo{end},'Stream')
+      continue;
+   else
+      cNew = nigeLab.utils.initChannelStruct('Streams',1);
+   end
+   cNew.name = strInfo{end-1};
+   cNew.native_channel_name = cNew.name;
+   cNew.custom_channel_name = cNew.name;
+   cNew.port_name = strInfo{end-2};
+   switch upper(cNew.port_name)
+      case {'DIGIN','DIGITALIN'}
+         cNew.port_prefix = 'DIN';
+      case {'DIGOUT','DIGITALOUT'}
+         cNew.port_prefix = 'DOUT';
+      case {'ANAIN','ANALOGIN','ADC'}
+         cNew.port_prefix = 'ADC';
+      case {'ANAOUT','ANALOGOUT','DAC'}
+         cNew.port_prefix = 'DAC';
+      otherwise
+         cNew.port_prefix = strInfo{end-2};
+   end % switch upper(cNew(iCh).port_name)
+   cNew.signal = nigeLab.utils.signal(strInfo{end-2});
+   c = [c, cNew]; %#ok<*AGROW>
 end
+
+end % function parseStreamsHierarchy
+
+function c = parseEventsHierarchy(F)
+% PARSEEVENTSHIERARCHY  Parse hierarchy for EVENTS field type
+
+c = nigeLab.utils.initChannelStruct('Events',0);
+
+for iCh = 1:numel(F)
+   [~,fname,~] = fileparts(F(iCh).name);
+   strInfo = strsplit(fname,'_');
+   if ~ismember(strInfo{end},'Events')
+      continue;
+   else
+      cNew = nigeLab.utils.initChannelStruct('Events',1);
+   end
+   cNew.name = strInfo{end-2};
+   c = [c, cNew];
+end
+
+end % function parseEventsHierarchy
