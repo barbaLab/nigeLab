@@ -104,14 +104,13 @@ classdef vidInfo < handle
          obj.Panel = nigelPanelObj;
          
          obj.f = obj.Block.Pars.Video.ScoringEventFieldName;
-         obj.vid_F = getVid_F(obj.Block.Videos.v); 
          
          % Initialize current video time
          obj.setVidTime(); % no input: default to tVid == 0
          
          % Make video panel display and the "Heads Up Display" (HUD)
          obj.buildVidDisplay;
-         obj.buildHeadsUpDisplay(obj.vid_F(1).name);
+         obj.buildHeadsUpDisplay(obj.Block.Videos(1).Name);
          
          % Construct video selection interface and load video
          obj.buildVidSelectionList;
@@ -637,7 +636,7 @@ classdef vidInfo < handle
             'FontSize',13,...
             'Position',[0.025 0.025 0.95 0.95],...
             'Value',1,...
-            'String',{obj.vid_F.name}.',...
+            'String',{obj.Block.Videos.Name}.',...
             'Callback',@obj.setCurrentVideo);
          obj.VidSelectPanel.nestObj(obj.VidSelectListBox,'VidSelectListBox');
       end

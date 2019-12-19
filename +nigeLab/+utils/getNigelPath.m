@@ -9,7 +9,7 @@ end
 nigelPath = mfilename('fullpath');
 nigelPath = strsplit(nigelPath,filesep);
 if isempty(nigelPath{1}),nigelPath{1}='\';end
-nigelPath = strjoin(nigelPath(1:end-3),filesep);
+nigelPath = fullfile(nigelPath{1:end-3});
 
 if strcmp(mode,'UNC')
     if isunix

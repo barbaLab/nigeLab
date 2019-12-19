@@ -15,7 +15,7 @@ mkdir('myTank_analysis')
 %% create a tank object 
 % you will be asked to select the source (myTank) and destination (you can 
 % choose every folder, we suggest to use myTank_anamysis) 
-tank = nigeLab.Tank('RecDir',fullfile(pwd,'myTank'),'SaveLoc',fullfile(pwd,'myTank_analysis')); 
+tank = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'myTank_analysis')); 
 
 % this will create a tank object with all the linked metadata and will save
 % it in the destination folder. check the folder tree that was created. If

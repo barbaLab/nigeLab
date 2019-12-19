@@ -29,8 +29,10 @@ end
 %%
 hashNum = randi(10,n,8) + OFFSET_NUM - 1;
 hashAlpha = randi(26,n,8) + OFFSET_ALPHA - 1;
-hashIndex = randperm(16);
-hash = [hashNum,hashAlpha];
-hashString = cellstr(char(hash(:,hashIndex)));
+% Set the first column to ALWAYS be a letter so that hash always returns
+% valid variable or field names for convenience
+hashIndex = randperm(15)+1;
+hash = [hashAlpha(:,1),hashNum,hashAlpha(:,2:8)];
+hashString = cellstr(char(hash(:,[1,hashIndex])));
 
 end

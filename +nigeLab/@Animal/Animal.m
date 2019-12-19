@@ -76,6 +76,7 @@ classdef Animal < matlab.mixin.Copyable
    % Listeners and Flags
    properties (SetAccess = public, GetAccess = private, Hidden = true)
       % Listeners
+      BlockListener    event.listener  % event.listener that listens for any child block changes
       Listener         event.listener  % Scalar event.listener associated with this ANIMAL
       PropListener     event.listener  % Array of handles listening to ANIMAL property changes
       
@@ -83,6 +84,9 @@ classdef Animal < matlab.mixin.Copyable
       IsEmpty = true  % Flag to indicate whether block is EMPTY
    end
    
+   events
+      StatusChanged  % Issued any time a "child" BLOCK status is changed  
+   end
    
    %% METHODS
    % PUBLIC
@@ -173,70 +177,6 @@ classdef Animal < matlab.mixin.Copyable
        
       end
       
-      % Add Blocks to Animal object
-      function addChildBlock(animalObj,blockPath,idx)
-         % ADDBLOCK  Add Block "Children" to Blocks property
-         %
-         %  animalObj.addChildBlock('blockPath'); 
-         %  --> Adds block located at 'BlockPath'
-         %
-         %  animalObj.addChildBlock(blockObj);
-         %  --> Adds the block directly to 'Blocks'
-         %
-         %  animalObj.addChildBlock(blockObj,idx);
-         %  --> Adds the block to the array element indexed by idx
-
-         if nargin < 2
-            blockPath = [];
-         end
-         
-         if ~isscalar(animalObj)
-            error(['nigeLab:' mfilename ':badInputType2'],...
-               'animalObj must be scalar.');
-         end
-
-         switch class(blockPath)
-            case 'char'
-               % Create the Children Block objects
-               blockObj = nigeLab.Block(blockPath,animalObj.Paths.SaveLoc);
-               
-            case 'nigeLab.Block'
-               % Load them directly as Children
-               if numel(blockPath) > 1
-                  blockObj = reshape(blockPath,1,numel(blockPath));
-               else
-                  blockObj = blockPath;
-               end
-               
-            case 'double'
-               if isempty(blockPath)
-                  blockObj = nigeLab.Block([],animalObj.Paths.SaveLoc);
-               end
-
-            otherwise
-               error(['nigeLab:' mfilename ':badInputType1'],...
-                  'Bad blockPath input type: %s',class(blockPath));
-         end
-         
-         
-         
-         if nargin < 3
-            idx = numel(animalObj.Blocks);
-            animalObj.Blocks = [animalObj.Blocks blockObj];
-            idx = idx:numel(animalObj.Blocks);
-         else
-            S = substruct('()',{1,idx});
-            animalObj.Blocks = builtin('subsasgn',animalObj.Blocks,...
-                                          S,blockObj);
-         end
-         for i = 1:numel(blockObj)
-            blockObj(i).Listener = ...
-                  addlistener(blockObj(i),...
-                     'ObjectBeingDestroyed',...
-                     @(~,~)animalObj.AssignNULL);
-         end
-      end
-      
       % Make sure listeners are deleted when animalObj is destroyed
       function delete(animalObj)
          % DELETE  Ensures listener handles are properly destroyed
@@ -250,14 +190,29 @@ classdef Animal < matlab.mixin.Copyable
             return;
          end
          
+         % Destroy any associated "property listener" handles
          for i = 1:numel(animalObj.PropListener)
             if isvalid(animalObj.PropListener(i))
                delete(animalObj.PropListener(i));
             end
          end
          
-         if isvalid(animalObj.Listener)
-            delete(animalObj.Listener)
+         % Destroy any associated Listener handles
+         if ~isempty(animalObj.Listener)
+            for lh = animalObj.Listener
+               if isvalid(lh)
+                  delete(lh);
+               end
+            end
+         end
+         
+         % Destroy any associated Block Listener handles
+         if ~isempty(animalObj.BlockListener)
+            for lh = animalObj.BlockListener
+               if isvalid(lh)
+                  delete(lh);
+               end
+            end
          end
          
          delete(animalObj.Blocks);
@@ -347,6 +302,8 @@ classdef Animal < matlab.mixin.Copyable
          % then assigned to animalObj.Blocks after the save. 
          B = animalObj.Blocks; % Since animalObj.Blocks(:) = [] in saveobj
          pL = animalObj.PropListener;
+         L = animalObj.Listener;
+         bL = animalObj.BlockListener;
          for b = animalObj.Blocks
             b.save;
          end
@@ -360,6 +317,8 @@ classdef Animal < matlab.mixin.Copyable
          % Reassign after save, so pointer is valid
          animalObj.Blocks = B; 
          animalObj.PropListener = pL;
+         animalObj.Listener = L;
+         animalObj.BlockListener = bL;
          
          % Save "nigelAnimal" file for convenience of identifying this
          % folder as an "ANIMAL" folder in the future
@@ -367,9 +326,13 @@ classdef Animal < matlab.mixin.Copyable
                      fullfile(animalObj.Paths.SaveLoc,...
                               animalObj.Pars.FolderIdentifier));
          
-         fid = fopen(animalIDFile,'w+');
-         fwrite(fid,['ANIMAL|' animalObj.Name]);
-         fclose(fid);
+         if exist(animalIDFile,'file')==0
+            fid = fopen(animalIDFile,'w');
+            if fid > 0
+               fwrite(fid,['ANIMAL|' animalObj.Name]);
+               fclose(fid);
+            end
+         end
       end
       
       % Overloaded function that is called when ANIMAL is being saved.
@@ -378,7 +341,8 @@ classdef Animal < matlab.mixin.Copyable
          %          value to the matfile. We do it this way so that
          %          animalObj does not save Block objects redundantly.
          
-         animalObj.Blocks(:) = [];     
+         animalObj.Blocks(:) = [];    
+         animalObj.BlockListener(:) = [];
          animalObj.PropListener(:) = [];
          animalObj.Listener(:) = [];
       end
@@ -392,6 +356,7 @@ classdef Animal < matlab.mixin.Copyable
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       
+      addChildBlock(animalObj,blockPath,idx) % Add child BLOCK
       mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
       removeBlocks(animalObj,ind)         % Disassociate a Block from Animal
       
@@ -403,13 +368,13 @@ classdef Animal < matlab.mixin.Copyable
       
       flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
-      linkToData(animalObj)                    % Link disk data of all Blocks in Animal
+      flag = linkToData(animalObj)                    % Link disk data of all Blocks in Animal
       flag = splitMultiAnimals(blockObj,tabpanel) % Split recordings that have multiple animals to separate recs
    end
    
    % PUBLIC
    % "Hidden" methods that shouldn't typically be used
-   methods (Access = public, Hidden = true)
+   methods (Access = public, Hidden = true, Static = false)
       clearSpace(animalObj,ask,usrchoice) % Remove files from disk
       updateNotes(blockObj,str) % Update notes for a recording
       
@@ -419,6 +384,31 @@ classdef Animal < matlab.mixin.Copyable
       flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
       
       N = getNumBlocks(animalObj); % Gets total number of blocks 
+   end
+   
+   % PUBLIC
+   % "Hidden" for event listener purposes
+   methods (Access = public, Hidden = true)
+      % Callback for when a "child" Block is moved or otherwise destroyed
+      function AssignNULL(animalObj)
+         % ASSIGNNULL  Does null assignment to remove a block of a
+         %             corresponding index from the animalObj.Blocks
+         %             property array, for example, if that Block is
+         %             destroyed or moved to a different animalObj. Useful
+         %             as a callback for an event listener handle.
+         
+         idx = ~isvalid(animalObj.Blocks);
+         if sum(idx) >= 1
+            animalObj.Blocks(idx) = [];
+            if numel(idx) == numel(animalObj.BlockListener)
+               if isvalid(animalObj.BlockListener(idx))
+                  delete(animalObj.BlockListener(idx));
+               end
+            end
+            animalObj.BlockListener(idx) = [];
+         end
+      end
+      
    end
     
    % PRIVATE 
@@ -452,17 +442,6 @@ classdef Animal < matlab.mixin.Copyable
    % PRIVATE
    % Listener callbacks
    methods (Access = private, Hidden = true) 
-      % Callback for when a "child" Block is moved or otherwise destroyed
-      function AssignNULL(animalObj)
-         % ASSIGNNULL  Does null assignment to remove a block of a
-         %             corresponding index from the animalObj.Blocks
-         %             property array, for example, if that Block is
-         %             destroyed or moved to a different animalObj. Useful
-         %             as a callback for an event listener handle.
-         
-         animalObj.Blocks(~isvalid(animalObj.Blocks)) = [];
-      end
-      
       % Ensure that there are not redundant Blocks in animalObj.Blocks
       % based on the .Name property of each member Block object
       function CheckBlocksForClones(animalObj)
@@ -527,11 +506,11 @@ classdef Animal < matlab.mixin.Copyable
          %  nigeLab.Animal.Empty(n); % Make n-element array of Animal
          
          if nargin < 1
-            n = [1, 1];
+            n = [0, 0];
          else
-            n = nanmax(n,1);
+            n = nanmax(n,0);
             if isscalar(n)
-               n = [1, n];
+               n = [0, n];
             end
          end
          

@@ -10,7 +10,7 @@ function flag = doUnitFilter(blockObj)
 flag = false;
 blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
-
+   
 if ~genPaths(blockObj,blockObj.AnimalLoc)
    warning('Something went wrong when generating paths for extraction.');
    return;
@@ -20,9 +20,9 @@ if ~blockObj.updateParams('Filt')
    warning('Could not update filter parameters.');
    return;
 else
-   pars = blockObj.FiltPars;
+   pars = blockObj.Pars.Filt;
 end
-
+reportProgress(blockObj,'Filtering',0);
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
 %% ENSURE MASK IS ACCURATE

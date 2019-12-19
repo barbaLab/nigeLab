@@ -146,9 +146,9 @@ new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
 
 % Create structure arrays for each type of data channel.
-raw_channels = utils.initChannelStruct('Channels',1); 
-analogIO_channels = utils.initChannelStruct('Streams',0); 
-digIO_channels = utils.initChannelStruct('Streams',0); 
+raw_channels = nigeLab.utils.initChannelStruct('Channels',0); 
+analogIO_channels = nigeLab.utils.initChannelStruct('Streams',0); 
+digIO_channels = nigeLab.utils.initChannelStruct('Streams',0); 
 
 raw_index = 1;
 analogIO_index = 1;
@@ -353,14 +353,12 @@ num_stim_samples = 0;
 for iN = 1:num_probes
    eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
 end
-for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
-   fieldOut = field{:};
-   fieldOutVal = eval(fieldOut);
-   header.(fieldOut) = fieldOutVal;
-%% Helper functions
-
 DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHD').';
+
 for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOut = field{:};
    fieldOutVal = eval(fieldOut);
    header.(fieldOut) = fieldOutVal;
+end
+
+end

@@ -75,10 +75,15 @@ classdef Tank < handle
    % Private - Listeners & Flags
    properties (SetAccess = public, GetAccess = private, Hidden = true)
       % Listeners
+      AnimalListener  event.listener  % Array of handles that listen for ANIMAL event changes
       PropListener    event.listener  % Array of handles that listen for key event changes
       
       % Flags
       IsEmpty = true  % Is this an empty tank
+   end
+   
+   events
+      StatusChanged  % Issued any time a "child" ANIMAL responds to BLOCK status change
    end
 
   
@@ -199,9 +204,17 @@ classdef Tank < handle
             return;
          end
          
+         % Delete "property listener" object array
          for i = 1:numel(tankObj.PropListener)
             if isvalid(tankObj.PropListener(i))
                delete(tankObj.PropListener(i));
+            end
+         end
+         
+         % Delete "animal listener" object array
+         for i = 1:numel(tankObj.AnimalListener)
+            if isvalid(tankObj.AnimalListener(i))
+               delete(tankObj.AnimalListener(i));
             end
          end
          
@@ -263,6 +276,7 @@ classdef Tank < handle
          % Save all Animals associated with tank
          A = tankObj.Animals; % Since tankObj.Animals(:) = []; in saveobj
          pL = tankObj.PropListener;
+         aL = tankObj.AnimalListener;
          for a = tankObj.Animals
             a.save;
          end
@@ -275,16 +289,20 @@ classdef Tank < handle
          % so pointers are still good after saving: 
          tankObj.Animals = A;         
          tankObj.PropListener = pL;
+         tankObj.AnimalListener = aL;
          
          % Save tank "ID" for convenience of identifying this folder as a
          % "nigelTank" in the future.
          tankIDFile = nigeLab.utils.getUNCPath(...
                      fullfile(tankObj.Paths.SaveLoc,...
                               tankObj.Pars.FolderIdentifier));
-         
-         fid = fopen(tankIDFile,'w+');
-         fwrite(fid,['TANK|' tankObj.Name]);
-         fclose(fid);
+         if exist(tankIDFile,'file')==0
+            fid = fopen(tankIDFile,'w');
+            if fid > 0
+               fwrite(fid,['TANK|' tankObj.Name]);
+               fclose(fid);
+            end
+         end
          
       end
       
@@ -297,6 +315,7 @@ classdef Tank < handle
          
          tankObj.Animals(:) = [];       
          tankObj.PropListener(:) = [];
+         tankObj.AnimalListener(:) = [];
       end
       
       % Returns the status of a operation/animal for each unique pairing
@@ -352,7 +371,7 @@ classdef Tank < handle
       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
       flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
       
-      linkToData(tankObj)           % Link TANK to data files on DISK
+      flag = linkToData(tankObj)           % Link TANK to data files on DISK
       blockList = list(tankObj)     % List Blocks in TANK    
       flag = updatePaths(tankObj,SaveLoc)    % Update PATHS to files
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
@@ -493,11 +512,11 @@ classdef Tank < handle
          %  tankObj = nigeLab.Tank.Empty(n); % Make n-element array Tank
          
          if nargin < 1
-            n = [1, 1];
+            n = [0, 0];
          else
-            n = nanmax(n,1);
+            n = nanmax(n,0);
             if isscalar(n)
-               n = [1, n];
+               n = [0, n];
             end
          end
          
@@ -526,8 +545,8 @@ classdef Tank < handle
                in = load(fullfile(A(ii).folder,A(ii).name));
                a.addAnimal(in.animalObj,ii);
             end
-            a.addListeners();
-            b = a;
+               a.addListeners();
+               b = a;
             return;
          else
             a.addListeners();

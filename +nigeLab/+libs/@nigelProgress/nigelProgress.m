@@ -520,7 +520,7 @@ classdef nigelProgress < handle
          switch lower(strrep(str,'.',''))
             case {'done','complete','finished','over'}
                % Ensure that it is at 100%
-               bar.setProgress(100);
+               bar.setState(100,'Done.');
                
             otherwise
                % Do nothing

@@ -87,7 +87,7 @@ classdef Block < matlab.mixin.Copyable
       Channels struct                             % Struct array of neurophysiological stream data
       Events   struct                             % Struct array of asynchronous events
       Streams  struct                             % Struct array of non-electrode data streams
-      Videos   nigeLab.libs.VidStreamsType        % Array of nigeLab.libs.VidStreamsType
+      Videos   nigeLab.libs.VideosFieldType       % Array of nigeLab.libs.VideosFieldType
       
       Graphics struct  % Struct for associated graphics objects
       
@@ -151,7 +151,7 @@ classdef Block < matlab.mixin.Copyable
       
       FolderIdentifier        char        % ID '.nigelBlock' to denote a folder is a BLOCK
       Delimiter               char        % Delimiter for name metadata for dynamic variables
-      DynamicVarExp           char        % Expression for parsing BLOCK names from raw file
+      DynamicVarExp           cell        % Expression for parsing BLOCK names from raw file
       IncludeChar             char        % Character indicating included name elements
       DiscardChar             char        % Character indicating discarded name elements
       
@@ -185,14 +185,20 @@ classdef Block < matlab.mixin.Copyable
       % Flags
       IsEmpty = true   % True if no data in this (e.g. Empty() method used)
    end
+   
+   % Key pair for "public" and "private" key identifier
+   properties (SetAccess = private, GetAccess = private, Hidden = true)
+      KeyPair  struct  % Fields are "public" and "private" (hashes)
+   end
   
    
    %% EVENTS
    events
       channelCompleteEvent
       processCompleteEvent
-      ProgressChanged
+      ProgressChanged  % Issued by nigeLab.Block/reportProgress
       MethodCanceled
+      StatusChanged    % Issued by nigeLab.Block/updateStatus
    end
    
    %% METHODS
@@ -312,9 +318,38 @@ classdef Block < matlab.mixin.Copyable
             return;
          end
          
-         if isvalid(blockObj.Listener)
-            delete(blockObj.Listener)
+         % Destroy any listeners associated with this Block
+         if ~isempty(blockObj.Listener)
+            for lh = blockObj.Listener
+               if isvalid(lh)
+                  delete(lh);
+               end
+            end
          end
+      end
+      
+      % Returns the public hash key for this block
+      function publicKey = getKey(blockObj)
+         %GETKEY  Return the public hash key for this block
+         %
+         %  publicKey = blockObj.getKey();
+         %
+         %  publicKey  --  .Public field of blockObj.KeyPair
+         %
+         %  If blockObj is array, then publicKey is returned as cell array
+         %  of dimensions equivalent to blockObj.
+         
+         n = numel(blockObj);
+         if n > 1
+            publicKey = cell(size(blockObj));
+            for i = 1:n
+               publicKey{i} = blockObj(i).getKey();
+            end
+            return;            
+         end
+         
+         publicKey = blockObj.KeyPair.Public;
+         
       end
       
       % "Cancels" method execution
@@ -342,6 +377,76 @@ classdef Block < matlab.mixin.Copyable
          end
          
          tf = blockObj.IsEmpty || builtin('isempty',blockObj);
+      end
+      
+      % Find block from block array based on public or private hash
+      function b = findByKey(blockObjArray,keyStr,keyType)
+         %FINDBYKEY  Returns the block corresponding to keyStr from array
+         %
+         %  example:
+         %  blockObjArray = tankObj{:,:}; % Get all blocks from tank
+         %  b = findKey(blockObjArray,keyStr); % Find specific block 
+         %  
+         %  b = findKey(blockObjArray,privateKey,'Private'); 
+         %  --> By default, uses 'Public' key to find the Block; this would
+         %      find the associated 'Private' key that matches the contents
+         %      of privateKey.
+         %
+         %  keyStr : Can be char array or cell array. If it's a cell array,
+         %           then b is returned as a row vector with number of
+         %           elements corresponding to number of cell elements.
+         %
+         %  keyType : (optional) Char array. Should be 'Private' or
+         %                          'Public' (default if not specified)
+         
+         if nargin < 2
+            error(['nigeLab:' mfilename ':tooFewInputs'],...
+               'Need to provide block array and hash key at least.');
+         else
+            if ~iscell(keyStr)
+               keyStr = {keyStr};
+            end
+         end
+         
+         if nargin < 3
+            keyType = 'Public';
+         else
+            if ~ischar(keyType)
+               error(['nigeLab:' mfilename ':badInputType2'],...
+                  'Unexpected class for ''keyType'' (%s): should be char.',...
+                  class(keyType));
+            end
+            % Ensure it is the correct capitalization
+            keyType = lower(keyType);
+            keyType(1) = upper(keyType(1));
+            if ~ismember(keyType,{'Public','Private'})
+               error(['nigeLab:' mfilename ':badKeyType'],...
+                  'keyType must be ''Public'' or ''Private''');
+            end
+         end
+         
+         b = nigeLab.Block.Empty(); % Initialize empty Block array
+         
+         % Loop through array of blocks, breaking the loop if an actual
+         % block is found. If block index is greater than the size of
+         % array, then returns an empty double ( [] )
+         nBlock = numel(blockObjArray);
+         if nBlock > 1
+            cur = 0;
+            while ((numel(b) < numel(keyStr)) && (cur < nBlock))
+               cur = cur + 1;
+               b = [b,findByKey(blockObjArray(cur),keyStr,keyType)]; %#ok<*AGROW>
+            end
+            return;
+         end
+         
+         % If any of the keys match, return the corresponding block.
+         thisKey = blockObj.KeyPair.(keyType);
+         idx = find(ismember(keyStr,thisKey),1,'first');
+         if ~isempty(idx)
+            b = blockObjArray(idx);
+         end
+         
       end
       
       % Overloaded SAVE method for BLOCK to handle child objects such as
@@ -381,9 +486,13 @@ classdef Block < matlab.mixin.Copyable
           blockIDFile = nigeLab.utils.getUNCPath(blockObj.Paths.SaveLoc.dir,...
                                                 blockObj.FolderIdentifier);
 
-          fid = fopen(blockIDFile,'w+');
-          fwrite(fid,['BLOCK|' blockObj.Name]);
-          fclose(fid);
+          if exist(blockIDFile,'file')==0
+             fid = fopen(blockIDFile,'w');
+             if fid > 0
+                fwrite(fid,['BLOCK|' blockObj.Name]);
+                fclose(fid);
+             end
+          end
 
           % save multianimals if present
           if blockObj.MultiAnimals
@@ -581,6 +690,31 @@ classdef Block < matlab.mixin.Copyable
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end
    
+   % PRIVATE
+   methods (Access = private)      
+      % Initialize .KeyPair property
+      function keyPair = initKey(blockObj)
+         %INITKEY  Initialize blockObj.KeyPair for use with unique ID later
+         %
+         %  keyPair = blockObj.initKey();
+         
+         % Ensure it works if input is array object
+         n = numel(blockObj);
+         if n > 1
+            keyPair = struct('Public',cell(1,n),'Private',cell(1,n));
+            for i = 1:n
+               keyPair(i) = blockObj(i).initKey();
+            end
+            return;
+         end
+         
+         hashPair = nigeLab.utils.makeHash(2);
+         keyPair = struct('Public',hashPair(1),...
+                          'Private',hashPair(2));
+         blockObj.KeyPair = keyPair;
+      end
+   end
+   
    % Static methods for multiple animals
    methods (Static)
       % Method to "cancel" execution of a function evaluation
@@ -596,11 +730,11 @@ classdef Block < matlab.mixin.Copyable
          %  blockObj = nigeLab.Block.Empty(n); % Make n-element array Block
          
          if nargin < 1
-            n = [1, 1];
+            n = [0, 0];
          else
-            n = nanmax(n,1);
+            n = nanmax(n,0);
             if isscalar(n)
-               n = [1, n];
+               n = [0, n];
             end
          end
          
@@ -617,11 +751,16 @@ classdef Block < matlab.mixin.Copyable
          %
          %  blockObj = loadobj(blockObj);
          
+         % After introducing '.KeyPair' ensure it is backwards-compatible
+         if isempty(a.KeyPair)
+            a.initKey();
+         end
+         
          if ~a.MultiAnimals
             b = a;
             return;
          end
-
+         
          % blockObj has "pointer" to 'MultiAnimalsLinkedBlocks' but until
          % they are "reloaded" the "pointer" is bad (references bl in
          % the wrong place, essentially?)

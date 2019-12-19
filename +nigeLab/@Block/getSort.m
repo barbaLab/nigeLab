@@ -60,12 +60,47 @@ fName = fullfile(sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
     
 if getStatus(blockObj,'Sorted',ch) % If sorting already exists, use those
     clusterIndex = getCIFromExistingFile(blockObj,ch);
-    
+    if ~any(clusterIndex) % if all indexes are zero
+        clusterIndex = blockObj.getClus(ch);
+    end
 elseif exist(fName,'file')~=0       % Technically, files could exist but Status not updated...
     
     clusterIndex = getCIFromExistingFile(blockObj,ch);
-    updateStatus(blockObj,'Sorted',ch)
+    if ~any(clusterIndex) % if all indexes are zero
+        clusterIndex = blockObj.getClus(ch);
+        ts = getSpikeTimes(blockObj,ch);
+        n = numel(ts);
+        data = [zeros(n,2) clusterIndex ts zeros(n,1)];
+        if exist(blockObj.Paths.Sorted.dir,'dir')==0
+            mkdir(blockObj.Paths.Sorted.dir);
+        end
+        blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+            fName,data,'access','w');
+        if ~suppressText
+            fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+                blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+            
+        end
+    end
+    updateStatus(blockObj,'Sorted',true,ch);
+
+elseif getStatus(blockObj,'Clusters',ch)
+    clusterIndex = blockObj.getClus(ch);
+    ts = getSpikeTimes(blockObj,ch);
+    n = numel(ts);
+    data = [zeros(n,2) clusterIndex ts zeros(n,1)];
+    if exist(blockObj.Paths.Sorted.dir,'dir')==0
+        mkdir(blockObj.Paths.Sorted.dir);
+    end
+    blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+        fName,data,'access','w');
+    if ~suppressText
+        fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+            blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+        
+    end
     
+    updateStatus(blockObj,'Sorted',true,ch);
 elseif getStatus(blockObj,'Spikes',ch) % but spikes do
     % initialize the 'Sorted' DiskData file
     
