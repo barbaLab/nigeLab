@@ -1,17 +1,34 @@
 classdef VidStreamsType < handle
    % VIDSTREAMSTYPE  Handle class for managing blockObj.Streams.VidStreams
+   %
+   % VIDSTREAMSTYPE Methods:
+   % VidStreamsType - Class constructor
+   %
+   % GetStream - Returns the SubStream corresponding to 'streamName'
+   %     Note that 'substreams' are slightly different than 'vidstream' and
+   %     can be thought of as a more general 'stream' type (e.g. the core
+   %     data content of both 'VidStreams' and 'Streams' end up being the
+   %     same in 'SubStreams').
+   % 
+   % VIDSTREAMSTYPE Properties:
+   % at - (Private) struct that contains the stream data
+   %     --> This should be referenced using `GetStream` method <--
+   %
+   % Block - (Private) handle referencing the associated recording Block
+
    
-   properties (GetAccess = public, SetAccess = private)
+   properties (GetAccess = private, SetAccess = private)
       at  % Struct with fields 'info', 'data', 't', and 'fs'
 %       --> info  % 'nigeLab.utils.signal' class object
 %       --> diskdata  % Empty on init. Becomes a matfile when linked
+%       --> tag     % Tag for quick reference of a given vidStream
 %       --> t     % Times corresponding to video frames
 %       --> fs    % Sample rate
-
-      v     % nigeLab.libs.VideosFieldType class object: handles Video
-      fname % Filename for this VIDEO
+      
+      Block nigeLab.Block % References the block it is attached to
    end
 
+   % PUBLIC
    % CONSTRUCTOR
    methods (Access = public)
       % Class constructor
@@ -58,105 +75,57 @@ classdef VidStreamsType < handle
             end
             return;
          end
-         
-         % Set the 'v' property, which is a wrapper for interacting with
-         % the actual Video file
-         obj.v = videosFieldObj;
-         obj.at = struct('info',cell(numel(vidStreamSignals),1),...
-            'diskdata',cell(numel(vidStreamSignals),1),...
-            't',cell(numel(vidStreamSignals),1),...
-            'fs',cell(numel(vidStreamSignals),1));
+
+         % '.at' is the actual reference to the streams
+         obj.at = nigeLab.utils.initChannelStruct('VidStreams',...
+                     numel(vidStreamSignals));
          for iA = 1:numel(obj.at)
             obj.at(iA).info = vidStreamSignals(iA);
-            obj.at(iA).t = videosFieldObj(iA).getFrameTimes;
-            obj.at(iA).fs = obj.v.FS;
+            obj.at(iA).t = videosFieldObj.getFrameTimes;
+            obj.at(iA).tag = obj.getNameStr(iA);
+            obj.at(iA).fs = videosFieldObj.FS;
          end
                  
       end
    end
    
-   % "GET" and "SET" methods
-   methods (Access = public)
-      % Get filename of video using UNC path
-      function [filename,fileIsPresent] = getFile(obj,field)
-         % GETFILE  Returns filename using UNC path convention
+   % PUBLIC
+   % Currently just 'getStream'
+   methods (Access = public)    
+      % Method to find the index of the corresponding stream
+      function idx = findIndex(obj,argMatch,matchType)
+         % FINDINDEX  Returns an index of the corresponding stream
+         %
+         %  idx = obj.findIndex(argMatch,matchType)
+         %
+         %  If obj is given as an array input, then output is index to
+         %  match the corresponding signal argument and type. argMatch and
+         %  matchType may be specified as cell arrays, in which case the
+         %  matching signal must match each element-wise combination.
          
          if numel(obj) > 1
-            [filename,fileIsPresent] = nigeLab.utils.initCellArray(1,numel(obj));
+            idx = nan(size(obj));
             for i = 1:numel(obj)
-               [filename{i},fileIsPresent{i}] = obj(i).getFile(field);
-            end
-            fileIsPresent = cellfun(@all,fileIsPresent,'UniformOutput',true);
-            fileIsPresent = reshape(fileIsPresent,1,numel(fileIsPresent));
-            return;
-         end
-         
-         switch lower(field)
-            case {'video', 'videos'}
-               [filename,fileIsPresent] = obj.v.getFile;
-            case {'vidstreams','vidstream'}
-               [filename,fileIsPresent] = obj.checkData;
-            otherwise
-               error('Unexpected ''field'' value: %s',field);
-         end
-      end
-      
-      % Returns the 'name' field for all elements of 'field' and also the
-      % indexing as a 2-column vector where the first column indexes Videos
-      % elements and second indexes either (.at) or (.v) elements.
-      function [name,idx] = getName(obj,field)
-         % GETNAME  Returns name and 2-column indexing vector for streams
-         %
-         % [name,idx] = obj.getName('video');      Returns video names
-         % [name,idx] = obj.getName('vidstreams'); Returns stream names
-         %
-         % Rows of idx correspond to elements of name. The first column of
-         % idx represents indexing into the obj (blockObj.Videos) array,
-         % while the second column represents indexing into the '.v' or
-         % '.at' streams for 'video' and 'vidstreams' respectively.
-         
-         if numel(obj) > 1
-            [name,idx] = nigeLab.utils.initCellArray(numel(obj),1);
-            for i = 1:numel(obj)
-               [name{i},idx{i}] = obj(i).getName(field);
+               tmp = obj(i).findIndex(argMatch,matchType);
+               if ~isempty(tmp)
+                  idx(i) = tmp;
+               end
             end
             return;
          end
          
-         switch lower(field)
-            case {'video','videos'}
-               [name,idx] = obj.getVidName;
-            case {'vidstreams','vidstream'}
-               [name,idx] = obj.getVidStreamName;
-            otherwise
-               error('Unrecognized fieldtype: %s',field);
+         if ~iscell(argMatch)
+            argMatch = {argMatch};
          end
-      end
-      
-      % Returns name string to use in file name
-      function str = getNameStr(obj,iVid)
-         % GETNAMESTR  Parse naming in a consistent format
-         %
-         %  str = obj.getNameStr; Returns name as %s-%s-%s formatted char
-         %                        --> One cell element for each VidStream
-         %                             if there are multiple per video.
-         %
-         %  str = obj.getNameStr(iVid); Returns name as char array
-         %                                (%s-%s-%s formatted)
-         
-         
-         if nargin < 2
-            str = cell(numel(obj.at),1);
-            for i = 1:numel(str)
-               str{i} = getNameStr(obj,i);
-            end
-            return;
+         if ~iscell(matchType)
+            matchType = {matchType};
          end
          
-         str = sprintf('%s-%s-%s',...
-            obj.at(iVid).info.Source,...
-            obj.at(iVid).info.Name,...
-            obj.at(iVid).info.Group);
+         tf = true(size(obj.at));
+         for i = 1:numel(argMatch)
+            tf = tf & belongsTo(obj.at.info,argMatch{i},matchType{i});
+         end
+         idx = find(tf,1,'first');
       end
       
       % Returns the VidStream corresponding to streamName
@@ -178,7 +147,7 @@ classdef VidStreamsType < handle
          %                 together.  
          
          if nargin < 5
-            stream = nigeLab.utils.initChannelStruct('substreams',1);
+            stream = nigeLab.utils.initChannelStruct('SubStreams',0);
          end
          
          if nargin < 4
@@ -199,7 +168,7 @@ classdef VidStreamsType < handle
             return;
          end
          
-         idx = belongsTo(obj.at.info,streamName,'Name') & ...
+         idx = obj.belongsTo(obj.at.info,streamName,'Name') & ...
                belongsTo(obj.at.info,source,'Source');
          if sum(idx) < 1
             return;
@@ -217,60 +186,67 @@ classdef VidStreamsType < handle
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
       end
       
-      % Set the UNC Path for this object
-      function setPath(obj,uncPath,idx)
-         % SETPATH  Set UNC path (filename) for associated files
-         
-         if nargin < 3
-            idx = 1;
-         end
-         
-         if numel(obj) > 1
-            for i = 1:numel(obj)
-               obj(i).setPath(uncPath,i);
-            end
-            return;
-         end
-         obj.fname = cell(numel(obj.at),1);
-         if isfield(obj.v.meta,obj.v.pars.MovieIndexVar)
-            idx = str2double(obj.v.meta.(obj.v.pars.MovieIndexVar));
-         end
-         
-         for i = 1:numel(obj.at)
-            obj.fname{i} = fullfile(sprintf(strrep(uncPath,'\','/'),...
-               obj.getNameStr(i),idx,'mat'));
-         end
-      end
-      
    end
    
-   % Private "GET" methods
-   methods (Access = private)
-      % Return video file NAME (without extension)
-      function [name,idx] = getVidName(obj,idx)
-         % GETVIDNAME  Returns video file NAME (without extension)
+   % PRIVATE
+   % "GET" methods
+   methods (Access = private)  
+      % Check to see if data is present and if not, initialize the stream
+      function [filename,fileIsPresent] = checkData(obj)
+         % CHECKDATA    Check if data is present, if not, make file
          %
-         %  name = obj.getVidName;  Name is a char array if only one
-         %                          element in obj, otherwise it is a cell
-         %                          array where each is a char array
-         %                          corresponding to an element of obj.
+         %  [filename, fileIsPresent] = obj.checkData();
+         
+         filename = cell(1,numel(obj.at));
+         fileIsPresent = false(1,numel(obj.at));
+         
+         
+         for i = 1:numel(obj.at)
+            fName = nigeLab.utils.getUNCPath(obj.fname{i});
+            if isempty(fName)
+               error('Filenames not yet set using obj.setPath.');
+            end
+            
+            if exist(fName,'file')==0
+               diskPars = struct('format','Hybrid',...
+                  'name',fName,...
+                  'size',size(obj.at(i).t),...
+                  'access','w',...
+                  'class','single');
+               obj.at(i).diskdata = nigeLab.utils.makeDiskFile(diskPars);
+            else
+               fileIsPresent(i) = true;
+               obj.at(i).diskdata = nigeLab.libs.DiskData('Hybrid',fName);
+            end
+            filename{i} = fName;
+         end
+      end
+      
+      % Returns name string to use in file name
+      function str = getNameStr(obj,iStream)
+         % GETNAMESTR  Parse naming in a consistent format
+         %
+         %  str = obj.getNameStr; Returns name as %s-%s-%s formatted char
+         %                        --> One cell element for each VidStream
+         %                             if there are multiple per video.
+         %
+         %  str = obj.getNameStr(iStream); Returns name as char array
+         %                                (%s-%s-%s formatted)
          
          if nargin < 2
-            idx = [1,1];
-         end
-         
-         if numel(obj) > 1
-            name = cell(size(obj));
-            idx = repmat((1:numel(obj)).',1,2);
-            for i = 1:size(idx,1)
-               name{i} = obj(idx(i,1)).getVidName(idx(i,:));
+            str = cell(numel(obj.at),1);
+            for i = 1:numel(str)
+               str{i} = getNameStr(obj,i);
             end
             return;
          end
          
-         [~,name,~] = fileparts(obj.v.Name);
+         str = sprintf('%s-%s-%s',...
+            obj.at(iStream).info.Source,...
+            obj.at(iStream).info.Name,...
+            obj.at(iStream).info.Group);
       end
-      
+
       % Return video stream NAME
       function [name,idx] = getVidStreamName(obj,idx)
          % GETVIDSTREAMNAME  Returns video stream NAME from signal info
@@ -310,36 +286,7 @@ classdef VidStreamsType < handle
          
          name = obj.at(idx(1,2)).info.Name;
       end
-   end
-   
-   methods (Access = private)
-      function [filename,fileIsPresent] = checkData(obj)
-         % CHECKDATA    Check if data is present, if not, make file
-         
-         filename = cell(1,numel(obj.at));
-         fileIsPresent = false(1,numel(obj.at));
-         
-         
-         for i = 1:numel(obj.at)
-            fName = nigeLab.utils.getUNCPath(obj.fname{i});
-            if isempty(fName)
-               error('Filenames not yet set using obj.setPath.');
-            end
-            
-            if exist(fName,'file')==0
-               diskPars = struct('format','Hybrid',...
-                  'name',fName,...
-                  'size',size(obj.at(i).t),...
-                  'access','w',...
-                  'class','single');
-               obj.at(i).diskdata = nigeLab.utils.makeDiskFile(diskPars);
-            else
-               fileIsPresent(i) = true;
-               obj.at(i).diskdata = nigeLab.libs.DiskData('Hybrid',fName);
-            end
-            filename{i} = fName;
-         end
-      end
+
    end
    
 end

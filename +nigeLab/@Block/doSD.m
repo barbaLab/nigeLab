@@ -25,7 +25,7 @@ if ~blockObj.updateParams('SD')
     return;
 end
 
-pars = blockObj.SDPars;
+pars = blockObj.Pars.SD;
 pars.FS = blockObj.SampleRate;
 
 %% UPDATE STATUS FOR THESE STAGES
@@ -35,57 +35,51 @@ blockObj.updateStatus('Clusters',false,blockObj.Mask);
 blockObj.updateStatus('Sorted',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-blockObj.reportProgress('Detecting Spikes',0);
+str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spikes');
+str = sprintf('Detecting %s',str);
+blockObj.reportProgress(str,0);
 for iCh = blockObj.Mask
-   
-   % Parse file-name information
-   pNum  = num2str(blockObj.Channels(iCh).probe);
-   chNum = blockObj.Channels(iCh).chStr;
-   
-   fNameClus = sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
-      pNum,chNum);
-   fNameSort = sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
-      pNum,chNum);
-   
-   
-   % Get pointer to the correct data:
-   if getStatus(blockObj,'CAR',iCh)
-      data=blockObj.Channels(iCh).CAR(:);  % Load CAR-filtered data
-   elseif getStatus(blockObj,'Filt',iCh)
-      data=blockObj.Channels(iCh).Filt(:); % Load filtered data
-   else
-      warning('Must first perform unit filtering and re-referencing.');
-      disp('Doing those now...');
-      doUnitFilter(blockObj);
-      doReReference(blockObj);
-      doSD(blockObj);
-      return;
-   end
-   
-   % Do the detection:
-   if (iCh == 1)
-      [spk,feat,art,blockObj.SDPars] = PerChannelDetection(data,pars);
-   else
-      [spk,feat,art] = PerChannelDetection(data,blockObj.SDPars);
-   end
-   
-   if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
-      error('Could not save spiking events for channel %d.',iCh);
-   end
-   
-   % Initialize Clusters files (could be modified later):
-   if exist(fullfile(fNameClus),'file')==0
-      blockObj.getClus(iCh,true);
-   end
-   
-   % Initialize Sorted files:
-   if exist(fullfile(fNameSort),'file')==0
-      blockObj.getSort(iCh,true);
-   end
-   blockObj.updateStatus('Spikes',true,iCh);
-%    blockObj.notifyUser('doSD','Per-Channel Detection',iCh,max(blockObj.Mask));
-   
-      
+    
+    % Parse file-name information
+    pNum  = num2str(blockObj.Channels(iCh).probe);
+    chNum = blockObj.Channels(iCh).chStr;
+    
+    fNameClus = sprintf(strrep(blockObj.Paths.Clusters.file,'\','/'),...
+        pNum,chNum);
+    fNameSort = sprintf(strrep(blockObj.Paths.Sorted.file,'\','/'),...
+        pNum,chNum);
+    
+    
+    % Get pointer to the correct data:
+    if getStatus(blockObj,'CAR',iCh)
+        data=blockObj.Channels(iCh).CAR(:);  % Load CAR-filtered data
+    elseif getStatus(blockObj,'Filt',iCh)
+        data=blockObj.Channels(iCh).Filt(:); % Load filtered data
+    else
+        warning('Must first perform unit filtering and re-referencing.');
+        disp('Doing those now...');
+        doUnitFilter(blockObj);
+        doReReference(blockObj);
+        doSD(blockObj);
+        return;
+    end
+    
+    % Do the detection:
+    if (iCh == 1)
+        [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars);
+    else
+        [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD);
+    end
+    
+    if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
+        error('Could not save spiking events for channel %d.',iCh);
+    end
+
+    blockObj.updateStatus('Spikes',true,iCh);
+    pct = sum(iCh > blockObj.Mask)./numel(blockObj.Mask) * 100;
+    blockObj.reportProgress(str,pct,'toWindow');
+    blockObj.reportProgress('Spike Detection.',pct,'toEvent');
+    
 end
 
 % Indicate that it is finished at the end

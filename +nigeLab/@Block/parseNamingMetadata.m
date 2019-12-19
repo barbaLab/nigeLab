@@ -19,11 +19,13 @@ function meta = parseNamingMetadata(blockObj)
 
 %%
 % Parse name and extension. "nameParts" contains parsed variable strings:
+pars = blockObj.Pars.Block;
 [pname,fName,blockObj.FileExt] = fileparts(blockObj.RecFile);
+
 if strcmp(blockObj.FileExt,blockObj.FolderIdentifier)
    [~,fName,~] = fileparts(pname);  % Go back one level
 end
-nameParts=strsplit(fName,[blockObj.Delimiter {'.'}]);
+nameParts=strsplit(fName,[pars.VarExprDelimiter, '.']);
 
 % Parse variables from defaults.Block "template," which match delimited
 % elements of block recording name:
@@ -31,6 +33,7 @@ regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
    blockObj.IncludeChar,...
    blockObj.DiscardChar);
 splitStr = regexp(blockObj.DynamicVarExp,regExpStr,'match');
+splitStr = [splitStr{:}];
 
 % Find which delimited elements correspond to variables that should be 
 % included by looking at the leading character from the defaults.Block
@@ -73,9 +76,35 @@ if sum(ismember(f,{'RecDate'})) < 1
    end
 end
 
+% Make sure that AnimalID and RecID are there
+special = {'RecID','AnimalID'}; % These Meta fields MUST be present
+for ii = 1:numel(special)
+   f = special{ii};
+   if ~isfield(meta,f)
+      if ~isfield(pars.SpecialMeta,f)
+         error(['nigeLab:' mfilename ':configConflict'],...
+            ['%s is configured to use %s as a "special field,"\n' ...
+             'but it is not configured in %s.'],...
+             nigeLab.utils.getNigeLink('nigeLab.Block','parseNamingMetadata'),...
+             f,nigeLab.utils.getNigeLink('nigeLab.defaults.Block'));
+      end
+      if isempty(pars.SpecialMeta.(f).vars)
+         warning('No RecID associated with recording. Making random hash.');
+         meta.(f) = nigeLab.utils.makeHash();
+         meta.(f) = meta.(f){:};
+      else
+         tmp = cell(size(pars.SpecialMeta.(f).vars));
+         for i = 1:numel(pars.SpecialMeta.(f).vars)
+            tmp{i} = meta.(pars.SpecialMeta.(f).vars{i});
+         end
+         meta.(f) = strjoin(tmp,pars.SpecialMeta.(f).cat);
+      end
+   end
+end
+
 % Similarly, if recording_time is empty, still keep it as a field in
 % metadata associated with the BLOCK.
-if sum(ismember(f,{'RecTime'})) < 1
+if ~isfield(meta,'RecTime')
    meta.RecTime = 'hhmmss';
 end
 

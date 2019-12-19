@@ -5,16 +5,14 @@ function flag = linkVideosField(blockObj,field)
 %  flag = LINKVIDEOSFIELD(b);
 %
 %  Returns flag as true when a file is missing.
-%
-% Note: This is useful when you already have formatted data,
-%       or when the processing stops for some reason while in progress.
-%
-% By: MAECI 2019 collaboration (Freddy & Max)
+
 
 %%
 flag = false;
 str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
-
+if isempty(blockObj.Videos)
+   return;
+end
 [~,updateFlags] = getFile(blockObj.Videos,field);
 blockObj.updateStatus(field,updateFlags);
 pct = round((sum(updateFlags)/numel(updateFlags)) * 100);

@@ -1,5 +1,5 @@
 function Recluster(obj)
-par = nigeLab.defaults.SPC;
+par = nigeLab.defaults.AutoClustering;
 
 ch = obj.Parent.UI.ch;
 unit = obj.Spikes.CurClass;

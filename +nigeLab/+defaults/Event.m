@@ -31,13 +31,22 @@ pars = struct;
 %    'Grasp';           % 14)
 %    'Support';         % 15)
 %    'Complete';        % 16)
-%    };           
-pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with different timestamps needs its own 'Events' element
-   'Reach';       % 1)
-   'Grasp';       % 2)
-   'Support';     % 3)
-   'Complete';    % 4)
-   };            
+%    };        
+pars.Name = {...    % Example B (RHD)
+   'trialrunning';    % 1) Trial running "HIGH" events
+   'beambreak';       % 2) Beam break events
+   'nosepoke';        % 3) Nose-poke beam break
+   'Reach';           % 4) Reach scored onset
+   'Grasp';           % 5) Grasp scored onset
+   'Support';         % 6) Support scored onset
+   'Complete';        % 7) Complete scored onset
+   };    
+% pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with different timestamps needs its own 'Events' element
+%    'Reach';       % 1)
+%    'Grasp';       % 2)
+%    'Support';     % 3)
+%    'Complete';    % 4)
+%    };            
    
 % This should match number of elements of Events:
 % pars.Fields = {...    % Example A (RHS)
@@ -59,40 +68,56 @@ pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with 
 %    'ScoredEvents';    % 16)
 %    };
 
-pars.Fields = {...   % KUMC: "RC" project (MM)
-   'ScoredEvents';   % 1) % Should match one of the elements from
-   'ScoredEvents';   % 2) % defaults.Block cell array "Fields"
-   'ScoredEvents';   % 3)
-   'ScoredEvents';   % 4)
+pars.Fields = {...    % Example B (RHD) -- Audio task
+   'DigEvents';       % 1)
+   'DigEvents';       % 2)
+   'DigEvents';       % 3)
+   'ScoredEvents';    % 4)
+   'ScoredEvents';    % 5)
+   'ScoredEvents';    % 6)
+   'ScoredEvents';    % 7)
    };
+
+% pars.Fields = {...   % KUMC: "RC" project (MM)
+%    'ScoredEvents';   % 1) % Should match one of the elements from
+%    'ScoredEvents';   % 2) % defaults.Block cell array "Fields"
+%    'ScoredEvents';   % 3)
+%    'ScoredEvents';   % 4)
+%    };
 
 % Key that defines whether events are 'manual' (e.g. video scoring) or 
 % 'auto' (e.g. parsed from stream in some way). Should have one entry for
 % any unique entry to 'pars.Fields'; "extra" keys are okay. Any data that
 % will have video scoring must have at least one key with the 'manual' type
 % included in 'pars.Fields'.
-pars.EventType = struct(... % KUMC: "RC" project (MM)
-   'ScoredEvents','manual');
+
+% pars.EventType = struct(... % KUMC: "RC" project (MM)
+%    'ScoredEvents','manual');
 
 % pars.EventType = struct(... % Example A
 %    'ScoredEvents','manual',...
 %    'DigEvents','auto',...
 %    'Stim','auto');
 
-% For automatic detection
-pars.TrialDetectionInfo = struct(... % For sync using parsed 'Paw_Likelihood'
-   'Field','VidStreams',...
-   'Source','Front',... % "source camera" (unused for "non-VidStreams")
-   'Name','Paw_Likelihood',...
-   'Debounce',0.250,...  % Debounce time (seconds)
-   'Threshold',0.6,...   % Threshold for ( > value) to HIGH
-   'Type','Rising'); % Can be 'Rising', 'Falling', 'All' (edge transition type)
-                     % Can also be 'Level' for analog value changes in discrete steps
+pars.EventType = struct(... % Example B
+   'ScoredEvents','manual',...
+   'DigEvents','auto');
 
-pars.EventDetectionType = [];
+% For automatic detection
+
+% pars.TrialDetectionInfo = struct(... % For sync using parsed 'Paw_Likelihood' (RC)
+%    'Field','VidStreams',...
+%    'Source','Front',... % "source camera" (unused for "non-VidStreams")
+%    'Name','Paw_Likelihood',...
+%    'Debounce',0.250,...  % Debounce time (seconds)
+%    'Threshold',0.6,...   % Threshold for ( > value) to HIGH
+%    'Type','Rising'); % Can be 'Rising', 'Falling', 'All' (edge transition type)
+%                      % Can also be 'Level' for analog value changes in discrete steps
+% pars.EventDetectionType = []; % For RC
+
 pars.MaxTrialDistance = 1.5; % Maximum time between within-trial events
 
-% pars.TrialDetectionInfo = struct(... % For sync using LED
+% pars.TrialDetectionInfo = struct(... % For sync using LED (Example A)
 %    'Field','DigIO',...
 %    'Name','TrialRunning',...
 %    'Source',[],...
@@ -113,6 +138,18 @@ pars.MaxTrialDistance = 1.5; % Maximum time between within-trial events
 %    'Falling';   % 11)
 %    'Level';     % 12) (skip 13-16 because not 'auto' field)
 %    };
+pars.TrialDetectionInfo = struct(... % For sync using LED (Example B)
+   'Field','DigIO',...
+   'Name','trialrunning',...
+   'Source',[],...
+   'Debounce',0.250,...
+   'Threshold',0.5,...
+   'Type','Rising');
+pars.EventDetectionType = {... % Example B (RHD)
+   'Rising';    % 1)
+   'Rising';    % 2) 
+   'Rising';    % 3) (skip 4-7 because not 'auto' fields)
+   };
 
 %% Error parsing (do not change)
 % Check that number of elements of Name matches that of Fields

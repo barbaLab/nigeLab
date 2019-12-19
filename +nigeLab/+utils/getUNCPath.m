@@ -39,7 +39,7 @@ end
 if iscell(p)
    UNCPath = cell(size(p));
    for i = 1:numel(p)
-      UNCPath{i} = getUNCPath(p{i});
+      UNCPath{i} = nigeLab.utils.getUNCPath(p{i});
    end
    return;
 end

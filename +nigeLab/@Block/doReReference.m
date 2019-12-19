@@ -12,13 +12,10 @@ flag = false; % Create flag for reporting successful execution
 blockObj.checkActionIsValid();
 nigeLab.utils.checkForWorker('config');
 
-
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-
-
 
 if isempty(blockObj.Mask) % need to set the mask before doing CAR
    warning(sprintf(['Channel Mask (blockObj.Mask) has not been set yet.\n' ...
@@ -33,8 +30,8 @@ nSamples = length(blockObj.Channels(1).Filt);
 nProbes = numel(probe);
 refMean = zeros(nProbes,nSamples);
 
-doSuppression = blockObj.FiltPars.STIM_SUPPRESS;
-stimProbeChannel     = blockObj.FiltPars.STIM_P_CH;
+doSuppression = blockObj.Pars.Filt.STIM_SUPPRESS;
+stimProbeChannel     = blockObj.Pars.Filt.STIM_P_CH;
 
 if doSuppression % Note: this part is probably deprecated
    if isnan(stimProbeChannel(1))
@@ -78,7 +75,9 @@ for iProbe = 1:nProbes
 end
 
 %% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
-
+str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference',...
+   'common-average noise');
+str = sprintf('Removing %s',str);
 for iCh = blockObj.Mask
    % Do re-reference
    data = doCAR(blockObj.Channels(iCh),...
@@ -100,8 +99,9 @@ for iCh = blockObj.Mask
    
    % Update user
    pct = 100 * (iCh / blockObj.NumChannels);
-   blockObj.reportProgress('Applying ReReferencing',pct);
-blockObj.updateStatus('CAR',true,iCh);
+   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress('Doing CAR.',pct,'toEvent');
+   blockObj.updateStatus('CAR',true,iCh);
 end
 
 flag = true;

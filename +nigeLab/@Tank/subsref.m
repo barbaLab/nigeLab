@@ -2,7 +2,8 @@ function varargout = subsref(tankObj,S)
 % SUBSREF  Overloaded function modified so that BLOCK can be
 %          referenced by indexing from ANIMAL using {} operator.
 %          Everything with {} referencing refers to the
-%          tankObj.Animals property.
+%          tankObj.Animals property. NOTE: {} indexing does not support
+%          additional subscripts (e.g. can't do tankObj{:,:}.Animals).
 %
 %  childBlockArray = tankObj{[2,1;1,4;3,1]}
 %  --> childBlockArray is the 1st Child Block of 2nd Animal in
@@ -50,6 +51,11 @@ subs = S(1).subs;
 
 switch S(1).type
    case '{}'
+      if numel(S) > 1
+         error(['nigeLab:' mfilename ':badSubscriptReference'],...
+            ['Shortcut indexing using {} does not support subsequent ' ...
+             '''.'' or ''()'' references.']);
+      end
       switch numel(subs)
          % If only 1 subscript, then it indexes Animals
          case 1

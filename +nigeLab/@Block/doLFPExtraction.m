@@ -25,13 +25,16 @@ if ~blockObj.updateParams('LFP')
 %    error('Something went wrong setting the LFP parameters.');
 end
 
-DecimateCascadeM = blockObj.LFPPars.DecimateCascadeM;
-DecimateCascadeN = blockObj.LFPPars.DecimateCascadeN;
-DecimationFactor =   blockObj.LFPPars.DecimationFactor;
-blockObj.LFPPars.DownSampledRate = blockObj.SampleRate / DecimationFactor;
+DecimateCascadeM = blockObj.Pars.LFP.DecimateCascadeM;
+DecimateCascadeN = blockObj.Pars.LFP.DecimateCascadeN;
+DecimationFactor =   blockObj.Pars.LFP.DecimationFactor;
+blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
-fprintf(1,'Decimating raw data... %.3d%%\n',0);
+str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
+      'Decimating');
+str = sprintf('%s raw data',str);
+
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
@@ -47,11 +50,12 @@ for iCh=blockObj.Mask
    blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
-   
-   blockObj.notifyUser('doLFPExtraction','Decimation',iCh,max(blockObj.Mask));
 
+   pct = round(iCh/numel(blockObj.Mask) * 100);
+   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress('Decimating.',pct,'toEvent');
+   blockObj.updateStatus('LFP',iCh,true);
 end
-blockObj.updateStatus('LFP',true);
 blockObj.save;
 flag = true;
 end

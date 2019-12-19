@@ -89,6 +89,6 @@ switch nargin
       error('Invalid number of arguments (%g).',nargin);      
 end
 
-
+str = strrep(str,'\','/');
 
 end

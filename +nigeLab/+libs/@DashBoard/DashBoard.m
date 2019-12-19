@@ -1246,15 +1246,13 @@ classdef DashBoard < handle
                      A = obj.Tank{SelectedItems(:,1)};
                      B = obj.Tank{SelectedItems};                     
                end % switch nCol
-               
+
                if ~all([A.MultiAnimals])
-                  error(['nigeLab:' mfilename ':badSelection'],...
-                     'One or more selected ANIMALS is not multi-animal.');
+                  return;
                end
                
                if ~all([B.MultiAnimals])
-                  error(['nigeLab:' mfilename ':badSelection'],...
-                     'One or more selected BLOCKS is not multi-animal (should not be possible).');
+                  return;
                end
                
                obj.toSplit = struct('Animal',cell(numel(A),1),...

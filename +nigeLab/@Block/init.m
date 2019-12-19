@@ -13,6 +13,7 @@ if any(~blockObj.updateParams('all'))
    warning('Could not properly initialize parameters.');
    return;
 end
+pars = blockObj.Pars.Block;
    
 %% PARSE NAME INFO
 % Set flag for output if something goes wrong
@@ -23,16 +24,14 @@ str = [];
 nameCon = blockObj.NamingConvention;
 for ii = 1:numel(nameCon)
    if isfield(meta,nameCon{ii})
-      str = [str, ...
-         meta.(nameCon{ii}),...
-         blockObj.Delimiter]; %#ok<AGROW>
+      str = [str,meta.(nameCon{ii}),pars.Concatenater]; %#ok<AGROW>
    end
 end
 blockObj.Name = str(1:(end-1));
 
 %% Check for multiple Animals
 for ii = fieldnames(meta)'
-   if contains(meta.(ii{:}),blockObj.MultiAnimalsChar)
+   if contains(meta.(ii{:}),pars.MultiAnimalsChar)
        blockObj.MultiAnimals = true;
        break;
    end

@@ -25,7 +25,8 @@ for fieldIndex = 1:N
    pcur = parseFolder(blockObj,fieldIndex);
    if exist(pcur,'dir')==0
       warningFold(fieldIndex) = true;
-      warningRef(fieldIndex) = true;
+   elseif isempty(dir([pcur filesep '*.mat']))
+       warningRef(fieldIndex) = true;
    else
        warningRef(fieldIndex) = blockObj.linkField(fieldIndex);
    end

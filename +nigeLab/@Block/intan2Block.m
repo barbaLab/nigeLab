@@ -195,7 +195,7 @@ for f = fields
                nSamples = blockObj.Meta.Header.(sampleField);
                chName = info(iCh).custom_channel_name;
                fName = sprintf(strrep(paths.(curDataField).file,'\','/'), ...
-                  info(iCh).signal.type,chName);
+                  info(iCh).signal.Group,chName);
                diskPars = struct('format',blockObj.getFileType(curDataField),...
                   'name',fullfile(fName),...
                   'size',[1 nSamples],...
@@ -342,6 +342,8 @@ deBounce = false; % This just for the update job Tag part
 F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
+F = F(ismember(F, fieldnames(Files))); % only extract data fr which we have files
+D = D(ismember(D, fieldnames(Files)));
 fprintf(1,'File too long to safely load in memory.\n');
 fprintf(1, '-->\tSplit into %d blocks',ceil(info.NumDataBlocks/nBlocks));
 NB = ceil(info.NumDataBlocks/nBlocks);
@@ -475,7 +477,7 @@ if nargin < 8
 end
 data = dataBuffer(buffer.(field)(1:dataPointsToRead));
 sig = [info.DigIOChannels.signal];
-dataIdx = ismember({sig.type},field);
+dataIdx = ismember({sig.Group},field);
 dataIdx = find(dataIdx);
 if isempty(dataIdx)
    return;
