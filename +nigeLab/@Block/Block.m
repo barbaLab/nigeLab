@@ -770,4 +770,9 @@ classdef Block < matlab.mixin.Copyable
          b = a;
       end
    end
+   
+   % Static enumeration methods
+   methods (Static = true, Access = public)
+      field = getOperationField(operation); % Get field associated with operation
+   end
 end

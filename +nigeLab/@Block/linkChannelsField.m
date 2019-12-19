@@ -26,10 +26,9 @@ counter = 0;
 for iCh = blockObj.Mask
    
    % Get file name
-   pNum  = num2str(blockObj.Channels(iCh).port_number);
-   chNum = num2str(blockObj.Channels(iCh).native_order,'%03g');
+   pNum  = num2str(blockObj.Channels(iCh).probe);
    fName = sprintf(strrep(blockObj.Paths.(field).file,'\','/'), ...
-      pNum,chNum);
+      pNum,blockObj.Channels(iCh).chStr);
    fName = fullfile(fName);
    
    % If file is not detected
@@ -55,10 +54,11 @@ for iCh = blockObj.Mask
    
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
+   blockObj.updateStatus(field,updateFlag(iCh),iCh);
    blockObj.reportProgress(str,pct);
 end
 % Only update status of unmasked channels. The other ones shouldn't matter
 % when are looking at 'doAction dependencies' later.
-blockObj.updateStatus(field,updateFlag);
+
 
 end

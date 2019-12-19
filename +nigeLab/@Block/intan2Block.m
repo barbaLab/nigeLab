@@ -120,7 +120,7 @@ for f = fields
          nCh.(curDataField) = blockObj.NumChannels;
          diskPars.class = 'single';
          for iCh = 1:nCh.(curDataField)
-            pNum  = num2str(info(iCh).port_number);
+            pNum  = num2str(info(iCh).probe);
             chNum = info(iCh).custom_channel_name(...
                regexp(info(iCh).custom_channel_name, '\d'));
             fName = sprintf(strrep(paths.(curDataField).file,'\','/'), pNum, chNum);
@@ -131,7 +131,8 @@ for f = fields
                'class','single');
             Files.(curDataField){iCh} = nigeLab.utils.makeDiskFile(diskPars);
             pct = floor(iCh/nCh.(curDataField) * 100);
-            reportProgress(blockObj,[curDataField ' info'], pct);
+            reportProgress(blockObj,[curDataField ' info'], pct,'toWindow');
+            reportProgress(blockObj,'Allocating.',round((pct/100)*30),'toEvent');
          end
       case 'Events'
          fName = sprintf(strrep(paths.(curDataField).file,'\','/'), curDataField);
@@ -404,7 +405,8 @@ fclose(fid);
 
 % Link to data
 blockObj.reportProgress('Linking Data.',95,'toEvent');
-blockObj.linkToData();
+blockObj.linkToData(intersect({'Raw','AnalogIO','DigIO','Stim'},...
+                              blockObj.Fields));
 flag = true;
 
 end

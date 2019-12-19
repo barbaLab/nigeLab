@@ -281,6 +281,8 @@ classdef DashBoard < handle
          %                  destruction.
          
          lh = [];
+         lh = [lh, addlistener(obj.Tank,'StatusChanged',...
+                     @(~,~)obj.updateStatusTable)];   
          lh = [lh, addlistener(obj.remoteMonitor,...
             'jobCompleted',@obj.refreshStats)];
          lh = [lh, addlistener(obj.splitMultiAnimalsUI,...
@@ -965,6 +967,10 @@ classdef DashBoard < handle
                   end
                   if flag
                      delete(lh);
+                     field = target.getOperationField(operation);
+                     if ~isempty(field)
+                        linkToData(target,field);
+                     end
                   end
                   % Since it is SERIAL, bar will be updated
                   if flag
@@ -1308,6 +1314,25 @@ classdef DashBoard < handle
          obj.Tank = tankObj;
          delete(obj.Tree);
          obj.Tree = obj.initTankTree();
+      end
+      
+      % Update the status table for TANK, ANIMAL, or BLOCK
+      function updateStatusTable(obj,~)
+         %UPDATESTATUSTABLE  Update status table for TANK, ANIMAL, or BLOCK
+         %
+         %  
+         
+         SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+         nCol = size(SelectedItems,2);
+         switch  nCol
+            case 0  % tank
+               setTankTable(obj);
+            case 1  % animal
+               setAnimalTable(obj,SelectedItems);
+            case 2  % block
+               setBlockTable(obj,SelectedItems);
+         end
+         
       end
       
       % Set the "TANK" table -- the display showing processing status
