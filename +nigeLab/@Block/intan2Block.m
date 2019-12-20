@@ -112,6 +112,7 @@ for f = fields
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
+         blockObj.parseProbeNumbers;
          info = blockObj.Meta.Header.RawChannels;
          infoname = fullfile(paths.(curDataField).info);
          save(fullfile(infoname),'info','-v7.3');
@@ -120,9 +121,8 @@ for f = fields
          nCh.(curDataField) = blockObj.NumChannels;
          diskPars.class = 'single';
          for iCh = 1:nCh.(curDataField)
-            pNum  = num2str(info(iCh).probe);
-            chNum = info(iCh).custom_channel_name(...
-               regexp(info(iCh).custom_channel_name, '\d'));
+            pNum  = num2str(blockObj.Channels(iCh).probe);
+            chNum = blockObj.Channels(iCh).chStr;
             fName = sprintf(strrep(paths.(curDataField).file,'\','/'), pNum, chNum);
             diskPars = struct('format',blockObj.getFileType(curDataField),...
                'name',fullfile(fName),...

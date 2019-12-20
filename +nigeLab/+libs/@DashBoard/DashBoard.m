@@ -968,7 +968,7 @@ classdef DashBoard < handle
                   if flag
                      delete(lh);
                      field = target.getOperationField(operation);
-                     if ~isempty(field)
+                     if ~isempty(field) && ~any(target.Status.field{1})
                         linkToData(target,field);
                      end
                   end
