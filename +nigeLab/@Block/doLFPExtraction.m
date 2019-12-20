@@ -54,15 +54,16 @@ for iCh=blockObj.Mask
    pct = round(iCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
-   blockObj.updateStatus('LFP',iCh,true);
+   blockObj.updateStatus('LFP',true,iCh);
 end
+blockObj.linkToData('LFP');
 blockObj.save;
 flag = true;
 end
 
 function fName = parseFileName(blockObj,channel)
 %% PARSEFILENAME  Get file name from a given channel
-pNum  = num2str(blockObj.Channels(channel).port_number);
+pNum  = num2str(blockObj.Channels(channel).probe);
 chNum = blockObj.Channels(channel).chStr;
 fName = sprintf(strrep(blockObj.Paths.LFP.file,'\','/'), pNum, chNum);
 end

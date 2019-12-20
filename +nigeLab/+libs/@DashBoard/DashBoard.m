@@ -968,7 +968,10 @@ classdef DashBoard < handle
                   if flag
                      delete(lh);
                      field = target.getOperationField(operation);
-                     if ~isempty(field) && ~any(target.Status.field{1})
+                     if ~iscell(field)
+                        field = {field};
+                     end
+                     if ~isempty(field) && ~any(target.Status.(field{1}))
                         linkToData(target,field);
                      end
                   end

@@ -46,7 +46,7 @@ if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
 end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
-   blockObj.reportProgress('Computing CAR',0);
+blockObj.reportProgress('Computing CAR',0,'toWindow');
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -60,7 +60,7 @@ for iCh = blockObj.Mask
    end
    pc = 100 * (iCh / blockObj.NumChannels);
    blockObj.reportProgress('Computing CAR',pc);
-
+   
 end
 
 %% SAVE EACH PROBE REFERENCE TO THE DISK
@@ -103,7 +103,8 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Doing CAR.',pct,'toEvent');
    blockObj.updateStatus('CAR',true,iCh);
 end
-
+blockObj.linkToData('CAR');
+blockObj.save;
 flag = true;
 
    function data = doCAR(channelData,reference)

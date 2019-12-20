@@ -35,8 +35,9 @@ switch nargin
       str_start = '<a href="matlab: opentoline(';
       fname = which(className);
       link_str = [str_start '''' fname ''', 1);'];
+      sound_str = ' nigeLab.sounds.play(''pop'',1.35); ';
       help_str = [' help(''' className ''');">' linkText '</a>'];
-      str = [link_str help_str];
+      str = [link_str sound_str help_str];
    
    case 2 % If 2 inputs, determine if second is char or numeric
           %    Correspondingly, either link to function or specific line
@@ -45,20 +46,22 @@ switch nargin
          str_start = '<a href="matlab: matlab.desktop.editor.openAndGoToFunction(';
          fname = which(className);
          link_str = [str_start '''' fname ''', ''' methodName ''');'];
+         sound_str = ' nigeLab.sounds.play(''pop'',1.35); ';
          tmp = help([className '/' methodName]);
          if isempty(tmp)
             help_str = [' help(''' className ''');">' linkText '</a>'];
          else
             help_str = [' help(''' className '/' methodName ''');">' linkText '</a>'];
          end
-         str = [link_str help_str];
+         str = [link_str sound_str help_str];
       elseif isnumeric(methodName)
          linkText = className;
          str_start = '<a href="matlab: opentoline(';
          fname = which(className);
          link_str = [str_start '''' fname ''', ' num2str(methodName) ');'];
+         sound_str = ' nigeLab.sounds.play(''pop'',1.35); ';
          help_str = [' help(''' className ''');">' linkText '</a>'];
-         str = [link_str help_str];
+         str = [link_str sound_str help_str];
       else
          error('Bad class of methodName input: %s',class(methodName));
       end
@@ -69,19 +72,21 @@ switch nargin
          str_start = '<a href="matlab: matlab.desktop.editor.openAndGoToFunction(';
          fname = which(className);
          link_str = [str_start '''' fname ''', ''' methodName ''');'];
+         sound_str = ' nigeLab.sounds.play(''pop'',1.35); ';
          tmp = help([className '/' methodName]);
          if isempty(tmp)
             help_str = [' help(''' className ''');">' linkText '</a>'];
          else
             help_str = [' help(''' className '/' methodName ''');">' linkText '</a>'];
          end
-         str = [link_str help_str];
+         str = [link_str sound_str help_str];
       elseif isnumeric(methodName)
          str_start = '<a href="matlab: opentoline(';
          fname = which(className);
          link_str = [str_start '''' fname ''', ' num2str(methodName) ');'];
+         sound_str = ' nigeLab.sounds.play(''pop'',1.35); ';
          help_str = [' help(''' className ''');">' linkText '</a>'];
-         str = [link_str help_str];
+         str = [link_str sound_str help_str];
       else
          error('Bad class of methodName input: %s',class(methodName));
       end   

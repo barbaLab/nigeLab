@@ -74,9 +74,11 @@ for iCh = chan
     
     % report progress to the user
     pct = round((iCh/numel(chan)) * 100);
+    blockObj.updateStatus('Clusters',true,iCh);
     blockObj.reportProgress(str,pct,'toWindow');
     blockObj.reportProgress(sprintf('%s',par.MethodName),pct,'toEvent');
 end
+blockObj.linkToData('Clusters');
 blockObj.save;
 flag = true;
 end

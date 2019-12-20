@@ -32,8 +32,11 @@ blockObj.checkMask;
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-reportProgress(blockObj,'Filtering',0);
-updateFlag = false(1,blockObj.NumChannels);
+str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
+   'Unit Bandpass Filter');
+str = sprintf('Applying %s',str);
+
+blockObj.reportProgress(str,0,'toWindow');
 for iCh = blockObj.Mask
 %    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
 %       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
@@ -69,13 +72,14 @@ for iCh = blockObj.Mask
       return;
    end
    
-   updateFlag(iCh) = true;
+   blockObj.updateStatus('Filt',true,iCh);
    pct = floor(iCh/max(blockObj.Mask)*100);
-   reportProgress(blockObj,'Filtering',pct);
-   
+   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
-blockObj.updateStatus('Filt',updateFlag);
+
 flag = true;
+blockObj.linkToData('Filt');
 blockObj.save;
 
 end
