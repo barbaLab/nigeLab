@@ -1,11 +1,8 @@
 function flag = doLFPExtraction(blockObj)
-%% DOLFPEXTRACTION   Decimates files to retrieve LFPs.
+%DOLFPEXTRACTION   Decimates files to retrieve LFPs.
 %
 % Sampling frequency chosen for the downsampled files is 1000Hz
 % Band of interest in LFPs is up to 250Hz.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
-
 
 %% INITIALIZE PARAMETERS
 flag = false;
@@ -20,9 +17,10 @@ end
 
 
 if ~blockObj.updateParams('LFP')
-   warning('Something went wrong setting the LFP parameters.');
-   return;
-%    error('Something went wrong setting the LFP parameters.');
+%    warning('Something went wrong setting the LFP parameters.');
+%    return;
+   error(['nigeLab:' mfilename ':UpdateParamsUnsuccessful'],...
+      'Something went wrong while updating the LFP parameters.');
 end
 
 DecimateCascadeM = blockObj.Pars.LFP.DecimateCascadeM;
@@ -34,7 +32,7 @@ blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
       'Decimating');
 str = sprintf('%s raw data',str);
-
+fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
@@ -46,7 +44,6 @@ for iCh=blockObj.Mask
    fName = parseFileName(blockObj,iCh);
    
    % Assign to diskData and protect it:
-   fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
    blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
@@ -59,14 +56,13 @@ end
 blockObj.linkToData('LFP');
 blockObj.save;
 flag = true;
+
+   function fName = parseFileName(blockObj,channel)
+      %PARSEFILENAME  Get file name from a given channel
+      pNum  = num2str(blockObj.Channels(channel).probe);
+      chNum = blockObj.Channels(channel).chStr;
+      fName = sprintf(strrep(blockObj.Paths.LFP.file,'\','/'), pNum,chNum);
+   end
+
 end
-
-function fName = parseFileName(blockObj,channel)
-%% PARSEFILENAME  Get file name from a given channel
-pNum  = num2str(blockObj.Channels(channel).probe);
-chNum = blockObj.Channels(channel).chStr;
-fName = sprintf(strrep(blockObj.Paths.LFP.file,'\','/'), pNum, chNum);
-end
-
-
 

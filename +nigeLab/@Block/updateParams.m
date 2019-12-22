@@ -36,6 +36,10 @@ allProps = cellfun(@(x)x(1:(end-2)),{tmp.name},'UniformOutput',false);
 % The following properties do not apply or should be set in constructor:
 tmp = setdiff(allProps,[PropsToSkip,ConstructProps]);
 
+% Make sure that blockObj.Pars is initialized as a struct
+if isempty(blockObj.Pars)
+   blockObj.Pars = struct;
+end
 if nargin < 2 % if not supplied, select from list...
 
    idx = promptForParamType(tmp);
@@ -83,9 +87,6 @@ else
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-if isempty(blockObj.Pars)
-   blockObj.Pars = struct;
-end
 blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
 flag = true;
 if nargout > 1

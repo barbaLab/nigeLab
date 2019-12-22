@@ -53,7 +53,8 @@ for iCh = blockObj.Mask
    end
    
    % Status updates done in saveChannelSpikingEvents
-   pct = round(iCh/numel(blockObj.Mask) * 100);
+   curCh = find(blockObj.Mask == iCh,1,'first');
+   pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Spike Detection.',pct,'toEvent');
    

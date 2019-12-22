@@ -61,4 +61,5 @@ for i = 1:numel(blockObj)
       addlistener(blockObj(i),'StatusChanged',...
       @(~,evt)notify(animalObj,'StatusChanged',evt))];
 end
+animalObj.parseProbes();
 end

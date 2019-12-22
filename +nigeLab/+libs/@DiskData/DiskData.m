@@ -422,7 +422,7 @@ classdef DiskData < handle
             case 'Event'
                switch S(1).type
                   case '()'
-                     
+                     %% e.g. blockObj.Channels(k).Spikes(:)
                      if any(strcmp(S(1).subs,':'))
                         indx = [1 inf];
                         
@@ -469,6 +469,7 @@ classdef DiskData < handle
                      return;
                      
                   case '.'
+                     %% e.g. blockObj.Channels(k).Spikes.value;
                      s=methods(obj);
                      if any(strcmp(s,S(1).subs)) && ~strcmp('class',S(1).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
                         Out = builtin('subsref',obj,S);
@@ -477,11 +478,14 @@ classdef DiskData < handle
                         %                             Out = sprintf('obj.%s',S(ii).subs);
                      else
                         if numel(S) > 1
+                           % Handle __.Spikes.value([true true false ...]):
                            if islogical(S(2).subs{1})
+                              % Convert to numeric
                               S(2).subs{1} = find(S(2).subs{1});
                               S(2).subs{1} = reshape(S(2).subs{1},...
                                  1,numel(S(2).subs{1}));
                            end
+                           % Handle blockObj.Channels(k).Spikes.value([]):
                            if isempty(S(2).subs{1})
                               varargout = {[]};
                               return;

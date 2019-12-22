@@ -20,6 +20,7 @@ flag = false;
 % If not otherwise specified, assume extraction has not been done.
 if nargin < 2
    suppressWarning = false;
+   field = blockObj.Fields;
 else
    switch class(suppressWarning)
       case 'char'

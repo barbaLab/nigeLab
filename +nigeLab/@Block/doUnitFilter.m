@@ -46,9 +46,8 @@ for iCh = blockObj.Mask
    end
    if ~pars.STIM_SUPPRESS
       % Filter and and save amplifier_data by probe/channel
-      pNum  = num2str(blockObj.Channels(iCh).port_number);
-      chNum = blockObj.Channels(iCh).custom_channel_name(...
-         regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));      
+      pNum  = num2str(blockObj.Channels(iCh).probe);
+      chNum = blockObj.Channels(iCh).chStr;   
       fName = sprintf(strrep(blockObj.Paths.Filt.file,'\','/'), ...
          pNum, chNum);
       
@@ -73,7 +72,8 @@ for iCh = blockObj.Mask
    end
    
    blockObj.updateStatus('Filt',true,iCh);
-   pct = floor(iCh/max(blockObj.Mask)*100);
+   curCh = find(blockObj.Mask == iCh,1,'first');
+   pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end

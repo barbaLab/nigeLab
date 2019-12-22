@@ -24,6 +24,12 @@ counter = 0;
 % Only iterate on the channels we care about (don't update status for
 % others, either). 
 for iCh = blockObj.Mask
+   % Make sure block "key" is linked
+   if ~isfield(blockObj.Channels(iCh),'Key')
+      blockObj.Channels(iCh).Key = blockObj.getKey();
+   elseif isempty(blockObj.Channels(iCh).Key)
+      blockObj.Channels(iCh).Key = blockObj.getKey();
+   end
    
    % Get file name
    pNum  = num2str(blockObj.Channels(iCh).probe);
@@ -49,6 +55,7 @@ for iCh = blockObj.Mask
             % (e.g. 'Raw', 'Filt', etc...)
             blockObj.Channels(iCh).(field) = ...
                nigeLab.libs.DiskData(fileType,fName);
+            
       end
    end
    
