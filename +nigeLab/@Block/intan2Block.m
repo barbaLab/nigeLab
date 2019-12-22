@@ -112,6 +112,7 @@ for f = fields
    
    switch blockObj.FieldType{idx}
       case 'Channels' % Each "Channels" file has multiple channels
+         blockObj.parseProbeNumbers;
          info = blockObj.Meta.Header.RawChannels;
          infoname = fullfile(paths.(curDataField).info);
          save(fullfile(infoname),'info','-v7.3');
@@ -120,9 +121,8 @@ for f = fields
          nCh.(curDataField) = blockObj.NumChannels;
          diskPars.class = 'single';
          for iCh = 1:nCh.(curDataField)
-            pNum  = num2str(info(iCh).port_number);
-            chNum = info(iCh).custom_channel_name(...
-               regexp(info(iCh).custom_channel_name, '\d'));
+            pNum  = num2str(blockObj.Channels(iCh).probe);
+            chNum = blockObj.Channels(iCh).chStr;
             fName = sprintf(strrep(paths.(curDataField).file,'\','/'), pNum, chNum);
             diskPars = struct('format',blockObj.getFileType(curDataField),...
                'name',fullfile(fName),...
@@ -131,7 +131,8 @@ for f = fields
                'class','single');
             Files.(curDataField){iCh} = nigeLab.utils.makeDiskFile(diskPars);
             pct = floor(iCh/nCh.(curDataField) * 100);
-            reportProgress(blockObj,[curDataField ' info'], pct);
+            reportProgress(blockObj,[curDataField ' info'], pct,'toWindow');
+            reportProgress(blockObj,'Allocating.',round((pct/100)*30),'toEvent');
          end
       case 'Events'
          fName = sprintf(strrep(paths.(curDataField).file,'\','/'), curDataField);
@@ -216,7 +217,7 @@ for f = fields
    
 end
 % Memory --> 30%
-blockObj.reportProgress('Memory Allocated.',30,'toEvent');
+blockObj.reportProgress('Memory Allocated.',35,'toEvent');
 
 %% INITIALIZE INDEXING VECTORS FOR READING CHUNKS OF DATA FROM FILE
 
@@ -343,7 +344,9 @@ F = fieldnames(buffer);
 D = fieldnames(digBuffer);
 
 F = F(ismember(F, fieldnames(Files))); % only extract data fr which we have files
+nF = numel(F);
 D = D(ismember(D, fieldnames(Files)));
+nD = numel(D);
 fprintf(1,'File too long to safely load in memory.\n');
 fprintf(1, '-->\tSplit into %d blocks',ceil(info.NumDataBlocks/nBlocks));
 NB = ceil(info.NumDataBlocks/nBlocks);
@@ -368,21 +371,19 @@ for iBlock=1:NB
    
    % Write data to file
    for iF = 1:numel(F)
-      PCT = (iBlock-1)/nBlocks + (iF/numel(F))/nBlocks/2; % Block completion percent
       writeData(blockObj,dataBuffer,...
-         Files,buffer,formatDataFun,F{iF},dataPointsToRead,PCT);
+         Files,buffer,formatDataFun,F{iF},dataPointsToRead,iF,nF,nD,NB);
    end
    
    for iD = 1:numel(D)
-      PCT = (iBlock-1)/nBlocks + 1/(NB*2) + (iD/numel(D))/(NB*2); % Block completion percent
       writeDigData(blockObj,dataBuffer,...
-         Files,digBuffer,info,D{iD},dataPointsToRead,PCT);
+         Files,digBuffer,info,D{iD},dataPointsToRead,iD,nF,nD,NB);
       
    end
    
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
-   pct = floor(100 * (progress / info.NumDataBlocks));
+   pct = round(100 * (progress / info.NumDataBlocks));
    reportProgress(blockObj,'Extracting',pct,'toWindow');
 end
 fprintf(1,newline);
@@ -404,7 +405,8 @@ fclose(fid);
 
 % Link to data
 blockObj.reportProgress('Linking Data.',95,'toEvent');
-blockObj.linkToData();
+blockObj.linkToData(intersect({'Raw','AnalogIO','DigIO','Stim'},...
+                              blockObj.Fields));
 flag = true;
 
 end
@@ -445,36 +447,32 @@ idx(index)=true;
 idx=repmat(idx,1,nBlocks);
 end
 
-function writeData(blockObj,dataBuffer,Files,buffer,scaleFun,field,dataPointsToRead,PCT)
+function writeData(blockObj,dataBuffer,Files,buffer,scaleFun,field,dataPointsToRead,iCur,Nf,Nd,NChunk)
 %% WRITEDATA   Write data from buffer to DiskData file
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
 
-if nargin < 8
-   PCT = 1;
-end
 
 if ~isfield(Files,field) || ~isfield(buffer,field)
    return;
 end
 
 nChan = numel(Files.(field));
+OFFSET = 40 + round((iCur-1)/((Nf+Nd) * NChunk) * 100);
 for iCh=1:nChan % units = microvolts
    Files.(field){iCh}.append( ...
       single(scaleFun.(field)(...
           single(dataBuffer(...
                  buffer.(field)(1:dataPointsToRead)==iCh)),iCh)));
    
-   pct = iCh /nChan;
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100 * pct));
-   blockObj.reportProgress('Writing Data.',40 + round(50 * pct * PCT) ,'toEvent');
+   pct = round(iCh /nChan * 100);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',pct);
+   PCT = round(pct/2);
+   blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toEvent');
 end
 end
 
-function writeDigData(blockObj,dataBuffer,Files,buffer,info,field,dataPointsToRead,PCT)
+function writeDigData(blockObj,dataBuffer,Files,buffer,info,field,dataPointsToRead,iCur,Nf,Nd,NChunk)
 fprintf(1, '\t->Saving %s data...%.3d%%\n',field,0);
-if nargin < 8
-   PCT = 1;
-end
 data = dataBuffer(buffer.(field)(1:dataPointsToRead));
 sig = [info.DigIOChannels.signal];
 dataIdx = ismember({sig.Group},field);
@@ -485,15 +483,17 @@ else
    dataIdx = reshape(dataIdx,1,numel(dataIdx));
 end
 
+OFFSET = 40 + round((iCur-1+Nf)/((Nf+Nd) * NChunk) * 100);
 dataCount = 0;
 for iCh = dataIdx
    dataCount = dataCount + 1;
    mask = uint16(2^(info.DigIOChannels(iCh).native_order) * ones(size(data)));
    Files.(field){dataCount}.append(int8(bitand(data, mask) > 0));
    
-   pct = dataCount / numel(dataIdx);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(100 * pct));
-   blockObj.reportProgress('Writing Data.',40 + round(50 * pct * PCT) ,'toEvent');
+   pct = round(dataCount/numel(dataIdx) * 100);
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',pct);
+   PCT = round(pct/2);
+   blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toEvent');
 end
 end
 

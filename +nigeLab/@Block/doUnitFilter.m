@@ -32,8 +32,11 @@ blockObj.checkMask;
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-reportProgress(blockObj,'Filtering',0);
-updateFlag = false(1,blockObj.NumChannels);
+str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
+   'Unit Bandpass Filter');
+str = sprintf('Applying %s',str);
+
+blockObj.reportProgress(str,0,'toWindow');
 for iCh = blockObj.Mask
 %    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
 %       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
@@ -43,9 +46,8 @@ for iCh = blockObj.Mask
    end
    if ~pars.STIM_SUPPRESS
       % Filter and and save amplifier_data by probe/channel
-      pNum  = num2str(blockObj.Channels(iCh).port_number);
-      chNum = blockObj.Channels(iCh).custom_channel_name(...
-         regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));      
+      pNum  = num2str(blockObj.Channels(iCh).probe);
+      chNum = blockObj.Channels(iCh).chStr;   
       fName = sprintf(strrep(blockObj.Paths.Filt.file,'\','/'), ...
          pNum, chNum);
       
@@ -69,13 +71,15 @@ for iCh = blockObj.Mask
       return;
    end
    
-   updateFlag(iCh) = true;
-   pct = floor(iCh/max(blockObj.Mask)*100);
-   reportProgress(blockObj,'Filtering',pct);
-   
+   blockObj.updateStatus('Filt',true,iCh);
+   curCh = find(blockObj.Mask == iCh,1,'first');
+   pct = round(curCh/numel(blockObj.Mask) * 100);
+   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
-blockObj.updateStatus('Filt',updateFlag);
+
 flag = true;
+blockObj.linkToData('Filt');
 blockObj.save;
 
 end

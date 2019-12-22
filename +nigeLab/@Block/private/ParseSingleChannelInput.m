@@ -1,9 +1,7 @@
 function flag = ParseSingleChannelInput(blockObj,ch)
-%% PARSESINGLECHANNELINPUT    Parse validity of channel input
+%PARSESINGLECHANNELINPUT    Validates index for selecting a single channel
 %   
 %  flag = ParseSingleChannelInput(blockObj,ch);
-%
-% By: Max Murphy  v1.0  12/06/2018  Original version (R2017a)
 
 %% 
 flag = false;

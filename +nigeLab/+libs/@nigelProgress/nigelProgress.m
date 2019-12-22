@@ -513,10 +513,10 @@ classdef nigelProgress < handle
          %
          %  addlistener(bar,'Status','PostSet',@(~,~)bar.updateStatus);
          
-         str = bar.Status;
-%          disp(['-->Status: ' str]);
-         
+         str = bar.Status;         
          bar.setChild('status','String',str);
+         drawnow;
+         
          switch lower(strrep(str,'.',''))
             case {'done','complete','finished','over'}
                % Ensure that it is at 100%

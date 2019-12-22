@@ -25,7 +25,7 @@ classdef VidStreamsType < handle
 %       --> t     % Times corresponding to video frames
 %       --> fs    % Sample rate
       
-      Block nigeLab.Block % References the block it is attached to
+      Video nigeLab.libs.VideosFieldType % References the "parent" video
    end
 
    % PUBLIC
@@ -76,6 +76,7 @@ classdef VidStreamsType < handle
             return;
          end
 
+         obj.Video = videosFieldObj;
          % '.at' is the actual reference to the streams
          obj.at = nigeLab.utils.initChannelStruct('VidStreams',...
                      numel(vidStreamSignals));

@@ -162,7 +162,8 @@ classdef DiskData < handle
          
          %% CREATE DIFFERENT TYPES OF DISKDATA FOR DIFFERENT FILE TYPES
          switch nargin
-            case 1 % Only 1 "default" input provided
+            case 1
+               %% Only 1 "default" input provided
                % This case is specifically for dealing with MatFiles.
                if isa(varargin{1},'matlab.io.MatFile')
                   obj.diskfile_ = varargin{1};
@@ -190,7 +191,8 @@ classdef DiskData < handle
                else
                   error('Data format not yet supported');
                end
-            case 2 % 2 "default" inputs provided: file type and file name
+            case 2
+               %% 2 "default" inputs provided: file type and file name
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
                if writable_
@@ -268,19 +270,22 @@ classdef DiskData < handle
                      end
                      obj.type_='Hybrid';
                      
-                     if data % If data has been found, do some H5 handling
-                        fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
-                        H5L.delete(fid,'data','H5P_DEFAULT');
-                        H5F.close(fid);
-                        varname_ = ['/' obj.name_];
-                        h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
+                     if exist('data','var')~=0
+                        if any(data) %#ok<NODEF> % If data has been found, do some H5 handling
+                           fid = H5F.open(varargin{2},'H5F_ACC_RDWR','H5P_DEFAULT');
+                           H5L.delete(fid,'data','H5P_DEFAULT');
+                           H5F.close(fid);
+                           varname_ = ['/' obj.name_];
+                           h5create(varargin{2}, varname_, size_,'ChunkSize',chunks_,'DataType',class_);
+                        end
                      end
                      
                   case 'Event' % Deal with Spikes and other Events
                      % The default name is 'data'
                      obj.class_ = 'double';
+                     % If the file does not already exist
                      if ~exist(fName,'file')
-                      
+                        % Then create it, as an "extendable" matfile
                         obj.name_ = name_;
                         obj.size_ = [0 0];
                         obj.bytes_ = 0;
@@ -311,7 +316,8 @@ classdef DiskData < handle
                   otherwise
                      error('Unknown data format');
                end
-            case 3 % In this case, the data was included in constructor
+            case 3 
+               %% (All) 3 "default" inputs: data was included as well
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
                % Third arg is the data; don't make a copy of that
@@ -322,6 +328,7 @@ classdef DiskData < handle
                end
                switch fType
                   case 'MatFile'
+                     %% MatFile  --  (Old-ish) for 'data' vector
                      eval(sprintf('%s=varargin{3};',name_));
                      % Depending on how the file was saved
                      if isstruct(varargin{3})
@@ -339,9 +346,10 @@ classdef DiskData < handle
                      info = whos(obj.diskfile_);
                      obj.bytes_ = info.bytes;
                   case 'Hybrid'
+                     %% Hybrid  --  For Matfile with H5 handling (streams)
                      % This initially creates a file with a variable,
                      % 'data', that is written to it.
-                     data=zeros(1,1,class_);
+                     data=zeros(1,1,class_); %#ok<PREALL>
                      save(fName,'data','-v7.3');
                      
                      % Now that the file exists, make a matfile pointing to
@@ -368,7 +376,7 @@ classdef DiskData < handle
                   case 'Event'
                      % This initially creates a file with a variable,
                      % 'data', that is written to it.
-                     data=zeros(1,1,class_);
+                     data = varargin{3};
                      save(fName,'data','-v7.3');
                      
                      % Now that the file exists, make a matfile pointing to
@@ -380,22 +388,23 @@ classdef DiskData < handle
                      obj.type_='Event';
                      obj.name_ = name_;
                      obj.class_ = class_;
-                     fid = H5F.open(fName,'H5F_ACC_RDWR','H5P_DEFAULT');
-                     H5L.delete(fid,'data','H5P_DEFAULT');
-                     H5F.close(fid);
-                     varname_ = ['/' obj.name_];
-                     h5create(fName, varname_, size_,'DataType',class_);
-                     
-                     h5write(fName, '/data', varargin{3},[1 1],size(varargin{3}));
+%                      fid = H5F.open(fName,'H5F_ACC_RDWR','H5P_DEFAULT');
+%                      H5L.delete(fid,'data','H5P_DEFAULT');
+%                      H5F.close(fid);
+%                      varname_ = ['/' obj.name_];
+%                      h5create(fName, varname_, size_,'DataType',class_);
+%                      
+%                      h5write(fName, '/data', ...
+%                         varargin{3},[1 1],size(varargin{3}));
                      
                      % And parse the data about that file
                      info = whos(obj.diskfile_);
                      obj.bytes_ = info.bytes;
                      
-                     % For some reason need to get size information this
-                     % way, seems redundant not sure why?
-                     data = obj.diskfile_.(obj.name_);
-                     obj.size_ = size(data);
+%                      % For some reason need to get size information this
+%                      % way, seems redundant not sure why?
+%                      data = obj.diskfile_.(obj.name_);
+                     obj.size_ = size(obj.diskfile_.data);
                   otherwise
                      error('Unknown data format');
                end
@@ -413,7 +422,7 @@ classdef DiskData < handle
             case 'Event'
                switch S(1).type
                   case '()'
-                     
+                     %% e.g. blockObj.Channels(k).Spikes(:)
                      if any(strcmp(S(1).subs,':'))
                         indx = [1 inf];
                         
@@ -460,6 +469,7 @@ classdef DiskData < handle
                      return;
                      
                   case '.'
+                     %% e.g. blockObj.Channels(k).Spikes.value;
                      s=methods(obj);
                      if any(strcmp(s,S(1).subs)) && ~strcmp('class',S(1).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
                         Out = builtin('subsref',obj,S);
@@ -468,11 +478,14 @@ classdef DiskData < handle
                         %                             Out = sprintf('obj.%s',S(ii).subs);
                      else
                         if numel(S) > 1
+                           % Handle __.Spikes.value([true true false ...]):
                            if islogical(S(2).subs{1})
+                              % Convert to numeric
                               S(2).subs{1} = find(S(2).subs{1});
                               S(2).subs{1} = reshape(S(2).subs{1},...
                                  1,numel(S(2).subs{1}));
                            end
+                           % Handle blockObj.Channels(k).Spikes.value([]):
                            if isempty(S(2).subs{1})
                               varargout = {[]};
                               return;
