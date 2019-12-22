@@ -71,6 +71,13 @@ if ~blockObj.initEvents
    return;
 end
 
+%% INITIALIZE KEYS
+if ~blockObj.initKey()
+   warning('Could not initialize unque keys for the block.');
+   return;
+end
+
+
 blockObj.updateStatus('init');
 
 % Prior to link to data, check if a function handle for conversion has been

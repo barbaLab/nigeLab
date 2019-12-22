@@ -704,11 +704,12 @@ classdef Block < matlab.mixin.Copyable
    % PRIVATE
    methods (Access = private)      
       % Initialize .KeyPair property
-      function keyPair = initKey(blockObj)
+      function flag = initKey(blockObj)
          %INITKEY  Initialize blockObj.KeyPair for use with unique ID later
          %
          %  keyPair = blockObj.initKey();
-         
+         flag = true;
+         try
          % Ensure it works if input is array object
          n = numel(blockObj);
          if n > 1
@@ -719,20 +720,14 @@ classdef Block < matlab.mixin.Copyable
             return;
          end
          
-         % Check to make sure that it should be set
-         if ~isempty(blockObj.KeyPair)
-            if isfield(blockObj.KeyPair,'Public') && ...
-               isfield(blockObj.KeyPair,'Private')
-               keyPair = blockObj.KeyPair;
-               return;
-            end
-         end
-         
-         % If it has not been initialized, make up a pair
-         hashPair = nigeLab.utils.makeHash(2);
+         hashPair = nigeLab.utils.makeHash(blockObj,2);
          keyPair = struct('Public',hashPair(1),...
                           'Private',hashPair(2));
          blockObj.KeyPair = keyPair;
+         catch er
+             flag = false;
+             rethrow(er);
+         end
       end
    end
    
