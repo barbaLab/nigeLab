@@ -88,11 +88,13 @@ end
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tconfigW; Add nigeLab remote repo to worker path\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
-      fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p);
-      fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
-      fprintf(fid,'\t\t''Worker (%%s) does not see nigeLab (%%s)'',...\n');
-      fprintf(fid,'\t\tpwd,''%s'');\n',p);
-      fprintf(fid,'end %% error check for remote repo path\n');
+      for i = 1:numel(p)
+         fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{i});
+         fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
+         fprintf(fid,'\t\t''Worker (%%s) does not see nigeLab (%%s)'',...\n');
+         fprintf(fid,'\t\tpwd,''%s'');\n',p{i});
+         fprintf(fid,'end %% error check for remote repo path\n');
+      end
       % Add path to remote repository
       fprintf(fid,'%%%% Add remote nigeLab repository.\n');
       for i = 1:numel(p)
@@ -124,7 +126,7 @@ end
       fprintf(fid,'%%\tqWrapper(targetFile); Run nigelLab on target\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
       for i = 1:numel(p)
-         fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p);
+         fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p{i});
       end
       fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{1});
       fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');

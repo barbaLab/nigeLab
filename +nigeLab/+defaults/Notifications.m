@@ -14,16 +14,14 @@ pars.NMaxNameChars = 15;  % If less than this, uses full name on notifications
 % notifyUser():
 pars.TagDelim = '||'; % This should separate TagString between naming and % complete
 pars.TagString.String = ['%s.%s %s' pars.TagDelim '%.3d%%']; % regexp for Tag updates
-pars.TagString.Vars = {'blockObj.Meta.AnimalID',...
-                          'blockObj.Meta.RecID'};
+pars.TagString.Vars = {'AnimalID','RecID'};
 %               Animal.Block operation TagDelim progress
 
 
 % regexp for command window updates
 pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; 
 % Command window update variables
-pars.NotifyString.Vars = {'blockObj.Meta.AnimalID',...
-                          'blockObj.Meta.RecID'};
+pars.NotifyString.Vars = {'AnimalID','RecID'};
 %                 Animal.Block -> operation : progress
 pars.NotifyTimer = 0.5; % timer period (seconds) for remote monitor checks
 pars.UseParallel=0;

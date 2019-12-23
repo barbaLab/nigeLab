@@ -50,13 +50,15 @@ switch lower(notification_mode)
       return;
 
    otherwise
+      pct = round(pct);
       % Behave as if 'toWindow'
 end
 
 if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
+   %% Serial execution on localhost
    metas = cell(1, numel(pars.NotifyString.Vars));
    for ii=1:numel(pars.NotifyString.Vars)
-      metas{ii} = eval(pars.NotifyString.Vars{ii});
+      metas{ii} = blockObj.Meta.(pars.NotifyString.Vars{ii});
    end
    str = sprintf(pars.NotifyString.String,metas{:},...         % constant part of the message
       str_expr,floor(pct));                                     % variable part of the message
@@ -96,18 +98,19 @@ if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
    end
    
 else % we are in worker environment
+   %% Local or Remote parallel worker environment
    str_expr = regexprep(sprintf(str_expr),'<.*?>','');
    job = getCurrentJob;
    metas = cell(1, numel(pars.TagString.Vars));
    for ii=1:numel(pars.TagString.Vars)
-      metas{ii} = eval(pars.TagString.Vars{ii});
+      metas{ii} = blockObj.Meta.(pars.TagString.Vars{ii});
    end
-   str = sprintf(pars.TagString.String,metas{:},...                     % variable part of the message
-      str_expr,floor(pct));
+   str = sprintf(pars.TagString.String,metas{:},...   
+      str_expr,pct);
    if nargout == 1
       return;
    end
-   set(job,'Tag',str);    % constant part of the message;
+   set(job,'Tag',str);   
 end
 
 end
