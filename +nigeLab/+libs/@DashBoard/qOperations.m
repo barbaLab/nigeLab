@@ -61,10 +61,8 @@ switch class(target)
                  
       if obj.Tank.UseParallel
          %% Configure remote or local cluster for correct parallel computation
-         lineNum = dbstack();
-         lineNum = lineNum(1).line+61;
          lineLink = nigeLab.utils.getNigeLink(...
-            'nigeLab.libs.DashBoard/qOperations',lineNum,...
+            'nigeLab.libs.DashBoard','qOperations',...
             '(Parallel)');
          fprintf(1,'Initializing %s job: %s - %s\n',...
             lineLink,opLink,target.Name);
@@ -78,11 +76,14 @@ switch class(target)
             myCluster = parcluster();
          end
          
-         configFilePath = fullfile(nigeLab.defaults.Tempdir,'configW.m');
-         if isempty(qPars.RemoteRepoPath)
-            attachedFiles = ...
+         
+         attachedFiles = ...
                matlab.codetools.requiredFilesAndProducts(...
                sprintf('%s.m',operation));
+         
+            
+         if isempty(qPars.RemoteRepoPath)
+            configFilePath = fullfile(nigeLab.defaults.Tempdir,'configW.m');
             p = nigeLab.utils.getNigelPath('UNC');
 
             % programmatically creates a worker config file
@@ -96,10 +97,12 @@ switch class(target)
                attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
             end
          else
+            p = qPars.RemoteRepoPath;
+            configFilePath = fullfile(p,'configW.m');
             fid = fopen(configFilePath,'w');
-            fprintf(fid,'addpath(''%s'');',qPars.RemoteRepoPath);
+            fprintf(fid,'addpath(''%s'');',p);
             fclose(fid);
-            attachedFiles = {nigeLab.utils.getUNCPath(configFilePath)};
+            attachedFiles = [attachedFiles, {configFilePath}];
          end
          
          n = min(nPars.NMaxNameChars,numel(target.Name));
@@ -109,6 +112,7 @@ switch class(target)
          tagStr = reportProgress(target,'Queuing',0);
          job = createCommunicatingJob(myCluster, ...
             'AttachedFiles', attachedFiles, ...
+            'AdditionalPaths', p,...
             'Name', [operation target.Name], ...
             'NumWorkersRange', qPars.NWorkerMinMax, ...
             'Type','pool', ...
@@ -127,19 +131,15 @@ switch class(target)
          job.FinishedFcn=@(~,~)obj.remoteMonitor.barCompleted(bar);
          job.QueuedFcn=@(~,~)bar.setState(bar,0,'Queuing...');
          job.RunningFcn=@(~,~)bar.setState(bar,0,'Running...');
-         
          createTask(job,operation,0,{target});
          submit(job);
          fprintf(1,'%s Job running: %s - %s\n',...
             lineLink,opLink,target.Name);
          
       else
-         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
          %% otherwise run single operation serially
-         lineNum = dbstack();
-         lineNum = lineNum(1).line+18;
          lineLink = nigeLab.utils.getNigeLink(...
-            'nigeLab.libs.DashBoard/qOperations',lineNum,...
+            'nigeLab.libs.DashBoard','qOperations',...
             '(Non-Parallel)');
          fprintf(1,'%s Job running: %s - %s\n',...
             lineLink,opLink,target.Name);

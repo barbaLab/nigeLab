@@ -24,8 +24,8 @@ pars.NWorkerMinMax = [1,1]; % Min & Max # workers to assign to a job
 pars.WaitTimeSec = 1; % Time to wait between checking for new cluster
 pars.InitTimeSec = 5; % Time to wait when initializing cluster
 
-% pars.RemoteRepoPath = '';
-pars.RemoteRepoPath = '//KUMC-NAS01/home-kumc/m053m716/MyRepos/nigeLab';
+pars.RemoteRepoPath = '';
+% pars.RemoteRepoPath = '//KUMC-NAS01/home-kumc/m053m716/MyRepos/nigeLab';
 
 if nargin > 0
    if isfield(pars,paramName)

@@ -493,5 +493,3 @@ flag = true;
 updateStatus(blockObj,'Raw',true);
 
 end
-
-end
