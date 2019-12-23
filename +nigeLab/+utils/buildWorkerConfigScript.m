@@ -29,20 +29,25 @@ if ~ischar(queueMode)
 end
 
 configFile = fullfile(Tempdir,CONFIG_SCRIPT_NAME);
-if exist(configFile,'file')~=0
-   delete(configFile);
-end
 switch lower(queueMode)
    case {'remote','fromremote'}
       % Just makes sure nigeLab is added to path (didn't work for MM)
       % This works if the method is queued FROM repo on remote location:
       p = getNigelPath('UNC'); 
+      if exist(configFile,'file')~=0
+         delete(configFile);
+      end
       fid = fopen(configFile,'w');
       fprintf(fid,'%%CONFIGW  Programmatically-generated path adder\n');
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tconfigW; Add nigeLab remote repo to worker path\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
-      fprintf(fid,'addpath(''%s''); %% Parsed repo location',p);
+      fprintf(fid,'%%%% Add remote nigeLab repository.\n');
+      fprintf(fid,'addpath(''%s''); %% Parsed repo location\n\n',p);
+      fprintf(fid,'%%%% Import getNigelPath to make sure we add path\n');
+      fprintf(fid,'import nigeLab.utils.getNigelPath\n'); 
+      fprintf(fid,'p = getNigelPath(''UNC''); %% Return worker path\n');
+      fprintf(fid,'addpath(p); %% Add "imported" path');
       fclose(fid);
       varargout = {configFile};
    case {'local','fromlocal'}
@@ -51,8 +56,20 @@ switch lower(queueMode)
       p = varargin{1};
       operation = varargin{2};
       
+      if exist(configFile,'file')~=0
+         delete(configFile);
+      end
       fid = fopen(configFile,'w');
-      fprintf(fid,'addpath(''%s''); %% Fixed remote repo location',p);
+      fprintf(fid,'%%CONFIGW  Programmatically-generated path adder\n');
+      fprintf(fid,'%%\n');
+      fprintf(fid,'%%\tconfigW; Add nigeLab remote repo to worker path\n');
+      addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
+      fprintf(fid,'%%%% Add remote nigeLab repository.\n');
+      fprintf(fid,'addpath(''%s''); %% Fixed remote repo location\n\n',p);
+      fprintf(fid,'%%%% Import getNigelPath to make sure we add path\n');
+      fprintf(fid,'import nigeLab.utils.getNigelPath\n'); 
+      fprintf(fid,'p = getNigelPath(''UNC''); %% Return worker path\n');
+      fprintf(fid,'addpath(p); %% Add "imported" path');
       fclose(fid);
       
       wrapperFile = fullfile(pwd,WRAPPER_FCN_NAME);
@@ -65,9 +82,22 @@ switch lower(queueMode)
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tqWrapper(targetFile); Run nigelLab on target\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
-      fprintf(fid,'%%%% Point to repo\nconfigW; %% Also auto-gen''d\n\n');
-      fprintf(fid,'%%%% Load target block and run method\n');
+      fprintf(fid,'%%%% Add remote nigeLab repository.\n');
+      fprintf(fid,'configW; %% Also auto-gen''d\n\n');
+      fprintf(fid,'%%%% Attempt to load target Block.\n');
+      fprintf(fid,'%% Do some error-checking\n');
+      fprintf(fid,'try\n\t');
       fprintf(fid,'blockObj = nigeLab.Block.remoteLoad(targetFile);\n');
+      fprintf(fid,'catch me\n\t');
+      fprintf(fid,['if strcmp(me.identifier,' ...
+                   '''nigeLab:loadRemote:ObjectNotFound'')\n\t\t']);
+      fprintf(fid,'error([''nigeLab:'' mfilename '':BadLoad''],...\n\t\t');
+      fprintf(fid,'\t''nigeLab not found (@ %%s)\\n'',pwd);\n\t');
+      fprintf(fid,'else\n\t\t');
+      fprintf(fid,'rethrow(me);\n\t');
+      fprintf(fid,'end %% end compare identifier\n');
+      fprintf(fid,'end %% end try load ... catch\n\n');
+      fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
       fprintf(fid,'blockObj.%s(); %% Runs queued `doAction`\n',operation);
       fprintf(fid,'end');
       fclose(fid);
@@ -77,7 +107,8 @@ switch lower(queueMode)
       varargout{2} = wrapperFile;
    otherwise
       error(['nigeLab:' mfilename ':UnexpectedString'],...
-         'Unexpected case: %s (should be ''fromRemote'' or ''fromLocal'')\n',...
+         ['Unexpected case: %s\n' ...
+          '(should be ''fromRemote'' or ''fromLocal'')\n'],...
          queueMode);
 end
 
