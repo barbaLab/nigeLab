@@ -116,7 +116,7 @@ classdef Block < matlab.mixin.Copyable
       NumProbes         = 0   % Number of electrode arrays
       NumChannels       = 0   % Number of electrodes on all arrays
       
-      
+      UseParallel logical % Flag indicating whether this machine can use parallel processing
       Status      struct  % Completion status for each element of BLOCK/FIELDS
       PathExpr    struct  % Path expressions for creating file hierarchy
       Paths       struct  % Detailed paths specifications for all the saved files
@@ -280,7 +280,8 @@ classdef Block < matlab.mixin.Copyable
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
             if file == 0
-               error('No block selected. Object not created.');
+               error(['nigeLab:' mfilename ':UISelectionCanceled'],...
+                  'No block selected. Object not created.');
             end
             blockObj.RecFile =(fullfile(path,file));
          else
@@ -292,14 +293,16 @@ classdef Block < matlab.mixin.Copyable
                   blockObj.AnimalLoc = tmp;
                end
             elseif exist(blockObj.RecFile,'file')==0
-               error('%s is not a valid block file.',blockObj.RecFile);
+               error(['nigeLab:' mfilename ':invalidBlockFile'],...
+                  '%s is not a valid block file.',blockObj.RecFile);
             end
          end
+         
          blockObj.RecFile =nigeLab.utils.getUNCPath(blockObj.RecFile);
          if ~blockObj.init()
-            error('Block object construction unsuccessful.');
+            error(['nigeLab:' mfilename ':badBlockInit'],...
+               'Block object construction unsuccessful.');
          end
-         
       end
       
       % Overloaded DELETE method for BLOCK to ensure listeners are deleted
@@ -569,6 +572,42 @@ classdef Block < matlab.mixin.Copyable
               blockObj.(ff{f}) = obj.blockObj.(ff{f});
           end
       end
+      
+      % Method to set property (for example private property) for all
+      % blocks in an array
+      function setProp(blockObj,propName,propVal)
+         % SETPROP  Sets property of all blocks in array to a value
+         %
+         %  blockObj.setProp('PropName',propVal);
+         
+         if isempty(blockObj)
+            return;
+         end
+         
+         mc = metaclass(blockObj);
+         propList = {mc.PropertyList.Name};
+         idx = ismember(lower(propList),lower(propName));
+         if sum(idx) < 1
+            nigeLab.utils.cprintf('Comments','No BLOCK property: %s',...
+               propName);
+            return;
+         elseif sum(idx) > 1
+            idx = ismember(propList,propName);
+            if sum(idx) < 1
+               nigeLab.utils.cprintf('Comments','No BLOCK property: %s',...
+                  propName);
+               return;
+            end
+         end
+         propName = propList{idx};
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               setProp(blockObj(i),propName,propVal);
+            end
+            return;
+         end
+         blockObj.(propName) = propVal;         
+      end
    end
    
    % Methods to be catalogued in CONTENTS.M
@@ -577,6 +616,7 @@ classdef Block < matlab.mixin.Copyable
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
       fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
       fieldIdx = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
+      flag = checkParallelCompatibility(blockObj) % Check if parallel can be run
       offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo);
       
       addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example

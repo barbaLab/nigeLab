@@ -1,5 +1,5 @@
 function flag = doRawExtraction(blockObj)
-%% DORAWEXTRACTION  Convert raw data files to Matlab TANK-BLOCK structure object
+%DORAWEXTRACTION  Extract matfiles from binary recording files
 %
 %  b = nigeLab.Block;
 %  flag = doRawExtraction(b);
@@ -8,8 +8,6 @@ function flag = doRawExtraction(blockObj)
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if conversion was successful.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag

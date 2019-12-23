@@ -53,7 +53,7 @@ switch lower(notification_mode)
       % Behave as if 'toWindow'
 end
 
-if ~nigeLab.utils.checkForWorker % serial execution on localhost
+if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
    metas = cell(1, numel(pars.NotifyString.Vars));
    for ii=1:numel(pars.NotifyString.Vars)
       metas{ii} = eval(pars.NotifyString.Vars{ii});

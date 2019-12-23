@@ -51,6 +51,7 @@ subs = S(1).subs;
 
 switch S(1).type
    case '{}'
+      %% Shortcut: tankObj{:} --> All Animals / tankObj{:,:} --> All Blocks
       if numel(S) > 1
          error(['nigeLab:' mfilename ':badSubscriptReference'],...
             ['Shortcut indexing using {} does not support subsequent ' ...
@@ -84,6 +85,7 @@ switch S(1).type
       return;
       
       % If not {} index, use normal behavior
+%    case '
    otherwise
       [varargout{1:nargout}] = builtin('subsref',tankObj,S);
 end

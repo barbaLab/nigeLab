@@ -1,8 +1,14 @@
 function flag = doLFPExtraction(blockObj)
 %DOLFPEXTRACTION   Decimates files to retrieve LFPs.
 %
+%  b = nigeLab.Block();
+%  flag = b.doLFPExtraction();
+%
 % Sampling frequency chosen for the downsampled files is 1000Hz
 % Band of interest in LFPs is up to 250Hz.
+%
+%  See Also:
+%  NIGELAB.DEFAULTS.LFP
 
 %% INITIALIZE PARAMETERS
 flag = false;

@@ -26,7 +26,7 @@ end
 AnimalsNames=dir(tankObj.RecDir);
 AnimalsNames=AnimalsNames(~ismember({AnimalsNames.name},{'.','..'})); 
 AnimalsNames=AnimalsNames([AnimalsNames.isdir]);
-
+tankObj.checkParallelCompatibility();
 tankObj.Animals = nigeLab.Animal.Empty([1,numel(AnimalsNames)]);
 for idx=1:numel(AnimalsNames)
     animalPath = nigeLab.utils.getUNCPath(...

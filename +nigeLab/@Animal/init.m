@@ -28,7 +28,7 @@ supportedFormats = animalObj.Pars.Animal.SupportedFormats;
 % Remove other folder names
 Recordings = dir(fullfile(animalObj.RecDir));
 Recordings = Recordings(~ismember({Recordings.name},{'.','..'}));
-
+animalObj.checkParallelCompatibility();
 animalObj.Blocks = nigeLab.Block.Empty([1,numel(Recordings)]);
 skipVec = false([1,numel(Recordings)]);
 for bb=1:numel(Recordings)
