@@ -51,10 +51,7 @@ classdef nigelProgress < handle
       Name      char                % Name of bar
       Progress  double              % From 0 to 100, progress of bar
       Status   = ''                 % Currently-displayed status
-   end
-   
-   properties (Access = private, SetObservable = true)
-      Visible  char   % 'on' or 'off'
+      Visible  char                 % 'on' or 'off'
    end
    
    properties (Access = {?nigeLab.libs.remoteMonitor, ...

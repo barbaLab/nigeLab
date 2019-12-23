@@ -129,21 +129,47 @@ classdef remoteMonitor < handle
          
       end
       
+      % Returns bar based on sel from list of monitorObj bars
+      function bar = getBar(monitorObj,sel)
+         % GETBAR  Returns a single bar object based on selection from list
+         %           of  monitorObj bars.
+         
+         bar = getBar(monitorObj.bars,sel);
+      end
+
       % Starts the bar based on some input selection index
       function bar = startBar(monitorObj,name,sel,job)
          % STARTBAR  Starts the bar based on some input selection index and
          %           assigns a job as well. 
          %
          %  Returns a handle to the bar object
+         %
+         %  bar = monitorObj.startBar('barName',[3 2],job);
+         %  --> Returns the bar corresponding to 2nd block of 3rd animal
+         %  --> "Starts" the TimerFcn for that Bar
+         %
+         %  monitorObj.startBar('barName',bar,job);
+         %  --> Passes the bar to start directly to the method.
          
          if nargin < 4
             job = [];
          end
          
+         switch class(sel)
+            case 'nigeLab.libs.nigelProgress'
+               bar = sel; % Can be passed directly
+            otherwise
+               if isnumeric(sel)
+                  bar = monitorObj.getBar(sel);
+               else
+                  error(['nigeLab:' mfilename ':BadInputType2'],...
+                     'Unexpected class for ''sel'' input: %s',...
+                     class(sel));
+               end
+         end
+
          % Increment counter of running jobs
          monitorObj.runningJobs = monitorObj.runningJobs + 1;
-         
-         bar = monitorObj.getBar(sel);
          bar.Progress = 0;
          bar.Name = name;
          bar.job = job;
@@ -238,8 +264,29 @@ classdef remoteMonitor < handle
          end
 
       end
+   end
+   
+   methods (Access = {?nigeLab.libs.DashBoard,?nigeLab.libs.nigelProgress})
+      % Private function that is issued when the bar associated with this
+      % job reaches 100% completion
+      function barCompleted(monitorObj,bar)
+         % BARCOMPLETED  Callback to issue completion sound for the
+         %               completed task of NIGELBAROBJ, once a particular
+         %               bar has reached 100%.
+         %
+         %   monitorObj.barCompleted(bar);
+         %
+         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
+         
+         % Play the bell sound! Yay!
+         nigeLab.sounds.play('bell',1.5);
+         evtData = nigeLab.evt.jobCompletedEventData(bar);
+         if bar.IsComplete
+            bar.setState(100,'Done.');
+         end
+         notify(monitorObj,'jobCompleted',evtData);
+      end      
 
-      
    end
    
    % Private methods accessed internally
@@ -307,36 +354,6 @@ classdef remoteMonitor < handle
             @bar.getState)];
       end
       
-      % Private function that is issued when the bar associated with this
-      % job reaches 100% completion
-      function barCompleted(monitorObj,bar)
-         % BARCOMPLETED  Callback to issue completion sound for the
-         %               completed task of NIGELBAROBJ, once a particular
-         %               bar has reached 100%.
-         %
-         %   monitorObj.barCompleted(bar);
-         %
-         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
-         
-         % Play the bell sound! Yay!
-         nigeLab.sounds.play('bell',1.5);
-         evtData = nigeLab.evt.jobCompletedEventData(bar);
-         if bar.IsComplete
-            bar.setState(100,'Done.');
-         end
-         notify(monitorObj,'jobCompleted',evtData);
-      end
-      
-      % Returns bar based on sel from list of monitorObj bars
-      function bar = getBar(monitorObj,sel)
-         % GETBAR  Returns a single bar object based on selection from list
-         %           of  monitorObj bars.
-         
-         bar = getBar(monitorObj.bars,sel);
-      end
-      
-      
-
    end
    
 end

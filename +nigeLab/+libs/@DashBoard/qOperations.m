@@ -25,6 +25,11 @@ function qOperations(obj,operation,target,sel)
 %  NIGELAB.BLOCK/DOAUTOCLUSTERING, NIGELAB.BLOCK/DOLFPEXTRACTION,
 %  NIGELAB.DEFAULTS.QUEUE
 
+%% Define imports within scope of qOperations
+import nigeLab.utils.buildWorkerConfigScript
+import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
+import nigeLab.utils.findGoodCluster
+
 %%
 % Set indexing to assign to UserData property of Jobs, so that on
 % job completion the corresponding "jobIsRunning" property array
@@ -57,60 +62,54 @@ switch class(target)
       % remote - Distributed
       [~,qPars] = target.updateParams('Queue');
       [~,nPars] = target.updateParams('Notifications');
-      opLink = nigeLab.utils.getNigeLink('nigeLab.Block',operation);
+      opLink = getNigeLink('nigeLab.Block',operation);
                  
       if obj.Tank.UseParallel
          %% Configure remote or local cluster for correct parallel computation
-         lineLink = nigeLab.utils.getNigeLink(...
-            'nigeLab.libs.DashBoard','qOperations',...
-            '(Parallel)');
+         lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
+                                '(Parallel)');
          fprintf(1,'Initializing %s job: %s - %s\n',...
             lineLink,opLink,target.Name);
          if qPars.UseRemote
             if isfield(qPars,'Cluster')
                myCluster = parcluster(qPars.Cluster);
             else
-               myCluster = nigeLab.utils.findGoodCluster();
+               myCluster = findGoodCluster();
             end
          else
             myCluster = parcluster();
          end
          
-         
-         attachedFiles = ...
+         if isempty(qPars.RemoteRepoPath)
+            attachedFiles = ...
                matlab.codetools.requiredFilesAndProducts(...
                sprintf('%s.m',operation));
-         
-            
-         if isempty(qPars.RemoteRepoPath)
-            configFilePath = fullfile(nigeLab.defaults.Tempdir,'configW.m');
-            p = nigeLab.utils.getNigelPath('UNC');
-
-            % programmatically creates a worker config file
-            
-            fid = fopen(configFilePath,'w');
-            fprintf(fid,'addpath(''%s'');',p);
-            fclose(fid);
-            attachedFiles = [attachedFiles, {configFilePath}];
+            % programmatically creates a worker config file:
+            c = buildWorkerConfigScript('fromRemote');
+            attachedFiles = [attachedFiles, {c}];
 
             for jj=1:numel(attachedFiles)
-               attachedFiles{jj}=nigeLab.utils.getUNCPath(attachedFiles{jj});
+               attachedFiles{jj}=getUNCPath(attachedFiles{jj});
             end
          else
             p = qPars.RemoteRepoPath;
-            configFilePath = fullfile(p,'configW.m');
-            fid = fopen(configFilePath,'w');
-            fprintf(fid,'addpath(''%s'');',p);
-            fclose(fid);
-            attachedFiles = [attachedFiles, {configFilePath}];
+            % Create a worker config file that adds the remote repository,
+            % then loads the corresponding block matfile and runs the
+            % desired operation.
+            [c,w] = buildWorkerConfigScript('fromLocal',p,operation);
+            attachedFiles = {c, w};
          end
          
          n = min(nPars.NMaxNameChars,numel(target.Name));
          name = target.Name(1:n);
          name = strrep(name,'_','-');
+         bar = obj.remoteMonitor.getBar(sel);
+         bar.setState(0,'Pending...');
+         bar.Visible = 'on';
          
          tagStr = reportProgress(target,'Queuing',0);
          job = createCommunicatingJob(myCluster, ...
+            'AutoAttachFiles',false,...
             'AttachedFiles', attachedFiles, ...
             'AdditionalPaths', p,...
             'Name', [operation target.Name], ...
@@ -124,23 +123,29 @@ switch class(target)
          % target is nigelab.Block
          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s %s',blockName,operation(3:end));
-         bar = obj.remoteMonitor.startBar(barName,sel,job);
-         bar.setState(0,'Pending...')
-         
+         obj.remoteMonitor.startBar(barName,bar,job);
+
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)obj.remoteMonitor.barCompleted(bar);
-         job.QueuedFcn=@(~,~)bar.setState(bar,0,'Queuing...');
-         job.RunningFcn=@(~,~)bar.setState(bar,0,'Running...');
-         createTask(job,operation,0,{target});
+         job.QueuedFcn=@(~,~)bar.setState(0,'Queuing...');
+         job.RunningFcn=@(~,~)bar.setState(0,'Running...');
+         if isempty(qPars.RemoteRepoPath)
+            createTask(job,operation,0,{target});
+         else
+            targetFile = getUNCPath(...
+               [target.Paths.SaveLoc.dir '_Block.mat']);
+            createTask(job,'qWrapper',0,{targetFile});
+%             delete(c); % Delete configW.m (from Tempdir)
+%             delete(w); % Delete qWrapper.m (from pwd)
+         end
          submit(job);
          fprintf(1,'%s Job running: %s - %s\n',...
             lineLink,opLink,target.Name);
          
       else
          %% otherwise run single operation serially
-         lineLink = nigeLab.utils.getNigeLink(...
-            'nigeLab.libs.DashBoard','qOperations',...
-            '(Non-Parallel)');
+         lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
+                                '(Non-Parallel)');
          fprintf(1,'%s Job running: %s - %s\n',...
             lineLink,opLink,target.Name);
          % (target is scalar nigeLab.Block)

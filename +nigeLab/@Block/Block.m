@@ -771,7 +771,7 @@ classdef Block < matlab.mixin.Copyable
       end
    end
    
-   % Static methods for multiple animals
+   % Static methods to handle "Multi-Blocks" issues
    methods (Static)
       % Method to "cancel" execution of a function evaluation
       function cancelExecution()
@@ -797,7 +797,7 @@ classdef Block < matlab.mixin.Copyable
          blockObj = nigeLab.Block(n);
       end
       
-      % Overloaded method for loading objects (for many blocks case)
+      % Overloaded method for loading objects (for "multi-blocks" case)
       function b = loadobj(a)
          % LOADOBJ  Overloaded method called when loading BLOCK.
          %
@@ -830,5 +830,6 @@ classdef Block < matlab.mixin.Copyable
    % Static enumeration methods
    methods (Static = true, Access = public)
       field = getOperationField(operation); % Get field associated with operation
+      blockObj = loadRemote(targetBlockFile); % Load block on remote worker
    end
 end

@@ -33,6 +33,16 @@ flag = uFlag && lFlag && dFlag;
 
 tankObj.UseParallel = flag;
 
+if (nargout < 1)
+   nigeLab.utils.cprintf('Comments','Tank (%s) flagged for ',tankObj.Name);
+   if flag
+      nigeLab.utils.cprintf('*Strings','Parallel Processing\n');
+   else
+      
+      nigeLab.utils.cprintf('*Strings','Serial Processing\n');
+   end
+end
+
 %% Update all "Child" data objects
 A = tankObj.Animals; % All Animals
 setProp(A,'UseParallel',flag);

@@ -40,3 +40,5 @@ local/
 \+nigeLab/configW.m
 
 configW.m
+
+qWrapper.m
