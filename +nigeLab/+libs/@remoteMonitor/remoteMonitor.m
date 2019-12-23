@@ -18,6 +18,7 @@ classdef remoteMonitor < handle
       runningJobs = 0         % Number of running jobs
       progtimer   timer       % Timer for checking progress periodically
       pars        struct      % Parameters struct
+      delim       char        % Delimiter for parsing job tags
    end
    
    events
@@ -74,7 +75,8 @@ classdef remoteMonitor < handle
          end
          
          % Define figure size and axes padding for the single bar case
-         monitorObj.pars = nigeLab.defaults.Notifications();
+         monitorObj.pars = tankObj.Pars.Notifications;
+         monitorObj.delim = monitorObj.pars.TagDelim;
          monitorObj.progtimer = timer(...
             'Name',sprintf('%s_timer','remoteMonitor'),...
             'Period',monitorObj.pars.NotifyTimer,...
@@ -223,7 +225,7 @@ classdef remoteMonitor < handle
                   return;
                end
             else
-               pct = nigeLab.utils.jobTag2Pct(bar.job);
+               pct = nigeLab.utils.jobTag2Pct(bar.job,monitorObj.delim);
             end
             % Redraw the patch that colors in the progressbar
             bar.setState(pct);

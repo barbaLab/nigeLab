@@ -38,6 +38,3 @@ end
 feval(thisFunction, ObjH, EventData, argsIn{:});
    
 end
-
-
-end
