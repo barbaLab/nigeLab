@@ -68,6 +68,17 @@ if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
       return;
    end
    
+   if blockObj.UseParallel % Then we SHOULD be on the remote
+      p_db = blockObj.Pars.Notifications.DBLoc;
+      if exist(p_db,'dir')==0
+         mkdir(p_db);
+      end
+      % Just write current line for debugging
+      db_id = fopen(fullfile(p_db,'logs.txt'),'w');
+      fprintf(db_id,'Worker::%s: %s\n',pwd,str);
+      fclose(db_id);
+   end
+   
    % only increment counter by a certain amount defined in defaults.
    if ~floor(mod(pct,pars.MinIncrement))
       % This is only entered if % is an even multiple of pars.MinIncrement   
@@ -117,8 +128,20 @@ else % we are in worker environment
    if nargout == 1
       return;
    end
-   job = getCurrentJob;
-   set(job,'Tag',str);   
+   if ~isempty(blockObj.CurrentJob)
+      if isvalid(blockObj.CurrentJob)
+         job = blockObj.CurrentJob;
+      else
+         pause(15); % Make sure enough time to "catch" current job
+         job = getCurrentJob;
+         blockObj.CurrentJob = job;
+      end
+   else
+      pause(15);
+      job = getCurrentJob;
+      blockObj.CurrentJob = job;
+   end
+   set(job,'Tag',str); 
 end
 
 end

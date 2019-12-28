@@ -9,6 +9,9 @@ function varargout = buildWorkerConfigScript(queueMode,varargin)
 %         as the remote location, but the data and a clone of the
 %         repository are set up on the remote location. (i.e. MM method)
 %     --> varargin{1}: The full file path of the remote repo to add to path
+%     --> varargin{2}: Name of the operation
+%     --> varargin{3}: "Debug" output location on remote
+%                       (Block.Pars.Notifications('DBLoc'))
 %
 %  configFile  --  Char array that is the full filename (including path) of
 %                    the script to attach to the job and run on the worker.
@@ -47,10 +50,18 @@ switch lower(queueMode)
          p = {p};
       end
       operation = varargin{2};
+      if numel(varargin) > 2
+         db_p = varargin{3};
+      end
+      
       makeConfigScript(configFile,p);
       
       wrapperFile = fullfile(pwd,WRAPPER_FCN_NAME);
-      makeWrapperFunction(wrapperFile,operation,p);
+      if numel(varargin) > 2
+         makeWrapperFunction(wrapperFile,operation,p,db_p);
+      else
+         makeWrapperFunction(wrapperFile,operation,p);
+      end
       
       varargout = cell(1,2);
       varargout{1} = configFile;
@@ -75,10 +86,14 @@ end
    end
 
    % Helper-function to make "configW.m" configuration script
-   function makeConfigScript(configFile,p)
+   function makeConfigScript(configFile,p,db_p)
       %MAKECONFIGSCRIPT  Makes "configW.m" worker configuration script
       %
       %  makeConfigScript(configFile);
+      
+      if nargin < 3
+         db_p = 'C:/Remote_Matlab_Debug_Logs';
+      end
       
       if exist(configFile,'file')~=0
          delete(configFile);
@@ -112,7 +127,7 @@ end
    end
 
    % Helper-function to make wrapper function for running qOperation
-   function makeWrapperFunction(wrapperFile,operation,p)
+   function makeWrapperFunction(wrapperFile,operation,p,db_p)
       %MAKEWRAPPERFUNCTION  Make wrapper function for running qOperation
       %
       %  makeWrapperFunction(wrapperFile,operation);
@@ -128,23 +143,21 @@ end
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
       
       % DEBUG
-%       fprintf(fid,['error(''Worker path: %%s\\n' ...
-%                           'Target: %%s\\n'',pwd,targetFile);\n']);
-      fprintf(fid,'logName = fullfile(pwd,''logs.txt'');\n');
+      fprintf(fid,'logName = fullfile(%s,''logs.txt'');\n',db_p);
+      fprintf(fid,'if exist(''%s'',''dir'')==0\n\t',db_p);
+      fprintf(fid,'mkdir(''%s''); %% Make sure debug path is good\n',db_p);
+      fprintf(fid,'end\n');
       fprintf(fid,'if exist(logName,''file'')~=0\n\t');
       fprintf(fid,'delete(logName); %% Delete old log file\n');
       fprintf(fid,'end\n');
       fprintf(fid,'db_id = fopen(logName,''w''); %% Make debug logs\n');
+      fprintf(fid,['fprintf(db_id,''Worker path: %%s\\n' ...
+                   'Target: %%s\\n'',pwd,targetFile);\n']);
       
       for i = 1:numel(p)
          fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p{i});
       end
-%       fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{1});
-%       fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
-%       fprintf(fid,'\t\t''Worker (%%s) does not see nigeLab (%%s)'',...\n');
-%       fprintf(fid,'\t\tpwd,''%s'');\n',p{1});
-%       fprintf(fid,'end %% error check for remote repo path\n');
-%       fprintf(fid,'cd(''%s''); %% Fixed repo location\n\n',p{1});
+
       fprintf(fid,'\n%%%% Get handle to current job\n');
       fprintf(fid,'pause(15); %% Wait to make sure job has loaded\n');
       fprintf(fid,'curJob = getCurrentJob;\n');
@@ -155,8 +168,10 @@ end
       fprintf(fid,'\tfprintf(db_id,'' (%%s) '',class(curJob));\n');
       fprintf(fid,'\tif isvalid(curJob)\n');
       fprintf(fid,'\t\tfprintf(db_id,''%%s\\n'',curJob(1).Tag);\n');
+      fprintf(fid,['\t\tfprintf(db_id,' ...
+         '''%%g element(s) in curJob array\\n'',numel(curJob));\n']);
       fprintf(fid,'\t\t[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
-      fprintf(fid,'\t\tstrrep(curJob(1).Tag,tag,''Loading'');\n');
+      fprintf(fid,'\t\tcurJob(1).Tag = strrep(curJob(1).Tag,tag,''Loading'');\n');
       fprintf(fid,'\telse\n');
       fprintf(fid,'\t\tfprintf(db_id,''INVALID\\n'');\n');
       fprintf(fid,'\tend %% end isvalid\n');
@@ -165,7 +180,6 @@ end
       fprintf(fid,'%%%% Attempt to load target Block.\n');
       fprintf(fid,'%% Do some error-checking\n');
       fprintf(fid,'try\n\t');
-%       fprintf(fid,'import nigeLab.* %% Try importing package?\n\t');
       fprintf(fid,'blockObj = nigeLab.Block.loadRemote(targetFile);\n');
       fprintf(fid,'catch me\n\t');
       fprintf(fid,['if strcmp(me.identifier,' ...
@@ -180,7 +194,7 @@ end
       
       fprintf(fid,'if ~isempty(curJob)\n');
       fprintf(fid,'\tif isvalid(curJob)\n');
-      fprintf(fid,'\t\tstrrep(curJob(1).Tag,''Loading'',''Running'');\n');
+      fprintf(fid,'\t\tcurJob(1).Tag = strrep(curJob(1).Tag,''Loading'',''Running'');\n');
       fprintf(fid,'\tend %% end isvalid\n');
       fprintf(fid,'end %% end ~isempty\n\n');
       

@@ -12,15 +12,12 @@ function flag = doLFPExtraction(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false;
-blockObj.checkActionIsValid();
-nigeLab.utils.checkForWorker('config');
+blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
    return;
 end
-
-
 
 if ~blockObj.updateParams('LFP')
 %    warning('Something went wrong setting the LFP parameters.');

@@ -174,7 +174,7 @@ classdef Block < matlab.mixin.Copyable
 %                                            'do' extraction methods
                           
       ViableFieldTypes       cell         % List of 'Viable' possible field types
-
+      CurrentJob  % parallel.job.MJSCommunicatingJob 
    end
 
    % Private - Listeners & Flags
@@ -524,6 +524,7 @@ classdef Block < matlab.mixin.Copyable
          %  blockObj.saveobj();
          
          blockObj.Listener(:) = [];
+         blockObj.CurrentJob = [];
       end
       
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.

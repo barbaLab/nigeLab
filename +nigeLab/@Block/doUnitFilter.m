@@ -21,7 +21,7 @@ if ~blockObj.updateParams('Filt')
 else
    pars = blockObj.Pars.Filt;
 end
-reportProgress(blockObj,'Filtering',0);
+reportProgress(blockObj,'Filtering.',0,'toWindow','Filtering');
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
 %% ENSURE MASK IS ACCURATE

@@ -93,10 +93,11 @@ switch class(target)
             end
          else
             p = qPars.RemoteRepoPath;
+            db_p = nPars.DBLoc;
             % Create a worker config file that adds the remote repository,
             % then loads the corresponding block matfile and runs the
             % desired operation.
-            [c,w] = buildWorkerConfigScript('fromLocal',p,operation);
+            [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p);
             attachedFiles = {c, w};
          end
          

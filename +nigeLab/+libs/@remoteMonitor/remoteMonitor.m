@@ -19,6 +19,7 @@ classdef remoteMonitor < handle
       progtimer   timer       % Timer for checking progress periodically
       pars        struct      % Parameters struct
       delim       char        % Delimiter for parsing job tags
+      tankObj     nigeLab.Tank  % Tank object
    end
    
    events
@@ -42,6 +43,8 @@ classdef remoteMonitor < handle
          if nargin < 2
             nigelPanelObj = gcf;
          end
+         
+         monitorObj.tankObj = tankObj;
          
          % Handle different input classes
          if isa(nigelPanelObj,'nigeLab.libs.nigelPanel') % nigelPanel
@@ -291,6 +294,11 @@ classdef remoteMonitor < handle
          evtData = nigeLab.evt.jobCompletedEventData(bar);
          if bar.IsComplete
             bar.setState(100,'Done.');
+         end
+         if bar.IsRemote
+            sel = bar.BlockSelectionIndex;
+            b = monitorObj.tankObj{sel(1,1),sel(1,2)};
+            b.reload(); % Reload the block so it is linked properly
          end
          notify(monitorObj,'jobCompleted',evtData);
       end      
