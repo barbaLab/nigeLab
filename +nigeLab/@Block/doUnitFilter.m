@@ -8,8 +8,8 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
-if blockObj.UseParallel && blockObj.OnRemote
-   [~,nPars] = blockObj.updateParams('Notifications');
+if blockObj.OnRemote
+   nPars = blockObj.Pars.Notifications;
    p_db = nPars.DBLoc; 
    if exist(p_db,'dir')==0
       mkdir(p_db);

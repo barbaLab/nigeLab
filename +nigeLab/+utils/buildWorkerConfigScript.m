@@ -213,6 +213,8 @@ end
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
       fprintf(fid,'blockObj.OnRemote = true;\n %% Currently on REMOTE');
       fprintf(fid,'blockObj.CurrentJob = curJob(1); %% Assign JOB\n');
+      fprintf(fid,'blockObj.updateParams(''Notifications'');\n');
+      fprintf(fid,'blockObj.updateParams(''Queue'');\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
          operation,operation);
       fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
