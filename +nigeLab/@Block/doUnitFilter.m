@@ -8,7 +8,22 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
+if blockObj.UseParallel
+   p_db = blockObj.Pars.Notifications.DBLoc; 
+   if exist(p_db,'dir')==0
+      mkdir(p_db);
+   end
+   db_id = fopen(fullfile(p_db,'logs.txt'),'a');
+   fprintf(db_id,'(%s) Begin %s\n',char(datetime),mfilename);
+   fclose(db_id);
+else
+   db_id = '';
+end
 blockObj.checkActionIsValid();
+if ~isempty(db_id)
+   fprintf(db_id,'(%s) %s passed checkActionIsValid\n',...
+      char(datetime),mfilename);
+end
 
 [~,pars] = blockObj.updateParams('Filt');
 reportProgress(blockObj,'Filtering.',0,'toWindow','Filtering');

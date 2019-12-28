@@ -148,7 +148,7 @@ end
       fprintf(fid,'mkdir(''%s''); %% Make sure debug path is good\n',db_p);
       fprintf(fid,'end\n');
       fprintf(fid,'db_id = fopen(logName,''a''); %% Make debug logs\n');
-      fprintf(fid,['fprintf(db_id,''(%%s) Worker path: %%s\\n' ...
+      fprintf(fid,['fprintf(db_id,''\\n(%%s) Worker path: %%s\\n' ...
                    '(%%s) Target: %%s\\n'',char(datetime),pwd,' ...
                    'char(datetime),targetFile);\n']);
       
@@ -202,6 +202,13 @@ end
                      'char(datetime),class(blockObj)); %% For debugging \n']);
       fprintf(fid,'fclose(db_id); %% End debug logging\n');
       fprintf(fid,'pause(10);\n\n');
+      
+      fprintf(fid,'%%%% Check that this is a valid method of blockObj\n');
+      fprintf(fid,'if ~ismethod(blockObj,''%s'')\n',operation);
+      fprintf(fid,['\terror([''nigelab:'' mfilename '':InvalidMethodName''], '...
+                   '...\n\t\t' ...
+                   '%s is not a valid doAction.'');\n']);
+      fprintf(fid,'end\n\n');
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
