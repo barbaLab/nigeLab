@@ -147,12 +147,10 @@ end
       fprintf(fid,'if exist(''%s'',''dir'')==0\n\t',db_p);
       fprintf(fid,'mkdir(''%s''); %% Make sure debug path is good\n',db_p);
       fprintf(fid,'end\n');
-      fprintf(fid,'if exist(logName,''file'')~=0\n\t');
-      fprintf(fid,'delete(logName); %% Delete old log file\n');
-      fprintf(fid,'end\n');
-      fprintf(fid,'db_id = fopen(logName,''w''); %% Make debug logs\n');
-      fprintf(fid,['fprintf(db_id,''Worker path: %%s\\n' ...
-                   'Target: %%s\\n'',pwd,targetFile);\n']);
+      fprintf(fid,'db_id = fopen(logName,''a''); %% Make debug logs\n');
+      fprintf(fid,['fprintf(db_id,''(%%s) Worker path: %%s\\n' ...
+                   '(%%s) Target: %%s\\n'',char(datetime),pwd,' ...
+                   'char(datetime),targetFile);\n']);
       
       for i = 1:numel(p)
          fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p{i});
@@ -161,19 +159,19 @@ end
       fprintf(fid,'\n%%%% Get handle to current job\n');
       fprintf(fid,'pause(15); %% Wait to make sure job has loaded\n');
       fprintf(fid,'curJob = getCurrentJob;\n');
-      fprintf(fid,'fprintf(db_id,''Current Job: '');\n');
+      fprintf(fid,'fprintf(db_id,''(%%s) Current Job: '',char(datetime));\n');
       fprintf(fid,'if isempty(curJob)\n');
       fprintf(fid,'\tfprintf(db_id,''EMPTY\\n'');\n');
       fprintf(fid,'else\n');
       fprintf(fid,'\tfprintf(db_id,'' (%%s) '',class(curJob));\n');
       fprintf(fid,'\tif isvalid(curJob)\n');
       fprintf(fid,'\t\tfprintf(db_id,''%%s\\n'',curJob(1).Tag);\n');
-      fprintf(fid,['\t\tfprintf(db_id,' ...
-         '''%%g element(s) in curJob array\\n'',numel(curJob));\n']);
+      fprintf(fid,['\t\tfprintf(db_id,''(%%s) ' ...
+         '%%g element(s) in curJob array\\n'',char(datetime),numel(curJob));\n']);
       fprintf(fid,'\t\t[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
       fprintf(fid,'\t\tcurJob(1).Tag = strrep(curJob(1).Tag,tag,''Loading'');\n');
       fprintf(fid,'\telse\n');
-      fprintf(fid,'\t\tfprintf(db_id,''INVALID\\n'');\n');
+      fprintf(fid,'\t\tfprintf(db_id,''(%%s) INVALID\\n'',char(datetime));\n');
       fprintf(fid,'\tend %% end isvalid\n');
       fprintf(fid,'end %% end isempty\n\n');
 
@@ -198,15 +196,19 @@ end
       fprintf(fid,'\tend %% end isvalid\n');
       fprintf(fid,'end %% end ~isempty\n\n');
       
-      fprintf(fid,['fprintf(db_id,''->\\tLoaded %%s successfully!\\n'','...
-                     'blockObj.Name); %% Update logs\n']);
-      fprintf(fid,['fprintf(db_id,''\\t->\\t(Class: %%s)\\n'','...
-                     'class(blockObj)); %% For debugging \n\n']);
+      fprintf(fid,['fprintf(db_id,''(%%s) ->\\tLoaded %%s successfully!\\n'','...
+                     'char(datetime),blockObj.Name); %% Update logs\n']);
+      fprintf(fid,['fprintf(db_id,''(%%s) \\t->\\t(Class: %%s)\\n'','...
+                     'char(datetime),class(blockObj)); %% For debugging \n']);
       fprintf(fid,'fclose(db_id); %% End debug logging\n');
+      fprintf(fid,'pause(10);\n\n');
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
-      fprintf(fid,'blockObj.%s(); %% Runs queued `doAction (%s)`\n',...
+      fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
          operation,operation);
+      fprintf(fid,'db_id = fopen(logName,''a''); %% Add to logs\n');
+      fprintf(fid,'fprintf(db_id,''(%%s) %s complete.\\n'',char(datetime));\n',...
+         operation);
       fprintf(fid,'end');
       fclose(fid);
    end

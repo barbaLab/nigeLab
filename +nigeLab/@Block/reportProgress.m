@@ -74,8 +74,9 @@ if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
          mkdir(p_db);
       end
       % Just write current line for debugging
-      db_id = fopen(fullfile(p_db,'logs.txt'),'w');
-      fprintf(db_id,'Worker::%s: %s\n',pwd,str);
+      db_id = fopen(fullfile(p_db,'logs.txt'),'a');
+      fprintf(db_id,'(%s) Worker::%s: %s <-- WRONG CALL\n',...
+         char(datetime),pwd,str);
       fclose(db_id);
    end
    
@@ -130,8 +131,8 @@ else % we are in worker environment
       mkdir(p_db);
    end
    % Just write current line for debugging
-   db_id = fopen(fullfile(p_db,'logs.txt'),'w');
-   fprintf(db_id,'Worker::%s: %s\n',pwd,str);
+   db_id = fopen(fullfile(p_db,'logs.txt'),'a');
+   fprintf(db_id,'(%s) Worker::%s: %s\n',char(datetime),pwd,str);
    fclose(db_id);
    if nargout == 1
       return;
