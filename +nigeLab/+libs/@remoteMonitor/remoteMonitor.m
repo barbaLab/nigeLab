@@ -25,7 +25,7 @@ classdef remoteMonitor < handle
       jobCompleted  % Event issued when progress bar hits 100%
    end
    
-   methods (Access = ?nigeLab.libs.DashBoard)
+   methods (Access = {?nigeLab.libs.DashBoard,?timer})
       % Class constructor for nigeLab.libs.remoteMonitor object handle
       function monitorObj = remoteMonitor(tankObj,nigelPanelObj)
          %REMOTEMONITOR  Class to monitor changes in remote jobs and issue 
@@ -247,14 +247,20 @@ classdef remoteMonitor < handle
             if ~bar.IsRemote
                if strcmpi(bar.getChild('status','String'),'Done.')
                   pct = 100;
+                  str = '';
                else
                   return;
                end
             else
-               pct = nigeLab.utils.jobTag2Pct(bar.job,monitorObj.delim);
+               [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,...
+                  monitorObj.delim);
             end
             % Redraw the patch that colors in the progressbar
-            bar.setState(pct);
+            if isempty(str)
+               bar.setState(pct);
+            else
+               bar.setState(pct,str);
+            end
             
             % If the job is completed, then run the completion method
             if pct == 100
@@ -266,7 +272,9 @@ classdef remoteMonitor < handle
       end
    end
    
-   methods (Access = {?nigeLab.libs.DashBoard,?nigeLab.libs.nigelProgress})
+   methods (Access = {?nigeLab.libs.DashBoard,...
+                      ?nigeLab.libs.nigelProgress,...
+                      ?parallel.job.MJSCommunicatingJob})
       % Private function that is issued when the bar associated with this
       % job reaches 100% completion
       function barCompleted(monitorObj,bar)

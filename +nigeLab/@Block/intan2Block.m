@@ -35,7 +35,7 @@ function flag = intan2Block(blockObj,fields,paths)
 
 %% PARSE INPUT
 flag = false;
-UseParallel = nigeLab.defaults.Queue('UseParallel');
+UseParallel = blockObj.UseParallel;
 if nargin < 3 % If 2 inputs, need to specify default paths struct
    paths = blockObj.Paths;
 end
@@ -50,7 +50,8 @@ end
 fid = fopen(blockObj.RecFile, 'r');
 s = dir(blockObj.RecFile);
 if isempty(s)
-   blockObj.reportProgress('<strong>No files found!</strong> Extraction aborted ::',100);
+   blockObj.reportProgress('<strong>No files found!</strong> Extraction aborted ::',...
+      100,'toWindow','Aborted');
    blockObj.reportProgress('',100,'toEvent');
    delete(lh);
    return;
@@ -90,6 +91,7 @@ end
 
 % Header --> 10%
 blockObj.reportProgress('Parsed header.',10,'toEvent');
+blockObj.reportProgress('Header parsed.',10,'toWindow','Parsed');
 
 %% PRE-ALLOCATE MEMORY FOR WRITING RECORDED VARIABLES TO DISK FILES
 % preallocates matfiles for varible that otherwise would require
@@ -131,7 +133,7 @@ for f = fields
                'class','single');
             Files.(curDataField){iCh} = nigeLab.utils.makeDiskFile(diskPars);
             pct = floor(iCh/nCh.(curDataField) * 100);
-            reportProgress(blockObj,[curDataField ' info'], pct,'toWindow');
+            reportProgress(blockObj,[curDataField ' info'], pct,'toWindow','Allocating');
             reportProgress(blockObj,'Allocating.',round((pct/100)*30),'toEvent');
          end
       case 'Events'
@@ -218,6 +220,7 @@ for f = fields
 end
 % Memory --> 30%
 blockObj.reportProgress('Memory Allocated.',35,'toEvent');
+blockObj.reportProgress('Memory Allocated.',35,'toWindow','Allocated');
 
 %% INITIALIZE INDEXING VECTORS FOR READING CHUNKS OF DATA FROM FILE
 
@@ -333,7 +336,7 @@ if end_~=nDataPoints
    error('Error during the extraction process(buffer size doesn''t match the datablock size), the data file might be corrupted.'); 
 end
 blockObj.reportProgress('Indexing complete.',40,'toEvent');
-
+blockObj.reportProgress('Indexing complete.',40,'toWindow','Indexed');
 %% READ BINARY DATA
 progress=0;
 num_gaps = 0;
@@ -384,7 +387,7 @@ for iBlock=1:NB
 %    clc;
    progress=progress+min(nBlocks,info.NumDataBlocks-nBlocks*(iBlock-1));
    pct = round(100 * (progress / info.NumDataBlocks));
-   reportProgress(blockObj,'Extracting',pct,'toWindow');
+   reportProgress(blockObj,'Extracting.',pct,'toWindow','Extracting');
 end
 fprintf(1,newline);
 % Check for gaps in timestamps.
@@ -405,6 +408,7 @@ fclose(fid);
 
 % Link to data
 blockObj.reportProgress('Linking Data.',95,'toEvent');
+blockObj.reportProgress('Linking Data.',95,'toWindow','Linking');
 blockObj.linkToData(intersect({'Raw','AnalogIO','DigIO','Stim'},...
                               blockObj.Fields));
 flag = true;
@@ -468,6 +472,7 @@ for iCh=1:nChan % units = microvolts
    fprintf(1,'\b\b\b\b\b%.3d%%\n',pct);
    PCT = round(pct/2);
    blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toEvent');
+   blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toWindow','Writing');
 end
 end
 
@@ -494,6 +499,7 @@ for iCh = dataIdx
    fprintf(1,'\b\b\b\b\b%.3d%%\n',pct);
    PCT = round(pct/2);
    blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toEvent');
+   blockObj.reportProgress('Writing Data.',OFFSET + PCT,'toWindow','Writing');
 end
 end
 

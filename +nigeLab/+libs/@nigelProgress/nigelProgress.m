@@ -34,6 +34,7 @@ classdef nigelProgress < handle
    
    properties (Access = public, SetObservable = true)
       Position  double   % Position of "container" but updates graphics
+      IsRemote  logical             % Flag indicating if bar is remote
       job
    end
 
@@ -47,7 +48,6 @@ classdef nigelProgress < handle
                          ?nigeLab.libs.DashBoard}, SetObservable = true)
       
       BarIndex = nan                % Index of this bar in remoteMonitor
-      IsRemote  logical             % Flag indicating if bar is remote
       Name      char                % Name of bar
       Progress  double              % From 0 to 100, progress of bar
       Status   = ''                 % Currently-displayed status
@@ -75,7 +75,8 @@ classdef nigelProgress < handle
    end
    
    methods (Access = {?nigeLab.libs.remoteMonitor, ...
-                      ?nigeLab.libs.DashBoard})
+                      ?nigeLab.libs.DashBoard,...
+                      ?parallel.job.MJSCommunicatingJob})
       % Class constructor for NIGELPROGRESS class
       function bar = nigelProgress(parent,name,sel)
          % NIGELPROGRESS    Create a bar allowing graphical tracking of

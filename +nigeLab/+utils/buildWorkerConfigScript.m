@@ -88,6 +88,7 @@ end
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tconfigW; Add nigeLab remote repo to worker path\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
+
       for i = 1:numel(p)
          fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{i});
          fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
@@ -125,15 +126,42 @@ end
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tqWrapper(targetFile); Run nigelLab on target\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
+      
+      % DEBUG
+%       fprintf(fid,['error(''Worker path: %%s\\n' ...
+%                           'Target: %%s\\n'',pwd,targetFile);\n']);
+      fprintf(fid,'logName = fullfile(pwd,''logs.txt'');\n');
+      fprintf(fid,'if exist(logName,''file'')~=0\n\t');
+      fprintf(fid,'delete(logName); %% Delete old log file\n');
+      fprintf(fid,'end\n');
+      fprintf(fid,'db_id = fopen(logName,''w''); %% Make debug logs\n');
+      
       for i = 1:numel(p)
          fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p{i});
       end
-      fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{1});
-      fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
-      fprintf(fid,'\t\t''Worker (%%s) does not see nigeLab (%%s)'',...\n');
-      fprintf(fid,'\t\tpwd,''%s'');\n',p{1});
-      fprintf(fid,'end %% error check for remote repo path\n');
-      fprintf(fid,'cd(''%s''); %% Fixed repo location\n\n',p{1});
+%       fprintf(fid,'if exist(''%s'',''dir'')==0 %% check if good\n\t',p{1});
+%       fprintf(fid,'error([''nigeLab:'' mfilename '':Debug''],...%%dbug\n');
+%       fprintf(fid,'\t\t''Worker (%%s) does not see nigeLab (%%s)'',...\n');
+%       fprintf(fid,'\t\tpwd,''%s'');\n',p{1});
+%       fprintf(fid,'end %% error check for remote repo path\n');
+%       fprintf(fid,'cd(''%s''); %% Fixed repo location\n\n',p{1});
+      fprintf(fid,'\n%%%% Get handle to current job\n');
+      fprintf(fid,'pause(15); %% Wait to make sure job has loaded\n');
+      fprintf(fid,'curJob = getCurrentJob;\n');
+      fprintf(fid,'fprintf(db_id,''Current Job: '');\n');
+      fprintf(fid,'if isempty(curJob)\n');
+      fprintf(fid,'\tfprintf(db_id,''EMPTY\\n'');\n');
+      fprintf(fid,'else\n');
+      fprintf(fid,'\tfprintf(db_id,'' (%%s) '',class(curJob));\n');
+      fprintf(fid,'\tif isvalid(curJob)\n');
+      fprintf(fid,'\t\tfprintf(db_id,''%%s\\n'',curJob(1).Tag);\n');
+      fprintf(fid,'\t\t[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
+      fprintf(fid,'\t\tstrrep(curJob(1).Tag,tag,''Loading'');\n');
+      fprintf(fid,'\telse\n');
+      fprintf(fid,'\t\tfprintf(db_id,''INVALID\\n'');\n');
+      fprintf(fid,'\tend %% end isvalid\n');
+      fprintf(fid,'end %% end isempty\n\n');
+
       fprintf(fid,'%%%% Attempt to load target Block.\n');
       fprintf(fid,'%% Do some error-checking\n');
       fprintf(fid,'try\n\t');
@@ -148,8 +176,23 @@ end
       fprintf(fid,'rethrow(me);\n\t');
       fprintf(fid,'end %% end compare identifier\n');
       fprintf(fid,'end %% end try load ... catch\n\n');
+      fprintf(fid,'%%%% Print to remote Command Window for debugging\n');
+      
+      fprintf(fid,'if ~isempty(curJob)\n');
+      fprintf(fid,'\tif isvalid(curJob)\n');
+      fprintf(fid,'\t\tstrrep(curJob(1).Tag,''Loading'',''Running'');\n');
+      fprintf(fid,'\tend %% end isvalid\n');
+      fprintf(fid,'end %% end ~isempty\n\n');
+      
+      fprintf(fid,['fprintf(db_id,''->\\tLoaded %%s successfully!\\n'','...
+                     'blockObj.Name); %% Update logs\n']);
+      fprintf(fid,['fprintf(db_id,''\\t->\\t(Class: %%s)\\n'','...
+                     'class(blockObj)); %% For debugging \n\n']);
+      fprintf(fid,'fclose(db_id); %% End debug logging\n');
+      
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
-      fprintf(fid,'blockObj.%s(); %% Runs queued `doAction`\n',operation);
+      fprintf(fid,'blockObj.%s(); %% Runs queued `doAction (%s)`\n',...
+         operation,operation);
       fprintf(fid,'end');
       fclose(fid);
    end

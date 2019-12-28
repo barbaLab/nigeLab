@@ -102,45 +102,45 @@ switch class(target)
          
          n = min(nPars.NMaxNameChars,numel(target.Name));
          name = target.Name(1:n);
-         name = strrep(name,'_','-');
-         bar = obj.remoteMonitor.getBar(sel);
-         bar.setState(0,'Pending...');
-         bar.Visible = 'on';
+         name = strrep(name,'_','-');         
+         metas = cell(1, numel(nPars.TagString.Vars));
+         for ii=1:numel(nPars.TagString.Vars)
+            metas{ii} = target.Meta.(nPars.TagString.Vars{ii});
+         end
+         tagStr = sprintf(nPars.TagString.String,metas{:},...         % constant part of the message
+                           'Pending',0);  
+         blockName = sprintf('%s.%s',target.Meta.AnimalID,...
+            target.Meta.RecID);
+         % target is nigelab.Block
+         blockName = blockName(1:min(end,nPars.NMaxNameChars));
+         barName = sprintf('%s.%s',blockName,operation(3:end));
          
-         tagStr = reportProgress(target,'Queuing',0);
          job = createCommunicatingJob(myCluster, ...
             'AutoAttachFiles',false,...
             'AttachedFiles', attachedFiles, ...
-            ... 'AdditionalPaths', p,...
-            'Name', [operation target.Name], ...
+            'AdditionalPaths', p,...
+            'Name', barName, ...
             'NumWorkersRange', qPars.NWorkerMinMax, ...
             'Type','pool', ...
             'UserData',sel,...
             'Tag',tagStr); %#ok<*PROPLC>
          
-         blockName = sprintf('%s.%s',target.Meta.AnimalID,...
-            target.Meta.RecID);
-         % target is nigelab.Block
-         blockName = blockName(1:min(end,nPars.NMaxNameChars));
-         barName = sprintf('%s %s',blockName,operation(3:end));
-         obj.remoteMonitor.startBar(barName,bar,job);
+         bar = obj.remoteMonitor.startBar(barName,sel,job);
 
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)obj.remoteMonitor.barCompleted(bar);
-         job.QueuedFcn=@(~,~)bar.setState(0,'Queuing...');
-         job.RunningFcn=@(~,~)bar.setState(0,'Running...');
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else
             targetFile = getUNCPath(...
                [target.Paths.SaveLoc.dir '_Block.mat']);
-            createTask(job,'qWrapper',0,{targetFile});
+            fprintf(1,'\n->\tTarget: %s\n',targetFile);
+            createTask(job,@qWrapper,0,{targetFile});
 %             delete(c); % Delete configW.m (from Tempdir)
 %             delete(w); % Delete qWrapper.m (from pwd)
          end
          submit(job);
-         fprintf(1,'%s Job running: %s - %s\n',...
-            lineLink,opLink,target.Name);
+         fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
          
       else
          %% otherwise run single operation serially

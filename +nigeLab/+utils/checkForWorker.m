@@ -76,6 +76,9 @@ switch class(nigelObj)
          str = nigeLab.utils.getNigeLink(class(nigelObj),...
             'checkParallelCompatibility');
          fprintf(1,'Consider re-running %s\n',str);
+         objName = inputname(1);
+         fprintf(1,['\t-->\t<a href="matlab:%s.checkParallelCompatibility();"' ...
+            '(Click here re-run check)</a> <--\n\n'],objName);
       end
       
       if compat_flag

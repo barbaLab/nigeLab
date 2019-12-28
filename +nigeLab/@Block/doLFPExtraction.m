@@ -55,7 +55,7 @@ for iCh=blockObj.Mask
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
 
    pct = round(iCh/numel(blockObj.Mask) * 100);
-   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress(str,pct,'toWindow','Decimating');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);
 end

@@ -701,7 +701,7 @@ classdef Block < matlab.mixin.Copyable
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
-      str = reportProgress(blockObj,str_expr,pct,notification_mode) % Update the user of progress
+      str = reportProgress(blockObj,str_expr,pct,notification_mode,tag_str) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
       idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end

@@ -1,4 +1,4 @@
-function str = reportProgress(blockObj, str_expr, pct, notification_mode) 
+function str = reportProgress(blockObj, str_expr, pct,notification_mode,tag_str) 
 % REPORTPROGRESS  Utility function to report progress on block operations.
 %
 %  str = blockObj.reportProgress(string,pct);
@@ -16,6 +16,8 @@ function str = reportProgress(blockObj, str_expr, pct, notification_mode)
 %
 %  mode  --  Default: 'toWindow' (print to window)
 %            Can set as 'toEvent' (notifies with event instead)
+%
+%  tag_str  --  "Fixed" string without html formatting (optional; for JOB)
 %
 %  Description:
 %       It uses the notification string specified in defaults.Notification,
@@ -36,21 +38,21 @@ if nargin < 3
 end
 
 pars = blockObj.Pars.Notifications;
-
+pct = round(pct);
 
 switch lower(notification_mode)
    case {'towindow','cmd','commandwindow','window'}
-      pct = round(pct);
       % Continue
    case {'toevent','event','evt','notify'}
-
-      evtData = nigeLab.evt.progressChangedEventData(str_expr,pct);
-      notify(blockObj,'ProgressChanged',evtData);
+      % Only do the event notification in Serial mode
+      if ~nigeLab.utils.checkForWorker(blockObj)
+         evtData = nigeLab.evt.progressChangedEventData(str_expr,pct);
+         notify(blockObj,'ProgressChanged',evtData);
+         
+      end
       str = [];
       return;
-
    otherwise
-      pct = round(pct);
       % Behave as if 'toWindow'
 end
 
@@ -99,17 +101,23 @@ if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
    
 else % we are in worker environment
    %% Local or Remote parallel worker environment
-   str_expr = regexprep(sprintf(str_expr),'<.*?>','');
-   job = getCurrentJob;
+   if nargin < 5
+      tag_str = regexprep(sprintf(str_expr),'<.*?>','');
+   end
    metas = cell(1, numel(pars.TagString.Vars));
    for ii=1:numel(pars.TagString.Vars)
       metas{ii} = blockObj.Meta.(pars.TagString.Vars{ii});
    end
-   str = sprintf(pars.TagString.String,metas{:},...   
-      str_expr,pct);
+   % Here, pars.TagString.String (nigeLab.defaults.Notifications) will
+   % always have form ['%s.%s %s' pars.TagDelim '%.3d%%']. The delimited
+   % portion is periodically checked by the TimerFcn running in the
+   % remoteMonitor of nigeLab.libs.DashBoard, which then updates the bar
+   % increment accordingly.
+   str = sprintf(pars.TagString.String,metas{:},tag_str,pct);
    if nargout == 1
       return;
    end
+   job = getCurrentJob;
    set(job,'Tag',str);   
 end
 

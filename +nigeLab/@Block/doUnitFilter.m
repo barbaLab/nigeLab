@@ -35,7 +35,7 @@ str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
    'Unit Bandpass Filter');
 str = sprintf('Applying %s',str);
 
-blockObj.reportProgress(str,0,'toWindow');
+blockObj.reportProgress(str,0,'toWindow','Filtering');
 for iCh = blockObj.Mask
 %    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
 %       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
@@ -73,7 +73,7 @@ for iCh = blockObj.Mask
    blockObj.updateStatus('Filt',true,iCh);
    curCh = find(blockObj.Mask == iCh,1,'first');
    pct = round(curCh/numel(blockObj.Mask) * 100);
-   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress(str,pct,'toWindow','Filtering');
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
 
@@ -96,6 +96,8 @@ function Y = ff(b,a,X,nEdge,IC)
 % where order is the filter order as 
 % Order = max(nb, na);
 
+import nigeLab.utils.FilterX.*;
+
 % User Interface: --------------------------------------------------------------
 % Do the work: =================================================================
 % Create initial conditions to treat offsets at beginning and end:
@@ -109,14 +111,14 @@ Xf   = 2 * X(end) - X((end - nEdge):(end - 1));
 
 % Use the faster C-mex filter function: -------------------------
 % Filter initial reflected signal:
-[~, Zi] = nigeLab.utils.FilterX.FilterX(b, a, Xi, IC * Xi(end),true);   
+[~, Zi] = FilterX(b, a, Xi, IC * Xi(end),true);   
 
 % Use the final conditions of the initial part for the actual signal:
-[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);                    % "s"teady state
-Yf        = nigeLab.utils.FilterX.FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
+[Ys, Zs]  = FilterX(b, a, X,  Zi);                    % "s"teady state
+Yf        = FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
 
 % Filter signal again in reverse order:
-[~, Zf] = nigeLab.utils.FilterX.FilterX(b, a, Yf, IC * Yf(1));  
-Y         = nigeLab.utils.FilterX.FilterX(b, a, Ys, Zf, true);
+[~, Zf] = FilterX(b, a, Yf, IC * Yf(1));  
+Y         = FilterX(b, a, Ys, Zf, true);
 Y = Y';
 end
