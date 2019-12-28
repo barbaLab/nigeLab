@@ -1,5 +1,5 @@
 function clusterIndex = getSort(blockObj,ch,suppressText)
-%% GETSORT     Retrieve list of spike Sorted class indices for each spike
+%GETSORT     Retrieve list of spike Sorted class indices for each spike
 %
 %  clusterIndex = GETSORT(blockObj,ch);
 %
@@ -22,8 +22,6 @@ function clusterIndex = getSort(blockObj,ch,suppressText)
 % clusterIndex :     Vector of spike classes (integers)
 %                    -> If ch is a vector, returns a cell array of
 %                       corresponding spike classes.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE INPUT
 if nargin < 2

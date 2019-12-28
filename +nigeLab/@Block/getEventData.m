@@ -1,5 +1,5 @@
 function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,matchValue)
-%% GETEVENTDATA     Retrieve data for a given event
+%GETEVENTDATA     Retrieve data for a given event
 %
 %  eventData = GETEVENTDATA(blockObj);
 %  eventData = GETEVENTDATA(blockObj,field);
@@ -72,8 +72,6 @@ function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,ma
 %  eventData   :     Data stored in field for a specific channel.
 %
 %  blockIdx    :     Index of the block that matches each element of data.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE INPUT
 if nargin < 2 % field was not provided
@@ -158,134 +156,21 @@ if (numel(blockObj) > 1)
    return;
 end
 
-%% SHOULD ADD ERROR CHECKING HERE FOR IF THE FIELD IS UNAVAILABLE
 blockObj.checkCompatibility(field);
 % Events struct is not associated with channels, so handle differently
-if ~any(strncmpi({'Spikes','SpikeFeatures','Clusters','Sorted'},field,7)) 
-   propName = lower(prop);
-   switch propName % Define some things to make it easier to avoid typo etc
-      case {'times','timestamps','t'}
-         propName = 'ts';
-      case {'index','id','val','group'}
-         propName = 'value';
-      case {'snip','snips','rate','lfp','aligned','x'}
-         propName = 'snippet';
-      case {'mask','label','name'}
-         propName = 'tag';
-      otherwise
-         % do nothing
-   end
-   
-   
-   idx = blockObj.getEventsIndex(field,ch);
-   
-   % Note that .data is STRUCT field; .data.data would be DiskData "data"
-   eventData = [];
-   if isfield(blockObj.Events,field)
-      if numel(blockObj.Events.(field)) >= idx
-         if isfield(blockObj.Events.(field)(idx),'data')
-            if isa(blockObj.Events.(field)(idx).data,'nigeLab.libs.DiskData')
-               if size(blockObj.Events.(field)(idx).data,2)>=5 % Then it exists and has been initialized correctly
-                  tmp = blockObj.Events.(field)(idx).data;
-                  eventData = tmp.(propName); 
-               else
-                  warning(['DiskData for Events.%s(%g) exists, but is ' ...
-                           'not initialized correctly (too small -- ' ...
-                           'only %g columns).'],field,idx,...
-                           size(blockObj.Events.(field)(idx).data,2));
-                  return;
-               end
-            else
-               warning(['Events.%s(%g) exists, but is not a DiskData ' ...
-                        '(current class is %g).'],field,idx,...
-                        class(blockObj.Events.(field)(idx).data));
-               return;
-            end
-         else
-            warning('''data'' is not a field of Events.%s(%g) yet.',...
-               field,idx);
-            return;
-         end
-      else
-         warning('Events.%s(%g) exceeds array dimensions.',field,idx);
-         return;
-      end
-   else
-      warning('%s is not a field of Block.Events.',field);
-      return;
-   end      
-   
-   % If a value to match is given, then 
-   if ~isnan(matchValue(1))
-      dataSelector = tmp.(matchProp);
-      if strcmpi(matchProp,'ts')
-         eventData = eventData(...
-            (dataSelector >= matchValue(1)) &...
-            (dataSelector < matchValue(2)));
-      elseif strcmpi(matchProp,'snippet')
-         dataMax = max(dataSelector,[],2);
-         dataMin = min(dataSelector,[],2);
-         eventData = eventData(...
-            (dataMin >= matchValue(1)) & ...
-            (dataMax < matchValue(2)));
-      else
-         eventData = eventData(ismember(dataSelector,matchValue),:);
-      end
-   end
-   
-else % Otherwise, channel "events" (e.g. spikes etc.)
-   F = fieldnames(blockObj.Channels(ch));
-   iF = strncmpi(F,field,7);
-   if sum(iF)==1
-      eventData = retrieveChannelData(blockObj,ch,F{iF},prop);
-      if ~isnan(matchValue(1))
-         dataSelector = retrieveChannelData(blockObj,ch,F{iF},matchProp);
-         if strcmpi(matchProp,'ts')
-            eventData = eventData((dataSelector >= matchValue(1)) &...
-               (dataSelector < matchValue(2)));
-         elseif strcmpi(matchProp,'snippet')
-            dataMax = max(dataSelector,[],2);
-            dataMin = min(dataSelector,[],2);
-            eventData = eventData((dataMin >= matchValue(1)) & ...
-               (dataMax < matchValue(2)));
-         else
-            eventData = eventData(ismember(dataSelector,matchValue));
-         end
-      end
-   elseif sum(iF)==0
-      warning('Event type (%s) is missing. Returning empty array.',field);
-      eventData = [];
-   else
-      warning('Event type (%s) is ambiguous. Returning empty array.',field);
-      eventData = [];
-   end
+fieldType = blockObj.getFieldType(field);
+switch fieldType
+   case 'Channels'
+      eventData = blockObj.getChannelsEventData(field,prop,ch,...
+         matchProp,matchValue);
+   case 'Streams'
+      eventName = ch;
+      eventData = blockObj.getStreamsEventData(field,prop,eventName,...
+         matchProp,matchValue);
+   otherwise
+      error(['nigeLab:' mfilename ':UnexpectedFieldType'],...
+         'Unexpected FieldType: %s (%s)',fieldType,blockObj.Name);
 end
 blockIdx = ones(size(eventData,1),1);
-
-   function out = retrieveChannelData(blockObj,ch,type,field)
-      try
-         out = blockObj.Channels(ch).(type).(field);
-      catch me % Parse for old file format
-         if strcmp(me.identifier,'MATLAB:MatFile:VariableNotInFile')
-            switch field
-               case 'value'
-                  out = blockObj.Channels(ch).(type).class;
-                  
-               case 'snippet'
-                  out = blockObj.Channels(ch).(type).spikes;
-                  
-               case 'ts'
-                  pk = blockObj.Channels(ch).Spikes.peak_train;
-                  out = find(pk)./blockObj.SampleRate;
-                  
-               otherwise
-                  warning('Unsure how to handle variable: %s',field);
-                  rethrow(me);
-            end
-         else
-            rethrow(me);
-         end
-      end
-   end
 
 end

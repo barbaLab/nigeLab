@@ -456,6 +456,7 @@ classdef Animal < matlab.mixin.Copyable
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
       
+      parseProbes(animalObj) % Parse probes from child BLOCKS
       addChildBlock(animalObj,blockPath,idx) % Add child BLOCK
       mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
       removeBlocks(animalObj,ind)         % Disassociate a Block from Animal
@@ -653,11 +654,10 @@ classdef Animal < matlab.mixin.Copyable
          %
          %  Just makes sure that a is correct, and returns it on loading as
          %  b to avoid infinite recursion.
-         
-         
-         
+
          if ~isfield(a.Paths,'SaveLoc')
             a.addListeners();
+            a.parseProbes();
             b = a;
             return;
          end
@@ -671,14 +671,16 @@ classdef Animal < matlab.mixin.Copyable
                a.addChildBlock(in.blockObj,ii);
             end
             a.addListeners(); % Add listeners after all blocks back in
+            a.parseProbes();
             b = a;
             return;
          else
             a.addListeners();
+            a.parseProbes();
             b = a;
             return;
          end
-         
+
       end
 
    end 

@@ -46,7 +46,7 @@ if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
 end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
-   blockObj.reportProgress('Computing CAR',0);
+blockObj.reportProgress('Computing CAR',0,'toWindow');
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -58,9 +58,10 @@ for iCh = blockObj.Mask
       warning('STIM SUPPRESSION method not yet available.');
       return;
    end
-   pc = 100 * (iCh / blockObj.NumChannels);
-   blockObj.reportProgress('Computing CAR',pc);
-
+   pct = round(100 * (iCh / numel(blockObj.Mask)));
+   blockObj.reportProgress('Computing CAR',pct,'toWindow');
+   PCT = round((pct/100) * 20); 
+   blockObj.reportProgress('Computing CAR.',PCT,'toEvent');
 end
 
 %% SAVE EACH PROBE REFERENCE TO THE DISK
@@ -85,8 +86,7 @@ for iCh = blockObj.Mask
    
    % Get filename
    pNum  = num2str(blockObj.Channels(iCh).probe);
-   chNum = blockObj.Channels(iCh).custom_channel_name(...
-      regexp(blockObj.Channels(iCh).custom_channel_name, '\d'));
+   chNum = blockObj.Channels(iCh).chStr;
    fName = sprintf(strrep(blockObj.Paths.CAR.file,'\','/'), ...
       pNum, chNum);
    
@@ -98,12 +98,14 @@ for iCh = blockObj.Mask
       refMeanFile{blockObj.Channels(iCh).probe});
    
    % Update user
-   pct = 100 * (iCh / blockObj.NumChannels);
+   pct = 100 * (iCh / numel(blockObj.Mask));
    blockObj.reportProgress(str,pct,'toWindow');
-   blockObj.reportProgress('Doing CAR.',pct,'toEvent');
+   PCT = 20 + round((pct/100) * 80); 
+   blockObj.reportProgress('Removing CAR.',PCT,'toEvent');
    blockObj.updateStatus('CAR',true,iCh);
 end
-
+blockObj.linkToData('CAR');
+blockObj.save;
 flag = true;
 
    function data = doCAR(channelData,reference)

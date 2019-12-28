@@ -1,24 +1,85 @@
 function flag = setChannelMask(blockObj,includedChannelIndices)
-%% SETCHANNELMASK    Set included channels to use for subsequent analyses
+%SETCHANNELMASK    Set included channels to use for subsequent analyses
 %
 %  flag = blockObj.SETCHANNELMASK;      % sets from user interface
 %  flag = blockObj.SETCHANNELMASK(includedChannelIndices); % no UI
 %
-% By: Max Murphy  v1.0  2019/01/07  Original version (r2017a)
+%  inputs --
+%  --> includedChannelIndices : (double) indexing array for .Channels, or
+%                               (logical) mask of same size as .Channels,
+%                                         where TRUE denotes that the
+%                                         .Channels element should be kept
+%                                         for further processing.
+%
+%     --> If blockObj is an array, then includedChannelIndices may be
+%           specified as a cell array of indexing vectors, which must 
+%           contain one cell per block in the array.
+%
+%  Sets blockObj.Mask property, which is an indexing array (double) that
+%  specifies the indices of the blockObj.Channels struct array that are to
+%  be included for subsequent analyses 
+%     (e.g. blockObj.Channels(blockObj.Mask).(fieldOfInterest) ... would
+%           return only the "good" channels for that recording).
 
 %% PARSE INPUT
-flag = false;
-if nargin > 1 % Then "includedChannelIndices" was supplied
-   h = nan; % In case "waitfor" is used elsewhere
-   
+if nargin < 2
+   includedChannelIndices = nan;
+end
+
+if numel(blockObj) > 1
+   flag = true;
+   if iscell(includedChannelIndices)
+      if numel(blockObj) ~= numel(includedChannelIndices)
+         error(['nigeLab:' mfilename ':BlockArrayInputMismatch'],...
+            ['%g elements in blockObj array input, ' ...
+             'but only %g elements in channel index cell array input'],...
+             numel(blockObj),numel(includedChannelIndices));
+      end
+   end   
+   for i = 1:numel(blockObj)
+      if iscell(includedChannelIndices)
+         flag = flag && blockObj(i).setChannelMask(includedChannelIndices{i});
+      else
+         flag = flag && blockObj(i).setChannelMask(includedChannelIndices);
+      end
+   end
+   return;
+else
+   flag = false;
+end
+
+% If it is logical, make sure the number of logical elements makes sense
+if islogical(includedChannelIndices)
+   if numel(includedChannelIndices) ~= numel(blockObj.Channels)
+      if numel(includedChannelIndices) ~= numel(blockObj.Mask)
+         error(['nigeLab:' mfilename ':BadMaskIndexArray2'],...
+            ['Logical indexing mask vector has %g elements, ' ...
+             'but should have %g elements (blockObj.Channels) or ' ...
+             '%g elements (blockObj.Mask) instead.'],...
+             numel(includedChannelIndices),...
+             numel(blockObj.Channels),...
+             numel(blockObj.Mask));            
+      else
+         % Otherwise, "mask the mask"
+         includedChannelIndices = blockObj.Mask(includedChannelIndices);
+      end
+   else
+      % Convert to `double` indexing array for consistency
+      vec = 1:numel(blockObj.Channels);
+      includedChannelIndices = vec(includedChannelIndices);
+   end
+end
+
+if ~isnan(includedChannelIndices) % Then mask was already given as input
    % Parse for errors
    if any(includedChannelIndices < 1)
-      warning('Invalid channel mask indices. Arrays must start at 1.');
-      return;
+      error(['nigeLab:' mfilename ':BadMaskIndexArray1'],...
+         'Invalid channel mask indices. Arrays must start at 1.');
    elseif any(includedChannelIndices > numel(blockObj.Channels))
-      warning('Invalid channel mask indices. Largest channel index is %d.',...
-         numel(blockObj.Channels));
-      return;
+      error(['nigeLab:' mfilename ':BadMaskIndexArray2'],...
+         ['Invalid channel mask indices. Largest channel index is %d.\n' ...
+          'blockObj.Mask is an index array to blockObj.Channels (%s)'],...
+          blockObj.Name, numel(blockObj.Channels));
    end
    
    % Parse for oddities

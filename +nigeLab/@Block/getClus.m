@@ -1,5 +1,5 @@
 function clusterIndex = getClus(blockObj,ch,suppressText)
-%% GETCLUS     Retrieve list of spike Clusters class indices for each spike
+%GETCLUS     Retrieve list of spike Clusters class indices for each spike
 %
 %  clusterIndex = GETCLUS(blockObj,ch);
 %
@@ -22,8 +22,6 @@ function clusterIndex = getClus(blockObj,ch,suppressText)
 % clusterIndex :     Vector of spike classes (integers)
 %                    -> If ch is a vector, returns a cell array of
 %                       corresponding spike classes.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE INPUT
 if nargin < 2
@@ -70,11 +68,14 @@ else % If it doesn't exist
       if exist(blockObj.Paths.Clusters.dir,'dir')==0
          mkdir(blockObj.Paths.Clusters.dir);
       end
-      blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
-         fName,data,'access','w');
-      if ~suppressText
-         fprintf(1,'Initialized Clusters file for P%d: Ch-%s\n',...
-            blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+      if exist(fName,'file')==0
+         blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
+            fName,data,'access','w');
+
+         if ~suppressText
+            fprintf(1,'Initialized Clusters file for P%d: Ch-%s\n',...
+               blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+         end
       end
    else
       clusterIndex = [];

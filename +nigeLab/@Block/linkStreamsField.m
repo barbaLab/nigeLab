@@ -1,5 +1,5 @@
 function flag = linkStreamsField(blockObj,field)
-%% LINKSTREAMSFIELD  Connect the data saved on the disk to Streams
+%LINKSTREAMSFIELD  Connect the data saved on the disk to Streams
 %
 %  b = nigeLab.Block;
 %  flag = LINKSTREAMSFIELD(b,field);
@@ -36,6 +36,11 @@ updateFlag = false(1,numel(blockObj.Streams.(field)));
 [pname,f_str,ext] = fileparts(nigeLab.utils.getUNCPath(blockObj.Paths.(field).file));
 counter = 0;
 for iStream = 1:numel(blockObj.Streams.(field))
+   if ~isfield(blockObj.Streams.(field)(iStream),'Key')
+      blockObj.Streams.(field)(iStream).Key = blockObj.getKey();
+   elseif isempty(blockObj.Streams.(field)(iStream).Key)
+      blockObj.Streams.(field)(iStream).Key = blockObj.getKey();
+   end
    
    % Parse info from channel struct. Because INIT comes first, we want to
    % use the file name conventions already established, so we don't use
@@ -45,7 +50,6 @@ for iStream = 1:numel(blockObj.Streams.(field))
       pname,...
       [sprintf(f_str,blockObj.Streams.(field)(iStream).signal.Group,...
       blockObj.Streams.(field)(iStream).name),ext]));
-
    % If file is not detected
    if ~exist(fullfile(dataFileName),'file')
       flag = true;

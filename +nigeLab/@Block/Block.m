@@ -348,6 +348,11 @@ classdef Block < matlab.mixin.Copyable
             return;            
          end
          
+         if isempty(blockObj.KeyPair)
+            blockObj.initKey();
+         elseif ~isfield(blockObj.KeyPair,'Public')
+            blockObj.initKey();
+         end
          publicKey = blockObj.KeyPair.Public;
          
       end
@@ -603,6 +608,7 @@ classdef Block < matlab.mixin.Copyable
       ts = getSpikeTimes(blockObj,ch,class)    % Get spike times (sec)
       idx = getSpikeTrain(blockObj,ch,class)   % Get spike sample indices
       spikes = getSpikes(blockObj,ch,class,type)   % Get spike waveforms
+      features = getSpikeFeatures(blockObj,ch,class) % Get extracted features
       sortIdx = getSort(blockObj,ch,suppress)  % Get spike sorted classes
       clusIdx = getClus(blockObj,ch,suppress)  % Get spike cluster classes
       [tag,str] = getTag(blockObj,ch)          % Get spike sorted tags
@@ -690,6 +696,11 @@ classdef Block < matlab.mixin.Copyable
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end
    
+   methods (Access = private, Hidden = true)
+      eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp,matchValue)
+      eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,matchValue)
+   end
+   
    % PRIVATE
    methods (Access = private)      
       % Initialize .KeyPair property
@@ -774,5 +785,10 @@ classdef Block < matlab.mixin.Copyable
          end
          b = a;
       end
+   end
+   
+   % Static enumeration methods
+   methods (Static = true, Access = public)
+      field = getOperationField(operation); % Get field associated with operation
    end
 end

@@ -27,7 +27,8 @@ pname = fileparts(p);
 soundName = fullfile(pname,[fname '.mat']);
 
 if ~exist(soundName,'file')
-   error('No corresponding sound file (%s) in nigeLab/+sounds.',soundName);
+   warning('No corresponding sound file (%s) in nigeLab/+sounds.',soundName);
+   return;
 end
 
 in = load(soundName,'sfx','fs');
