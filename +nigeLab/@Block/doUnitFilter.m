@@ -9,18 +9,8 @@ function flag = doUnitFilter(blockObj)
 %% GET DEFAULT PARAMETERS
 flag = false;
 blockObj.checkActionIsValid();
-   
-if ~genPaths(blockObj,blockObj.AnimalLoc)
-   warning('Something went wrong when generating paths for extraction.');
-   return;
-end
 
-if ~blockObj.updateParams('Filt')
-   warning('Could not update filter parameters.');
-   return;
-else
-   pars = blockObj.Pars.Filt;
-end
+[~,pars] = blockObj.updateParams('Filt');
 reportProgress(blockObj,'Filtering.',0,'toWindow','Filtering');
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 

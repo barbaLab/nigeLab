@@ -125,6 +125,14 @@ else % we are in worker environment
    % remoteMonitor of nigeLab.libs.DashBoard, which then updates the bar
    % increment accordingly.
    str = sprintf(pars.TagString.String,metas{:},tag_str,pct);
+   p_db = blockObj.Pars.Notifications.DBLoc;
+   if exist(p_db,'dir')==0
+      mkdir(p_db);
+   end
+   % Just write current line for debugging
+   db_id = fopen(fullfile(p_db,'logs.txt'),'w');
+   fprintf(db_id,'Worker::%s: %s\n',pwd,str);
+   fclose(db_id);
    if nargout == 1
       return;
    end

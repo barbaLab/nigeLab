@@ -86,14 +86,10 @@ end
    end
 
    % Helper-function to make "configW.m" configuration script
-   function makeConfigScript(configFile,p,db_p)
+   function makeConfigScript(configFile,p)
       %MAKECONFIGSCRIPT  Makes "configW.m" worker configuration script
       %
       %  makeConfigScript(configFile);
-      
-      if nargin < 3
-         db_p = 'C:/Remote_Matlab_Debug_Logs';
-      end
       
       if exist(configFile,'file')~=0
          delete(configFile);
@@ -132,6 +128,10 @@ end
       %
       %  makeWrapperFunction(wrapperFile,operation);
       
+      if nargin < 3
+         db_p = 'C:/Remote_Matlab_Debug_Logs';
+      end
+      
       if exist(wrapperFile,'file')~=0
          delete(wrapperFile);
       end
@@ -143,7 +143,7 @@ end
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
       
       % DEBUG
-      fprintf(fid,'logName = fullfile(%s,''logs.txt'');\n',db_p);
+      fprintf(fid,'logName = fullfile(''%s'',''logs.txt'');\n',db_p);
       fprintf(fid,'if exist(''%s'',''dir'')==0\n\t',db_p);
       fprintf(fid,'mkdir(''%s''); %% Make sure debug path is good\n',db_p);
       fprintf(fid,'end\n');

@@ -14,21 +14,11 @@ function flag = doLFPExtraction(blockObj)
 flag = false;
 blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
-if ~genPaths(blockObj)
-   warning('Something went wrong when generating paths for extraction.');
-   return;
-end
+[~,pars] = blockObj.updateParams('LFP');
 
-if ~blockObj.updateParams('LFP')
-%    warning('Something went wrong setting the LFP parameters.');
-%    return;
-   error(['nigeLab:' mfilename ':UpdateParamsUnsuccessful'],...
-      'Something went wrong while updating the LFP parameters.');
-end
-
-DecimateCascadeM = blockObj.Pars.LFP.DecimateCascadeM;
-DecimateCascadeN = blockObj.Pars.LFP.DecimateCascadeN;
-DecimationFactor =   blockObj.Pars.LFP.DecimationFactor;
+DecimateCascadeM = pars.LFP.DecimateCascadeM;
+DecimateCascadeN = pars.LFP.DecimateCascadeN;
+DecimationFactor =  pars.LFP.DecimationFactor;
 blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
