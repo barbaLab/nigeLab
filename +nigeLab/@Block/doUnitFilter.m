@@ -9,20 +9,24 @@ function flag = doUnitFilter(blockObj)
 %% GET DEFAULT PARAMETERS
 flag = false;
 if blockObj.UseParallel
-   p_db = blockObj.Pars.Notifications.DBLoc; 
+   [~,nPars] = blockObj.updateParams('Notifications');
+   p_db = nPars.DBLoc; 
    if exist(p_db,'dir')==0
       mkdir(p_db);
    end
-   db_id = fopen(fullfile(p_db,'logs.txt'),'a');
+   db_fname = fullfile(p_db,nPars.DBFile);
+   db_id = fopen(db_fname,'a');
    fprintf(db_id,'(%s) Begin %s\n',char(datetime),mfilename);
    fclose(db_id);
 else
-   db_id = '';
+   db_fname = '';
 end
 blockObj.checkActionIsValid();
-if ~isempty(db_id)
-   fprintf(db_id,'(%s) %s passed checkActionIsValid\n',...
+if ~isempty(db_fname)
+   db_id = fopen(db_fname);
+   fprintf(db_id,'(%s) %s :: passed checkActionIsValid\n',...
       char(datetime),mfilename);
+   fclose(db_id);
 end
 
 [~,pars] = blockObj.updateParams('Filt');
@@ -41,10 +45,16 @@ str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
 str = sprintf('Applying %s',str);
 
 blockObj.reportProgress(str,0,'toWindow','Filtering');
+
 for iCh = blockObj.Mask
-%    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
-%       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
-%    end
+
+   if ~isempty(db_fname)
+      db_id = fopen(db_fname);
+      fprintf(db_id,'(%s) %s :: begin Filtering Channel %03g\n',...
+         char(datetime),mfilename,iCh);
+      fclose(db_id);
+   end
+   
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
