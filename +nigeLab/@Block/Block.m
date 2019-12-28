@@ -98,6 +98,8 @@ classdef Block < matlab.mixin.Copyable
    % the list of fields that you see in the Matlab editor
    properties (SetAccess = public, Hidden = true, GetAccess = public)
       UserData % Allow UserData property to exist
+      OnRemote = false % Is this block running a job on remote worker?
+      CurrentJob  % parallel.job.MJSCommunicatingJob 
    end
    
    % Properties that can be obtained externally, but must be set by a
@@ -174,7 +176,6 @@ classdef Block < matlab.mixin.Copyable
 %                                            'do' extraction methods
                           
       ViableFieldTypes       cell         % List of 'Viable' possible field types
-      CurrentJob  % parallel.job.MJSCommunicatingJob 
    end
 
    % Private - Listeners & Flags

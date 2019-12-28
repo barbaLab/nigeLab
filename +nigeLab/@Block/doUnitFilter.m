@@ -8,7 +8,7 @@ function flag = doUnitFilter(blockObj)
 
 %% GET DEFAULT PARAMETERS
 flag = false;
-if blockObj.UseParallel
+if blockObj.UseParallel && blockObj.OnRemote
    [~,nPars] = blockObj.updateParams('Notifications');
    p_db = nPars.DBLoc; 
    if exist(p_db,'dir')==0
@@ -23,7 +23,7 @@ else
 end
 blockObj.checkActionIsValid();
 if ~isempty(db_fname)
-   db_id = fopen(db_fname);
+   db_id = fopen(db_fname,'a');
    fprintf(db_id,'(%s) %s :: passed checkActionIsValid\n',...
       char(datetime),mfilename);
    fclose(db_id);
@@ -49,7 +49,7 @@ blockObj.reportProgress(str,0,'toWindow','Filtering');
 for iCh = blockObj.Mask
 
    if ~isempty(db_fname)
-      db_id = fopen(db_fname);
+      db_id = fopen(db_fname,'a');
       fprintf(db_id,'(%s) %s :: begin Filtering Channel %03g\n',...
          char(datetime),mfilename,iCh);
       fclose(db_id);

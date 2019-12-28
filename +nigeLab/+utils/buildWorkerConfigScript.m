@@ -211,11 +211,17 @@ end
       fprintf(fid,'end\n\n');
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');
+      fprintf(fid,'blockObj.OnRemote = true;\n %% Currently on REMOTE');
+      fprintf(fid,'blockObj.CurrentJob = curJob(1); %% Assign JOB\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
          operation,operation);
+      fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
+      fprintf(fid,'blockObj.CurrentJob = []; %% Remove JOB\n');
+      fprintf(fid,'save(blockObj);\n');
       fprintf(fid,'db_id = fopen(logName,''a''); %% Add to logs\n');
       fprintf(fid,'fprintf(db_id,''(%%s) %s complete.\\n'',char(datetime));\n',...
          operation);
+      fprintf(fid,'fclose(db_id);\n');
       fprintf(fid,'end');
       fclose(fid);
    end
