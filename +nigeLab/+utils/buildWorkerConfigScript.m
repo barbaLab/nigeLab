@@ -207,7 +207,7 @@ end
       fprintf(fid,'if ~ismethod(blockObj,''%s'')\n',operation);
       fprintf(fid,['\terror([''nigelab:'' mfilename '':InvalidMethodName''], '...
                    '...\n\t\t' ...
-                   '%s is not a valid doAction.'');\n']);
+                   '''%s is not a valid doAction.'');\n'],operation);
       fprintf(fid,'end\n\n');
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Run method.\n');

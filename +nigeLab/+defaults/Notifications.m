@@ -10,6 +10,7 @@ function varargout = Notifications(varargin)
 pars = struct;
 pars.NMaxNameChars = 15;  % If less than this, uses full name on notifications
 pars.DBLoc = 'C:/Remote_Matlab_Debug_Logs';
+pars.DBFile = 'logs.txt';
 
 % For below, see nigeLab.utils.jobTag2Pct(), as well as Block method
 % notifyUser():
