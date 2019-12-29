@@ -9,6 +9,7 @@ function flag = doUnitFilter(blockObj)
 %% GET DEFAULT PARAMETERS
 flag = false;
 if blockObj.OnRemote
+   import nigeLab.*;
    nPars = blockObj.Pars.Notifications;
    p_db = nPars.DBLoc; 
    if exist(p_db,'dir')==0
@@ -21,6 +22,7 @@ if blockObj.OnRemote
 else
    db_fname = '';
 end
+
 blockObj.checkActionIsValid();
 if ~isempty(db_fname)
    db_id = fopen(db_fname,'a');
