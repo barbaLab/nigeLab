@@ -318,7 +318,8 @@ end
          operation);
       
       fprintf(fid,'profiler_results = profile(''info''); %% Return Profiler struct\n');
-      fprintf(fid,'prof_dir = ''ProfileResults_%04g''',randi(9999,1));
+      fprintf(fid,'prof_dir = ''ProfileResults_%04g''; %% Random ID\n',...
+         randi(9999,1));
       fprintf(fid,'out_dir = fullfile(db_p,prof_dir);\n');
       fprintf(fid,'if exist(out_dir,''dir'')==0\n\t');
       fprintf(fid,'mkdir(out_dir);\n');

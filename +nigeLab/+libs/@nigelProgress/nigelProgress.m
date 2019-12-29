@@ -366,14 +366,10 @@ classdef nigelProgress < handle
                bar.job = [];
             end
          else
-            % Play the alert sound! Booo! You canceled the job!
+            % I hate this sound! Boo! You should also hate it!
             nigeLab.sounds.play('alert',3);
             bar.setState(bar.Progress,'Interrupted');
-            if ~isempty(bar.job)
-               if isvalid(bar.job)
-                  delete(bar.job); % Remove the job
-               end
-            end
+
             bar.job = [];
             bar.Color = 'r';
          end

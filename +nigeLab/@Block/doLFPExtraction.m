@@ -21,9 +21,9 @@ end
 
 [~,pars] = blockObj.updateParams('LFP');
 
-DecimateCascadeM = pars.LFP.DecimateCascadeM;
-DecimateCascadeN = pars.LFP.DecimateCascadeN;
-DecimationFactor =  pars.LFP.DecimationFactor;
+DecimateCascadeM = pars.DecimateCascadeM;
+DecimateCascadeN = pars.DecimateCascadeN;
+DecimationFactor =  pars.DecimationFactor;
 blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
