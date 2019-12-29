@@ -97,7 +97,9 @@ switch class(target)
             % Create a worker config file that adds the remote repository,
             % then loads the corresponding block matfile and runs the
             % desired operation.
-            [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p);
+            add_debug_outputs = true;
+            [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p,...
+               add_debug_outputs);
             attachedFiles = {c, w};
          end
          

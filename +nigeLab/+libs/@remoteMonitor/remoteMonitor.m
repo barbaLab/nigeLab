@@ -96,15 +96,7 @@ classdef remoteMonitor < handle
       function delete(monitorObj)
          % DELETE  Destroy the object and its timers
          %
-         %  monitorObj.delete;
-         
-         % Delete the timer
-         if ~isempty(monitorObj.progtimer)
-            if isvalid(monitorObj.progtimer)
-               stop(monitorObj.progtimer);
-               delete(monitorObj.progtimer);
-            end
-         end
+         %  monitorObj.delete;        
          
          % Delete all bars
          if ~isempty(monitorObj.bars)

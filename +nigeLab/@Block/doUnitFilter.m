@@ -6,33 +6,20 @@ function flag = doUnitFilter(blockObj)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
+%% IMPORTS
+import nigeLab.libs.DiskData;
+import nigeLab.utils.getNigeLink;
+
 %% GET DEFAULT PARAMETERS
 flag = false;
-if blockObj.OnRemote
-   import nigeLab.*;
-   nPars = blockObj.Pars.Notifications;
-   p_db = nPars.DBLoc; 
-   if exist(p_db,'dir')==0
-      mkdir(p_db);
-   end
-   db_fname = fullfile(p_db,nPars.DBFile);
-   db_id = fopen(db_fname,'a');
-   fprintf(db_id,'(%s) Begin %s\n',char(datetime),mfilename);
-   fclose(db_id);
-else
-   db_fname = '';
-end
-
 blockObj.checkActionIsValid();
-if ~isempty(db_fname)
-   db_id = fopen(db_fname,'a');
-   fprintf(db_id,'(%s) %s :: passed checkActionIsValid\n',...
-      char(datetime),mfilename);
-   fclose(db_id);
+
+if ~genPaths(blockObj)
+   warning('Something went wrong with extraction.');
+   return;
 end
 
 [~,pars] = blockObj.updateParams('Filt');
-reportProgress(blockObj,'Filtering.',0,'toWindow','Filtering');
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
 %% ENSURE MASK IS ACCURATE
@@ -42,21 +29,17 @@ blockObj.checkMask;
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
-   'Unit Bandpass Filter');
-str = sprintf('Applying %s',str);
+if ~blockObj.OnRemote
+   str = getNigeLink('nigeLab.Block','doUnitFilter',...
+      'Unit Bandpass Filter');
+   str = sprintf('Applying %s',str);
+else
+   str = 'Filtering';
+end
 
 blockObj.reportProgress(str,0,'toWindow','Filtering');
 
-for iCh = blockObj.Mask
-
-   if ~isempty(db_fname)
-      db_id = fopen(db_fname,'a');
-      fprintf(db_id,'(%s) %s :: begin Filtering Channel %03g\n',...
-         char(datetime),mfilename,iCh);
-      fclose(db_id);
-   end
-   
+for iCh = blockObj.Mask   
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
@@ -75,7 +58,7 @@ for iCh = blockObj.Mask
          data = (ff(b,a,data,nfact,zi));
       end
       
-      blockObj.Channels(iCh).Filt = nigeLab.libs.DiskData(...
+      blockObj.Channels(iCh).Filt = DiskData(...
          fType,fName,data,...
          'access','w',...
          'size',size(data),...
@@ -94,9 +77,17 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
 
-flag = true;
-blockObj.linkToData('Filt');
 blockObj.save;
+if blockObj.OnRemote
+   str = 'Complete';
+else
+   linkStr = blockObj.getLink('Filt');
+   str = sprintf('<strong>Spike Bandpass Filtering</strong> complete: %s\n',linkStr);
+end
+blockObj.reportProgress(str,100,'toWindow','Done');
+blockObj.reportProgress('Done',100,'toEvent');
+
+flag = true;
 
 end
 

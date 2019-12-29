@@ -30,9 +30,11 @@ switch blockObj.RecType
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
       fprintf(1,' \n');
-      nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
-      nigeLab.utils.cprintf('Magenta-', 'WIP\n');
-      nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
+      if ~blockObj.OnRemote
+         nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
+         nigeLab.utils.cprintf('Magenta-', 'WIP\n');
+         nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
+      end
       flag = tdt2Block(blockObj);
       
    case 'Matfile' % "FLEX" format wherein source is an "_info.mat" file
@@ -59,8 +61,12 @@ end
 
 %% Update status and save
 blockObj.save;
-linkStr = blockObj.getLink('Raw');
-str = sprintf('<strong>Raw</strong> extraction complete: %s\n',linkStr);
+if blockObj.OnRemote
+   str = 'Complete';
+else
+   linkStr = blockObj.getLink('Raw');
+   str = sprintf('<strong>Raw</strong> extraction complete: %s\n',linkStr);
+end
 blockObj.reportProgress(str,100,'toWindow','Done');
 blockObj.reportProgress('Done',100,'toEvent');
 

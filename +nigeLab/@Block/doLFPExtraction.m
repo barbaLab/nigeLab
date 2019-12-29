@@ -14,6 +14,11 @@ function flag = doLFPExtraction(blockObj)
 flag = false;
 blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
+if ~genPaths(blockObj)
+   warning('Something went wrong with extraction');
+   return;
+end
+
 [~,pars] = blockObj.updateParams('LFP');
 
 DecimateCascadeM = pars.LFP.DecimateCascadeM;
@@ -22,9 +27,13 @@ DecimationFactor =  pars.LFP.DecimationFactor;
 blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
-      'Decimating');
-str = sprintf('%s raw data',str);
+if ~blockObj.OnRemote
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
+         'Decimating');
+   str = sprintf('%s raw data',str);
+else
+   str = 'Decimating';
+end
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
@@ -42,15 +51,19 @@ for iCh=blockObj.Mask
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
 
    pct = round(iCh/numel(blockObj.Mask) * 100);
-   blockObj.reportProgress(str,pct,'toWindow','Decimating');
+   blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);
 end
 blockObj.linkToData('LFP');
 blockObj.save;
 
-linkStr = blockObj.getLink('LFP');
-str = sprintf('LFP Extraction complete: %s\n',linkStr);
+if blockObj.OnRemote
+   str = 'Complete';
+else
+   linkStr = blockObj.getLink('LFP');
+   str = sprintf('<strong>LFP</strong> extraction complete: %s\n',linkStr);
+end
 blockObj.reportProgress(str,100,'toWindow','Done');
 blockObj.reportProgress('Done',100,'toEvent');
 

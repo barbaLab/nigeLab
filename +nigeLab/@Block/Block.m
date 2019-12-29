@@ -334,7 +334,9 @@ classdef Block < matlab.mixin.Copyable
       
       % Returns a formatted string that prints a link to open file browser
       % to block save location when printed in Command Window (on Windows).
-      % On Unix, linkStr is not linked (just returns the corresponding str)
+      % On Unix, the Matlab Editor working path is changed to show the
+      % location of the files corresponding to `field` (or BLOCK if no
+      % `field` is specified)
       function linkStr = getLink(blockObj,field)
          %GETLINK  Returns formatted string for link to Block in cmd window
          %
@@ -346,7 +348,16 @@ classdef Block < matlab.mixin.Copyable
          %  --> e.g. 
          %  >> linkStr = blockObj.getLink('Raw');
          %
-         %  * NOTE * Capitalization matters here.
+         %  <strong>NOTE:</strong> `field` is case-sensitive
+         %
+         %  UNIX links: 
+         %     1) add nigeLab to current Matlab path
+         %     2) play "pop" noise
+         %     3) change current folder to linked folder
+         %
+         %  WINDOWS links:
+         %     1) play "pop" noise
+         %     2) open linked folder in system file browser (explorer.exe)
          
          if nargin < 2
             field = 'SaveLoc';
@@ -358,13 +369,19 @@ classdef Block < matlab.mixin.Copyable
          end
          
          if isunix
-            linkStr = strrep(blockObj.Paths.(field).dir,'\','/');
+            str = strrep(blockObj.Paths.(field).dir,'\','/');
+            linkStr = sprintf(...
+               ['<a href="matlab: addpath(nigeLab.utils.getNigelPath()); ' ...
+                'nigeLab.sounds.play(''pop''); ' ...
+                'cd(''%s'');">%s</a>'],...
+               str,'Navigate to Files in Current Folder');
             return;
          else
             str = strrep(blockObj.Paths.(field).dir,'\','/');
             linkStr = sprintf(...
-               '<a href="matlab: winopen(''%s'');">%s</a>',...
-               str,str);
+               ['<a href="matlab: nigeLab.sounds.play(''pop''); ' ...
+                'winopen(''%s'');">%s</a>'],...
+               str,'View Files in Explorer');
                
          end
       end

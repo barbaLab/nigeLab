@@ -53,12 +53,21 @@ switch lower(queueMode)
       if numel(varargin) > 2
          db_p = varargin{3};
       end
+      if numel(varargin) > 3
+         add_debug_outputs = varargin{3};
+      else
+         add_debug_outputs = false;
+      end
       
       makeConfigScript(configFile,p);
       
       wrapperFile = fullfile(pwd,WRAPPER_FCN_NAME);
       if numel(varargin) > 2
-         makeWrapperFunction(wrapperFile,operation,p,db_p);
+         if add_debug_outputs
+            makeWrapperFunction_debug(wrapperFile,operation,p,db_p);
+         else
+            makeWrapperFunction(wrapperFile,operation,p);
+         end
       else
          makeWrapperFunction(wrapperFile,operation,p);
       end
@@ -122,11 +131,62 @@ end
       fclose(fid);
    end
 
-   % Helper-function to make wrapper function for running qOperation
-   function makeWrapperFunction(wrapperFile,operation,p,db_p)
+   % Helper-function to make wrapper function for running qOperation. This
+   % version is faster than debug version.
+   function makeWrapperFunction(wrapperFile,operation,p)
       %MAKEWRAPPERFUNCTION  Make wrapper function for running qOperation
       %
-      %  makeWrapperFunction(wrapperFile,operation);
+      %  makeWrapperFunction(wrapperFile,operation,p);
+      
+      if exist(wrapperFile,'file')~=0
+         delete(wrapperFile);
+      end
+      fid = fopen(wrapperFile,'w');
+      fprintf(fid,'function qWrapper(targetFile)\n');
+      fprintf(fid,'%%QWRAPPER  Programmatically-generated fcn wrapper\n');
+      fprintf(fid,'%%\n');
+      fprintf(fid,'%%\tqWrapper(targetFile); Run nigelLab on target\n');
+      fprintf(fid,'%%\n');
+      fprintf(fid,'%%\t\t--> NON-DEBUG VERSION <--\n');
+      addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
+      
+      fprintf(fid,'%%%% Add paths to this location\n');
+      for i = 1:numel(p)
+         fprintf(fid,'addpath(''%s''); %% Fixed repo location\n',p{i});
+      end
+
+      fprintf(fid,'\n%%%% Get handle to current job\n');
+      fprintf(fid,'curJob = getCurrentJob;\n\n');
+      
+      fprintf(fid,'%%%% Attempt to load target Block.\n');
+      fprintf(fid,['blockObj.reportProgress(' ...
+         '''Loading'',0,''toWindow'',''Loading'');\n']);
+      fprintf(fid,'blockObj = nigeLab.Block.loadRemote(targetFile);\n\n');
+      
+      fprintf(fid,'%%%% Now Block is successfully loaded. Update properties\n');
+      fprintf(fid,'blockObj.OnRemote = true; %% Currently on REMOTE\n');
+      fprintf(fid,'blockObj.CurrentJob = curJob(1); %% Assign JOB\n');
+      fprintf(fid,'blockObj.updateParams(''Notifications'');\n');
+      fprintf(fid,'blockObj.updateParams(''Queue'');\n\n');
+      
+      fprintf(fid,'%%%% Finally, we run the queued `doAction`\n');
+      fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
+         operation,operation);
+      fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
+      fprintf(fid,'blockObj.CurrentJob = []; %% Remove JOB\n');
+      fprintf(fid,'save(blockObj);\n\n');
+
+      fprintf(fid,'end');
+      fclose(fid);
+   end
+
+   % Helper-function to make wrapper function for running qOperation. This
+   % version puts outputs helpful for debugging or optimizing code run on
+   % the remote workers, but takes longer to run.
+   function makeWrapperFunction_debug(wrapperFile,operation,p,db_p)
+      %MAKEWRAPPERFUNCTION_DEBUG  Debug function for running qWrapper
+      %
+      %  makeWrapperFunction_debug(wrapperFile,operation,p,db_p);
       
       if nargin < 3
          db_p = 'C:/Remote_Matlab_Debug_Logs';
@@ -140,14 +200,17 @@ end
       fprintf(fid,'%%QWRAPPER  Programmatically-generated fcn wrapper\n');
       fprintf(fid,'%%\n');
       fprintf(fid,'%%\tqWrapper(targetFile); Run nigelLab on target\n');
+      fprintf(fid,'%%\n');
+      fprintf(fid,'%%\t\t--> DEBUG VERSION <--\n');
       addAutoSignature(fid,sprintf('nigeLab.utils.%s',mfilename));
       
       % DEBUG
       fprintf(fid,'%%%% Make a debug log for troubleshooting remote\n');
       fprintf(fid,'profile on; %% Turn on Matlab Profiler\n');
-      fprintf(fid,'logName = fullfile(''%s'',''logs.txt'');\n',db_p);
-      fprintf(fid,'if exist(''%s'',''dir'')==0\n\t',db_p);
-      fprintf(fid,'mkdir(''%s''); %% Make sure debug path is good\n',db_p);
+      fprintf(fid,'db_p = ''%s''; % Debug filepath\n',db_p);
+      fprintf(fid,'logName = fullfile(db_p,''logs.txt'');\n');
+      fprintf(fid,'if exist(db_p,''dir'')==0\n\t');
+      fprintf(fid,'mkdir(db_p); %% Make sure debug path is good\n');
       fprintf(fid,'end %% if folder does not exist make debug folder\n\n');
       fprintf(fid,'db_id = fopen(logName,''w''); %% Make debug logs\n');
       fprintf(fid,'iCount = 0;\n');
@@ -173,7 +236,6 @@ end
       end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
-      fprintf(fid,'pause(15); %% Wait to make sure job has loaded\n');
       fprintf(fid,'curJob = getCurrentJob;\n');
       fprintf(fid,'fprintf(db_id,''(%%s) Current Job: '',char(datetime));\n');
       fprintf(fid,'if isempty(curJob)\n');
@@ -238,8 +300,7 @@ end
       fprintf(fid,['fprintf(db_id,''(%%s) \\t->\\t(Updated Pars.Queue)\\n'','...
        ' ...\n\t' ...
        'char(datetime)); %% For debugging \n']);
-      fprintf(fid,'fclose(db_id); %% End debug logging\n');
-      fprintf(fid,'pause(10);\n\n');
+      fprintf(fid,'fclose(db_id); %% End debug logging\n\n');
       
       fprintf(fid,'%%%% Finally, we run the queued `doAction`\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
@@ -252,11 +313,26 @@ end
       fprintf(fid,'db_id = fopen(logName,''a''); %% Add to logs\n');
       fprintf(fid,'fprintf(db_id,''(%%s) %s complete.\\n'',char(datetime));\n',...
          operation);
-      fprintf(fid,'fclose(db_id);\n');
-      fprintf(fid,'p = profile(''info''); %% Return Profiler struct\n');
-      fprintf(fid,'profsave(p,''%s''); %% Save Profiler struct\n',db_p);
+      
+      fprintf(fid,'profiler_results = profile(''info''); %% Return Profiler struct\n');
+      fprintf(fid,['prof_dir = sprintf(''ProfileResults_%%04g'', '...
+         '...\n\t' ...
+         'randi(9999,1)));\n']);
+      fprintf(fid,'out_dir = fullfile(db_p,prof_dir);\n');
+      fprintf(fid,'if exist(out_dir,''dir'')==0\n\t');
+      fprintf(fid,'mkdir(out_dir);\n');
+      fprintf(fid,'else\n\t');
+      fprintf(fid,'delete(out_dir);\n\t');
+      fprintf(fid,'mkdir(out_dir);\n');
+      fprintf(fid,'end\n\n');
+      
+      fprintf(fid,'fprintf(db_id,''--> IN: %%s <--'',out_dir);\n');
+      fprintf(fid,'fclose(db_id);\n\n');
+      
+      fprintf(fid,['save(fullfile(out_dir,''Results.mat''),...\n\t' ...
+         '''profiler_results'',''-v7.3'');\n']);
+      fprintf(fid,'profsave(profiler_results,out_dir);\n');
       fprintf(fid,'end');
       fclose(fid);
    end
-
 end

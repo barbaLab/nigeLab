@@ -16,7 +16,6 @@ function flag = doAutoClustering(blockObj,chan,unit)
 
 %%
 flag = false;
-nigeLab.utils.checkForWorker('config');
 [~,par] = blockObj.updateParams('AutoClustering');
 blockObj.checkActionIsValid();
 
@@ -34,9 +33,13 @@ end
 if strcmpi(unit,'all') % Returns false if unit is numeric
    unit = 0:par.NMaxClus;
 end
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
-   par.MethodName);
-str = sprintf('AutoClustering (%s)',str);
+if ~blockObj.OnRemote
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
+      par.MethodName);
+   str = sprintf('AutoClustering (%s)',str);
+else
+   str = sprintf('AutoClustering-(%s)',par.MethodName);
+end
 blockObj.reportProgress(str,0,'toWindow');
 for iCh = chan
    % load spikes and classes
@@ -83,9 +86,18 @@ for iCh = chan
    blockObj.updateStatus('Clusters',true,iCh);
    blockObj.updateStatus('Sorted',true,iCh);
    blockObj.reportProgress(str,pct,'toWindow');
-   blockObj.reportProgress(sprintf('%s',par.MethodName),pct,'toEvent');
+   blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
 end
 blockObj.save;
+if blockObj.OnRemote
+   str = 'Complete';
+else
+   linkStr = blockObj.getLink('Clusters');
+   str = sprintf('<strong>Auto-Clustering</strong> complete: %s\n',linkStr);
+end
+blockObj.reportProgress(str,100,'toWindow','Done');
+blockObj.reportProgress('Done',100,'toEvent');
+
 flag = true;
 end
 

@@ -33,6 +33,7 @@ classdef nigelProgress < handle
 %     nigelProgress - Class constructor
    
    properties (Access = public, SetObservable = true)
+      Color              % face color of the progress bar
       Position  double   % Position of "container" but updates graphics
       IsRemote  logical             % Flag indicating if bar is remote
       job
@@ -330,6 +331,7 @@ classdef nigelProgress < handle
          % Should only do these things if .IsComplete flag is true
          if bar.IsComplete
             % Play the bell sound! Yay!
+            bar.setState(100,bar.CompleteKey);
             nigeLab.sounds.play('bell',1.5);
             if bar.IsRemote
                sel = bar.BlockSelectionIndex;
@@ -342,12 +344,14 @@ classdef nigelProgress < handle
          else
             % Play the alert sound! Booo! You canceled the job!
             nigeLab.sounds.play('alert',3);
+            bar.setState(bar.Progress,'Interrupted');
             if ~isempty(bar.job)
                if isvalid(bar.job)
                   delete(bar.job); % Remove the job
                end
             end
             bar.job = [];
+            bar.Color = 'r';
          end
       end 
       
@@ -461,13 +465,19 @@ classdef nigelProgress < handle
          evt = nigeLab.evt.barStopped(bar);
          notify(bar,'StateChanged',evt);
          if bar.IsRemote
+            % From remote, job.FinishedFcn is bar.indicateCompletion();
+            % So, just need .IsComplete to accurately reflect state of bar
             switch lower(bar.job.State)
                case 'finished'
-                  
+                  if bar.Progress == 100
+                     bar.IsComplete = true;
+                  else
+                     bar.IsComplete = false;
+                  end
                case 'failed'
-                  
+                  bar.IsComplete = false;
                otherwise
-                  
+                  bar.IsComplete = false;
             end
          end
       end
@@ -498,6 +508,11 @@ classdef nigelProgress < handle
             if strcmpi(str,bar.CompleteKey)
                % If on remote, wait for job to finish--it will do indicator
                bar.stopBar();
+               if pct == 100
+                  bar.IsComplete = true;
+               else
+                  bar.IsComplete = false;
+               end
             end
          else
             % Otherwise just wait until it hits 100% to indicate complete
@@ -534,6 +549,8 @@ classdef nigelProgress < handle
                         @(~,~)bar.toggleColor)];
          lh = [lh, addlistener(bar,'Position','PostSet',...
                         @(~,~)bar.updatePosition)];
+         lh = [lh, addlistener(bar,'Color','PostSet',...
+                        @(~,~)bar.updateColor)];
          lh = [lh, addlistener(bar,'Progress','PostSet',...
                         @(~,~)bar.updateProgress)];
          lh = [lh, addlistener(bar,'Status','PostSet',...
@@ -572,11 +589,9 @@ classdef nigelProgress < handle
          %  addlistener(bar,'IsRemote','PostSet',@(~,~)bar.toggleColor());
          
          if bar.IsRemote
-            bar.setChild('progbar','FaceColor',...
-               nigeLab.defaults.nigelColors('g'));
+            bar.Color = 'g';
          else
-            bar.setChild('progbar','FaceColor',...
-               nigeLab.defaults.nigelColors('b'));
+            bar.Color = 'b';
          end
          
       end
@@ -612,6 +627,20 @@ classdef nigelProgress < handle
             case 'off'
                % nothing specific here
          end
+      end
+      
+      % LISTENER CALLBACK: Update the face color of bar based on Color prop
+      function updateColor(bar)
+         % UPDATECOLOR  Updates face color of progress bar when 'Color'
+         %              property is changed.
+         %
+         %  addlistener(bar,'Color','PostSet',@(~,~)bar.updateColor);
+         
+         if ischar(bar.Color)
+            bar.Color = nigeLab.defaults.nigelColors(bar.Color);
+         end
+         
+         bar.setChild('progbar','FaceColor',bar.Color);
       end
       
       % LISTENER CALLBACK: Update parent panel position from Position prop
@@ -670,7 +699,7 @@ classdef nigelProgress < handle
          switch lower(strrep(str,'.',''))
             case {'done','complete','finished','over'}
                % Ensure that it is at 100%
-               bar.setState(100,'Done.');
+               bar.setState(100,bar.CompleteKey);
                
             otherwise
                % Do nothing
