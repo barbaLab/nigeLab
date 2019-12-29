@@ -142,8 +142,8 @@ switch class(target)
          end
          submit(job);
          if ~isempty(qPars.RemoteRepoPath)
-            delete(c); % Delete configW.m (from Tempdir)
-            delete(w); % Delete qWrapper.m (from pwd)
+%             delete(c); % Delete configW.m (from Tempdir)
+%             delete(w); % Delete qWrapper.m (from pwd)
          end
          fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
          

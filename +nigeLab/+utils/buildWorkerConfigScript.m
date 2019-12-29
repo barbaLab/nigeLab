@@ -54,7 +54,7 @@ switch lower(queueMode)
          db_p = varargin{3};
       end
       if numel(varargin) > 3
-         add_debug_outputs = varargin{3};
+         add_debug_outputs = varargin{4};
       else
          add_debug_outputs = false;
       end
@@ -156,6 +156,7 @@ end
       end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
+      fprintf(fid,'pause(15);\n');
       fprintf(fid,'curJob = getCurrentJob;\n\n');
       
       fprintf(fid,'%%%% Attempt to load target Block.\n');
@@ -236,6 +237,7 @@ end
       end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
+      fprintf(fid,'pause(15);\n');
       fprintf(fid,'curJob = getCurrentJob;\n');
       fprintf(fid,'fprintf(db_id,''(%%s) Current Job: '',char(datetime));\n');
       fprintf(fid,'if isempty(curJob)\n');

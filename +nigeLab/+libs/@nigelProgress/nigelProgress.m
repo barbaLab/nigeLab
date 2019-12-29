@@ -328,6 +328,8 @@ classdef nigelProgress < handle
          %
          %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
          
+         stopBar(bar); % Make sure it is stopped
+         
          % Should only do these things if .IsComplete flag is true
          if bar.IsComplete
             % Play the bell sound! Yay!
@@ -345,11 +347,11 @@ classdef nigelProgress < handle
             % Play the alert sound! Booo! You canceled the job!
             nigeLab.sounds.play('alert',3);
             bar.setState(bar.Progress,'Interrupted');
-            if ~isempty(bar.job)
-               if isvalid(bar.job)
-                  delete(bar.job); % Remove the job
-               end
-            end
+%             if ~isempty(bar.job)
+%                if isvalid(bar.job)
+%                   delete(bar.job); % Remove the job
+%                end
+%             end
             bar.job = [];
             bar.Color = 'r';
          end
@@ -450,7 +452,11 @@ classdef nigelProgress < handle
          %  bar.startBar(); Passes 'barStarted' evt via 'BarStarted' notify
          
          bar.IsComplete = false; % May need to reset if already ran
-         start(bar.Timer);
+         if strcmp(bar.Timer.Running,'off')
+            start(bar.Timer);
+         else
+            return; % Was already running, don't do other stuff
+         end
          evt = nigeLab.evt.barStarted(bar);
          notify(bar,'StateChanged',evt);
       end
@@ -461,7 +467,12 @@ classdef nigelProgress < handle
          %
          %  bar.stopBar(); Passes 'barStopped' evt via 'BarStopped' notify
          
-         stop(bar.Timer);
+         if strcmp(bar.Timer.Running,'on')
+            stop(bar.Timer);
+         else
+            return; % Was already off, don't do the other stuff
+         end
+
          evt = nigeLab.evt.barStopped(bar);
          notify(bar,'StateChanged',evt);
          if bar.IsRemote
