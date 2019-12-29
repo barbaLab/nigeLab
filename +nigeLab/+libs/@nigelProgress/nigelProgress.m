@@ -45,6 +45,8 @@ classdef nigelProgress < handle
    
    properties (Access = {?nigeLab.libs.remoteMonitor, ...
                          ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.evt.barStarted,...
+                         ?nigeLab.evt.barStopped,...
                          ?nigeLab.libs.DashBoard}, SetObservable = true)
       
       BarIndex = nan                % Index of this bar in remoteMonitor
@@ -56,10 +58,12 @@ classdef nigelProgress < handle
    
    properties (Access = {?nigeLab.libs.remoteMonitor, ...
                          ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.evt.barStarted,...
+                         ?nigeLab.evt.barStopped,...
                          ?nigeLab.libs.DashBoard})
       BlockSelectionIndex  double   % Index of the [animal block]
       IsComplete    =      false    % Flag indicating completion status
-      
+      Timer                timer    % Timer running "remote" monitor
    end
    
    properties (Access = public, Hidden = true)
@@ -67,18 +71,23 @@ classdef nigelProgress < handle
    end
    
    properties (Access = private)
-      listeners   event.listener
+      Tank        nigeLab.Tank                  % Tank "parent"
+      Monitor     nigeLab.libs.remoteMonitor    % Monitor "parent"
+      TagDelim       char   % Delimiter for parsing status from job tag
+      NotifyTimer    double % Interval (sec) for checking tag
+      CompleteKey    char   % Keyword for "JOB DONE" state
+      listeners   event.listener  % Event listener handle array
    end
    
    events
-      JobCanceled
+      StateChanged  % Issue eventdata for 'Start' or 'Stop' Type events
    end
    
    methods (Access = {?nigeLab.libs.remoteMonitor, ...
                       ?nigeLab.libs.DashBoard,...
                       ?parallel.job.MJSCommunicatingJob})
       % Class constructor for NIGELPROGRESS class
-      function bar = nigelProgress(parent,name,sel)
+      function bar = nigelProgress(parent,name,sel,monitorObj)
          % NIGELPROGRESS    Create a bar allowing graphical tracking of
          %                  completion status via the bar progress.
          %
@@ -118,6 +127,19 @@ classdef nigelProgress < handle
          bar.Parent = parent;
          bar.Position = parent.Position;
          bar.BlockSelectionIndex = sel;
+         bar.Tank = monitorObj.tankObj;
+         bar.Monitor = monitorObj;
+         
+         if ~isfield(bar.Tank.Pars,'Notifications')
+            bar.Tank.updateParams('Notifications');
+         elseif ~isfield(bar.Tank.Pars.Notifications,'TagDelim') || ...
+                ~isfield(bar.Tank.Pars.Notifications,'NotifyTimer') || ...
+                ~isfield(bar.Tank.Pars.Notifications,'CompleteKey')
+            bar.Tank.updateParams('Notifications');
+         end
+         bar.TagDelim = bar.Tank.Pars.Notifications.TagDelim;
+         bar.NotifyTimer = bar.Tank.Pars.Notifications.NotifyTimer;
+         bar.CompleteKey = bar.Tank.Pars.Notifications.CompleteKey;
          
          %% Build Children graphics
          bar.Children = cell(6,1);
@@ -186,6 +208,17 @@ classdef nigelProgress < handle
          %% Add property listeners
          bar.listeners = addPropertyListeners(bar);
          bar.job = [];
+         
+         %% Add Timer
+         bar.Timer = timer(...
+            'Name',sprintf('timer_A%02g_B%02g',sel(1),sel(2)),...
+            'Period',bar.NotifyTimer,...
+            'ExecutionMode','fixedSpacing',...
+            'UserData',sel,...
+            'TimerFcn',@(~,~)bar.updateBar);
+         
+         %% Add 'Cancel' callback
+         setChild(bar,'X','Callback',@(~,~)bar.stopBar);
       end
       
       % Things to do on delete function
@@ -207,6 +240,12 @@ classdef nigelProgress < handle
                if isvalid(lh)
                   delete(lh);
                end
+            end
+         end
+         
+         if ~isempty(bar.Timer)
+            if isvalid(bar.Timer)
+               delete(bar.Timer)
             end
          end
          
@@ -276,6 +315,41 @@ classdef nigelProgress < handle
             end
          end
       end
+      
+      % Private function that is issued when the bar associated with this
+      % job reaches 100% completion
+      function indicateCompletion(bar)
+         % INDICATECOMPLETION  Callback to issue completion sound for the
+         %               completed task of NIGELBAROBJ, once a particular
+         %               bar has reached 100%.
+         %
+         %   bar.indicateCompletion();
+         %
+         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
+         
+         % Should only do these things if .IsComplete flag is true
+         if bar.IsComplete
+            % Play the bell sound! Yay!
+            nigeLab.sounds.play('bell',1.5);
+            if bar.IsRemote
+               sel = bar.BlockSelectionIndex;
+               b = bar.Tank{sel(1,1),sel(1,2)};
+               b.reload(); % Reload the block so it is linked properly
+               evt = nigeLab.evt.jobCompletedEventData(bar);
+               notify(bar.Monitor,'jobCompleted',evt);
+               bar.job = [];
+            end
+         else
+            % Play the alert sound! Booo! You canceled the job!
+            nigeLab.sounds.play('alert',3);
+            if ~isempty(bar.job)
+               if isvalid(bar.job)
+                  delete(bar.job); % Remove the job
+               end
+            end
+            bar.job = [];
+         end
+      end 
       
       % Overloaded minus function to change indexing
       function C = minus(A,B)
@@ -365,6 +439,76 @@ classdef nigelProgress < handle
          end
       end
       
+      % Start the timer running on bar and notify event
+      function startBar(bar)
+         %STARTBAR  Start timer running on bar and notify event
+         %
+         %  bar.startBar(); Passes 'barStarted' evt via 'BarStarted' notify
+         
+         bar.IsComplete = false; % May need to reset if already ran
+         start(bar.Timer);
+         evt = nigeLab.evt.barStarted(bar);
+         notify(bar,'StateChanged',evt);
+      end
+      
+      % Stop the timer running on bar and notify event
+      function stopBar(bar)
+         %STOPBAR  Stop timer running on bar and notify event
+         %
+         %  bar.stopBar(); Passes 'barStopped' evt via 'BarStopped' notify
+         
+         stop(bar.Timer);
+         evt = nigeLab.evt.barStopped(bar);
+         notify(bar,'StateChanged',evt);
+         if bar.IsRemote
+            switch lower(bar.job.State)
+               case 'finished'
+                  
+               case 'failed'
+                  
+               otherwise
+                  
+            end
+         end
+      end
+      
+      % Updates the progress bar with current job status
+      function updateBar(bar)
+         % UPDATEREBAR  Update the bar to reflect status of current job
+         %
+         %  monitorObj.updateRemoteMonitor();  
+         %
+         %  --> This method should be periodically "pinged" by the TimerFcn
+         %      so that the state of the remote job can be updated.
+
+         if ~bar.IsRemote
+            str = bar.getChild('status','String');
+            if strcmpi(str,bar.CompleteKey)
+               pct = 100;
+            else
+               return;
+            end
+         else
+            [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,bar.TagDelim);
+         end
+         % Redraw the patch that colors in the progressbar
+         bar.setState(pct,str);
+         % If the job is completed, then run the completion method
+         if bar.IsRemote
+            if strcmpi(str,bar.CompleteKey)
+               % If on remote, wait for job to finish--it will do indicator
+               bar.stopBar();
+            end
+         else
+            % Otherwise just wait until it hits 100% to indicate complete
+            if pct == 100
+               bar.IsComplete = true;
+               bar.indicateCompletion();
+               bar.stopBar();
+            end
+         end
+
+      end
    end
    
    methods (Access = private)
@@ -397,7 +541,7 @@ classdef nigelProgress < handle
          lh = [lh, addlistener(bar,'Name','PostSet',...
                         @(~,~)bar.updateName)];
       end
-      
+
       % LISTENER CALLBACK: Update "visual" position in queue from index
       function setVisualQueuePosition(bar)
          % SETVISUALQUEUEPOSITION  Sets the position of bar depending on
@@ -460,6 +604,14 @@ classdef nigelProgress < handle
          ax.Visible = bar.Visible;
          set(ax.Children,'Visible',bar.Visible);
          bar.Parent.Visible = bar.Visible;
+         switch lower(bar.Visible)
+            case 'on'
+               jObj = nigeLab.utils.findjobj(getChild(bar,'X'));
+               jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+               jObj.setBorderPainted(false);
+            case 'off'
+               % nothing specific here
+         end
       end
       
       % LISTENER CALLBACK: Update parent panel position from Position prop

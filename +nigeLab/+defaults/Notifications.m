@@ -16,18 +16,21 @@ pars.DBFile = 'logs.txt';
 % notifyUser():
 pars.TagDelim = '||'; % This should separate TagString between naming and % complete
 pars.TagString.String = ['%s.%s %s' pars.TagDelim '%.3d%%']; % regexp for Tag updates
-pars.TagString.Vars = {'AnimalID','RecID'};
-%               Animal.Block operation TagDelim progress
-
+pars.TagString.Vars = {'AnimalID','RecID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
 
 % regexp for command window updates
 pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; 
+%    FORMAT  ::             >>[tab]Animal.Block -> operation : DDD%
+
 % Command window update variables
-pars.NotifyString.Vars = {'AnimalID','RecID'};
-%                 Animal.Block -> operation : progress
-pars.NotifyTimer = 0.5; % timer period (seconds) for remote monitor checks
+pars.NotifyString.Vars = {'AnimalID','RecID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
+pars.ConstantString.String = ...
+   ['%s', repmat('.%s',1,numel(pars.NotifyString.Vars)-1)];
+
+pars.NotifyTimer = 2; % timer period (seconds) for remote monitor checks
 pars.UseParallel=0;
 pars.MinIncrement = 5;
+pars.CompleteKey = 'Done'; % Keyword for "JOB DONE" state
 
 % Fixed "normalized" prog bar height
 pars.FixedProgBarHeightNormUnits = 0.12; 

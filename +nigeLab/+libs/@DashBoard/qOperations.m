@@ -114,7 +114,7 @@ switch class(target)
             target.Meta.RecID);
          % target is nigelab.Block
          blockName = blockName(1:min(end,nPars.NMaxNameChars));
-         barName = sprintf('%s.%s',blockName,operation(3:end));
+         barName = sprintf('%s.%s',blockName,operation);
          
          job = createCommunicatingJob(myCluster, ...
             'AutoAttachFiles',false,...
@@ -129,7 +129,7 @@ switch class(target)
          bar = obj.remoteMonitor.startBar(barName,sel,job);
 
          % Assign callbacks to update labels and timers etc.
-         job.FinishedFcn=@(~,~)obj.remoteMonitor.barCompleted(bar);
+         job.FinishedFcn=@(~,~)bar.indicateCompletion();
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else
@@ -137,10 +137,12 @@ switch class(target)
                [target.Paths.SaveLoc.dir '_Block.mat']);
             fprintf(1,'\n->\tTarget: %s\n',targetFile);
             createTask(job,@qWrapper,0,{targetFile});
-%             delete(c); % Delete configW.m (from Tempdir)
-%             delete(w); % Delete qWrapper.m (from pwd)
          end
          submit(job);
+         if ~isempty(qPars.RemoteRepoPath)
+            delete(c); % Delete configW.m (from Tempdir)
+            delete(w); % Delete qWrapper.m (from pwd)
+         end
          fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
          
       else
@@ -157,8 +159,6 @@ switch class(target)
          starttime = clock();
          bar = obj.remoteMonitor.startBar(barName,sel);
          bar.setState(0,'Pending...');
-         lh = addlistener(bar,'JobCanceled',...
-            @(~,~)target.invokeCancel);
          try
             feval(operation,target);
             flag = true;
@@ -169,7 +169,7 @@ switch class(target)
             for i = 1:numel(me.stack)
                disp(me.stack(i));
             end
-            obj.remoteMonitor.stopBar(bar);
+            obj.remoteMonitor.cancelBar(bar);
             s = struct;
             s.message = me.message;
             s.identifier = me.identifier;
@@ -177,7 +177,6 @@ switch class(target)
             lasterror(s); %#ok<LERR> % Set the last error struct
          end
          if flag
-            delete(lh);
             field = target.getOperationField(operation);
             if ~iscell(field)
                field = {field};
@@ -188,7 +187,7 @@ switch class(target)
          end
          % Since it is SERIAL, bar will be updated
          if flag
-            obj.remoteMonitor.stopBar(bar);
+            obj.remoteMonitor.cancelBar(bar);
          end
       end
       

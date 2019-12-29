@@ -332,6 +332,43 @@ classdef Block < matlab.mixin.Copyable
          end
       end
       
+      % Returns a formatted string that prints a link to open file browser
+      % to block save location when printed in Command Window (on Windows).
+      % On Unix, linkStr is not linked (just returns the corresponding str)
+      function linkStr = getLink(blockObj,field)
+         %GETLINK  Returns formatted string for link to Block in cmd window
+         %
+         %  linkStr = blockObj.getLink();  Returns BLOCK link
+         %
+         %  linkStr = blockObj.getLink('fieldName');  Returns link to
+         %                                   'fieldName' (if it exists).
+         %                                   Otherwise, throws an error.
+         %  --> e.g. 
+         %  >> linkStr = blockObj.getLink('Raw');
+         %
+         %  * NOTE * Capitalization matters here.
+         
+         if nargin < 2
+            field = 'SaveLoc';
+         end
+         
+         if ~isfield(blockObj.Paths,field)
+            error(['nigeLab:' mfilename ':UnexpectedString'],...
+               '%s is not a field of blockObj.Paths',field);
+         end
+         
+         if isunix
+            linkStr = strrep(blockObj.Paths.(field).dir,'\','/');
+            return;
+         else
+            str = strrep(blockObj.Paths.(field).dir,'\','/');
+            linkStr = sprintf(...
+               '<a href="matlab: winopen(''%s'');">%s</a>',...
+               str,str);
+               
+         end
+      end
+      
       % Returns the public hash key for this block
       function publicKey = getKey(blockObj)
          %GETKEY  Return the public hash key for this block

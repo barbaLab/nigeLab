@@ -14,9 +14,8 @@ classdef remoteMonitor < handle
       listeners  event.listener  % Array of listener handles
    end
    
-   properties (Access = private)
+   properties (Access = ?nigeLab.libs.nigelProgress)
       runningJobs = 0         % Number of running jobs
-      progtimer   timer       % Timer for checking progress periodically
       pars        struct      % Parameters struct
       delim       char        % Delimiter for parsing job tags
       tankObj     nigeLab.Tank  % Tank object
@@ -80,11 +79,6 @@ classdef remoteMonitor < handle
          % Define figure size and axes padding for the single bar case
          monitorObj.pars = tankObj.Pars.Notifications;
          monitorObj.delim = monitorObj.pars.TagDelim;
-         monitorObj.progtimer = timer(...
-            'Name',sprintf('%s_timer','remoteMonitor'),...
-            'Period',monitorObj.pars.NotifyTimer,...
-            'ExecutionMode','fixedSpacing',...
-            'TimerFcn',@(~,~)monitorObj.updateRemoteMonitor);
 
          monitorObj.bars = nigeLab.libs.nigelProgress(0);
          
@@ -136,7 +130,6 @@ classdef remoteMonitor < handle
       function bar = getBar(monitorObj,sel)
          % GETBAR  Returns a single bar object based on selection from list
          %           of  monitorObj bars.
-         
          bar = getBar(monitorObj.bars,sel);
       end
 
@@ -172,137 +165,39 @@ classdef remoteMonitor < handle
          end
 
          % Increment counter of running jobs
-         monitorObj.runningJobs = monitorObj.runningJobs + 1;
          bar.Progress = 0;
          bar.Name = name;
          bar.job = job;
-         bar.BarIndex = monitorObj.runningJobs;
          
-         jObj = nigeLab.utils.findjobj(getChild(bar,'X'));
-         jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
-         jObj.setBorderPainted(false);
+         % Changing BarIndex toggles the visibility, queue position etc.
+         bar.BarIndex = monitorObj.runningJobs+1;
          
-         %%% if first bar we need to start timer
-         if strcmp(monitorObj.progtimer.Running,'off')
-            start(monitorObj.progtimer);
+         bar.startBar();
+         
+      end
+         
+   end
+
+   methods (Access = {?nigeLab.libs.nigelProgress})
+      function barStateCB(monitorObj,src,evt)
+         switch evt.Type
+            case 'Start'
+               % Increment the counter of running jobs
+               monitorObj.runningJobs = monitorObj.runningJobs + 1;
+               
+            case 'Stop'
+               % Decrement the appropriate .BarIndex property:
+               monitorObj.bars = monitorObj.bars - src;
+
+               % Reduce number of running jobs and if there are still jobs
+               % running, start the timer again
+               monitorObj.runningJobs = monitorObj.runningJobs - 1;
+            otherwise
+               error(['nigeLab:' mfilename ':UnrecognizedEvent'],...
+                  'Unexpected event type: %s',evt.Type);
          end
-         
       end
       
-      % Remove a nigeLab.libs.nigelProgress object from visual queue.
-      % Acts as the opposite of "STARTBAR" method.
-      function stopBar(monitorObj,bar,evt)
-         % STOPBAR  function to remove a nigeLab.libs.nigelProgress bar
-         %            Acts as the opposite of "STARTBAR" method.
-         %
-         %  monitorObj.removeBar(nigelProgressObj);
-         %
-         %  bar  -- nigeLab.libs.nigelProgress "progress bar" to remove
-         
-         if nargin < 3
-            evt = [];
-         end
-         
-         % If it came from listener callback, then it was a child of
-         % nigelProgressBarObj.
-         if ~isa(bar,'nigeLab.libs.nigelProgress')
-            bar = bar.UserData;
-         end
-         
-         if strcmp(monitorObj.progtimer.Running,'on')
-            stop(monitorObj.progtimer); % to prevent graphical updates errors
-         end
-         
-         % If this was from clicking red 'X', it means the method was
-         % canceled in the middle.
-         if ~isempty(evt)
-            % Then it was listener callback so cancel
-            notify(bar,'JobCanceled');
-         end
-         
-         % Decrement the appropriate .BarIndex property:
-         monitorObj.bars = monitorObj.bars - bar;
-         
-         % Reduce number of running jobs and if there are still jobs
-         % running, start the timer again
-         monitorObj.runningJobs = monitorObj.runningJobs - 1;
-         monitorObj.barCompleted(bar);
-         
-         % Restart the progress timer if there are still bars
-         if monitorObj.runningJobs > 0
-            if strcmp(monitorObj.progTimer.Running,'off')
-               start(monitorObj.progtimer);
-            end
-         end
-      end
-         
-      % Updates the remote monitor with current job status
-      function updateRemoteMonitor(monitorObj)
-         % UPDATEREMOTEMONITOR  Update the remote monitor with current job
-         %                      status
-         %
-         %  monitorObj.updateRemoteMonitor();  
-         %
-         %  --> This method should be periodically "pinged" by the TimerFcn
-         %      so that the state of the remote job can be updated.
-         
-         for bar = monitorObj.bars
-            if ~bar.IsRemote
-               if strcmpi(bar.getChild('status','String'),'Done.')
-                  pct = 100;
-                  str = '';
-               else
-                  return;
-               end
-            else
-               [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,...
-                  monitorObj.delim);
-            end
-            % Redraw the patch that colors in the progressbar
-            if isempty(str)
-               bar.setState(pct);
-            else
-               bar.setState(pct,str);
-            end
-            
-            % If the job is completed, then run the completion method
-            if pct == 100
-               monitorObj.barCompleted(bar);
-            end
-            
-         end
-
-      end
-   end
-   
-   methods (Access = {?nigeLab.libs.DashBoard,...
-                      ?nigeLab.libs.nigelProgress,...
-                      ?parallel.job.MJSCommunicatingJob})
-      % Private function that is issued when the bar associated with this
-      % job reaches 100% completion
-      function barCompleted(monitorObj,bar)
-         % BARCOMPLETED  Callback to issue completion sound for the
-         %               completed task of NIGELBAROBJ, once a particular
-         %               bar has reached 100%.
-         %
-         %   monitorObj.barCompleted(bar);
-         %
-         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
-         
-         % Play the bell sound! Yay!
-         nigeLab.sounds.play('bell',1.5);
-         evtData = nigeLab.evt.jobCompletedEventData(bar);
-         if bar.IsComplete
-            bar.setState(100,'Done.');
-         end
-         if bar.IsRemote
-            sel = bar.BlockSelectionIndex;
-            b = monitorObj.tankObj{sel(1,1),sel(1,2)};
-            b.reload(); % Reload the block so it is linked properly
-         end
-         notify(monitorObj,'jobCompleted',evtData);
-      end      
-
    end
    
    % Private methods accessed internally
@@ -354,9 +249,7 @@ classdef remoteMonitor < handle
             'Tag',name);
 
          % Create the actual nigelProgress bar object
-         bar = nigeLab.libs.nigelProgress(pp,name,sel);
-         setChild(bar,'X','Callback',...
-            @monitorObj.stopBar);
+         bar = nigeLab.libs.nigelProgress(pp,name,sel,monitorObj);
          bar.BarIndex = nan;
          
          %%% Nest the panel in in the nigelPanel
@@ -366,8 +259,8 @@ classdef remoteMonitor < handle
          %%% store the bars in the remoteMonitor obj
          monitorObj.bars = [monitorObj.bars, bar];
          monitorObj.listeners = [monitorObj.listeners, ...
-            addlistener(blockObj,'ProgressChanged',...
-            @bar.getState)];
+            addlistener(blockObj,'ProgressChanged',@bar.getState),...
+            addlistener(bar,'StateChanged',@monitorObj.barStateCB)];
       end
       
    end

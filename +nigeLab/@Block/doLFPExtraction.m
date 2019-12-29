@@ -48,6 +48,12 @@ for iCh=blockObj.Mask
 end
 blockObj.linkToData('LFP');
 blockObj.save;
+
+linkStr = blockObj.getLink('LFP');
+str = sprintf('LFP Extraction complete: %s\n',linkStr);
+blockObj.reportProgress(str,100,'toWindow','Done');
+blockObj.reportProgress('Done',100,'toEvent');
+
 flag = true;
 
    function fName = parseFileName(blockObj,channel)

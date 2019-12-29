@@ -59,4 +59,9 @@ end
 
 %% Update status and save
 blockObj.save;
+linkStr = blockObj.getLink('Raw');
+str = sprintf('<strong>Raw</strong> extraction complete: %s\n',linkStr);
+blockObj.reportProgress(str,100,'toWindow','Done');
+blockObj.reportProgress('Done',100,'toEvent');
+
 end

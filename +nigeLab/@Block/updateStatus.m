@@ -41,7 +41,8 @@ N_CHAR_COMPARE = 7;
 if nargin > 2
    if iscell(operation) && iscell(value)
       if numel(operation)~=numel(value)
-         error(['''operation'' (%d) and ''value'' (%d) must have same' ...
+         error(['nigeLab:' mfilename ':InputSizeMismatch'],...
+            ['"operation" (%d) and "value" (%d) must have same' ...
             ' number of elements if given as cell array.'],...
             numel(operation), numel(value));
       end
@@ -63,7 +64,8 @@ end
 
 switch nargin
    case 0 % Must have input arguments (method of nigeLab.Block class)
-      error('Not enough input arguments.');
+      error(['nigeLab:' mfilename ':TooFewInputArgs'],...
+             'Not enough input arguments.');
       
    case 1 % If no input just return all the possible operations
       opOut=allPossibleOperations(1:end);
@@ -71,40 +73,45 @@ switch nargin
       
    case 2 % If only 1 input, 'init' command resets status of all
       if ~ischar(operation)
-         error('operation input argument must be a char');
+         error(['nigeLab:' mfilename ':BadInputType2'],...
+            '"operation" input argument must be a char (was %s)',...
+            class(operation));
       end
       
       if strncmpi('init',operation,N_CHAR_COMPARE)
          blockObj.Status = struct; % Change this to a struct
          for i = 1:numel(allPossibleOperations)
-             switch blockObj.FieldType{i}
-                 case 'Channels'
-                     n = blockObj.NumChannels;
-                 case 'Streams'
-                     n = numel(blockObj.Streams.(allPossibleOperations{i}));
-                 case 'Videos'
-                     n = numel(blockObj.Videos);
-                 otherwise
-                     strNumCh = ['Num' allPossibleOperations{i}];
-                     if isprop(blockObj,strNumCh)
-                         n = blockObj.(strNumCh);
-                     else
-                         n = 1;
-                     end                     
-             end
-             blockObj.Status.(allPossibleOperations{i}) = ...
-                 false(1,n);
-              notifyStatus(blockObj,allPossibleOperations{i},false(1,n));
-         end      
+            switch blockObj.FieldType{i}
+               case 'Channels'
+                  n = blockObj.NumChannels;
+               case 'Streams'
+                  n = numel(blockObj.Streams.(allPossibleOperations{i}));
+               case 'Videos'
+                  n = numel(blockObj.Videos);
+               otherwise
+                  strNumCh = ['Num' allPossibleOperations{i}];
+                  if isprop(blockObj,strNumCh)
+                     n = blockObj.(strNumCh);
+                  else
+                     n = 1;
+                  end
+            end
+            blockObj.Status.(allPossibleOperations{i}) = ...
+               false(1,n);
+            notifyStatus(blockObj,allPossibleOperations{i},false(1,n));
+         end
          blockObj.Fields = allPossibleOperations;
       else
-         error('''operation'' input argument is not valid (%s)',operation);
+         error(['nigeLab:' mfilename ':BadInputType3'],...
+            'If only "operation" is provided, must be ''init''');
       end
       opOut = [];
       
    case 3 % If 2 inputs, set value of that operation status to value
       if ~ischar(operation)
-         error('operation input argument must be a char');
+         error(['nigeLab:' mfilename ':BadInputType2'],...
+            '"operation" input argument must be a char (currently: %s)',...
+            class(operation));
       end
       idx = find(strncmpi(allPossibleOperations,operation,N_CHAR_COMPARE));
       if ~isempty(idx)
@@ -121,7 +128,9 @@ switch nargin
       
    case 4 % If 3 inputs, set value of a channel for operation to value
       if ~ischar(operation)
-         error('operation input argument must be a char');
+         error(['nigeLab:' mfilename ':BadInputType2'],...
+            '"operation" input argument must be a char (currently: %s)',...
+            class(operation));
       end
       idx = find(strncmpi(allPossibleOperations,operation,N_CHAR_COMPARE));
       if ~isempty(idx)
@@ -135,16 +144,17 @@ switch nargin
          opOut = [];
       end
       
-      return;      
+      return;
    otherwise
-      error('Too many input arguments (%d; max: 4).',nargin);
+      error(['nigeLab:' mfilename ':TooManyInputArgs'],...
+         'Too many input arguments (%d; max: 4).',nargin);
 end
 
-   % Helper function to notify the block of change in current status
+% Helper function to notify the block of change in current status
    function notifyStatus(Block,field,status,channel)
       %NOTIFYSTATUS  Emits the `StatusChanged` event notification to Block
       %
-      %  notifyStatus(Block,field,status); 
+      %  notifyStatus(Block,field,status);
       %  notifyStatus(Block,field,status,channel);
       %
       %  channel : (optional) If not specified, then it is assigned the
