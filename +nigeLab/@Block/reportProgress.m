@@ -69,18 +69,6 @@ if ~nigeLab.utils.checkForWorker(blockObj) % serial execution on localhost
       return;
    end
    
-   if blockObj.UseParallel % Then we SHOULD be on the remote
-      p_db = blockObj.Pars.Notifications.DBLoc;
-      if exist(p_db,'dir')==0
-         mkdir(p_db);
-      end
-      % Just write current line for debugging
-      db_id = fopen(fullfile(p_db,'logs.txt'),'a');
-      fprintf(db_id,'(%s) Worker::%s: %s <-- WRONG CALL\n',...
-         char(datetime),pwd,str);
-      fclose(db_id);
-   end
-   
    % only increment counter by a certain amount defined in defaults.
    if ~floor(mod(pct,pars.MinIncrement))
       % This is only entered if % is an even multiple of pars.MinIncrement   
@@ -132,17 +120,12 @@ else % we are in worker environment
    % remoteMonitor of nigeLab.libs.DashBoard, which then updates the bar
    % increment accordingly.
    str = sprintf(pars.TagString.String,metas{:},tag_str,pct);
-   p_db = blockObj.Pars.Notifications.DBLoc;
-   if exist(p_db,'dir')==0
-      mkdir(p_db);
-   end
-   % Just write current line for debugging
-   db_id = fopen(fullfile(p_db,'logs.txt'),'a');
-   fprintf(db_id,'(%s) Worker::%s: %s\n',char(datetime),pwd,str);
-   fclose(db_id);
+
    if nargout == 1
       return;
    end
+   % getCurrentJob can be slow, so this just checks if property for job
+   % already exists and takes that property value as the job if it is valid
    if ~isempty(blockObj.CurrentJob)
       if isvalid(blockObj.CurrentJob)
          job = blockObj.CurrentJob;
