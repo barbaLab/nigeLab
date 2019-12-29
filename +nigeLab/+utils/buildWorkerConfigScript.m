@@ -208,7 +208,7 @@ end
       % DEBUG
       fprintf(fid,'%%%% Make a debug log for troubleshooting remote\n');
       fprintf(fid,'profile on; %% Turn on Matlab Profiler\n');
-      fprintf(fid,'db_p = ''%s''; % Debug filepath\n',db_p);
+      fprintf(fid,'db_p = ''%s''; %% Debug filepath\n',db_p);
       fprintf(fid,'logName = fullfile(db_p,''logs.txt'');\n');
       fprintf(fid,'if exist(db_p,''dir'')==0\n\t');
       fprintf(fid,'mkdir(db_p); %% Make sure debug path is good\n');
@@ -318,8 +318,7 @@ end
       
       fprintf(fid,'profiler_results = profile(''info''); %% Return Profiler struct\n');
       fprintf(fid,['prof_dir = sprintf(''ProfileResults_%%04g'', '...
-         '...\n\t' ...
-         'randi(9999,1)));\n']);
+         'randi(9999,1));\n']);
       fprintf(fid,'out_dir = fullfile(db_p,prof_dir);\n');
       fprintf(fid,'if exist(out_dir,''dir'')==0\n\t');
       fprintf(fid,'mkdir(out_dir);\n');

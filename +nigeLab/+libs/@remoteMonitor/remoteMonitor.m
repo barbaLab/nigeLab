@@ -171,6 +171,8 @@ classdef remoteMonitor < handle
    end
 
    methods (Access = {?nigeLab.libs.nigelProgress})
+      % Handles different types of `StateChanged` events from
+      % `nigeLab.libs.nigelProgress` progress bar class
       function barStateCB(monitorObj,src,evt)
          switch evt.Type
             case 'Start'
@@ -178,12 +180,15 @@ classdef remoteMonitor < handle
                monitorObj.runningJobs = monitorObj.runningJobs + 1;
                
             case 'Stop'
-               % Decrement the appropriate .BarIndex property:
-               monitorObj.bars = monitorObj.bars - src;
-
                % Reduce number of running jobs and if there are still jobs
                % running, start the timer again
                monitorObj.runningJobs = monitorObj.runningJobs - 1;
+               
+            case 'Clear'
+               %% For example, when the red X is clicked or job destroyed
+               % Decrement the appropriate .BarIndex property:
+               monitorObj.bars = monitorObj.bars - src;
+               
             otherwise
                error(['nigeLab:' mfilename ':UnrecognizedEvent'],...
                   'Unexpected event type: %s',evt.Type);

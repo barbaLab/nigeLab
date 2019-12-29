@@ -78,6 +78,7 @@ classdef nigelProgress < handle
       NotifyTimer    double % Interval (sec) for checking tag
       CompleteKey    char   % Keyword for "JOB DONE" state
       listeners   event.listener  % Event listener handle array
+      joblistener event.listener  % Specific listener for job deletion
    end
    
    events
@@ -219,7 +220,18 @@ classdef nigelProgress < handle
             'TimerFcn',@(~,~)bar.updateBar);
          
          %% Add 'Cancel' callback
-         setChild(bar,'X','Callback',@(~,~)bar.stopBar);
+         setChild(bar,'X','Callback',@(~,~)bar.clearBar);
+      end
+      
+      % Listener callback for red 'X'
+      function clearBar(bar)
+         %CLEARBAR  Listener callback for clicking red cancel 'X'
+         %
+         %  x.Callback = @(~,~)bar.clearBar;
+         
+         stopBar(bar);
+         evt = nigeLab.evt.barCleared(bar);
+         notify(bar,'StateChanged',evt);
       end
       
       % Things to do on delete function
@@ -244,6 +256,14 @@ classdef nigelProgress < handle
             end
          end
          
+         % Delete other (specific) job listener
+         if ~isempty(bar.joblistener)
+            if isvalid(bar.joblistener)
+               delete(bar.joblistener);
+            end
+         end
+         
+         % Delete Timer object
          if ~isempty(bar.Timer)
             if isvalid(bar.Timer)
                delete(bar.Timer)
@@ -347,11 +367,11 @@ classdef nigelProgress < handle
             % Play the alert sound! Booo! You canceled the job!
             nigeLab.sounds.play('alert',3);
             bar.setState(bar.Progress,'Interrupted');
-%             if ~isempty(bar.job)
-%                if isvalid(bar.job)
-%                   delete(bar.job); % Remove the job
-%                end
-%             end
+            if ~isempty(bar.job)
+               if isvalid(bar.job)
+                  delete(bar.job); % Remove the job
+               end
+            end
             bar.job = [];
             bar.Color = 'r';
          end
@@ -570,6 +590,18 @@ classdef nigelProgress < handle
                         @(~,~)bar.updateName)];
       end
 
+      % Internal function to deal with job being removed via Job Monitor
+      function handleExternalJobDeletion(bar)
+         %HANDLEEXTERNALJOBDELETION  If job is deleted from Job Monitor
+         %
+         %  bar.handleExternalJobDeletion;  Listener callback that waits
+         %                                  for ObjectBeingDestroyed event
+         
+         bar.IsRemote = false;
+         bar.IsComplete = false;
+         bar.indicateCompletion();
+      end
+      
       % LISTENER CALLBACK: Update "visual" position in queue from index
       function setVisualQueuePosition(bar)
          % SETVISUALQUEUEPOSITION  Sets the position of bar depending on
@@ -615,8 +647,15 @@ classdef nigelProgress < handle
          
          if isempty(bar.job)
             bar.IsRemote = false;
+            if ~isempty(bar.joblistener)
+               if isvalid(bar.joblistener)
+                  delete(bar.joblistener);
+               end
+            end
          else
             bar.IsRemote = true;
+            bar.joblistener = addlistener(bar.job,'ObjectBeingDestroyed',...
+               @(~,~)bar.handleExternalJobDeletion);
          end
       end
       

@@ -40,6 +40,7 @@ end
 
 %% COMPUTE THE MEAN FOR EACH PROBE
 blockObj.reportProgress('Computing-CAR',0,'toWindow');
+curCh = 0;
 for iCh = blockObj.Mask
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
@@ -51,10 +52,11 @@ for iCh = blockObj.Mask
       warning('STIM SUPPRESSION method not yet available.');
       return;
    end
-   pct = round(100 * (iCh / numel(blockObj.Mask)));
-   blockObj.reportProgress('Computing-CAR',pct,'toWindow');
+   curCh = curCh + 1;
+   pct = round(100 * (curCh / numel(blockObj.Mask)));
    PCT = round((pct/100) * 20); 
-   blockObj.reportProgress('Computing-CAR.',PCT,'toEvent');
+   blockObj.reportProgress('Computing-CAR',PCT,'toWindow');
+   blockObj.reportProgress('Computing-CAR',PCT,'toEvent','Computing-CAR');
 end
 
 %% SAVE EACH PROBE REFERENCE TO THE DISK
@@ -76,6 +78,7 @@ if ~blockObj.OnRemote
 else
    str = 'Removing-CAR';
 end
+curCh = 0;
 for iCh = blockObj.Mask
    % Do re-reference
    data = doCAR(blockObj.Channels(iCh),...
@@ -95,10 +98,11 @@ for iCh = blockObj.Mask
       refMeanFile{blockObj.Channels(iCh).probe});
    
    % Update user
-   pct = 100 * (iCh / numel(blockObj.Mask));
-   blockObj.reportProgress(str,pct,'toWindow');
-   PCT = 20 + round((pct/100) * 80); 
-   blockObj.reportProgress('Removing CAR.',PCT,'toEvent',str);
+   curCh = curCh + 1;
+   pct = 100 * (curCh / numel(blockObj.Mask));
+   PCT = 20 + round((pct/100) * 80);
+   blockObj.reportProgress(str,PCT,'toWindow'); 
+   blockObj.reportProgress('Removing-CAR',PCT,'toEvent','Removing-CAR');
    blockObj.updateStatus('CAR',true,iCh);
 end
 blockObj.save;

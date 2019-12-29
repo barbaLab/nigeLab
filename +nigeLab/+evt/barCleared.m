@@ -1,6 +1,6 @@
-classdef (ConstructOnLoad) barStopped < event.EventData
-%%BARSTOPPED   Event issued by nigeLab.libs.nigelProgress when a "progress
-%                bar" stops running.
+classdef (ConstructOnLoad) barCleared < event.EventData
+%%BARCLEARED   Event issued by nigeLab.libs.nigelProgress when a "progress
+%                bar" is cleared from the queue
 
 %% Properties
    properties (Access = public)
@@ -11,16 +11,16 @@ classdef (ConstructOnLoad) barStopped < event.EventData
       Name                char     % Name (AnimalID.RecID) of job
       Operation           char     % Name of `do` Operation being run
       Time                datetime % Stop time of job
-      Type = 'Stop'                % "Type" of eventdata
+      Type = 'Clear'               % "Type" of eventdata
    end
    
 %% Methods
    methods (Access = public)
-      function evt = barStopped(bar)
-         %%BARSTOPPED   Event issued by nigeLab.libs.nigelProgress when a
-         %                 "progress bar" stops running.
+      function evt = barCleared(bar)
+         %%BARCLEARED   Event issued by nigeLab.libs.nigelProgress when a
+         %                 "progress bar" is cleared from visual queue.
          %
-         %  evt = nigeLab.evt.barStopped(bar);
+         %  evt = nigeLab.evt.barCleared(bar);
          %
          %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
          %
