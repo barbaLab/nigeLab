@@ -55,18 +55,16 @@ for iCh=blockObj.Mask
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);
 end
-blockObj.linkToData('LFP');
-blockObj.save;
-
 if blockObj.OnRemote
-   str = 'Complete';
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
 else
+   blockObj.save;
    linkStr = blockObj.getLink('LFP');
-   str = sprintf('<strong>LFP</strong> extraction complete: %s\n',linkStr);
+   str = sprintf('<strong>LFP extraction</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
 end
-blockObj.reportProgress(str,100,'toWindow','Done');
-blockObj.reportProgress('Done',100,'toEvent');
-
 flag = true;
 
    function fName = parseFileName(blockObj,channel)

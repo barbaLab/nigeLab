@@ -77,15 +77,16 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
 
-blockObj.save;
 if blockObj.OnRemote
-   str = 'Complete';
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
 else
+   blockObj.save;
    linkStr = blockObj.getLink('Filt');
-   str = sprintf('<strong>Spike Bandpass Filtering</strong> complete: %s\n',linkStr);
+   str = sprintf('<strong>Unit Filtering</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
 end
-blockObj.reportProgress(str,100,'toWindow','Done');
-blockObj.reportProgress('Done',100,'toEvent');
 
 flag = true;
 

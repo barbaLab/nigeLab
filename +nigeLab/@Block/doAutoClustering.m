@@ -88,16 +88,16 @@ for iCh = chan
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
 end
-blockObj.save;
 if blockObj.OnRemote
-   str = 'Complete';
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
 else
+   blockObj.save;
    linkStr = blockObj.getLink('Clusters');
    str = sprintf('<strong>Auto-Clustering</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
 end
-blockObj.reportProgress(str,100,'toWindow','Done');
-blockObj.reportProgress('Done',100,'toEvent');
-
 flag = true;
 end
 

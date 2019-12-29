@@ -60,14 +60,15 @@ switch blockObj.RecType
 end
 
 %% Update status and save
-blockObj.save;
 if blockObj.OnRemote
-   str = 'Complete';
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
 else
+   blockObj.save;
    linkStr = blockObj.getLink('Raw');
-   str = sprintf('<strong>Raw</strong> extraction complete: %s\n',linkStr);
+   str = sprintf('<strong>Raw extraction</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
 end
-blockObj.reportProgress(str,100,'toWindow','Done');
-blockObj.reportProgress('Done',100,'toEvent');
 
 end

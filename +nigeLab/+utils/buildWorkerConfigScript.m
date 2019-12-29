@@ -176,7 +176,7 @@ end
       fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
       fprintf(fid,'blockObj.CurrentJob = []; %% Remove JOB\n');
       fprintf(fid,'save(blockObj);\n\n');
-
+      fprintf(fid,'blockObj.reportProgress(''Done'',100,''toWindow'',''Done'');\n');
       fprintf(fid,'end');
       fclose(fid);
    end
@@ -312,19 +312,19 @@ end
       fprintf(fid,'save(blockObj);\n\n');
       
       fprintf(fid,'%%%% Indicate complete in debug logs and save profiler\n');
+      fprintf(fid,'blockObj.reportProgress(''Saving-Logs'',100,''toWindow'',''Saving-Logs'');\n');
       fprintf(fid,'db_id = fopen(logName,''a''); %% Add to logs\n');
       fprintf(fid,'fprintf(db_id,''(%%s) %s complete.\\n'',char(datetime));\n',...
          operation);
       
       fprintf(fid,'profiler_results = profile(''info''); %% Return Profiler struct\n');
-      fprintf(fid,['prof_dir = sprintf(''ProfileResults_%%04g'', '...
-         'randi(9999,1));\n']);
+      fprintf(fid,'prof_dir = ''ProfileResults_%04g''',randi(9999,1));
       fprintf(fid,'out_dir = fullfile(db_p,prof_dir);\n');
       fprintf(fid,'if exist(out_dir,''dir'')==0\n\t');
       fprintf(fid,'mkdir(out_dir);\n');
       fprintf(fid,'else\n\t');
-      fprintf(fid,'delete(out_dir);\n\t');
-      fprintf(fid,'mkdir(out_dir);\n');
+      fprintf(fid,'rmdir(out_dir); %% First, clear output path \n\t');
+      fprintf(fid,'mkdir(out_dir); %% Then make new one \n');
       fprintf(fid,'end\n\n');
       
       fprintf(fid,'fprintf(db_id,''--> IN: %%s <--'',out_dir);\n');
@@ -332,7 +332,9 @@ end
       
       fprintf(fid,['save(fullfile(out_dir,''Results.mat''),...\n\t' ...
          '''profiler_results'',''-v7.3'');\n']);
-      fprintf(fid,'profsave(profiler_results,out_dir);\n');
+      fprintf(fid,'profsave(profiler_results,out_dir);\n\n');
+      
+      fprintf(fid,'blockObj.reportProgress(''Done'',100,''toWindow'',''Done'');\n');
       fprintf(fid,'end');
       fclose(fid);
    end

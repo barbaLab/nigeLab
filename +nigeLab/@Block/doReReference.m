@@ -105,16 +105,17 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Removing-CAR',PCT,'toEvent','Removing-CAR');
    blockObj.updateStatus('CAR',true,iCh);
 end
-blockObj.save;
 
 if blockObj.OnRemote
-   str = 'Complete';
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
 else
+   blockObj.save;
    linkStr = blockObj.getLink('CAR');
    str = sprintf('<strong>Re-referencing</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
 end
-blockObj.reportProgress(str,100,'toWindow','Done');
-blockObj.reportProgress('Done',100,'toEvent');
 
 flag = true;
 
