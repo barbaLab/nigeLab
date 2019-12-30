@@ -6,23 +6,20 @@ function flag = doUnitFilter(blockObj)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
+%% IMPORTS
+import nigeLab.libs.DiskData;
+import nigeLab.utils.getNigeLink;
+
 %% GET DEFAULT PARAMETERS
 flag = false;
 blockObj.checkActionIsValid();
-nigeLab.utils.checkForWorker('config');
-   
-if ~genPaths(blockObj,blockObj.AnimalLoc)
-   warning('Something went wrong when generating paths for extraction.');
+
+if ~genPaths(blockObj)
+   warning('Something went wrong with extraction.');
    return;
 end
 
-if ~blockObj.updateParams('Filt')
-   warning('Could not update filter parameters.');
-   return;
-else
-   pars = blockObj.Pars.Filt;
-end
-reportProgress(blockObj,'Filtering',0);
+[~,pars] = blockObj.updateParams('Filt');
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
 %% ENSURE MASK IS ACCURATE
@@ -32,15 +29,17 @@ blockObj.checkMask;
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
 %% DO FILTERING AND SAVE
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doUnitFilter',...
-   'Unit Bandpass Filter');
-str = sprintf('Applying %s',str);
+if ~blockObj.OnRemote
+   str = getNigeLink('nigeLab.Block','doUnitFilter',...
+      'Unit Bandpass Filter');
+   str = sprintf('Applying %s',str);
+else
+   str = 'Filtering';
+end
 
-blockObj.reportProgress(str,0,'toWindow');
-for iCh = blockObj.Mask
-%    if blockObj.Channels(iCh).Raw.length <= nfact      % input data too short
-%       error(message('signal:filtfilt:InvalidDimensionsDataShortForFiltOrder',num2str(nfact)));
-%    end
+blockObj.reportProgress(str,0,'toWindow','Filtering');
+
+for iCh = blockObj.Mask   
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
@@ -59,7 +58,7 @@ for iCh = blockObj.Mask
          data = (ff(b,a,data,nfact,zi));
       end
       
-      blockObj.Channels(iCh).Filt = nigeLab.libs.DiskData(...
+      blockObj.Channels(iCh).Filt = DiskData(...
          fType,fName,data,...
          'access','w',...
          'size',size(data),...
@@ -74,13 +73,22 @@ for iCh = blockObj.Mask
    blockObj.updateStatus('Filt',true,iCh);
    curCh = find(blockObj.Mask == iCh,1,'first');
    pct = round(curCh/numel(blockObj.Mask) * 100);
-   blockObj.reportProgress(str,pct,'toWindow');
+   blockObj.reportProgress(str,pct,'toWindow','Filtering');
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
 
+if blockObj.OnRemote
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
+else
+   blockObj.save;
+   linkStr = blockObj.getLink('Filt');
+   str = sprintf('<strong>Unit Filtering</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
+end
+
 flag = true;
-blockObj.linkToData('Filt');
-blockObj.save;
 
 end
 
@@ -97,6 +105,8 @@ function Y = ff(b,a,X,nEdge,IC)
 % where order is the filter order as 
 % Order = max(nb, na);
 
+import nigeLab.utils.FilterX.*;
+
 % User Interface: --------------------------------------------------------------
 % Do the work: =================================================================
 % Create initial conditions to treat offsets at beginning and end:
@@ -110,14 +120,14 @@ Xf   = 2 * X(end) - X((end - nEdge):(end - 1));
 
 % Use the faster C-mex filter function: -------------------------
 % Filter initial reflected signal:
-[~, Zi] = nigeLab.utils.FilterX.FilterX(b, a, Xi, IC * Xi(end),true);   
+[~, Zi] = FilterX(b, a, Xi, IC * Xi(end),true);   
 
 % Use the final conditions of the initial part for the actual signal:
-[Ys, Zs]  = nigeLab.utils.FilterX.FilterX(b, a, X,  Zi);                    % "s"teady state
-Yf        = nigeLab.utils.FilterX.FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
+[Ys, Zs]  = FilterX(b, a, X,  Zi);                    % "s"teady state
+Yf        = FilterX(b, a, Xf, Zs, true);              % "f"inal conditions
 
 % Filter signal again in reverse order:
-[~, Zf] = nigeLab.utils.FilterX.FilterX(b, a, Yf, IC * Yf(1));  
-Y         = nigeLab.utils.FilterX.FilterX(b, a, Ys, Zf, true);
+[~, Zf] = FilterX(b, a, Yf, IC * Yf(1));  
+Y         = FilterX(b, a, Ys, Zf, true);
 Y = Y';
 end

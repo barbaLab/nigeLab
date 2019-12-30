@@ -29,9 +29,14 @@ blockObj.updateStatus('SpikeFeatures',false,blockObj.Mask);
 blockObj.updateStatus('Artifact',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spikes');
-str = sprintf('Detecting %s',str);
-blockObj.reportProgress(str,0);
+if ~blockObj.OnRemote
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spikes');
+   str = sprintf('Detecting %s',str);
+else
+   str = 'Spike-Detection';
+end
+blockObj.reportProgress(str,0,'toWindow');
+curCh = 0;
 for iCh = blockObj.Mask
    
    % Parse file-name information
@@ -53,15 +58,23 @@ for iCh = blockObj.Mask
    end
    
    % Status updates done in saveChannelSpikingEvents
-   curCh = find(blockObj.Mask == iCh,1,'first');
+   curCh = curCh + 1;
    pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
-   blockObj.reportProgress('Spike Detection.',pct,'toEvent');
+   blockObj.reportProgress('Spike-Detection.',pct,'toEvent','Spike-Detection');
    
 end
-% blockObj.linkToData({'Spikes','SpikeFeatures','Artifact'});
 % Indicate that it is finished at the end
-blockObj.save;
+if blockObj.OnRemote
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
+else
+   blockObj.save;
+   linkStr = blockObj.getLink('Spikes');
+   str = sprintf('<strong>Spike Detection</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
+end
 flag = true;
 
    function [spk,feat,art,pars] = PerChannelDetection(data, pars)

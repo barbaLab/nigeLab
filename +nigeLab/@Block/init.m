@@ -13,6 +13,7 @@ if any(~blockObj.updateParams('all'))
    warning('Could not properly initialize parameters.');
    return;
 end
+blockObj.checkParallelCompatibility();
 pars = blockObj.Pars.Block;
    
 %% PARSE NAME INFO

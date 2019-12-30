@@ -48,7 +48,8 @@ classdef Animal < matlab.mixin.Copyable
    
    % More likely to externally reference
    properties (SetAccess = private, GetAccess = public)
-      Paths   struct      % Path to Animal folder
+      Paths        struct      % Path to Animal folder
+      UseParallel  logical     % Flag to indicate if parallel/remote processing can be done on this machine
    end
    
    properties (Access = public)
@@ -352,7 +353,43 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.Listener(:) = [];
       end
       
-            % Returns the public hash key for this block
+      % Method to set property (for example private property) for all
+      % animal objects in array
+      function setProp(animalObj,propName,propVal)
+         % SETPROP  Sets property of all animals in array to a value
+         %
+         %  animalObj.setProp('PropName',propVal);
+
+         if isempty(animalObj)
+            return;
+         end
+         
+         mc = metaclass(animalObj);
+         propList = {mc.PropertyList.Name};
+         idx = ismember(lower(propList),lower(propName));
+         if sum(idx) < 1
+            nigeLab.utils.cprintf('Comments','No ANIMAL property: %s',...
+               propName);
+            return;
+         elseif sum(idx) > 1
+            idx = ismember(propList,propName);
+            if sum(idx) < 1
+               nigeLab.utils.cprintf('Comments','No ANIMAL property: %s',...
+                  propName);
+               return;
+            end
+         end
+         propName = propList{idx};
+         if numel(animalObj) > 1
+            for i = 1:numel(animalObj)
+               setProp(animalObj(i),propName,propVal);
+            end
+            return;
+         end
+         animalObj.(propName) = propVal;         
+      end
+
+      % Returns the public hash key for this block
       function publicKey = getKey(animalObj)
          %GETKEY  Return the public hash key for this block
          %
@@ -376,7 +413,7 @@ classdef Animal < matlab.mixin.Copyable
          
       end
       
-            % Find block from block array based on public or private hash
+      % Find block from block array based on public or private hash
       function a = findByKey(animalObjArray,keyStr,keyType)
          %FINDBYKEY  Returns the block corresponding to keyStr from array
          %
@@ -445,8 +482,7 @@ classdef Animal < matlab.mixin.Copyable
          end
          
       end
-      
-     
+
    end
    
    % PUBLIC 
@@ -469,6 +505,7 @@ classdef Animal < matlab.mixin.Copyable
       
       flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
+      flag = checkParallelCompatibility(animalObj) % Check if parallel can be run
       flag = linkToData(animalObj)                    % Link disk data of all Blocks in Animal
       flag = splitMultiAnimals(blockObj,tabpanel) % Split recordings that have multiple animals to separate recs
    end

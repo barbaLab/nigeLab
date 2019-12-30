@@ -1,4 +1,8 @@
 function flag = linkToData(tankObj)
+%LINKTODATA  Links data of all Animals in the Tank to the correct files
+%
+%  flag = tankObj.linkToData();
+
 flag = true;
 A=tankObj.Animals;
 for ii=1:numel(A)
@@ -6,4 +10,3 @@ for ii=1:numel(A)
 end
 tankObj.save;
 end
-

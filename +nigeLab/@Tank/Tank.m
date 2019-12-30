@@ -62,6 +62,7 @@ classdef Tank < handle
       Fields         cell      % Specific things to record
       FieldType      cell      % "Types" corresponding to Fields elements
       Paths          struct    % Detailed paths specifications for all the saved files
+      UseParallel    logical   % Flag indicating if parallel processing can be done on this machine
    end
    
    % Various parameters that may be useful to access publically but cannot
@@ -366,6 +367,8 @@ classdef Tank < handle
    methods (Access = public)
       addAnimal(tankObj,animalPath,idx) % Add child Animals to Tank
       
+      flag = checkParallelCompatibility(tankObj); 
+      
       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
@@ -374,6 +377,7 @@ classdef Tank < handle
       flag = linkToData(tankObj)           % Link TANK to data files on DISK
       blockList = list(tankObj)     % List Blocks in TANK    
       flag = updatePaths(tankObj,SaveLoc)    % Update PATHS to files
+      flag = updateParams(tankObj,paramType) % Update TANK parameters
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
       runFun(tankObj,f) % Run function f on all child blocks in tank
       
@@ -531,6 +535,7 @@ classdef Tank < handle
          
          if ~isfield(a.Paths,'SaveLoc')
             a.addListeners();
+            a.checkParallelCompatibility();
             b = a;
             return;
          end
@@ -545,11 +550,13 @@ classdef Tank < handle
                in = load(fullfile(A(ii).folder,A(ii).name));
                a.addAnimal(in.animalObj,ii);
             end
-               a.addListeners();
-               b = a;
+            a.addListeners();
+            a.checkParallelCompatibility();
+            b = a;
             return;
          else
             a.addListeners();
+            a.checkParallelCompatibility();
             b = a;
             return;
          end

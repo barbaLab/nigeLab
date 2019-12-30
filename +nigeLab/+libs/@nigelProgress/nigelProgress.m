@@ -33,7 +33,9 @@ classdef nigelProgress < handle
 %     nigelProgress - Class constructor
    
    properties (Access = public, SetObservable = true)
+      Color              % face color of the progress bar
       Position  double   % Position of "container" but updates graphics
+      IsRemote  logical             % Flag indicating if bar is remote
       job
    end
 
@@ -44,25 +46,27 @@ classdef nigelProgress < handle
    
    properties (Access = {?nigeLab.libs.remoteMonitor, ...
                          ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.evt.barStarted,...
+                         ?nigeLab.evt.barStopped,...
+                         ?nigeLab.evt.barCleared,...
                          ?nigeLab.libs.DashBoard}, SetObservable = true)
       
       BarIndex = nan                % Index of this bar in remoteMonitor
-      IsRemote  logical             % Flag indicating if bar is remote
       Name      char                % Name of bar
       Progress  double              % From 0 to 100, progress of bar
       Status   = ''                 % Currently-displayed status
-   end
-   
-   properties (Access = private, SetObservable = true)
-      Visible  char   % 'on' or 'off'
+      Visible  char                 % 'on' or 'off'
    end
    
    properties (Access = {?nigeLab.libs.remoteMonitor, ...
                          ?nigeLab.evt.jobCompletedEventData, ...
+                         ?nigeLab.evt.barStarted,...
+                         ?nigeLab.evt.barStopped,...
+                         ?nigeLab.evt.barCleared,...
                          ?nigeLab.libs.DashBoard})
       BlockSelectionIndex  double   % Index of the [animal block]
       IsComplete    =      false    % Flag indicating completion status
-      
+      Timer                timer    % Timer running "remote" monitor
    end
    
    properties (Access = public, Hidden = true)
@@ -70,17 +74,25 @@ classdef nigelProgress < handle
    end
    
    properties (Access = private)
-      listeners   event.listener
+      Tank        nigeLab.Tank           % Tank "parent"
+      Block       nigeLab.Block          % Block associated with this bar
+      Monitor     nigeLab.libs.remoteMonitor    % Monitor "parent"
+      TagDelim       char   % Delimiter for parsing status from job tag
+      NotifyTimer    double % Interval (sec) for checking tag
+      CompleteKey    char   % Keyword for "JOB DONE" state
+      listeners   event.listener  % Event listener handle array
+      joblistener event.listener  % Specific listener for job deletion
    end
    
    events
-      JobCanceled
+      StateChanged  % Issue eventdata for 'Start' or 'Stop' Type events
    end
    
    methods (Access = {?nigeLab.libs.remoteMonitor, ...
-                      ?nigeLab.libs.DashBoard})
+                      ?nigeLab.libs.DashBoard,...
+                      ?parallel.job.MJSCommunicatingJob})
       % Class constructor for NIGELPROGRESS class
-      function bar = nigelProgress(parent,name,sel)
+      function bar = nigelProgress(parent,name,sel,monitorObj)
          % NIGELPROGRESS    Create a bar allowing graphical tracking of
          %                  completion status via the bar progress.
          %
@@ -120,6 +132,20 @@ classdef nigelProgress < handle
          bar.Parent = parent;
          bar.Position = parent.Position;
          bar.BlockSelectionIndex = sel;
+         bar.Tank = monitorObj.tankObj;
+         bar.Block = bar.Tank{sel(1,1),sel(1,2)};
+         bar.Monitor = monitorObj;
+         
+         if ~isfield(bar.Tank.Pars,'Notifications')
+            bar.Tank.updateParams('Notifications');
+         elseif ~isfield(bar.Tank.Pars.Notifications,'TagDelim') || ...
+                ~isfield(bar.Tank.Pars.Notifications,'NotifyTimer') || ...
+                ~isfield(bar.Tank.Pars.Notifications,'CompleteKey')
+            bar.Tank.updateParams('Notifications');
+         end
+         bar.TagDelim = bar.Tank.Pars.Notifications.TagDelim;
+         bar.NotifyTimer = bar.Tank.Pars.Notifications.NotifyTimer;
+         bar.CompleteKey = bar.Tank.Pars.Notifications.CompleteKey;
          
          %% Build Children graphics
          bar.Children = cell(6,1);
@@ -188,6 +214,39 @@ classdef nigelProgress < handle
          %% Add property listeners
          bar.listeners = addPropertyListeners(bar);
          bar.job = [];
+         
+         %% Add Timer
+         bar.Timer = timer(...
+            'Name',sprintf('timer_A%02g_B%02g',sel(1),sel(2)),...
+            'Period',bar.NotifyTimer,...
+            'ExecutionMode','fixedSpacing',...
+            'UserData',sel,...
+            'TimerFcn',@(~,~)bar.updateBar);
+         
+         %% Add 'Cancel' callback
+         setChild(bar,'X','Callback',@(~,~)bar.clearBar);
+      end
+      
+      % Listener callback for red 'X'
+      function clearBar(bar)
+         %CLEARBAR  Listener callback for clicking red cancel 'X'
+         %
+         %  x.Callback = @(~,~)bar.clearBar;
+         
+         stopBar(bar);
+         evt = nigeLab.evt.barCleared(bar);
+         notify(bar,'StateChanged',evt);
+         if bar.IsRemote
+            if ~isempty(bar.job)
+               if isvalid(bar.job)
+                  cancel(bar.job);
+                  delete(bar.job);
+                  bar.job = [];
+               end
+            end
+         else
+            notify(bar.Block,'MethodCanceled',evt);
+         end
       end
       
       % Things to do on delete function
@@ -209,6 +268,20 @@ classdef nigelProgress < handle
                if isvalid(lh)
                   delete(lh);
                end
+            end
+         end
+         
+         % Delete other (specific) job listener
+         if ~isempty(bar.joblistener)
+            if isvalid(bar.joblistener)
+               delete(bar.joblistener);
+            end
+         end
+         
+         % Delete Timer object
+         if ~isempty(bar.Timer)
+            if isvalid(bar.Timer)
+               delete(bar.Timer)
             end
          end
          
@@ -278,6 +351,42 @@ classdef nigelProgress < handle
             end
          end
       end
+      
+      % Private function that is issued when the bar associated with this
+      % job reaches 100% completion
+      function indicateCompletion(bar)
+         % INDICATECOMPLETION  Callback to issue completion sound for the
+         %               completed task of NIGELBAROBJ, once a particular
+         %               bar has reached 100%.
+         %
+         %   bar.indicateCompletion();
+         %
+         %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
+         
+         stopBar(bar); % Make sure it is stopped
+         
+         % Should only do these things if .IsComplete flag is true
+         if bar.IsComplete
+            % Play the bell sound! Yay!
+            bar.setState(100,bar.CompleteKey);
+            nigeLab.sounds.play('bell',1.5);
+            if bar.IsRemote
+               sel = bar.BlockSelectionIndex;
+               b = bar.Tank{sel(1,1),sel(1,2)};
+               b.reload(); % Reload the block so it is linked properly
+               evt = nigeLab.evt.jobCompletedEventData(bar);
+               notify(bar.Monitor,'jobCompleted',evt);
+               bar.job = [];
+            end
+         else
+            % I hate this sound! Boo! You should also hate it!
+            nigeLab.sounds.play('alert',3);
+            bar.setState(bar.Progress,'Interrupted');
+
+            bar.job = [];
+            bar.Color = 'r';
+         end
+      end 
       
       % Overloaded minus function to change indexing
       function C = minus(A,B)
@@ -367,6 +476,96 @@ classdef nigelProgress < handle
          end
       end
       
+      % Start the timer running on bar and notify event
+      function startBar(bar)
+         %STARTBAR  Start timer running on bar and notify event
+         %
+         %  bar.startBar(); Passes 'barStarted' evt via 'BarStarted' notify
+         
+         bar.IsComplete = false; % May need to reset if already ran
+         if strcmp(bar.Timer.Running,'off')
+            start(bar.Timer);
+         else
+            return; % Was already running, don't do other stuff
+         end
+         evt = nigeLab.evt.barStarted(bar);
+         notify(bar,'StateChanged',evt);
+      end
+      
+      % Stop the timer running on bar and notify event
+      function stopBar(bar)
+         %STOPBAR  Stop timer running on bar and notify event
+         %
+         %  bar.stopBar(); Passes 'barStopped' evt via 'BarStopped' notify
+         
+         if strcmp(bar.Timer.Running,'on')
+            stop(bar.Timer);
+         else
+            return; % Was already off, don't do the other stuff
+         end
+
+         evt = nigeLab.evt.barStopped(bar);
+         notify(bar,'StateChanged',evt);
+         if bar.IsRemote
+            % From remote, job.FinishedFcn is bar.indicateCompletion();
+            % So, just need .IsComplete to accurately reflect state of bar
+            switch lower(bar.job.State)
+               case 'finished'
+                  if bar.Progress == 100
+                     bar.IsComplete = true;
+                  else
+                     bar.IsComplete = false;
+                  end
+               case 'failed'
+                  bar.IsComplete = false;
+               otherwise
+                  bar.IsComplete = false;
+            end
+         end
+      end
+      
+      % Updates the progress bar with current job status
+      function updateBar(bar)
+         % UPDATEREBAR  Update the bar to reflect status of current job
+         %
+         %  monitorObj.updateRemoteMonitor();  
+         %
+         %  --> This method should be periodically "pinged" by the TimerFcn
+         %      so that the state of the remote job can be updated.
+
+         if ~bar.IsRemote
+            str = bar.getChild('status','String');
+            if strcmpi(str,bar.CompleteKey)
+               pct = 100;
+            else
+               return;
+            end
+         else
+            [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,bar.TagDelim);
+         end
+         % Redraw the patch that colors in the progressbar
+         bar.setState(pct,str);
+         % If the job is completed, then run the completion method
+         if bar.IsRemote
+            if strcmpi(str,bar.CompleteKey)
+               % If on remote, wait for job to finish--it will do indicator
+               bar.stopBar();
+               if pct == 100
+                  bar.IsComplete = true;
+               else
+                  bar.IsComplete = false;
+               end
+            end
+         else
+            % Otherwise just wait until it hits 100% to indicate complete
+            if pct == 100
+               bar.IsComplete = true;
+               bar.indicateCompletion();
+               bar.stopBar();
+            end
+         end
+
+      end
    end
    
    methods (Access = private)
@@ -392,12 +591,26 @@ classdef nigelProgress < handle
                         @(~,~)bar.toggleColor)];
          lh = [lh, addlistener(bar,'Position','PostSet',...
                         @(~,~)bar.updatePosition)];
+         lh = [lh, addlistener(bar,'Color','PostSet',...
+                        @(~,~)bar.updateColor)];
          lh = [lh, addlistener(bar,'Progress','PostSet',...
                         @(~,~)bar.updateProgress)];
          lh = [lh, addlistener(bar,'Status','PostSet',...
                         @(~,~)bar.updateStatus)];
          lh = [lh, addlistener(bar,'Name','PostSet',...
                         @(~,~)bar.updateName)];
+      end
+
+      % Internal function to deal with job being removed via Job Monitor
+      function handleExternalJobDeletion(bar)
+         %HANDLEEXTERNALJOBDELETION  If job is deleted from Job Monitor
+         %
+         %  bar.handleExternalJobDeletion;  Listener callback that waits
+         %                                  for ObjectBeingDestroyed event
+         
+         bar.IsRemote = false;
+         bar.IsComplete = false;
+         bar.indicateCompletion();
       end
       
       % LISTENER CALLBACK: Update "visual" position in queue from index
@@ -430,11 +643,9 @@ classdef nigelProgress < handle
          %  addlistener(bar,'IsRemote','PostSet',@(~,~)bar.toggleColor());
          
          if bar.IsRemote
-            bar.setChild('progbar','FaceColor',...
-               nigeLab.defaults.nigelColors('g'));
+            bar.Color = 'g';
          else
-            bar.setChild('progbar','FaceColor',...
-               nigeLab.defaults.nigelColors('b'));
+            bar.Color = 'b';
          end
          
       end
@@ -447,8 +658,15 @@ classdef nigelProgress < handle
          
          if isempty(bar.job)
             bar.IsRemote = false;
+            if ~isempty(bar.joblistener)
+               if isvalid(bar.joblistener)
+                  delete(bar.joblistener);
+               end
+            end
          else
             bar.IsRemote = true;
+            bar.joblistener = addlistener(bar.job,'ObjectBeingDestroyed',...
+               @(~,~)bar.handleExternalJobDeletion);
          end
       end
       
@@ -462,6 +680,28 @@ classdef nigelProgress < handle
          ax.Visible = bar.Visible;
          set(ax.Children,'Visible',bar.Visible);
          bar.Parent.Visible = bar.Visible;
+         switch lower(bar.Visible)
+            case 'on'
+               jObj = nigeLab.utils.findjobj(getChild(bar,'X'));
+               jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
+               jObj.setBorderPainted(false);
+            case 'off'
+               % nothing specific here
+         end
+      end
+      
+      % LISTENER CALLBACK: Update the face color of bar based on Color prop
+      function updateColor(bar)
+         % UPDATECOLOR  Updates face color of progress bar when 'Color'
+         %              property is changed.
+         %
+         %  addlistener(bar,'Color','PostSet',@(~,~)bar.updateColor);
+         
+         if ischar(bar.Color)
+            bar.Color = nigeLab.defaults.nigelColors(bar.Color);
+         end
+         
+         bar.setChild('progbar','FaceColor',bar.Color);
       end
       
       % LISTENER CALLBACK: Update parent panel position from Position prop
@@ -520,7 +760,7 @@ classdef nigelProgress < handle
          switch lower(strrep(str,'.',''))
             case {'done','complete','finished','over'}
                % Ensure that it is at 100%
-               bar.setState(100,'Done.');
+               bar.setState(100,bar.CompleteKey);
                
             otherwise
                % Do nothing

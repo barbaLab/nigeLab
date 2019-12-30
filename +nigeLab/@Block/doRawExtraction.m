@@ -1,5 +1,5 @@
 function flag = doRawExtraction(blockObj)
-%% DORAWEXTRACTION  Convert raw data files to Matlab TANK-BLOCK structure object
+%DORAWEXTRACTION  Extract matfiles from binary recording files
 %
 %  b = nigeLab.Block;
 %  flag = doRawExtraction(b);
@@ -8,14 +8,11 @@ function flag = doRawExtraction(blockObj)
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if conversion was successful.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
 flag = false;
 blockObj.checkActionIsValid();
-nigeLab.utils.checkForWorker('config');
 
 if ~genPaths(blockObj)
    warning('Something went wrong when generating paths for extraction.');
@@ -33,9 +30,11 @@ switch blockObj.RecType
       % TDT raw data already has a sort of "BLOCK" structure that should be
       % parsed to get this information.
       fprintf(1,' \n');
-      nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
-      nigeLab.utils.cprintf('Magenta-', 'WIP\n');
-      nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
+      if ~blockObj.OnRemote
+         nigeLab.utils.cprintf('*Red','\t%s extraction is still ',blockObj.RecType);
+         nigeLab.utils.cprintf('Magenta-', 'WIP\n');
+         nigeLab.utils.cprintf('*Comment','\tIt might take a while...\n\n');
+      end
       flag = tdt2Block(blockObj);
       
    case 'Matfile' % "FLEX" format wherein source is an "_info.mat" file
@@ -61,5 +60,15 @@ switch blockObj.RecType
 end
 
 %% Update status and save
-blockObj.save;
+if blockObj.OnRemote
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
+else
+   blockObj.save;
+   linkStr = blockObj.getLink('Raw');
+   str = sprintf('<strong>Raw extraction</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
+end
+
 end

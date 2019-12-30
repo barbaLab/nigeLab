@@ -1,38 +1,41 @@
 function flag = doLFPExtraction(blockObj)
 %DOLFPEXTRACTION   Decimates files to retrieve LFPs.
 %
+%  b = nigeLab.Block();
+%  flag = b.doLFPExtraction();
+%
 % Sampling frequency chosen for the downsampled files is 1000Hz
 % Band of interest in LFPs is up to 250Hz.
+%
+%  See Also:
+%  NIGELAB.DEFAULTS.LFP
 
 %% INITIALIZE PARAMETERS
 flag = false;
-blockObj.checkActionIsValid();
-nigeLab.utils.checkForWorker('config');
+blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
 if ~genPaths(blockObj)
-   warning('Something went wrong when generating paths for extraction.');
+   warning('Something went wrong with extraction');
    return;
 end
 
+[~,pars] = blockObj.updateParams('LFP');
 
-
-if ~blockObj.updateParams('LFP')
-%    warning('Something went wrong setting the LFP parameters.');
-%    return;
-   error(['nigeLab:' mfilename ':UpdateParamsUnsuccessful'],...
-      'Something went wrong while updating the LFP parameters.');
-end
-
-DecimateCascadeM = blockObj.Pars.LFP.DecimateCascadeM;
-DecimateCascadeN = blockObj.Pars.LFP.DecimateCascadeN;
-DecimationFactor =   blockObj.Pars.LFP.DecimationFactor;
+DecimateCascadeM = pars.DecimateCascadeM;
+DecimateCascadeN = pars.DecimateCascadeN;
+DecimationFactor =  pars.DecimationFactor;
 blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
 %% DECIMATE DATA AND SAVE IT
-str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
-      'Decimating');
-str = sprintf('%s raw data',str);
+if ~blockObj.OnRemote
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
+         'Decimating');
+   str = sprintf('%s raw data',str);
+else
+   str = 'Decimating';
+end
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
+curCh = 0;
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
@@ -48,13 +51,22 @@ for iCh=blockObj.Mask
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
 
-   pct = round(iCh/numel(blockObj.Mask) * 100);
+   curCh = curCh + 1;
+   pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);
 end
-blockObj.linkToData('LFP');
-blockObj.save;
+if blockObj.OnRemote
+   str = 'Saving-Block';
+   blockObj.reportProgress(str,100,'toWindow',str);
+else
+   blockObj.save;
+   linkStr = blockObj.getLink('LFP');
+   str = sprintf('<strong>LFP extraction</strong> complete: %s\n',linkStr);
+   blockObj.reportProgress(str,100,'toWindow','Done');
+   blockObj.reportProgress('Done',100,'toEvent');
+end
 flag = true;
 
    function fName = parseFileName(blockObj,channel)

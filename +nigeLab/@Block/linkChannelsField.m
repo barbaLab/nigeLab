@@ -62,7 +62,7 @@ for iCh = blockObj.Mask
    counter = counter + 1;
    pct = 100 * (counter / numel(blockObj.Mask));
    blockObj.updateStatus(field,updateFlag(iCh),iCh);
-   blockObj.reportProgress(str,pct);
+   blockObj.reportProgress(str,pct,'toWindow','Linking');
 end
 % Only update status of unmasked channels. The other ones shouldn't matter
 % when are looking at 'doAction dependencies' later.

@@ -98,6 +98,8 @@ classdef Block < matlab.mixin.Copyable
    % the list of fields that you see in the Matlab editor
    properties (SetAccess = public, Hidden = true, GetAccess = public)
       UserData % Allow UserData property to exist
+      OnRemote = false % Is this block running a job on remote worker?
+      CurrentJob  % parallel.job.MJSCommunicatingJob 
    end
    
    % Properties that can be obtained externally, but must be set by a
@@ -116,7 +118,7 @@ classdef Block < matlab.mixin.Copyable
       NumProbes         = 0   % Number of electrode arrays
       NumChannels       = 0   % Number of electrodes on all arrays
       
-      
+      UseParallel logical % Flag indicating whether this machine can use parallel processing
       Status      struct  % Completion status for each element of BLOCK/FIELDS
       PathExpr    struct  % Path expressions for creating file hierarchy
       Paths       struct  % Detailed paths specifications for all the saved files
@@ -174,7 +176,6 @@ classdef Block < matlab.mixin.Copyable
 %                                            'do' extraction methods
                           
       ViableFieldTypes       cell         % List of 'Viable' possible field types
-
    end
 
    % Private - Listeners & Flags
@@ -191,13 +192,12 @@ classdef Block < matlab.mixin.Copyable
       KeyPair  struct  % Fields are "public" and "private" (hashes)
    end
   
-   
    %% EVENTS
    events
       channelCompleteEvent
       processCompleteEvent
       ProgressChanged  % Issued by nigeLab.Block/reportProgress
-      MethodCanceled
+      MethodCanceled   % Issued by nigeLab.libs.nigelProgress/clearBar
       StatusChanged    % Issued by nigeLab.Block/updateStatus
    end
    
@@ -280,7 +280,8 @@ classdef Block < matlab.mixin.Copyable
             [file,path]= uigetfile(fullfile(blockObj.RecLocDefault,'*.*'),...
                'Select recording BLOCK');
             if file == 0
-               error('No block selected. Object not created.');
+               error(['nigeLab:' mfilename ':UISelectionCanceled'],...
+                  'No block selected. Object not created.');
             end
             blockObj.RecFile =(fullfile(path,file));
          else
@@ -292,14 +293,16 @@ classdef Block < matlab.mixin.Copyable
                   blockObj.AnimalLoc = tmp;
                end
             elseif exist(blockObj.RecFile,'file')==0
-               error('%s is not a valid block file.',blockObj.RecFile);
+               error(['nigeLab:' mfilename ':invalidBlockFile'],...
+                  '%s is not a valid block file.',blockObj.RecFile);
             end
          end
+         
          blockObj.RecFile =nigeLab.utils.getUNCPath(blockObj.RecFile);
          if ~blockObj.init()
-            error('Block object construction unsuccessful.');
+            error(['nigeLab:' mfilename ':badBlockInit'],...
+               'Block object construction unsuccessful.');
          end
-         
       end
       
       % Overloaded DELETE method for BLOCK to ensure listeners are deleted
@@ -325,6 +328,60 @@ classdef Block < matlab.mixin.Copyable
                   delete(lh);
                end
             end
+         end
+      end
+      
+      % Returns a formatted string that prints a link to open file browser
+      % to block save location when printed in Command Window (on Windows).
+      % On Unix, the Matlab Editor working path is changed to show the
+      % location of the files corresponding to `field` (or BLOCK if no
+      % `field` is specified)
+      function linkStr = getLink(blockObj,field)
+         %GETLINK  Returns formatted string for link to Block in cmd window
+         %
+         %  linkStr = blockObj.getLink();  Returns BLOCK link
+         %
+         %  linkStr = blockObj.getLink('fieldName');  Returns link to
+         %                                   'fieldName' (if it exists).
+         %                                   Otherwise, throws an error.
+         %  --> e.g. 
+         %  >> linkStr = blockObj.getLink('Raw');
+         %
+         %  <strong>NOTE:</strong> `field` is case-sensitive
+         %
+         %  UNIX links: 
+         %     1) add nigeLab to current Matlab path
+         %     2) play "pop" noise
+         %     3) change current folder to linked folder
+         %
+         %  WINDOWS links:
+         %     1) play "pop" noise
+         %     2) open linked folder in system file browser (explorer.exe)
+         
+         if nargin < 2
+            field = 'SaveLoc';
+         end
+         
+         if ~isfield(blockObj.Paths,field)
+            error(['nigeLab:' mfilename ':UnexpectedString'],...
+               '%s is not a field of blockObj.Paths',field);
+         end
+         
+         if isunix
+            str = strrep(blockObj.Paths.(field).dir,'\','/');
+            linkStr = sprintf(...
+               ['<a href="matlab: addpath(nigeLab.utils.getNigelPath()); ' ...
+                'nigeLab.sounds.play(''pop''); ' ...
+                'cd(''%s'');">%s</a>'],...
+               str,'Navigate to Files in Current Folder');
+            return;
+         else
+            str = strrep(blockObj.Paths.(field).dir,'\','/');
+            linkStr = sprintf(...
+               ['<a href="matlab: nigeLab.sounds.play(''pop''); ' ...
+                'winopen(''%s'');">%s</a>'],...
+               str,'View Files in Explorer');
+               
          end
       end
       
@@ -521,6 +578,7 @@ classdef Block < matlab.mixin.Copyable
          %  blockObj.saveobj();
          
          blockObj.Listener(:) = [];
+         blockObj.CurrentJob = [];
       end
       
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
@@ -569,6 +627,42 @@ classdef Block < matlab.mixin.Copyable
               blockObj.(ff{f}) = obj.blockObj.(ff{f});
           end
       end
+      
+      % Method to set property (for example private property) for all
+      % blocks in an array
+      function setProp(blockObj,propName,propVal)
+         % SETPROP  Sets property of all blocks in array to a value
+         %
+         %  blockObj.setProp('PropName',propVal);
+         
+         if isempty(blockObj)
+            return;
+         end
+         
+         mc = metaclass(blockObj);
+         propList = {mc.PropertyList.Name};
+         idx = ismember(lower(propList),lower(propName));
+         if sum(idx) < 1
+            nigeLab.utils.cprintf('Comments','No BLOCK property: %s',...
+               propName);
+            return;
+         elseif sum(idx) > 1
+            idx = ismember(propList,propName);
+            if sum(idx) < 1
+               nigeLab.utils.cprintf('Comments','No BLOCK property: %s',...
+                  propName);
+               return;
+            end
+         end
+         propName = propList{idx};
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               setProp(blockObj(i),propName,propVal);
+            end
+            return;
+         end
+         blockObj.(propName) = propVal;         
+      end
    end
    
    % Methods to be catalogued in CONTENTS.M
@@ -577,6 +671,7 @@ classdef Block < matlab.mixin.Copyable
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
       fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
       fieldIdx = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
+      flag = checkParallelCompatibility(blockObj) % Check if parallel can be run
       offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo);
       
       addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
@@ -661,7 +756,7 @@ classdef Block < matlab.mixin.Copyable
       % Miscellaneous utilities:
       N = getNumBlocks(blockObj) % This is just to make it easier to count total # blocks
       notifyUser(blockObj,op,stage,curIdx,totIdx) % Update the user of progress
-      str = reportProgress(blockObj,str_expr,pct,notification_mode) % Update the user of progress
+      str = reportProgress(blockObj,str_expr,pct,notification_mode,tag_str) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
       idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
    end
@@ -731,7 +826,7 @@ classdef Block < matlab.mixin.Copyable
       end
    end
    
-   % Static methods for multiple animals
+   % Static methods to handle "Multi-Blocks" issues
    methods (Static)
       % Method to "cancel" execution of a function evaluation
       function cancelExecution()
@@ -757,7 +852,7 @@ classdef Block < matlab.mixin.Copyable
          blockObj = nigeLab.Block(n);
       end
       
-      % Overloaded method for loading objects (for many blocks case)
+      % Overloaded method for loading objects (for "multi-blocks" case)
       function b = loadobj(a)
          % LOADOBJ  Overloaded method called when loading BLOCK.
          %
@@ -790,5 +885,6 @@ classdef Block < matlab.mixin.Copyable
    % Static enumeration methods
    methods (Static = true, Access = public)
       field = getOperationField(operation); % Get field associated with operation
+      blockObj = loadRemote(targetBlockFile); % Load block on remote worker
    end
 end

@@ -1,5 +1,5 @@
 function fieldIdx = checkCompatibility(blockObj,requiredFields)
-%% CHECKCOMPATIBILITY  Checks if Block is compatible with "required fields"
+% CHECKCOMPATIBILITY  Checks if Block is compatible with "required fields"
 %
 %  blockObj = nigeLab.Block;
 %  fieldIdx = blockObj.CHECKCOMPATIBILITY('FieldName');
@@ -13,6 +13,10 @@ function fieldIdx = checkCompatibility(blockObj,requiredFields)
 %
 %  Returns fieldIdx, the index into blockObj.Fields for each element of
 %  requiredFields (if no error is thrown).
+%
+%  See Also:
+%  NIGELAB.BLOCK/CHECKACTIONISVALID,
+%  NIGELAB.BLOCK/CHECKPARALLELCOMPATIBILITY
 
 %%
 % Could add parsing here to allow requiredFields to be a 'config' class or

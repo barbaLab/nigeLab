@@ -27,6 +27,7 @@ if numel(blockObj) > 1
 end
 
 blockObj.updateParams('doActions');
+nigeLab.utils.checkForWorker(blockObj,'config');
 
 % Get dbstack, ignoring first N "cards"
 % Skips: (1) this function and possibly (2) recursive call
