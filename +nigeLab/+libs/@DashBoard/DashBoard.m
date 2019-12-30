@@ -814,6 +814,16 @@ classdef DashBoard < handle
          %                       from UserData of nodes on obj.Tree
          %
          %  sel = obj.selectedItems2Index(items);
+         %
+         %  >> obj.SelectionIndex = selectedItems2Index(items);
+         %
+         %  sel : [tankIndex animalIndex blockIndex];
+         %     --> If tank only, always is [1 0 0];
+         %     --> If animal or block, then is [1 iAk iBkj]
+         %        Where iAk is the k-th animal's index, and iBkj is the
+         %        j-th block of the k-th animal. If only animals are
+         %        selected, then it will create rows for all block
+         %        "children" of the animal.
          
          % tankObj
          if isempty(items)

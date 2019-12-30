@@ -155,6 +155,12 @@ classdef remoteMonitor < handle
                      class(sel));
                end
          end
+         
+         % Error check on multi-job submissions
+         if ~isempty(bar.job)
+            error(['nigeLab:' mfilename ':InvalidJobSubmission'],...
+               'Cannot run multiple jobs for the same Block simultaneously.');
+         end
 
          % Increment counter of running jobs
          bar.Progress = 0;
