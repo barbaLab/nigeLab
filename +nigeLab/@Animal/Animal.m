@@ -43,7 +43,8 @@ classdef Animal < matlab.mixin.Copyable
    
    % Cannot set but may want to see it publically. SetObservable.
    properties (GetAccess = public, SetAccess = private, SetObservable)
-      Mask     double        % Channel "Mask" vector (for all recordings)
+      BlockMask  logical       % Block "Mask" logical vector
+      Mask       double        % Channel "Mask" vector (for all recordings)
    end
    
    % More likely to externally reference
@@ -701,23 +702,24 @@ classdef Animal < matlab.mixin.Copyable
          
          BL = dir(fullfile(a.Paths.SaveLoc,'*_Block.mat'));
          if isempty(a.Blocks)
+            % Blocks should not be saved with object, they are removed
+            % during save method and then re-added.
             a.Blocks = nigeLab.Block.Empty([1,numel(BL)]);
-
             for ii=1:numel(BL)
                in = load(fullfile(BL(ii).folder,BL(ii).name));
                a.addChildBlock(in.blockObj,ii);
             end
-            a.addListeners(); % Add listeners after all blocks back in
-            a.parseProbes();
-            b = a;
-            return;
          else
-            a.addListeners();
-            a.parseProbes();
-            b = a;
-            return;
+            % Nothing specific, a.Blocks isempty is typical (expected) case
+            warning('Animal (%s) was loaded with non-empty Blocks',a.Name);
          end
-
+         a.addListeners();
+         a.parseProbes();
+         % Check if BlockMask is not yet initialized; if it is not, set it
+         if isempty(a.BlockMask)
+            a.BlockMask = true(size(a.Blocks)); % init all to true
+         end
+         b = a;
       end
 
    end 
