@@ -35,6 +35,7 @@ else
    str = 'Decimating';
 end
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
+curCh = 0;
 for iCh=blockObj.Mask
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
@@ -50,7 +51,8 @@ for iCh=blockObj.Mask
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
 
-   pct = round(iCh/numel(blockObj.Mask) * 100);
+   curCh = curCh + 1;
+   pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);

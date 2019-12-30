@@ -192,13 +192,12 @@ classdef Block < matlab.mixin.Copyable
       KeyPair  struct  % Fields are "public" and "private" (hashes)
    end
   
-   
    %% EVENTS
    events
       channelCompleteEvent
       processCompleteEvent
       ProgressChanged  % Issued by nigeLab.Block/reportProgress
-      MethodCanceled
+      MethodCanceled   % Issued by nigeLab.libs.nigelProgress/clearBar
       StatusChanged    % Issued by nigeLab.Block/updateStatus
    end
    

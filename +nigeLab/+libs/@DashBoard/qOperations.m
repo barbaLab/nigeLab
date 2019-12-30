@@ -157,7 +157,7 @@ switch class(target)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
             target.Meta.RecID);
          blockName = blockName(1:min(end,nPars.NMaxNameChars));
-         barName = sprintf('%s %s',blockName,operation(3:end));
+         barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();
          bar = obj.remoteMonitor.startBar(barName,sel);
          bar.setState(0,'Pending...');
@@ -171,7 +171,7 @@ switch class(target)
             for i = 1:numel(me.stack)
                disp(me.stack(i));
             end
-            obj.remoteMonitor.cancelBar(bar);
+            cancelBar(bar);
             s = struct;
             s.message = me.message;
             s.identifier = me.identifier;
@@ -186,10 +186,6 @@ switch class(target)
             if ~isempty(field) && ~any(target.Status.(field{1}))
                linkToData(target,field);
             end
-         end
-         % Since it is SERIAL, bar will be updated
-         if flag
-            obj.remoteMonitor.cancelBar(bar);
          end
       end
       

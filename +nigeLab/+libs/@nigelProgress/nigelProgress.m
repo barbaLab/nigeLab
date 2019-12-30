@@ -74,7 +74,8 @@ classdef nigelProgress < handle
    end
    
    properties (Access = private)
-      Tank        nigeLab.Tank                  % Tank "parent"
+      Tank        nigeLab.Tank           % Tank "parent"
+      Block       nigeLab.Block          % Block associated with this bar
       Monitor     nigeLab.libs.remoteMonitor    % Monitor "parent"
       TagDelim       char   % Delimiter for parsing status from job tag
       NotifyTimer    double % Interval (sec) for checking tag
@@ -132,6 +133,7 @@ classdef nigelProgress < handle
          bar.Position = parent.Position;
          bar.BlockSelectionIndex = sel;
          bar.Tank = monitorObj.tankObj;
+         bar.Block = bar.Tank{sel(1,1),sel(1,2)};
          bar.Monitor = monitorObj;
          
          if ~isfield(bar.Tank.Pars,'Notifications')
@@ -234,6 +236,17 @@ classdef nigelProgress < handle
          stopBar(bar);
          evt = nigeLab.evt.barCleared(bar);
          notify(bar,'StateChanged',evt);
+         if bar.IsRemote
+            if ~isempty(bar.job)
+               if isvalid(bar.job)
+                  cancel(bar.job);
+                  delete(bar.job);
+                  bar.job = [];
+               end
+            end
+         else
+            notify(bar.Block,'MethodCanceled',evt);
+         end
       end
       
       % Things to do on delete function

@@ -156,7 +156,6 @@ end
       end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
-      fprintf(fid,'pause(15);\n');
       fprintf(fid,'curJob = getCurrentJob;\n\n');
       
       fprintf(fid,'%%%% Attempt to load target Block.\n');
@@ -302,6 +301,9 @@ end
       fprintf(fid,['fprintf(db_id,''(%%s) \\t->\\t(Updated Pars.Queue)\\n'','...
        ' ...\n\t' ...
        'char(datetime)); %% For debugging \n']);
+      fprintf(fid,['fprintf(db_id,''(%%s) \\t->\\t(Running %s...)\\n'','...
+         ' ...\n\t' ...
+         'char(datetime)); %% For debugging \n'],operation);
       fprintf(fid,'fclose(db_id); %% End debug logging\n\n');
       
       fprintf(fid,'%%%% Finally, we run the queued `doAction`\n');
