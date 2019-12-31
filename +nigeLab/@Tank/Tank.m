@@ -53,8 +53,9 @@ classdef Tank < handle
    %% PROPERTIES
    % Public get & set, SetObservable as well
    properties (GetAccess = public, SetAccess = public, SetObservable)
-      Name    char               % Name of experiment (TANK)
-      Animals nigeLab.Animal     % Handle array to Children
+      Name        char               % Name of experiment (TANK)
+      Animals     nigeLab.Animal     % Handle array to Children
+      AnimalMask  logical            % Logical array for masking child animals
    end
 
    % Has to be set by method of Tank, but can be accessed publically
@@ -550,16 +551,17 @@ classdef Tank < handle
                in = load(fullfile(A(ii).folder,A(ii).name));
                a.addAnimal(in.animalObj,ii);
             end
-            a.addListeners();
-            a.checkParallelCompatibility();
-            b = a;
-            return;
          else
-            a.addListeners();
-            a.checkParallelCompatibility();
-            b = a;
-            return;
+            % Do not expect this to be the case.
+            warning('Tank (%s) was loaded with non-empty Animals',a.Name);
          end
+         a.addListeners();
+         a.checkParallelCompatibility();
+         % Check if AnimalMask is initialized; if it is not, set it
+         if isempty(a.AnimalMask)
+            a.AnimalMask = true(size(a.Animals)); % init all to true
+         end
+         b = a;
          
       end
       

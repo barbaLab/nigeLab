@@ -41,6 +41,7 @@ else
    str = sprintf('AutoClustering-(%s)',par.MethodName);
 end
 blockObj.reportProgress(str,0,'toWindow');
+curCh = 0;
 for iCh = chan
    % load spikes and classes
    inspk = blockObj.getSpikeFeatures(iCh,unit);
@@ -81,10 +82,9 @@ for iCh = chan
    saveClusters(blockObj,classes,iCh,temp);
    
    % report progress to the user
-   curCh = find(chan == iCh,1,'first');
+   curCh = curCh+1;
    pct = round((curCh/numel(chan)) * 100);
    blockObj.updateStatus('Clusters',true,iCh);
-   blockObj.updateStatus('Sorted',true,iCh);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
 end

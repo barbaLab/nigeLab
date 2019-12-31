@@ -2,9 +2,13 @@ function parseProbes(animalObj)
 %PARSEPROBES  Parse .Probes property struct fields using child "blocks"
 %
 %  animalObj.parseProbes();
+%
+%  In use as a listener callback (handle is animalObj.PropListener(3)).
+%  Also called in `nigeLab.Animal/addChildBlock` at the end, if the mask
+%  size has increased or if the number of non-empty Child Blocks is equal
+%  to the mask size.
 
 animalObj.updateParams('Animal');
-
 if isempty(animalObj.Blocks)
    nigeLab.utils.cprintf('Comments',...
       'No child blocks of Animal: %s -- skipped probe parsing\n',...
@@ -15,6 +19,7 @@ end
 % Get all possible unique probe/channel number combinations for this Animal
 channelID = [];
 B = animalObj.Blocks(~isempty(animalObj.Blocks));
+B = B(animalObj.BlockMask);
 for b = B
    if isempty(b)
       continue;

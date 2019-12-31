@@ -22,6 +22,7 @@ classdef DashBoard < handle
    properties(SetAccess = private, GetAccess = public)
       Children       cell                % Cell array of nigelPanels
       remoteMonitor  nigeLab.libs.remoteMonitor  % Monitor remote progress
+      Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
    end
    
    properties(SetAccess = immutable, GetAccess = public)
@@ -38,10 +39,13 @@ classdef DashBoard < handle
       jobIsRunning = false;       % Flag indicating current job(s) state
       RecapAxes      matlab.graphics.axis.Axes  % "Recap" circles container
       RecapTable     uiw.widget.Table    % "Recap" table
-      Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
       splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI % interface to split multiple animals
-      treeContextMenu  matlab.ui.container.ContextMenu  % UI context menu for launching "do" actions
       Listener  event.listener    % Array of event listeners to delete on destruction
+      
+      Tree_ContextMenu   matlab.ui.container.ContextMenu  % UI context menu for launching "do" actions
+      Mask_MenuItem      matlab.ui.container.Menu  % Context menu item for 'BlockMask'
+      DoMethod_MenuItem  matlab.ui.container.Menu  % Context menu item array for 'do' methods
+      Sort_MenuItem      matlab.ui.container.Menu  % Context menu item for 'Sort' interface
    end
    
    % RESTRICTED
@@ -54,7 +58,9 @@ classdef DashBoard < handle
    %% EVENTS
    
    events
-      TreeSelectionChanged       % Event issued when new node on Tree is clicked
+      TreeSelectionChanged  % Event issued when new node on Tree is clicked
+                            % Has `nigeLab.evt.treeSelectionChanged`
+                            % eventData associated with it.
    end
    
    %% METHODS
@@ -79,6 +85,7 @@ classdef DashBoard < handle
          end
          
          %% Init
+         addpath(pwd); % Add current path
          obj.Tank = tankObj;
          obj.initRefProps();
          
@@ -126,7 +133,7 @@ classdef DashBoard < handle
          treeSelectionFcn(obj,obj.Tree,Nodes)
          
          %% Add listeners
-         obj.treeContextMenu = obj.initUICMenu();
+         obj.Tree_ContextMenu = obj.initUICMenu();
          obj.Listener = obj.addAllListeners();
          
       end
@@ -287,6 +294,8 @@ classdef DashBoard < handle
          %                  destruction.
          
          lh = [];
+         
+         % Add listeners for 'Completed' or 'Changed' events
          lh = [lh, addlistener(obj.Tank,'StatusChanged',...
             @(~,~)obj.updateStatusTable)];
          lh = [lh, addlistener(obj.remoteMonitor,...
@@ -294,6 +303,7 @@ classdef DashBoard < handle
          lh = [lh, addlistener(obj.splitMultiAnimalsUI,...
             'splitCompleted',@(~,e)obj.addToTree(e.nigelObj))];
          
+         % Add listeners for Multi-Animals UI tree "pruning"
          for a = obj.Tank.Animals
             lh = [lh, ...
                addlistener(a,'ObjectBeingDestroyed',...
@@ -305,6 +315,11 @@ classdef DashBoard < handle
          end
          lh = [lh, addlistener(obj.Tank,'ObjectBeingDestroyed',...
             @obj.removeFromTree)];
+         
+         % Add listeners for uiContextMenu items so that they are
+         % appropriately enabled or disabled according to the selection
+         lh = [lh, addlistener(obj,'TreeSelectionChanged',...
+            @(~,evt)obj.uiCMenu_updateEnable(evt))];
          
       end
       
@@ -318,7 +333,6 @@ classdef DashBoard < handle
          %                    'splitCompleted',...
          %                    @(~,e)obj.addToTree(e.nigelObj));
          
-         Tree = obj.Tree;
          switch class(nigelObj)
             case 'nigeLab.Tank'
                ...
@@ -330,14 +344,16 @@ classdef DashBoard < handle
                if any(indx)
                   AnNode = obj.Tree.Root.Children(indx);
                else
-                  AnNode = uiw.widget.CheckboxTreeNode('Name',AnNames{ii},'Parent',Tree.Root);
-                  set(AnNode,'UserData',[numAnimals+ii]);
+                  AnNode = uiw.widget.CheckboxTreeNode(...
+                     'Name',AnNames{ii},'Parent',obj.Tree.Root);
+                  set(AnNode,'UserData',numAnimals+ii);
                end
                
                Metas = [nigelObj(ii).Blocks.Meta];
                BlNames = {Metas.RecID};
                for jj=1:numel(BlNames)
-                  BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);
+                  BlNode = uiw.widget.CheckboxTreeNode(...
+                     'Name',BlNames{jj},'Parent',AnNode);
                   
                   set(BlNode,'UserData',[numAnimals + ii,jj]);
                end
@@ -349,8 +365,8 @@ classdef DashBoard < handle
                Metas = [nigelObj.Meta];
                AnNames = {Meta.AnimalID};
                for ii =1:numel(AnNames)
-                  AnIndx = strcmp({Tree.Root.Children.Name},AnNames(ii));
-                  AnNode = Tree.Root.Children(AnIndx);
+                  AnIndx = strcmp({obj.Tree.Root.Children.Name},AnNames(ii));
+                  AnNode = obj.Tree.Root.Children(AnIndx);
                   BlNames = {Metas.RecID};
                   for jj=1:numel(BlNames)
                      BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);
@@ -366,7 +382,6 @@ classdef DashBoard < handle
          end
          
          nigeLab.libs.DashBoard.addToNode(animalNode,BlNames);
-         obj.Tree = Tree; % Assign as property of DashBoard at end
       end
       
       % Add buttons to interface
@@ -596,6 +611,7 @@ classdef DashBoard < handle
             'Tag','Tree',...
             'ForegroundColor',obj.Color.onPanel,...
             'TreePaneBackgroundColor',obj.Color.panel,...
+            'SelectionBackgroundColor',obj.Color.enabled_selection,...
             'BackgroundColor',obj.Color.panel,...
             'TreeBackgroundColor',obj.Color.panel,...
             'Units','normalized',...
@@ -616,7 +632,6 @@ classdef DashBoard < handle
          end
          
          nigelPanelObj.nestObj(Tree,Tree.Tag);
-         obj.Tree = Tree; % Assign as property of DashBoard at end
       end
       
       % CloseRequestFcn handler to ensure that extra objects are
@@ -642,48 +657,7 @@ classdef DashBoard < handle
          obj.Listener(:) = [];
       end
       
-      % Initialize the job array, as well as the isJobRunning
-      % property for the method. Return false if unable to initialize (for
-      % example, if job for one step is still running).
-      function flag = initJobs(obj,target)
-         flag = false;
-         % For example, if doRawExtraction was run, don't want to run
-         % doUnitFilter yet. NOTE: Start here with 'any' but could later be
-         % updated to only re-initialize the jobIsRunning array if it
-         % should change size. Then, you could have asymmetric job
-         % advancement by only checking on BLOCK case for job creation.
-         if any(obj.jobIsRunning)
-            fprintf(1,'Jobs are still running. Aborted.\n');
-            return;
-         end
-         
-         % Remove any previous job handle objects, if they exist
-         if ~isempty(obj.job)
-            for ii = 1:numel(obj.job)
-               delete(obj.job{ii});
-            end
-         end
-         
-         % Remove any previous progress bars, if they exist
-         if ~isempty(obj.jobProgressBar)
-            for ii = 1:numel(obj.jobProgressBar)
-               f = fieldnames(obj.jobProgressBar{ii});
-               for ik = 1:numel(f)
-                  if isvalid(obj.jobProgressBar{ii}.(f{ik}))
-                     delete(obj.jobProgressBar{ii}.(f{ik}));
-                  end
-               end
-            end
-         end
-         
-         obj.jobIsRunning = false(1,getNumBlocks(target));
-         obj.jobProgressBar = cell(1,getNumBlocks(target));
-         obj.job = cell(1,getNumBlocks(target));
-         
-         flag = true; % If completed successfully
-      end
-      
-      % Initialize reference proprety values
+      % Initialize reference property values
       function initRefProps(obj)
          % INITREFPROPS  Initialize property values for referencing later
          %
@@ -896,6 +870,9 @@ classdef DashBoard < handle
                setBlockTable(obj,SelectedItems);
                setBlockTablePars(obj,SelectedItems);
          end
+         evt = nigeLab.evt.treeSelectionChanged(...
+            obj.Tank,obj.SelectionIndex);
+         notify(obj,'TreeSelectionChanged',evt);
          
       end
       
@@ -1393,12 +1370,13 @@ classdef DashBoard < handle
    % PRIVATE
    % Methods for UI Context Interactions (mostly callbacks)
    methods(Access = private)
+      
       % Callback for when user clicks on tree interface
-      function uiCMenuClick(obj,m,~)
-         % UICMENUCLICK  Callback for when user clicks on tree interface
-         %               context menu.
+      function uiCMenuClick_doAction(obj,m,~)
+         % UICMENUCLICK_DOACTION  Callback for clicks on tree interface
+         %                        context menu.
          %
-         %  m.Callback = @obj.uiCMenuClick;
+         %  m.Callback = @obj.uiCMenuClick_doAction;
          %
          %  obj  --  nigeLab.libs.DashBoard handle
          %
@@ -1440,8 +1418,73 @@ classdef DashBoard < handle
             case 2  % block
                for ii = 1:size(SelectedItems,1)
                   B = obj.Tank{SelectedItems(ii,1),SelectedItems(ii,2)};
-                  obj.qOperations(m.Label,B(ii),SelectedItems(ii,:));
+                  obj.qOperations(m.Label,B,SelectedItems(ii,:));
                end
+         end
+      end
+      
+      function uiCMenuClick_Sort(obj,~,~)
+         %UICMENUCLICK_SORT  Context-menu callback to run SORT interface
+         %
+         %  mitem.Callback = @(~,~)obj.uiCMenuClick_Sort;
+         %
+         %  Runs the spike sorting interface.
+         
+         blockObj = obj.getSelectedItems('obj');
+         nigeLab.Sort(blockObj); % Invoke sorting interface
+      end
+      
+      function uiCMenuClick_toggleBlockMask(obj,src,~)
+         %UICMENUCLICK_TOGGLEBLOCKMASK  Toggle Block 'enabled' status
+         %
+         %  mitem.Callback = @obj.uiCMenuClick_toggleBlockMask;
+         %
+         %  Set the BlockMask property of Animal to true (enabled) or false
+         %  (disabled) for a Block or subset of Blocks.
+         
+         evt = nigeLab.evt.treeSelectionChanged(...
+               obj.Tank,obj.SelectionIndex);
+         if strcmp(src.Checked,'on') % If it is enabled, then disable
+            src.Checked = 'off';
+            setProp(evt.Block,'IsMasked',false);
+            obj.uiCMenu_updateEnable(evt);
+         else % otherwise, enable
+            src.Checked = 'on';
+            setProp(evt.Block,'IsMasked',true);
+            obj.uiCMenu_updateEnable(evt);
+         end
+      end
+      
+      % LISTENER CALLBACK: Toggles menu items on or off depend on select
+      function uiCMenu_updateEnable(obj,evt)
+         %UICMENU_UPDATEENABLE  Toggles 'enabled' for menu items depending
+         %                       on the current selection from obj.Tree
+         %
+         %  addlistener(obj,'TreeSelectionChanged',...
+         %     @obj.uiCMenu_updateEnable);
+         
+         if any(~[evt.Block.IsMasked])
+            set(obj.Mask_MenuItem,'Checked','off');
+            set(obj.DoMethod_MenuItem,'Enable','off');
+            set(obj.Sort_MenuItem,'Enable','off');
+            set(obj.Tree,'SelectionBackgroundColor',obj.Color.disabled_selection);
+         else
+            set(obj.Mask_MenuItem,'Checked','on');
+            set(obj.Tree,'SelectionBackgroundColor',obj.Color.enabled_selection);
+            for i = 1:numel(obj.DoMethod_MenuItem)
+               if obj.Tank.Pars.doActions.(obj.DoMethod_MenuItem(i).Label).enabled
+                  obj.DoMethod_MenuItem(i).Enable = 'on';
+               end
+            end
+            if any(~getStatus(evt.Block,{'Spikes'}))
+               set(obj.Sort_MenuItem,'Enable','off');
+            else
+               if numel(evt.Animal) > 1
+                  set(obj.Sort_MenuItem,'Enable','off');
+               else
+                  set(obj.Sort_MenuItem,'Enable','on');
+               end
+            end
          end
       end
       
@@ -1452,17 +1495,33 @@ classdef DashBoard < handle
          %
          %  obj.initUICMenu();
          
-         treeContextMenu = uicontextmenu(...
-            'Parent',obj.nigelGUI);
-         m = methods(obj.Tank);
+         treeContextMenu = uicontextmenu('Parent',obj.nigelGUI);
+         obj.Mask_MenuItem = uimenu(treeContextMenu,...
+            'Label','Enable',...
+            'Checked','on',...
+            'Enable','on',...
+            'Callback',@obj.uiCMenuClick_toggleBlockMask);
+         
+         m = methods('nigeLab.Block');
          m = m(startsWith(m,'do'));
          for ii=1:numel(m)
-            mitem = uimenu(treeContextMenu,'Label',m{ii});
-            mitem.Callback = @obj.uiCMenuClick;
+            obj.DoMethod_MenuItem(ii) = uimenu(treeContextMenu,...
+               'Label',m{ii},...
+               'Callback',@obj.uiCMenuClick_doAction);
+            if obj.Tank.Pars.doActions.(m{ii}).enabled
+               obj.DoMethod_MenuItem(ii).Enable = 'on';
+            else
+               obj.DoMethod_MenuItem(ii).Enable = 'off';
+            end
          end
+         obj.DoMethod_MenuItem(1).Separator = 'on';
+         obj.Sort_MenuItem = uimenu(treeContextMenu,...
+            'Label','Spike Sorting',...
+            'Separator','on',...
+            'Callback',@(~,~)obj.uiCMenuClick_Sort);
+         
          set(obj.Tree,'UIContextMenu',treeContextMenu);
       end
-      
       
    end
    
@@ -1595,7 +1654,7 @@ classdef DashBoard < handle
       end
       
       % Initialize Colors struct with default values
-      function col = initColors(figCol,panelCol,onPanelCol,buttonCol,onButtonCol)
+      function col = initColors(figCol,panelCol,onPanelCol,buttonCol,onButtonCol,enabledSelCol,disabledSelCol)
          % INITCOLORS  Initialize colors struct for panel colors
          %
          %  col has three fields: 'fig', 'panel', 'onPanel', 'button', and
@@ -1635,6 +1694,18 @@ classdef DashBoard < handle
             col.onButton = nigeLab.defaults.nigelColors(2.1);
          else
             col.onButton = onButtonCol;
+         end
+         
+         if nargin < 6
+            col.enabled_selection = nigeLab.defaults.nigelColors('g');
+         else
+            col.enabled_selection = enabledSelCol;
+         end
+         
+         if nargin < 7
+            col.disabled_selection = nigeLab.defaults.nigelColors('r');
+         else
+            col.disabled_selection = disabledSelCol;
          end
       end
       

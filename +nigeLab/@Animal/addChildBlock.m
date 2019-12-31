@@ -53,13 +53,27 @@ else
    animalObj.Blocks = builtin('subsasgn',animalObj.Blocks,...
       S,blockObj);
 end
+
+% Initialize mask to true if we are adding NEW blocks. If they have already
+% been added and this is invoked by loadobj, the mask will be bigger than
+% animalObj.Blocks
+maskDiff = sum(~isempty(animalObj.Blocks)) - numel(animalObj.BlockMask);
+if maskDiff > 0
+   animalObj.BlockMask = [animalObj.BlockMask, true(1,maskDiff)];
+end
 for i = 1:numel(blockObj)
    blockObj(i).Listener = [blockObj(i).Listener,...
       addlistener(blockObj(i),'ObjectBeingDestroyed',...
-      @(~,~)animalObj.AssignNULL)];
+         @(~,~)animalObj.AssignNULL), ...
+      addlistener(animalObj,'BlockMask','PostSet',...
+         @(~,propEvt)blockObj.updateMaskFlag(propEvt.AffectedObject))];
    animalObj.BlockListener = [animalObj.BlockListener, ...
       addlistener(blockObj(i),'StatusChanged',...
-      @(~,evt)notify(animalObj,'StatusChanged',evt))];
+         @(~,evt)notify(animalObj,'StatusChanged',evt)), ...
+      addlistener(blockObj(i),'IsMasked','PostSet',...
+         @(~,propEvt)animalObj.updateBlockMask(propEvt.AffectedObject))];
 end
-animalObj.parseProbes();
+if maskDiff >= 0
+   animalObj.parseProbes();
+end
 end

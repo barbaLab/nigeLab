@@ -40,7 +40,7 @@ if ~isfield(blockObj.Pars.doActions,doName)
       nigeLab.utils.getNigeLink('nigeLab.defaults.doActions'));
 end
 
-Fields = blockObj.Pars.doActions.(doName);
+Fields = blockObj.Pars.doActions.(doName).required;
 if isempty(Fields)
    return; % No requirements; proceed
 end
