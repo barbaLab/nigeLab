@@ -40,7 +40,8 @@ blockIdx = [];
 for ii = vec
    % If multiple sample rates, warn the user and exit
    if abs(sortObj.Blocks(ii).SampleRate-sortObj.spk.fs)>eps
-      error('Recordings with different sample rates are incompatible.');
+      error(['nigeLab:' mfilename ':IncompatibleSampleRates'],...
+         'Recordings with different sample rates are incompatible.');
    end
    
    % Retrieve associated spikes

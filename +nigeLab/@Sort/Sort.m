@@ -80,23 +80,24 @@ classdef Sort < handle
          %
          %  nigeLab.Sort;
          %  sortObj = nigeLab.Sort;
-         %  sortObj = nigeLab.Sort(nigelObj);
-         %
-         % By: Max Murphy & Fred Barban 2019-01-07                           
+         %  sortObj = nigeLab.Sort(nigelObj);                       
          
          %% INITIALIZE PARAMETERS
          if ~initParams(sortObj)
-            error('Sort object parameterization unsuccessful.');
+            error(['nigeLab:' mfilename ':BadInit'],...
+                  'Could not set parameters for sortObj.');
          end
          
          %% INITIALIZE INPUT DATA
          if nargin > 0
             if ~initData(sortObj,nigelObj)
-               error('OrgExpObj array not created successfully.');
+               error(['nigeLab:' mfilename ':BadInit'],...
+                  'sortObj array not created successfully.');
             end
          else
             if ~initData(sortObj)
-               error('OrgExpObj array not created successfully.');
+               error(['nigeLab:' mfilename ':BadInit'],...
+                  'sortObj array not created successfully.');
             end
          end
          

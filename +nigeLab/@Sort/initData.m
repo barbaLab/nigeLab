@@ -21,59 +21,37 @@ function flag = initData(sortObj,nigelObj)
 
 %% PARSE INPUT
 flag = false;
-if nargin > 1
-   % Parse input argument type
-   switch class(nigelObj(1))
-      case 'nigeLab.Block'
-         if ~parseBlocks(sortObj,nigelObj)
-            warning('Could not parse nigeLab.Block objects.');
-            return;
-         end
-      case 'nigeLab.Animal'
-         if ~parseAnimals(sortObj,nigelObj)
+if nargin < 2
+   nigelObj = getFromFileSelection(sortObj);
+end
+
+% Parse input argument type
+switch class(nigelObj)
+   case 'nigeLab.Block'
+      if ~parseBlocks(sortObj,nigelObj)
+         warning('Could not parse nigeLab.Block objects.');
+         return;
+      end
+   case 'nigeLab.Animal'
+      if ~parseAnimals(sortObj,nigelObj)
+         warning('Could not parse nigeLab.Animal objects.');
+         return;
+      end
+   case 'nigeLab.Tank'
+      if numel(nigelObj) > 1
+         warning('Only 1 nigeLab.Tank object can be scored at a time.');
+         return;            
+      else
+         if ~parseAnimals(sortObj,nigelObj.Animals)
             warning('Could not parse nigeLab.Animal objects.');
             return;
          end
-      case 'nigeLab.Tank'
-         if numel(nigelObj) > 1
-            warning('Only 1 nigeLab.Tank object can be scored at a time.');
-            return;            
-         else
-            if ~parseAnimals(sortObj,nigelObj.Animals)
-               warning('Could not parse nigeLab.Animal objects.');
-               return;
-            end
-         end         
-      otherwise
-         warning(['%s is an invalid input type.\n' ...
-                  'Must be a Block, Animal, or Tank object array.'],...
-                  class(nigelObj(1)));
-         return;
-   end
-   
-else   
-   [fName,pName,~] = uigetfile(sortObj.pars.InFileFilt,...
-                               sortObj.pars.InFilePrompt,...
-                               sortObj.pars.InFileDefDir,...
-                               'MultiSelect','on');
-                               
-   if iscell(fName) % Load array and run using recursion
-      nigelObjArray = [];
-      for ii = 1:numel(fName)
-         in = load(fullfile(pName,fName{ii}));
-         f = fieldnames(in);
-         nigelObjArray = [nigelObjArray; in.(f{1})]; %#ok<AGROW>
-      end
-      flag = initData(sortObj,nigelObjArray);
+      end         
+   otherwise
+      warning(['%s is an invalid input type.\n' ...
+               'Must be a Block, Animal, or Tank object array.'],...
+               class(nigelObj(1)));
       return;
-      
-   else % Otherwise, just load it and run init using recursion
-      in = load(fullfile(pName,fName));
-      f = fieldnames(in);
-      flag = initData(sortObj,in.(f{1}));
-      return;
-   end
-   
 end
 
 %% INITIALIZE SPK, CLU, AND ORIG PROPERTY STRUCTS
@@ -101,7 +79,7 @@ for iCh = sortObj.Channels.Mask % get # clusters per channel
    sortObj.spk.tMax = max(sortObj.spk.tMax,max(sortObj.spk.ts{iCh}));
  
    fraction_done = 100 * (iCh / sortObj.Channels.N);
-   fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+   fprintf(1,'\b\b\b\b\b%.3d%%\n',round(fraction_done))
 end
 
 
@@ -110,4 +88,29 @@ sortObj.prev = sortObj.spk.class;
 sortObj.orig = sortObj.spk.class;
 
 flag = true;
+
+   % Helper function
+   function nigelObj = getFromFileSelection(sortObj)
+      %GETFROMFILESELECTION  Helper function to get nigelObj based on UI
+      [fName,pName,~] = uigetfile(sortObj.pars.InFileFilt,...
+                               sortObj.pars.InFilePrompt,...
+                               sortObj.pars.InFileDefDir,...
+                               'MultiSelect','on');                        
+      if iscell(fName)
+         nigelObj = [];
+         for ii = 1:numel(fName)
+            in = load(fullfile(pName,fName{ii}));
+            f = fieldnames(in);
+            nigelObj = [nigelObj; in.(f{1})]; %#ok<AGROW>
+         end
+      else % Otherwise, just load it and run init using recursion
+         if fName == 0
+            error(['nigeLab:' mfilename ':NoFileSelection'],...
+               'No input file selected. Canceled Sort initialization.');
+         end
+         in = load(fullfile(pName,fName));
+         f = fieldnames(in);
+         nigelObj = in.f{1};
+      end
+   end
 end
