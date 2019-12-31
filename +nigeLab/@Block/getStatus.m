@@ -52,11 +52,20 @@ if ~isscalar(blockObj)
             case 'Channels'
                if iscell(field)
                   status = false(numel(blockObj),numel(field));
+                  if numel(field) > 1
+                     for i = 1:numel(blockObj)
+                        status(i,:) = blockObj(i).getStatus(field);
+                     end
+                  else
+                     for i = 1:numel(blockObj)
+                        status(i) = all(blockObj(i).getStatus(field));
+                     end
+                  end
                else
                   status = false(numel(blockObj),blockObj(1).NumChannels);
-               end
-               for i = 1:numel(blockObj)
-                  status(i,:) = blockObj(i).getStatus(field);
+                  for i = 1:numel(blockObj)
+                     status(i,:) = blockObj(i).getStatus(field);
+                  end
                end
             otherwise
                
@@ -109,7 +118,6 @@ switch nargin
          else
             return;
          end
-         return;
       end
       if isfield(blockObj.Pars,'Video') && strcmp(field,'Video')
          if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
@@ -138,9 +146,9 @@ switch nargin
                      size(blockObj.Scoring.Video,1)},'Complete');
                otherwise
                   % do nothing
-            end
-         end
-      end
+            end % switch field
+         end % ~isempty(blockObj.Pars.Video.ScoringEventFieldname
+      end % isfield 'Video' and field is 'Video'
       
    case 3 % If channel is given (3 inputs, including blockObj)
       status = parseStatus(blockObj,field);

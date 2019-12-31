@@ -130,6 +130,11 @@ classdef Block < matlab.mixin.Copyable
       FileExt    char                     % .rhd, .rhs, or other
    end
    
+   % Flags
+   properties (SetAccess = private, GetAccess = public, SetObservable = true)
+      IsMasked = true  % Is this Block enabled (true) or disabled (false)?
+   end
+   
    % Properties that can be obtained externally, but must be set by a
    % method of the class object, and don't populate in the editor window or
    % in the tab-completion window
@@ -386,31 +391,42 @@ classdef Block < matlab.mixin.Copyable
       end
       
       % Returns the public hash key for this block
-      function publicKey = getKey(blockObj)
+      function key = getKey(blockObj,keyType)
          %GETKEY  Return the public hash key for this block
          %
-         %  publicKey = blockObj.getKey();
+         %  publicKey = blockObj.getKey('Public');
+         %  privateKey = blockObj.getKey('Private'); Really not useful but
+         %                                            there for future
+         %                                            expansion.
          %
-         %  publicKey  --  .Public field of blockObj.KeyPair
+         %  key --  .Public field of blockObj.KeyPair
          %
          %  If blockObj is array, then publicKey is returned as cell array
          %  of dimensions equivalent to blockObj.
          
+         if nargin < 2
+            keyType = 'Public';
+         end
+         if ~ismember(keyType,{'Public','Private'})
+            error(['nigeLab:' mfilename ':BadKeyType'],...
+               'keyType must be ''Public'' or ''Private''');
+         end
+         
          n = numel(blockObj);
          if n > 1
-            publicKey = cell(size(blockObj));
+            key = cell(size(blockObj));
             for i = 1:n
-               publicKey{i} = blockObj(i).getKey();
+               key{i} = blockObj(i).getKey();
             end
             return;            
          end
          
          if isempty(blockObj.KeyPair)
             blockObj.initKey();
-         elseif ~isfield(blockObj.KeyPair,'Public')
+         elseif ~isfield(blockObj.KeyPair,keyType)
             blockObj.initKey();
          end
-         publicKey = blockObj.KeyPair.Public;
+         key = blockObj.KeyPair.(keyType);
          
       end
       
@@ -439,76 +455,6 @@ classdef Block < matlab.mixin.Copyable
          end
          
          tf = blockObj.IsEmpty || builtin('isempty',blockObj);
-      end
-      
-      % Find block from block array based on public or private hash
-      function b = findByKey(blockObjArray,keyStr,keyType)
-         %FINDBYKEY  Returns the block corresponding to keyStr from array
-         %
-         %  example:
-         %  blockObjArray = tankObj{:,:}; % Get all blocks from tank
-         %  b = findKey(blockObjArray,keyStr); % Find specific block 
-         %  
-         %  b = findKey(blockObjArray,privateKey,'Private'); 
-         %  --> By default, uses 'Public' key to find the Block; this would
-         %      find the associated 'Private' key that matches the contents
-         %      of privateKey.
-         %
-         %  keyStr : Can be char array or cell array. If it's a cell array,
-         %           then b is returned as a row vector with number of
-         %           elements corresponding to number of cell elements.
-         %
-         %  keyType : (optional) Char array. Should be 'Private' or
-         %                          'Public' (default if not specified)
-         
-         if nargin < 2
-            error(['nigeLab:' mfilename ':tooFewInputs'],...
-               'Need to provide block array and hash key at least.');
-         else
-            if ~iscell(keyStr)
-               keyStr = {keyStr};
-            end
-         end
-         
-         if nargin < 3
-            keyType = 'Public';
-         else
-            if ~ischar(keyType)
-               error(['nigeLab:' mfilename ':badInputType2'],...
-                  'Unexpected class for ''keyType'' (%s): should be char.',...
-                  class(keyType));
-            end
-            % Ensure it is the correct capitalization
-            keyType = lower(keyType);
-            keyType(1) = upper(keyType(1));
-            if ~ismember(keyType,{'Public','Private'})
-               error(['nigeLab:' mfilename ':badKeyType'],...
-                  'keyType must be ''Public'' or ''Private''');
-            end
-         end
-         
-         b = nigeLab.Block.Empty(); % Initialize empty Block array
-         
-         % Loop through array of blocks, breaking the loop if an actual
-         % block is found. If block index is greater than the size of
-         % array, then returns an empty double ( [] )
-         nBlock = numel(blockObjArray);
-         if nBlock > 1
-            cur = 0;
-            while ((numel(b) < numel(keyStr)) && (cur < nBlock))
-               cur = cur + 1;
-               b = [b,findByKey(blockObjArray(cur),keyStr,keyType)]; %#ok<*AGROW>
-            end
-            return;
-         end
-         
-         % If any of the keys match, return the corresponding block.
-         thisKey = blockObj.KeyPair.(keyType);
-         idx = find(ismember(keyStr,thisKey),1,'first');
-         if ~isempty(idx)
-            b = blockObjArray(idx);
-         end
-         
       end
       
       % Overloaded SAVE method for BLOCK to handle child objects such as
@@ -665,8 +611,24 @@ classdef Block < matlab.mixin.Copyable
       end
    end
    
+   % Methods accessible by "parent" Animal
+   methods (Access = ?nigeLab.Animal)
+      % Set BlockMask flag (.IsMasked) for this block
+      function updateMaskFlag(blockObj,animalObj)
+         %UPDATEMASKFLAG  Sets the BlockMask flag (.IsMasked) 
+         %
+         %  addlistener(animalObj,'BlockMask','PostSet',...
+         %     @blockObj.updateMaskFlag);
+         
+         [~,idx] = findByKey(animalObj.Blocks,blockObj);
+         blockObj.IsMasked = animalObj.BlockMask(idx);
+      end
+   end
+   
    % Methods to be catalogued in CONTENTS.M
    methods (Access = public)
+      [blockObj,idx] = findByKey(blockObjArray,keyStr,keyType); % Find block from block array based on public or private hash
+      
       % Scoring videos
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
       fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records

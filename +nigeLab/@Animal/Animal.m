@@ -39,11 +39,11 @@ classdef Animal < matlab.mixin.Copyable
       Name     char          % Animal identification code
       Probes   struct        % Electrode configuration structure
       Blocks   nigeLab.Block % Children (nigeLab.Block objects)
+      BlockMask  logical       % Block "Mask" logical vector
    end
    
    % Cannot set but may want to see it publically. SetObservable.
    properties (GetAccess = public, SetAccess = private, SetObservable)
-      BlockMask  logical       % Block "Mask" logical vector
       Mask       double        % Channel "Mask" vector (for all recordings)
    end
    
@@ -236,6 +236,37 @@ classdef Animal < matlab.mixin.Copyable
          end
       end
       
+      % Returns the key for this animal object
+      function key = getKey(animalObj,keyType)
+         %GETKEY  Return the key for this animal object
+         %
+         %  publicKey = animalObj.getKey();
+         %  publicKey = animalObj.getKey('Public');
+         %
+         %  key --  .(keyType) field of blockObj.KeyPair
+         %
+         %  If animalObj is array, then key is returned as cell array
+         %  of dimensions equivalent to animalObj.
+         
+         if nargin < 2
+            keyType = 'Public';
+         end
+         if ~ismember(keyType,{'Public','Private'})
+            error(['nigeLab:' mfilename ':BadKeyType'],...
+               'keyType must be ''Public'' or ''Private''');
+         end
+         
+         n = numel(animalObj);
+         if n > 1
+            key = cell(size(animalObj));
+            for i = 1:n
+               key{i} = animalObj(i).getKey();
+            end
+            return;            
+         end
+         key = animalObj.KeyPair.(keyType);
+      end
+      
       % Returns Status for each Operation/Block pairing
       function flag = getStatus(animalObj,opField)
          % GETSTATUS  Returns Status Flag for each Operation/Block pairing
@@ -389,106 +420,13 @@ classdef Animal < matlab.mixin.Copyable
          end
          animalObj.(propName) = propVal;         
       end
-
-      % Returns the public hash key for this block
-      function publicKey = getKey(animalObj)
-         %GETKEY  Return the public hash key for this block
-         %
-         %  publicKey = blockObj.getKey();
-         %
-         %  publicKey  --  .Public field of blockObj.KeyPair
-         %
-         %  If blockObj is array, then publicKey is returned as cell array
-         %  of dimensions equivalent to blockObj.
-         
-         n = numel(animalObj);
-         if n > 1
-            publicKey = cell(size(animalObj));
-            for i = 1:n
-               publicKey{i} = animalObj(i).getKey();
-            end
-            return;            
-         end
-         
-         publicKey = animalObj.KeyPair.Public;
-         
-      end
-      
-      % Find block from block array based on public or private hash
-      function a = findByKey(animalObjArray,keyStr,keyType)
-         %FINDBYKEY  Returns the block corresponding to keyStr from array
-         %
-         %  example:
-         %  blockObjArray = tankObj{:,:}; % Get all blocks from tank
-         %  b = findKey(blockObjArray,keyStr); % Find specific block 
-         %  
-         %  b = findKey(blockObjArray,privateKey,'Private'); 
-         %  --> By default, uses 'Public' key to find the Block; this would
-         %      find the associated 'Private' key that matches the contents
-         %      of privateKey.
-         %
-         %  keyStr : Can be char array or cell array. If it's a cell array,
-         %           then b is returned as a row vector with number of
-         %           elements corresponding to number of cell elements.
-         %
-         %  keyType : (optional) Char array. Should be 'Private' or
-         %                          'Public' (default if not specified)
-         
-         if nargin < 2
-            error(['nigeLab:' mfilename ':tooFewInputs'],...
-               'Need to provide animal array and hash key at least.');
-         else
-            if ~iscell(keyStr)
-               keyStr = {keyStr};
-            end
-         end
-         
-         if nargin < 3
-            keyType = 'Public';
-         else
-            if ~ischar(keyType)
-               error(['nigeLab:' mfilename ':badInputType2'],...
-                  'Unexpected class for ''keyType'' (%s): should be char.',...
-                  class(keyType));
-            end
-            % Ensure it is the correct capitalization
-            keyType = lower(keyType);
-            keyType(1) = upper(keyType(1));
-            if ~ismember(keyType,{'Public','Private'})
-               error(['nigeLab:' mfilename ':badKeyType'],...
-                  'keyType must be ''Public'' or ''Private''');
-            end
-         end
-         
-         a = nigeLab.Animal.Empty(); % Initialize empty Block array
-         
-         % Loop through array of animals, breaking the loop if an actual
-         % animal is found. If animal index is greater than the size of
-         % array, then returns an empty double ( [] )
-         nAnimal = numel(animalObjArray);
-         if nAnimal > 1
-            cur = 0;
-            while ((numel(a) < numel(keyStr)) && (cur < nAnimal))
-               cur = cur + 1;
-               a = [a,findByKey(animalObjArray(cur),keyStr,keyType)]; %#ok<*AGROW>
-            end
-            return;
-         end
-         
-         % If any of the keys match, return the corresponding block.
-         thisKey = blockObj.KeyPair.(keyType);
-         idx = find(ismember(keyStr,thisKey),1,'first');
-         if ~isempty(idx)
-            a = animalObjArray(idx);
-         end
-         
-      end
-
    end
    
    % PUBLIC 
    % Methods that should go in Contents.m eventually
    methods (Access = public)
+      [animalObj,idx] = findByKey(animalObjArray,keyStr,keyType); % Find animal from animal array based on public or private hash
+      
       table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
       out = animalGet(animalObj,prop)       % Get a specific BLOCK property
       flag = animalSet(animalObj,prop)      % Set a specific BLOCK property
@@ -570,11 +508,16 @@ classdef Animal < matlab.mixin.Copyable
          
          animalObj.PropListener(1) = ...
             addlistener(animalObj,'Name','PostSet',...
-            @(~,~)animalObj.updateAnimalNameInChildBlocks);
+            @(~,~)animalObj.updateAnimalNameInChildBlocks());
          
          animalObj.PropListener(2) = ...
             addlistener(animalObj,'Blocks','PostSet',...
-            @(~,~)animalObj.CheckBlocksForClones);
+            @(~,~)animalObj.CheckBlocksForClones());
+         
+         animalObj.PropListener(3) = ...
+            addlistener(animalObj,'BlockMask','PostSet',...
+            @(~,~)animalObj.parseProbes());
+            
       end
       
             % Initialize .KeyPair property
@@ -661,6 +604,19 @@ classdef Animal < matlab.mixin.Copyable
              animalObj.Blocks(bb).Meta.AnimalID = animalObj.Name;
           end
       end
+      
+      % LISTENER CALLBACK: Updates .BlockMask
+      function updateBlockMask(animalObj,blockObj)
+         %UPDATEBLOCKMASK  Updates .BlockMask based on blockObj.IsMasked
+         %
+         %  addlistener(blockObj,'IsMasked','PostSet',...
+         %     @animalObj.updateBlockMask);
+         
+         [~,idx] = findByKey(animalObj.Blocks,blockObj);
+         if animalObj.BlockMask(idx)~=blockObj.IsMasked
+            animalObj.BlockMask(idx) = blockObj.IsMasked;
+         end
+      end
    end
    
    % STATIC
@@ -714,11 +670,6 @@ classdef Animal < matlab.mixin.Copyable
             warning('Animal (%s) was loaded with non-empty Blocks',a.Name);
          end
          a.addListeners();
-         a.parseProbes();
-         % Check if BlockMask is not yet initialized; if it is not, set it
-         if isempty(a.BlockMask)
-            a.BlockMask = true(size(a.Blocks)); % init all to true
-         end
          b = a;
       end
 
