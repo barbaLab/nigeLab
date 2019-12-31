@@ -1,8 +1,12 @@
 function [Col] = nigelColors(input,source)
 %NIGELCOLORS default colors for nigeLab
+%  
 %   returns one or more colors depending on the input
 %
 %   input,  numeric array or string.
+%
+%  To get a list of input color options, call as:
+%  <strong>>> nigeLab.defaults.nigelColors('help'); </strong>
 %
 % ---------------------------------
 %   Col,   Color matrix. Nx3, where N is nunmel(input)
@@ -21,32 +25,57 @@ switch nargin
          return;
       end
       if iscell(input),Col=nigeLab.defaults.nigelColors(input{1});return;end
-      switch input
+      switch lower(input)
+         case {'help','opts','options'}
+            fprintf(1,'<strong>''primary'',''g'',''hl''</strong> -> ');
+            nigeLab.utils.cprintf([30, 185, 128]./255,'green\n');
+            fprintf(1,'<strong>''secondary'',''dg'',''enable'',''button''</strong> -> ');
+            nigeLab.utils.cprintf([4, 93, 86]./255,'dark green\n');
+            fprintf(1,'<strong>''disable'',''ddg''</strong> -> ');
+            nigeLab.utils.cprintf([4, 55, 32]./255,'darker green\n');
+            fprintf(1,'<strong>''tertiary'',''o''</strong> -> ');
+            nigeLab.utils.cprintf([255, 104, 89]./255,'orange\n');
+            fprintf(1,'<strong>''quaternary'',''y''</strong> -> ');
+            nigeLab.utils.cprintf([255, 207, 68]./255,'yellow\n');
+            fprintf(1,'<strong>''onprimary'',''k''</strong> -> ');
+            nigeLab.utils.cprintf([0 0 0],'black\n');
+            fprintf(1,'<strong>''background'',''bg''</strong> -> ');
+            nigeLab.utils.cprintf([18, 18, 18]./255,'nearly black\n');
+            fprintf(1,'<strong>''surface'',''sfc'',''dark''</strong> -> ');
+            nigeLab.utils.cprintf([55, 56, 58]./255,'dark gray\n');
+            fprintf(1,'<strong>''disabletext'',''med''</strong> -> ');
+            nigeLab.utils.cprintf([125, 125, 125]./255,'medium gray\n');
+            fprintf(1,'<strong>''light'',''light_grey''</strong> -> ');
+            nigeLab.utils.cprintf([220, 220, 220]./255,'light gray\n');
+            fprintf(1,'''onsecondary'',''onbutton'',''onsurface'',''enabletext'',''w'' -> ');
+            nigeLab.utils.cprintf([1 1 1],'white\n');
+            fprintf(1,'<strong>''r'',''red''</strong> -> ');
+            nigeLab.utils.cprintf([240, 25, 25]./255,'red\n');
+            fprintf(1,'<strong>''m'',''magenta''</strong> -> ');
+            nigeLab.utils.cprintf([240, 25, 240]./255,'magenta\n');
+            fprintf(1,'<strong>''b'',''blue''</strong> -> ');
+            nigeLab.utils.cprintf([67 129 193]./255,'blue\n');
          case {'primary','g','green','highlight','hl',1}
             Col = [30, 185, 128]./255;   % green
          case {'secondary','dg','darkgreen','button','enable',2}
             Col = [4, 93, 86]./255;      % dark green
          case {'disable','ddg','darkergreen',2.5}
-            Col = [4, 55, 32]./255;      % dark green
+            Col = [4, 55, 32]./255;      % darker green
          case {'tertiary','o','orange',3}
             Col = [255, 104, 89]./255;   % orange
          case {'quaternary','y','yellow',4}
             Col = [255, 207, 68]./255;   % yellow
-         case {'onprimary','k','black',1.1}
-            Col = [0, 0, 0]./255; % black
-         case {'onsecondary','w','white','onbutton','enabletext',2.1} 
-            Col = [255, 255, 255]./255; % white
-         case {'disabletext','med_gray','med_grey','med'}
-            Col = [125, 125, 125]./255;
-         case {'ontertiary',3.1}
-            Col = [0, 0, 0]./255; % black
-         case {'onquaternary',4.1}
+         case {'onprimary','k','black','ontertiary','onquaternary',1.1}
             Col = [0, 0, 0]./255; % black
          case {'background','bg',0}
             Col = [18, 18, 18]./255; % nearly black
          case {'surface','sfc','dark_gray','dark_grey','dark',0.1}
             Col = [55, 56, 58]./255; % dark grey
-         case {'onsurface','onsfc',0.2}
+         case {'disabletext','med_gray','med_grey','med'}
+            Col = [125, 125, 125]./255;
+         case {'light_grey','light_gray','light'}
+            Col = [220, 220, 220]./255; % light grey
+         case {'onsecondary','w','white','onbutton','enabletext','onsurface','onsfc',2.1,0.2} 
             Col = [255, 255, 255]./255; % white
          case {'r','red'}
             Col = [240, 25, 25]./255; % red
@@ -54,8 +83,6 @@ switch nargin
             Col = [240, 25, 240]./255; % magenta
          case {'b','blue'}
             Col = [67 129 193]./255; % blue
-         case {'light_grey','light_gray','light'}
-            Col = [220, 220, 220]./255; % light grey
          otherwise
             Col = [0, 0, 0]./255;
             warning('%s is not a recognized nigelColors option.',input);
