@@ -5,3 +5,5 @@
 *.jpeg filter=lfs diff=lfs merge=lfs -binary
 *.rhs filter=lfs diff=lfs merge=lfs -binary
 *.rhd filter=lfs diff=lfs merge=lfs -binary
+*.PNG filter=lfs diff=lfs merge=lfs -binary
+*.JPG filter=lfs diff=lfs merge=lfs -binary
