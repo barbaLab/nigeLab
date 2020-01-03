@@ -27,7 +27,7 @@ classdef splitMultiAnimalsUI < handle
    end
    
    events
-      splitCompleted   % Fired once the "splitting" has been finished
+      SplitCompleted   % Fired once the "splitting" has been finished
    end
    
    methods (Access = public)
@@ -360,7 +360,7 @@ classdef splitMultiAnimalsUI < handle
          end
          populateTree(Tree_);
          obj.animalObj.removeBlocks(find(obj.animalObj.Blocks == obj.blockObj)); %#ok<FNDSB>
-         notify(obj,'splitCompleted',splitCompletedEvt);
+         notify(obj,'SplitCompleted',splitCompletedEvt);
          % if an animal obj is available, move everything to the correct
          % animal
       end

@@ -1,11 +1,8 @@
 function pars = Tank()
-%% TANK  Template for initializing parameters for nigeLab.Tank class
+%TANK  Template for initializing parameters for nigeLab.Tank class
 %
 %   pars = nigeLab.defaults.Tank;
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
-%%
 pars = struct;
 pars.BlockNameVars = {'Animal_ID'; ...
                          'Year'; ...

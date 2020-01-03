@@ -1,11 +1,8 @@
 function pars = Probe()
-%% PROBE   Template for initializing parameters for probe data
+%PROBE   Template for initializing parameters for probe data
 %
 %   pars = nigeLab.defaults.Probe;
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
-%%
 pars = struct;
 [pars.Folder,~,~] = fileparts(mfilename('fullpath'));
 pars.File = 'Probes.xlsx';

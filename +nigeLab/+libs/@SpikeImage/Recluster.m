@@ -59,8 +59,7 @@ classes(classes==1)=unit;
 for ii= uclass
    iMove = classes==ii;
    obj.Spikes.CurClass = ii;
-   evtData = nigeLab.evt.assignmentEventData(subsetIndex(iMove),...
-      ii,unit);
+   evtData = nigeLab.evt.assignClus(subsetIndex(iMove),ii,unit);
    obj.UpdateClusterAssignments(nan,evtData);
 end
 fprintf(1,' done.\n');

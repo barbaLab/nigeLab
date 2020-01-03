@@ -234,8 +234,17 @@ classdef SpikeImage < handle
       end
       
       
-      
+      % Sets feature visibility for spikes of cluster index "clus"
       function SetVisibleFeatures(obj,clus,val)
+         %SETVISIBLEFEATURES  Set visibility of scatter elements for spikes
+         %  that belong to the cluster indexed by "clus"
+         %
+         %  obj.SetVisibleFeatures(clus,val);
+         %
+         %  e.g.
+         %  >> obj.setVisibleFeatures(3,1); Makes scatter points for
+         %                                  cluster "class" 3 visible
+         
          if ~obj.checkFeaturesUI
             return;
          end
@@ -245,16 +254,13 @@ classdef SpikeImage < handle
          else
             state = 'off';
          end
-
-         ind2D=([obj.Parent.UI.FeaturesUI.Features2D.Children.UserData] ==...
-             clus);
-         ind3D=([obj.Parent.UI.FeaturesUI.Features3D.Children.UserData] ==...
-            clus);
+         featureObj = obj.Parent.UI.FeaturesUI;
+         ind2D=([featureObj.Features2D.Children.UserData] == clus);
+         ind3D=([featureObj.Features3D.Children.UserData] == clus);
          
          % Update any potential listeners
-         evtData = nigeLab.evt.visionToggleEventData(...
-            ind2D,ind3D,state,clus,val);
-         notify(obj,'VisionToggled',evtData);
+         evt = nigeLab.evt.toggleClusterVisible(ind2D,ind3D,state,clus,val);
+         notify(obj,'VisionToggled',evt);
       end
       
    end
@@ -602,7 +608,7 @@ classdef SpikeImage < handle
          obj.Draw([plotNum,pastNum]);
          
          visible = obj.VisibleToggle{plotNum}.Value;
-         evtData = nigeLab.evt.spikeAxesEventData(plotNum,visible);
+         evtData = nigeLab.evt.spikeAxesClicked(plotNum,visible);
          notify(obj,'SpikeAxesSelected',evtData);
                   
       end
@@ -647,7 +653,7 @@ classdef SpikeImage < handle
          set(obj.Figure,'Pointer','arrow');
          
          
-         evtData = nigeLab.evt.assignmentEventData(subsetIndex(iMove),...
+         evtData = nigeLab.evt.assignClus(subsetIndex(iMove),...
             obj.Spikes.CurClass,thisClass);
          obj.UpdateClusterAssignments(nan,evtData);
       end
@@ -740,7 +746,7 @@ classdef SpikeImage < handle
          
          subs = 1:numel(obj.Spikes.Class);
          class = obj.Spikes.Class;
-         evtData = nigeLab.evt.assignmentEventData(subs,class);
+         evtData = nigeLab.evt.assignClus(subs,class);
          
          notify(obj,'ClassAssigned',evtData);
       end

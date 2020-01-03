@@ -1,5 +1,5 @@
 function [TDTNaming] = TDT()
-%% defaults.TDT  Initialize TDT custom variables names
+%TDT  Initialize TDT custom variables names
 
 %% Waveform, stream
 % specify here all the streams name you want to extract from the TDT datafile

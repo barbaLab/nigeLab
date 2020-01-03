@@ -1,12 +1,41 @@
 classdef remoteMonitor < handle
-   %REMOTEMONITOR  Class to monitor changes in remote jobs and issue an
-   %               event ('jobCompleted') whenever the job reaches its
-   %               'Complete
+   %REMOTEMONITOR   Monitor changes in ongoing jobs and update visual cues
    %
-   %  monitorObj = nigeLab.libs.remoteMonitor();  Goes in current figure
-   %  monitorObj = nigeLab.libs.remoteMonitor(nigelPanelObj);
+   %  This class is an "intermediate" between any interface that uses the
+   %  `nigeLab.libs.nigelProgress` progress bars and the actual queueing of
+   %  the jobs that is tracked by the bars indicating job progress. When a
+   %  given job is completed, it issues the `JobCompleted` event and
+   %  associated `nigeLab.libs.jobCompleted` event.EventData so that the
+   %  correct bar can be appropriately updated. It also makes sure that
+   %  bars are correctly created and destroyed.
+   %  
+   %  REMOTEMONITOR Properties:
+   %     qPanel  --  nigeLab.libs.nigelPanel (container for "queue" panel)
    %
-   %  nigelPanelObj  --  A uipanel, nigeLab.libs.nigelPanel, or figure
+   %     bars  -- nigeLab.libs.nigelProgress (array of "progress" bars)
+   %
+   %     listeners  --  event.listener  (array of listener handles)
+   %
+   %     runningJobs  --  Number of currently-running jobs
+   %        * Used when "starting" a new bar to give it the correct
+   %          position in the visual queue, or when a job is finished to
+   %          make sure that jobs all "slide up" correctly if the bar is
+   %          hidden by the user.
+   %
+   %     pars  --  Parameters struct
+   %
+   %     delim  --  Delimiter for parsing job tags (usually '||')
+   %
+   %     tankObj  --  Handle to `nigeLab.Tank` Tank object
+   %
+   %  REMOTEMONITOR Events:
+   %     JobCompleted  --  Event issued when progress bar hits 100%
+   %        Associated event.EventData class is `nigeLab.evt.jobCompleted`
+   %
+   %  REMOTEMONITOR Methods:
+   %     remoteMonitor  -- Constructor for object to monitor progress bars
+   %      >> monitorObj = nigeLab.libs.remoteMonitor();  
+   %      >> monitorObj = nigeLab.libs.remoteMonitor(nigelPanelObj);
    
    properties
       qPanel   nigeLab.libs.nigelPanel     % Graphics container for "queue" panel
@@ -22,16 +51,13 @@ classdef remoteMonitor < handle
    end
    
    events
-      jobCompleted  % Event issued when progress bar hits 100%
+      JobCompleted  % Event issued when progress bar hits 100%
    end
    
    methods (Access = {?nigeLab.libs.DashBoard,?timer})
       % Class constructor for nigeLab.libs.remoteMonitor object handle
       function monitorObj = remoteMonitor(tankObj,nigelPanelObj)
-         %REMOTEMONITOR  Class to monitor changes in remote jobs and issue 
-         %               an event ('jobCompleted') whenever the job reaches
-         %               its 'Complete' state (parallel.Task.State ==
-         %               'Complete')
+         %REMOTEMONITOR   Constructor for object to monitor progress bars
          %
          %  monitorObj = nigeLab.libs.remoteMonitor(nigelPanelObj);
          %
