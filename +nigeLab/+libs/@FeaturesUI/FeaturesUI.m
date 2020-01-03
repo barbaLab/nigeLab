@@ -503,7 +503,7 @@ classdef FeaturesUI < handle
          end
          iMove = unique(iMove);
          
-         evtData = nigeLab.evt.assignmentEventData(iMove,obj.CurClass);
+         evtData = nigeLab.evt.assignClus(iMove,obj.CurClass);
          notify(obj,'ClassAssigned',evtData);
          set(obj.Figure,'Pointer','arrow');
       end

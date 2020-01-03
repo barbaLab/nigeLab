@@ -7,25 +7,38 @@ classdef  (ConstructOnLoad) splitCompleted < event.EventData
    %  using the `nigeLab.libs.splitMultiAnimalsUI` 
    %
    %  SPLITCOMPLETED Properties:
-   %     nigelObj  -  An array of `nigelObjects` such as `Block`
+   %     obj  --  An array of `nigelObjects` such as `Block`
    %        It should contain all the `Block` and `Animal` handles that
    %        will be split by separating the corresponding sub-elements
    %        (such as individual Raw Channels files for example) to the
    %        correctly-associated `Block`
+   %
+   %     type  --  {'Block', 'Animal', or 'Tank'} (type of nigelObj)
+   %
+   %     n  --  Number of nigelObjects in array
+   %
+   %  SPLITCOMPLETED Methods:
+   %     splitCompleted  --  Constructor for 'multiAnimals' split eventdata
+   %        evt = nigeLab.evt.splitCompleted(nigelObjArray);
     
-   properties
-      nigelObj  % An array of `nigelObjects`
+   properties (GetAccess = public, SetAccess = immutable)
+      nigelObj         % An array of `nigelObjects`
+      type    char     % Type of `nigelObject`
+      n       double   % Number of nigelObjects in array
    end
    
-   methods
-      function evtData = splitCompleted(nigelObj)
+   methods (Access = public)
+      function evt = splitCompleted(nigelObj)
       % SPLITCOMPLETED Event class to notify the DashBoard and any other
       %                objects involved in splitting a "multi-animal" block
       %
-      %  evtData = nigeLab.evt.splitCompleted(blockObjArray);
-      %  evtData = nigeLab.evt.splitCompleted(animalObjArray);
+      %  evt = nigeLab.evt.splitCompleted(blockObjArray);
+      %  evt = nigeLab.evt.splitCompleted(animalObjArray);
       
-         evtData.nigelObj = nigelObj;   
+         evt.nigelObj = nigelObj;
+         clInfo = strsplit(class(nigelObj),'.');
+         evt.type = clInfo{2};
+         evt.n = numel(nigelObj);
       end
    end
 end

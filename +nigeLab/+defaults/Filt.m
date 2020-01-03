@@ -1,5 +1,5 @@
 function pars = Filt(varargin)
-%% defaults.Filt  Initialize filter parameters for bandpass filter
+%FILT  Initialize filter parameters for bandpass filter
 %
 %  pars = defaults.Filt('NAME',value,...);
 %
@@ -8,13 +8,9 @@ function pars = Filt(varargin)
 %  --------
 %  varargin    :     (Optional) 'NAME', value input argument pairs.
 %
-%                    -> 'FSTOP1' [def: 250 Hz] // 1st stopband frequency
-%
 %                    -> 'FPASS1' [def: 300 Hz] // 1st passband frequency
 %
 %                    -> 'FPASS2' [def: 3000 Hz] // 2nd passband frequency
-%
-%                    -> 'FSTOP2' [def: 3050 Hz] // 2nd stopband frequency
 %
 %                    -> 'ASTOP1' [def: 70 dB] // 1st stopband attenuation
 %
@@ -33,8 +29,6 @@ function pars = Filt(varargin)
 %   OUTPUT
 %  --------
 %    pars      :     Parameters struct with filter parameters.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% DEFAULTS
 % The filtering routine can be specified here.

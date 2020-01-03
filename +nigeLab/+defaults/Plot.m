@@ -2,8 +2,6 @@ function pars = Plot()
 %% PLOT   Template for initializing parameters for plotting data
 %
 %   pars = nigeLab.defaults.Plot;
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
 %%
 pars = struct;

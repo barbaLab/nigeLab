@@ -3,24 +3,30 @@ classdef (ConstructOnLoad) treeSelectionChanged < event.EventData
 %                       selection has changed in Tank/Animal/Block tree of
 %                       nigeLab.libs.DashBoard
 %
-%  evt = nigeLab.evt.treeSelectionChanged(block,animal);
+%  This is issued with the `TreeSelectionChanged` notification of
+%  `nigeLab.libs.DashBoard` any time the `nigeLab.libs.DashBoard.Tree`
+%  uiw.widgets.Tree object is clicked and the selection (highlighted nodes,
+%  which correspond to the currently-selected `nigeLab.Block` objects) is
+%  changed.
 %
 %  TREESELECTIONCHANGED Methods:
-%     treeSelectionChanged  -  Class constructor
+%     treeSelectionChanged  --  Class constructor
+%
+%     initAll  --  (Private) helper method to assign ALL blocks in tank
 %
 %  TREESELECTIONCHANGED Properties:
-%     Animal - nigeLab.Animal scalar or array of animals in this selection
+%     Animal -- nigeLab.Animal scalar or array of animals in this selection
 %
-%     Block - nigeLab.Block scalar or array of blocks in this selection
+%     Block -- nigeLab.Block scalar or array of blocks in this selection
 %
-%     Tank - nigeLab.Tank scalar; hierarchical top-level container
+%     Tank -- nigeLab.Tank scalar; hierarchical top-level container
 %     
 %     SelectionIndex - [animalIndex, blockIndex] 2-column matrix that
 %        indexes .Tank. i.e. 
 %        >> evt.Block = evt.Tank{evt.SelectionIndex}; % or
 %        >> evt.Animal = evt.Tank{evt.SelectionIndex(:,1)};
 
-   properties
+   properties (GetAccess = public, SetAccess = private)
       Animal  nigeLab.Animal % Animal or array of animals in this selection
       Block   nigeLab.Block  % Block or array of blocks in this selection
       Tank    nigeLab.Tank   % Tank associated with this selection
@@ -29,9 +35,7 @@ classdef (ConstructOnLoad) treeSelectionChanged < event.EventData
 
    methods (Access = public)
       function evt = treeSelectionChanged(tankObj,selectionIndex)
-         %TREESELECTIONCHANGED   Event for notifying listeners that current
-         %                       selection has changed in Tank/Animal/Block
-         %                       tree of nigeLab.libs.DashBoard
+         %TREESELECTIONCHANGED Constructor for tree selection changed event
          %
          %  tankObj = nigeLab.Tank();
          %  evt = nigeLab.evt.treeSelectionChanged(tankObj,selectionIndex);

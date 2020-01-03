@@ -1,9 +1,9 @@
-classdef (ConstructOnLoad) statusChangedEventData < event.EventData
-   % STATUSCHANGEDEVENTDATA   Event data that is issued by
-   %                          nigeLab.Block/updateStatus when the Status of
-   %                          a particular field is changed.
+classdef (ConstructOnLoad) statusChanged < event.EventData
+   % STATUSCHANGED   Event data that is issued by 
+   %                 nigeLab.Block/updateStatus when the Status of
+   %                 a particular field is changed.
    %
-   %  STATUSCHANGEDEVENTDATA  Properties:
+   %  STATUSCHANGED Properties:
    %     field - (char) - 'Raw' or 'Spikes' etc
    %
    %     fieldType - (char) - 'Channels' or 'Streams' etc
@@ -17,6 +17,12 @@ classdef (ConstructOnLoad) statusChangedEventData < event.EventData
    %        this might be [1,3,5] for the first, third, and fifth channels
    %        in the array that could correspond to 'A-022', 'A-005', and
    %        'B-027' or something like that.
+   %
+   %  STATUSCHANGED Methods:
+   %     
+   %     statusChanged  --  Status changed event data class constructor
+   %        evt = nigeLab.evt.statusChanged('fieldName',fieldType,...
+   %           key,true,channelIndex);
    
    properties (Access = public)
       field           char    % 'Raw' or 'Spikes' etc.
@@ -27,12 +33,12 @@ classdef (ConstructOnLoad) statusChangedEventData < event.EventData
    end
    
    methods (Access = public)
-      function evt = statusChangedEventData(field,fieldType,key,status,index)
-         % STATUSCHANGEDEVENTDATA   Event data that is issued by
+      function evt = statusChanged(field,fieldType,key,status,index)
+         % STATUSCHANGED   Event data that is issued by
          %                          nigeLab.Block/updateStatus when the 
          %                          Status of a particular field is changed
          %
-         %  evt = nigeLab.evt.statusChangedEventData(field,fieldType,key);
+         %  evt = nigeLab.evt.statusChanged(field,fieldType,key);
          %  --> Creates event data that can be passed via `notify` during a
          %      'StatusChanged' event of nigeLab.Block
          %
@@ -43,7 +49,7 @@ classdef (ConstructOnLoad) statusChangedEventData < event.EventData
          %  blockObj.updateStatus('fieldName',channelIndex,true);
          %  ...
          %  key = blockObj.getKey();
-         %  evt = nigeLab.evt.statusChangedEventData('fieldName',...
+         %  evt = nigeLab.evt.statusChanged('fieldName',...
          %           fieldType,key,true,channelIndex);
          %  notify(blockObj,'StatusChanged',evt);
          

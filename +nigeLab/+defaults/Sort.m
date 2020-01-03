@@ -1,11 +1,9 @@
 function pars = Sort()
-%% SORT      Template for initializing params for Spike Sorting UI
+%SORT      Template for initializing params for Spike Sorting UI
 %
 %   pars = nigeLab.defaults.Sort;
-%
-% By: MAECI 2018 collaboration (MM, FB)
 
-%% Defaults for SORT parameters
+% Defaults for SORT parameters
 pars = struct;                   % carries all parameter variables
 
 % Defaults for UI usability

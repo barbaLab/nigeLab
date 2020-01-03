@@ -1,9 +1,7 @@
 function pars = Sync()
-%% SYNC      Template for initializing parameters related to experiment trigger synchronization
+%SYNC      Template for initializing parameters related to experiment trigger synchronization
 %
 %   pars = nigeLab.defaults.Sync;
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
 %%
 pars = struct;

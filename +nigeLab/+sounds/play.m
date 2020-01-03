@@ -1,5 +1,5 @@
 function play(soundName,speedFactor)
-%% PLAY  Play the sound corresponding to [soundName '.mat']
+%PLAY  Play the sound corresponding to [soundName '.mat']
 %
 %  nigeLab.sounds.play(); % default is 'alert' sound
 %  nigeLab.sounds.play('alert');
@@ -9,8 +9,6 @@ function play(soundName,speedFactor)
 %  Sound file must contain 'sfx' variable which is the 1xnSamples audio 
 %  (double) waveform, as well as 'fs' variable, which is the (double
 %  scalar) sampling frequency.
-%
-% By: Max Murphy  v1.0  2019-07-09   Original version (R2017a)
 
 if nargin < 1
    soundName = 'alert';

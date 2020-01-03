@@ -299,7 +299,7 @@ classdef DashBoard < handle
          lh = [lh, addlistener(obj.Tank,'StatusChanged',...
             @(~,~)obj.updateStatusTable)];
          lh = [lh, addlistener(obj.remoteMonitor,...
-            'jobCompleted',@obj.refreshStats)];
+            'JobCompleted',@obj.refreshStats)];
          lh = [lh, addlistener(obj.splitMultiAnimalsUI,...
             'splitCompleted',@(~,e)obj.addToTree(e.nigelObj))];
          
@@ -1096,13 +1096,13 @@ classdef DashBoard < handle
          %
          %  Example usage:
          %  rm = nigeLab.libs.remoteMonitor;
-         %  lh = addlistener(rm,'jobCompleted',@obj.refreshStats);
+         %  lh = addlistener(rm,'JobCompleted',@obj.refreshStats);
          %
          %  obj  --  nigeLab.libs.DashBoard object
          %  ~  --  "Source"  (unused; nigeLab.libs.remoteMonitor object)
          %  evt  --  "EventData" associated with the remoteMonitor
-         %           'jobCompleted' event, which is a
-         %           nigeLab.evt.jobCompletedEventData custom event
+         %           'JobCompleted' event, which is a
+         %           nigeLab.evt.jobCompleted custom event
          
          idx = evt.BlockSelectionIndex;
          obj.Tank.Animals(idx(1)).Blocks(idx(2)).reload;

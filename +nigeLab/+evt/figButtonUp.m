@@ -1,13 +1,11 @@
-classdef (ConstructOnLoad) figButtonUpEventData < event.EventData
-% FIGBUTTONUPEVENTDATA  Event for notifying listeners of "button
-%                       up" from click type.
+classdef (ConstructOnLoad) figButtonUp < event.EventData
+% FIGBUTTONUP  Event for notifying listeners of "buttonup" from click type
 %
-%  evt = nigeLab.evt.figButtonUpEventData(SelectionType);
+%  FIGBUTTONUP Methods:
+%     figButtonUp  -  Class constructor
+%        evt = nigeLab.evt.figButtonUp(SelectionType);
 %
-%  FIGBUTTONUPEVENTDATA Methods:
-%     figButtonUpEventData  -  Class constructor
-%
-%  FIGBUTTONUPEVENTDATA Properties:
+%  FIGBUTTONUP Properties:
 %     Name  -  'left', 'right', 'double', 'both', or 'unknown'
 %     
 %     SelectionType - 'normal', 'alt', 'open', or 'extend'
@@ -18,11 +16,11 @@ classdef (ConstructOnLoad) figButtonUpEventData < event.EventData
    end
 
    methods
-      function evt = figButtonUpEventData(SelectionType)
-         % FIGBUTTONUPEVENTDATA  Event for notifying listeners of "button
+      function evt = figButtonUp(SelectionType)
+         % FIGBUTTONUP  Event for notifying listeners of "button
          %                       up" from click type.
          %
-         %  evt = nigeLab.evt.figButtonUpEventData(SelectionType);
+         %  evt = nigeLab.evt.figButtonUp(SelectionType);
          %
          %  evt.Name: {'left','right','double','both', or 'unknown'}
          %  evt.SelectionType: {'normal,'alt','open','extend'};

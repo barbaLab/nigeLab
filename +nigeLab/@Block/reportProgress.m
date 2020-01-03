@@ -47,7 +47,7 @@ switch lower(notification_mode)
       % Only do the event notification in Serial mode
       if ~nigeLab.utils.checkForWorker(blockObj)
          status = str_expr;
-         evtData = nigeLab.evt.progressChangedEventData(status,pct);
+         evtData = nigeLab.evt.progressChanged(status,pct);
          notify(blockObj,'ProgressChanged',evtData);
          
       end

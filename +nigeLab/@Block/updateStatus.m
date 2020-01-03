@@ -170,7 +170,7 @@ end
       
       fieldType = Block.getFieldType(field);
       pubKey = Block.getKey();
-      evt = nigeLab.evt.statusChangedEventData(field,fieldType,pubKey,...
+      evt = nigeLab.evt.statusChanged(field,fieldType,pubKey,...
          status,channel);
       notify(Block,'StatusChanged',evt);
    end
