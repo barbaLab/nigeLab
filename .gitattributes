@@ -1,4 +1,3 @@
-*.mat filter=lfs diff=lfs merge=lfs -binary
 *.svg filter=lfs diff=lfs merge=lfs -binary
 *.png filter=lfs diff=lfs merge=lfs -binary
 *.jpg filter=lfs diff=lfs merge=lfs -binary
