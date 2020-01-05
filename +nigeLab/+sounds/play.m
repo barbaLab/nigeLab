@@ -29,7 +29,11 @@ if ~exist(soundName,'file')
    return;
 end
 
-in = load(soundName,'sfx','fs');
-soundsc(in.sfx,in.fs * speedFactor);
+try
+   in = load(soundName,'sfx','fs');
+   soundsc(in.sfx,in.fs * speedFactor);
+catch
+   % do nothing
+end
 
 end

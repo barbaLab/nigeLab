@@ -351,7 +351,7 @@ classdef behaviorInfo < handle
             if isempty(info)
                obj.hashID = nigeLab.utils.makeHash();
                todays_date = nigeLab.utils.getNigelDate();
-               user = obj.Block.Pars.Video.User;
+               user = obj.Block.User;
                prog = obj.checkProgress;
                info = table({user},{todays_date},{prog},tic,0,...
                   'VariableNames',{'User','Date','Status','Tic','Toc'},...

@@ -14,16 +14,15 @@ function flag = linkChannelsField(blockObj,field,fileType)
 %%
 flag = false;
 % updateFlag is for the total number of channels
-updateFlag = false(1,blockObj.NumChannels);
+updateFlag = false(size(blockObj.Mask));
 str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 blockObj.reportProgress(str,0);
 
-
-counter = 0;
-
 % Only iterate on the channels we care about (don't update status for
-% others, either). 
+% others, either).
+curCh = 0;
 for iCh = blockObj.Mask
+   curCh = curCh + 1;
    % Make sure block "key" is linked
    if ~isfield(blockObj.Channels(iCh),'Key')
       blockObj.Channels(iCh).Key = blockObj.getKey();
@@ -41,29 +40,27 @@ for iCh = blockObj.Mask
    if ~exist(fullfile(fName),'file')
       flag = true;
    else
-      updateFlag(iCh) = true;
+      updateFlag(curCh) = true;
       switch fileType
          case 'Event' % If it's a 'spikes' file
             try % Channels can also have channel events
                blockObj.Channels(iCh).(field) = ...
                   nigeLab.libs.DiskData(fileType,fName);
             catch % If spikes exist but in "bad format", fix that
-               updateFlag(iCh) = blockObj.checkSpikeFile(fName);
+               updateFlag(curCh) = blockObj.checkSpikeFile(fName);
             end
          otherwise
             % Each element of Channels will have different kinds of data
             % (e.g. 'Raw', 'Filt', etc...)
             blockObj.Channels(iCh).(field) = ...
                nigeLab.libs.DiskData(fileType,fName);
-            
       end
    end
    
-   counter = counter + 1;
-   pct = 100 * (counter / numel(blockObj.Mask));
-   blockObj.updateStatus(field,updateFlag(iCh),iCh);
+   pct = 100 * (curCh / numel(blockObj.Mask));
    blockObj.reportProgress(str,pct,'toWindow','Linking');
 end
+blockObj.updateStatus(field,updateFlag,blockObj.Mask);
 % Only update status of unmasked channels. The other ones shouldn't matter
 % when are looking at 'doAction dependencies' later.
 

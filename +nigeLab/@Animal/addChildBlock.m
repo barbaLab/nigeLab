@@ -34,7 +34,8 @@ switch class(blockPath)
       
    case 'double'
       if isempty(blockPath)
-         blockObj = nigeLab.Block([],animalObj.Paths.SaveLoc);
+         blockObj = nigeLab.Block([],animalObj.Paths.SaveLoc,...
+            'RecLocDefault',animalObj.RecDir);
       end
       
    otherwise

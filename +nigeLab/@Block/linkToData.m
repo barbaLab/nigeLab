@@ -101,7 +101,7 @@ if any(warningRef) && ~suppressWarning
          blockObj.Name,field{warningIdx(ii)});
    end
 end
-
+blockObj.updateStatus('notify'); % Just emits the event in case listeners
 blockObj.save;
 flag = true;
 

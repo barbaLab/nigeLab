@@ -21,7 +21,7 @@ classdef nigelProgress < handle
 %     Children - Cell array of Children objects, which is as follows:
 %                 * prog_axes:        Axes containing progressbar
 %                 * progname_label:   text "label"
-%                 * progbar_patch:    patch that "grows" with progress
+%                 * progbar_rect:     rect that "grows" with progress
 %                 * progpct_label:    text % as bar grows
 %                 * progstatus_label: text status of task
 %                 * progX_btn:        pushbutton uicontrol to cancel
@@ -148,55 +148,71 @@ classdef nigelProgress < handle
          bar.CompleteKey = bar.Tank.Pars.Notifications.CompleteKey;
          
          %% Build Children graphics
-         bar.Children = cell(6,1);
+         bar.Children = cell(7,1);
          bar.Children{1} = axes(bar.Parent, ...
             'Units','Normalized',...
             'Position', [0.025 0.025 0.900 0.950], ...
-            'XLim', [0 1], ...
+            'XLimMode','manual',...
+            'XLim', [-0.1 1.0], ...
+            'YLimMode','manual',...
             'YLim', [0 1], ...
             'Box', 'off', ...
             'ytick', [], ...
             'xtick', [],...
+            'NextPlot','add',...
             'Tag','prog_axes',...
             'Color','none',...
             'XColor','none',...
             'YColor','none');
          
-         bar.Children{3} = patch(bar.Children{1}, ...
-            'XData', [0   0   0   0  ], ...
-            'YData', [0   0   1   1  ],...
-            'FaceColor',nigeLab.defaults.nigelColors(1),...
-            'Tag','progbar_patch');
+         bar.Children{7} = rectangle(bar.Children{1},...
+            'Position',[-0.1 0 0.125 1],...
+            'Curvature',[0.2 0.5],...
+            'FaceColor',nigeLab.defaults.nigelColors('primary'),...
+            'EdgeColor','none',...
+            'Tag','progbar_anchor');
+
+         bar.Children{3} = rectangle(bar.Children{1}, ...
+            'Position', [0   0   1   1  ], ...
+            'Curvature',[0.0 0.0],...
+            'FaceColor',nigeLab.defaults.nigelColors('primary'),...
+            'EdgeColor','none',...
+            'Tag','progbar_rect');
          
          bar.Children{2} = text(bar.Children{1},...
-            0.01, 0.5, name, ...
+            0.05, 0.5, name, ...
             'HorizontalAlignment', 'Left', ...
             'VerticalAlignment','middle',...
             'FontUnits', 'Normalized', ...
-            'FontSize', 0.35,...
+            'FontSize', 0.7,...
             'Color',nigeLab.defaults.nigelColors('onsurface'),...
             'FontName','Droid Sans',...
+            'FontWeight','bold',...
             'BackgroundColor','none',...
             'Tag','progname_label');
          
          bar.Children{4} = text(bar.Children{1},...
-            0.99, 0.5, '0%', ...
+            0.985, 0.5, '0%', ...
             'HorizontalAlignment', 'Right', ...
             'VerticalAlignment','middle',...
             'FontUnits', 'Normalized', ...
-            'FontSize', 0.35,...
+            'FontSize', 0.7,...
+            'FontWeight','bold',...
             'FontName','Droid Sans',...
             'BackgroundColor','none',...
+            'Color',nigeLab.defaults.nigelColors('onprimary'),...
             'Tag','progpct_label');
          
          bar.Children{5} = text(bar.Children{1},...
-            0.52, 0.5, '', ...
-            'HorizontalAlignment', 'Left', ...
+            0.80, 0.5, '', ...
+            'HorizontalAlignment', 'Right', ...
             'VerticalAlignment','middle',...
             'FontUnits', 'Normalized', ...
-            'FontSize', 0.35,...
+            'FontSize', 0.7,...
+            'FontWeight','bold',...
             'FontName','Droid Sans',...
             'BackgroundColor','none',...
+            'Color',nigeLab.defaults.nigelColors('med_grey'),...
             'Tag','progstatus_label');
          
          %%%% Design and plot the cancel button
@@ -244,8 +260,6 @@ classdef nigelProgress < handle
                   bar.job = [];
                end
             end
-         else
-            notify(bar.Block,'MethodCanceled',evt);
          end
       end
       
@@ -317,26 +331,30 @@ classdef nigelProgress < handle
          %  tag  --  char array. can be
          %           * prog_axes:        Axes containing progressbar
          %           * progname_label:   text "label"
-         %           * progbar_patch:    patch that "grows" with progress
+         %           * progbar_rect:     rectangle "grows" with progress
          %           * progpct_label:    text % as bar grows
          %           * progstatus_label: text status of task
          %           * progX_btn:        pushbutton uicontrol to cancel
+         %           * progbar_anchor:   curved rectangle "anchor"
          
          switch lower(tag)
-            case {'prog_axes','axes','a','ax','prog','container'}
+            case {'progbar_axes','prog_axes','axes','a','ax','prog','container'}
                h = bar.Children{1};
-            case {'name','progname_label','progname'}
+            case {'progbar_name','name','progname_label','progname'}
                h = bar.Children{2};
-            case {'progx_btn','btn','x','xbtn'}
+            case {'progbar_x','progx_btn','btn','x','xbtn'}
                h = bar.Children{6};
-            case {'status','progstatus_label','progstatus'}
+            case {'progbar_status','status','progstatus_label','progstatus'}
                h = bar.Children{5};
-            case {'progbar_patch','patch','progbar','bar','progress'}
+            case {'progbar_rect','rect','progrect','patch',...
+                  'progbar','bar','progress','progbar_patch'}
                h = bar.Children{3};
-            case {'progpct_label','pct','progpct'}
+            case {'progbar_label','progpct_label','pct','progpct'}
                h = bar.Children{4};
+            case {'progbar_anchor','anchor','proganchor'}
+               h = bar.Children{7};
             otherwise
-               error(['nigeLab:' mfilename ':tagMismatch'],...
+               error(['nigeLab:' mfilename ':BadChildTag'],...
                   'Could not find Child object for tag: %s',tag);
          end
          
@@ -345,7 +363,7 @@ classdef nigelProgress < handle
             if isprop(h,propName)
                h = h.(propName);
             else
-               error(['nigeLab:' mfilename ':propMismatch'],...
+               error(['nigeLab:' mfilename ':BadPropertyName'],...
                   'Could not find Property (%s) for %s Child Object.',...
                   propName,tag);
             end
@@ -422,42 +440,50 @@ classdef nigelProgress < handle
       end
       
       % Set child object property based on tag
-      function h = setChild(bar,tag,propName,propVal)
+      function h = setChild(bar,tag,varargin)
          % SETCHILD  Set property of child object based on tag
          %
-         %  bar.setChild('tag','propName',propVal);
+         %  bar.setChild('tag','propName1',propVal1,...);
          %
          %  tag  --  char array. can be
          %           * prog_axes:        Axes containing progressbar
          %           * progname_label:   text "label"
-         %           * progbar_patch:    patch that "grows" with progress
+         %           * progbar_rect:     rectangle "grows" with progress
          %           * progpct_label:    text % as bar grows
          %           * progstatus_label: text status of task
          %           * progX_btn:        pushbutton uicontrol to cancel
+         %           * progbar_anchor:   curved rectangle progress "anchor"
          
          switch lower(tag)
-            case {'prog_axes','axes','a','ax','prog','container'}
+            case {'progbar_axes','prog_axes','axes',...
+                  'a','ax','prog','container'}
                h = bar.Children{1};
-            case {'name','progname_label','progname'}
+            case {'progbar_name','name','progname_label','progname'}
                h = bar.Children{2};
-            case {'progx_btn','btn','x','xbtn'}
+            case {'progbar_x','progx_btn','btn','x','xbtn'}
                h = bar.Children{6};
-            case {'status','progstatus_label','progstatus'}
+            case {'progbar_status','status',...
+                  'progstatus_label','progstatus'}
                h = bar.Children{5};
-            case {'progbar_patch','patch','progbar','bar'}
+            case {'progbar_rect','rect','progrect','patch',...
+                  'progbar','bar','progbar_patch'}
                h = bar.Children{3};
-            case {'progpct_label','pct','progpct'}
+            case {'progbar_pct','progpct_label','pct','progpct'}
                h = bar.Children{4};
+            case {'progbar_anchor','anchor','proganchor'}
+               h = bar.Children{7};
             otherwise
-               error(['nigeLab:' mfilename ':tagMismatch'],...
+               error(['nigeLab:' mfilename ':BadChildTag'],...
                   'Could not find Child object for tag: %s',tag);
          end
-         if isprop(h,propName)
-            h.(propName) = propVal;
-         else
-            error(['nigeLab:' mfilename ':propMismatch'],...
-               'Could not find Property (%s) for %s Child Object.',...
-               propName,tag);
+         for iV = 1:2:numel(varargin)
+            if isprop(h,varargin{iV})
+               h.(varargin{iV}) = varargin{iV+1};
+            else
+               error(['nigeLab:' mfilename ':BadPropertyName'],...
+                  'Could not find Property (%s) for %s Child Object.',...
+                  varargin{iV},tag);
+            end
          end
       end
       
@@ -488,6 +514,10 @@ classdef nigelProgress < handle
          else
             return; % Was already running, don't do other stuff
          end
+         bar.setChild('progbar_rect','Curvature',[0 0]);
+         bar.setChild('progbar_anchor',...
+            'Position',[-0.1 0 0.125 1]);
+         drawnow;
          evt = nigeLab.evt.barStarted(bar);
          notify(bar,'StateChanged',evt);
       end
@@ -550,7 +580,7 @@ classdef nigelProgress < handle
             if strcmpi(str,bar.CompleteKey)
                % If on remote, wait for job to finish--it will do indicator
                bar.stopBar();
-               if pct == 100
+               if pct >= 100
                   bar.IsComplete = true;
                else
                   bar.IsComplete = false;
@@ -558,7 +588,7 @@ classdef nigelProgress < handle
             end
          else
             % Otherwise just wait until it hits 100% to indicate complete
-            if pct == 100
+            if pct >= 100
                bar.IsComplete = true;
                bar.indicateCompletion();
                bar.stopBar();
@@ -634,6 +664,7 @@ classdef nigelProgress < handle
          offset = 0.005;
          yNew = 1 - (bar.BarIndex * (h + offset));
          bar.Position(2) = yNew;
+         drawnow;
       end
       
       % LISTENER CALLBACK: Switches bar color depending on remote state
@@ -682,11 +713,11 @@ classdef nigelProgress < handle
          bar.Parent.Visible = bar.Visible;
          switch lower(bar.Visible)
             case 'on'
-               jObj = nigeLab.utils.findjobj(getChild(bar,'X'));
+               jObj = nigeLab.utils.findjobj(getChild(bar,'progbar_x'));
                jObj.setBorder(javax.swing.BorderFactory.createEmptyBorder());
                jObj.setBorderPainted(false);
             case 'off'
-               % nothing specific here
+               % nothing specific
          end
       end
       
@@ -701,7 +732,8 @@ classdef nigelProgress < handle
             bar.Color = nigeLab.defaults.nigelColors(bar.Color);
          end
          
-         bar.setChild('progbar','FaceColor',bar.Color);
+         bar.setChild('progbar_rect','FaceColor',bar.Color);
+         bar.setChild('progbar_anchor','FaceColor',bar.Color);
       end
       
       % LISTENER CALLBACK: Update parent panel position from Position prop
@@ -731,16 +763,17 @@ classdef nigelProgress < handle
          %  addlistener(bar,'Progress','PostSet',@(~,~)bar.updateProgress);
          
          pct = bar.Progress;
-         
-         % Get the offset of the progressbar from the left of the panel
-         xStart = getChild(bar,'progress','XData');
-         xStart = xStart(1);
 
          % Compute how far the bar should be filled based on the percent
-         % completion, accounting for offset from left of panel
-         xStop = xStart + (1-xStart) * (pct/100);
-         bar.setChild('progbar','XData',[xStart, xStop, xStop, xStart]);
-         bar.setChild('pct','String',sprintf('%.3g%%',pct));
+         % completion, assuming start position is 0 and end is 1.
+         xStop = pct/100;
+         if isnan(xStop)
+            xStop = 0;
+         end
+         bar.setChild('progbar_rect','Position',[0, 0, xStop, 1]);
+         bar.setChild('progbar_anchor','Position',[-0.1 0 0.125+0.175*xStop 1]);
+         bar.setChild('progbar_pct','String',sprintf('%.3g%%',pct));
+         bar.setChild('progbar_rect','Curvature',[0.05*xStop 0.5*xStop]);
          drawnow;
          
          bar.IsComplete = pct >= 100;
@@ -761,7 +794,6 @@ classdef nigelProgress < handle
             case {'done','complete','finished','over'}
                % Ensure that it is at 100%
                bar.setState(100,bar.CompleteKey);
-               
             otherwise
                % Do nothing
          end

@@ -34,8 +34,18 @@ classdef nigelButton < handle
 %           string to go into the button. In this case, the fourth input
 %           (fcn) should be provided as a function handle for ButtonDownFcn
    
+   properties (Access = public)
+      SelectedColor    % Color for border change on "selected" highlight
+      HoveredColor     % Color for border change on "rollover" mouse hover
+   end
+
    properties (Access = public,SetObservable = true)
-      Enable = 'on'  % Is the button enabled
+      Enable char = 'on'  % Is the button enabled?
+      FaceColorEnable     % b.Button.FaceColor
+      FaceColorDisable    % Color for face when button disabled
+      FontColorEnable     % b.Label.Color
+      FontColorDisable    % Color for string on button when disabled
+      String char         % String displayed on b.Label
    end
 
    properties (Access = public, SetObservable = false)
@@ -43,10 +53,14 @@ classdef nigelButton < handle
       Fcn_Args    cell         % (Optional) function arguments
    end
    
+   properties (Access = ?nigeLab.utils.Mouse.rollover,SetObservable = true)
+      Hovered char = 'off'    % Does this button have mouse over it?
+   end
+   
    properties (GetAccess = public,SetAccess = private,SetObservable = true)
-      Selected = 'off'   % Is this button currently clicked
+      Selected char = 'off'   % Is this button currently clicked
       Button  matlab.graphics.primitive.Rectangle  % Curved rectangle
-      Label   matlab.graphics.primitive.Text  % Text to display
+      Label   matlab.graphics.primitive.Text       % Text to display
    end
    
    properties (GetAccess = public, SetAccess = immutable)
@@ -129,6 +143,7 @@ classdef nigelButton < handle
          end
          
          % Initialize rest of graphics
+         b.initColors();
          b.buildGraphic(buttonPropPairs,'Button');
          b.buildGraphic(labPropPairs,'Label');
          b.completeGroup();
@@ -238,7 +253,7 @@ classdef nigelButton < handle
          % Figure UserData will be set on Figure ButtonUpFcn
          b.Listener = [b.Listener, addlistener(b.Figure,...
             'UserData','PostSet',...
-            @(~,evt)b.ButtonUpFcn(evt.AffectedObject.UserData))];
+            @(~,evt)b.ButtonUpFcn(evt.AffectedObject))];
          
          % Add listener so text label stays in middle of button
          b.Listener = [b.Listener, ...
@@ -248,8 +263,10 @@ classdef nigelButton < handle
                      
          % Add listeners for SetObservable properties
          b.Listener = [b.Listener, ...
-            addlistener(b,'Enable','PostSet',...
-            @(~,evt)b.setEnable(evt.AffectedObject.Enable))];
+            addlistener(b,'Enable','PostSet',@(~,~)b.setEnable),...
+            addlistener(b,'Selected','PostSet',@(~,~)b.setSelected),...
+            addlistener(b,'Hovered','PostSet',@(~,~)b.setHovered),...
+            addlistener(b,'String','PostSet',@(~,~)b.setString)];
       end
       
       % Button click graphic
@@ -268,20 +285,22 @@ classdef nigelButton < handle
             return;
          end
          
-         b.Border.Visible = 'on';
          b.Selected = 'on';
-         b.Label.FontWeight = 'bold';
       end
       
       % Button click graphic
-      function ButtonUpFcn(b,UserData)
+      function ButtonUpFcn(b,AffectedObject)
          % BUTTONUPFCN  Crude method to show the highlight border of
          %                       button that was clicked on a left-click,
          %                       and then execute current button callback.
          
+         if ~isa(AffectedObject,'matlab.ui.Figure')
+            return;
+         end
+         
          if numel(b) > 1
             for i = 1:numel(b)
-               ButtonUpFcn(b(i),UserData);
+               ButtonUpFcn(b(i),AffectedObject);
             end
             return;
          end
@@ -292,10 +311,9 @@ classdef nigelButton < handle
             return;
          end
          % If button is released, turn off "highlight border"
-         b.Border.Visible = 'off';
          b.Selected = 'off';
-         b.Label.FontWeight = 'normal';
-         switch lower(UserData)
+         drawnow;
+         switch lower(AffectedObject.UserData)
             case 'normal'
                if ~isempty(b.Fcn)
                   feval(b.Fcn,b.Fcn_Args{:});
@@ -333,22 +351,21 @@ classdef nigelButton < handle
                b.Button = rectangle(b.Group,...
                   'Position',[0.15 0.10 0.70 0.275],...
                   'Curvature',[.2 .6],...
-                  'FaceColor',nigeLab.defaults.nigelColors('button'),...
+                  'FaceColor',b.FaceColorEnable,...
                   'EdgeColor','none',...
-                  'LineWidth',3,...
+                  'LineWidth',1,...
                   'Tag','Button',...
-                  'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
+                  'ButtonDownFcn',@(~,~)b.ButtonClickGraphic,...
+                  'UserData',b);
                b.Border = rectangle(b.Group,...
                   'Position',[0.15 0.10 0.70 0.275],...
                   'Curvature',[.2 .6],...
                   'FaceColor','none',...
-                  'EdgeColor',nigeLab.defaults.nigelColors('highlight'),...
-                  'LineWidth',3,...
+                  'EdgeColor','none',...
+                  'LineWidth',1.5,...
                   'Tag','Border',...
-                  'Visible','off',...
-                  'HitTest','off');
+                  'PickableParts','none');
 
-               
             case 'Label'
                % Do not make additional label graphics
                if ~isempty(b.Label)
@@ -360,7 +377,7 @@ classdef nigelButton < handle
                % By default put it in the middle of the button
                pos = b.getCenter(b.Button.Position);
                b.Label = text(b.Group,pos(1),pos(2),'',...
-                  'Color',nigeLab.defaults.nigelColors('onbutton'),...
+                  'Color',b.FontColorEnable,...
                   'FontName','Droid Sans',...
                   'Units','normalized',...
                   'FontUnits','normalized',...
@@ -368,7 +385,7 @@ classdef nigelButton < handle
                   'Tag','Label',...
                   'HorizontalAlignment','center',...
                   'VerticalAlignment','middle',...
-                  'ButtonDownFcn',@(~,~)b.ButtonClickGraphic);
+                  'PickableParts','none');
                
             otherwise
                error(['nigeLab:' mfilename ':badInputType4'],...
@@ -445,6 +462,20 @@ classdef nigelButton < handle
 
       end
       
+      % Initialize the colors for disable/enable conditions
+      function initColors(b)
+         %INITCOLORS  Initializes all color-related properties
+         %
+         %  b.initColors();
+         
+         b.SelectedColor = nigeLab.defaults.nigelColors('highlight');
+         b.HoveredColor = nigeLab.defaults.nigelColors('rollover');
+         b.FaceColorEnable = nigeLab.defaults.nigelColors('enable');
+         b.FaceColorDisable = nigeLab.defaults.nigelColors('disable');
+         b.FontColorEnable = nigeLab.defaults.nigelColors('enabletext');
+         b.FontColorDisable = nigeLab.defaults.nigelColors('disabletext');
+      end
+      
       % Parses "parent figure" from parent
       function fig = parseFigure(b)
          % PARSEFIGURE Parses "parent figure" from parent container
@@ -459,18 +490,75 @@ classdef nigelButton < handle
             @(src,~)set(fig,'UserData',src.SelectionType));
       end
       
-      % Toggles enable status
-      function setEnable(b,enable)
+      % PROPERTY LISTENER CALLBACK: Toggles enable status
+      function setEnable(b)
+         %SETENABLE  Toggle enable status of button
+         %
+         %  addlistener(b,'Enable','PostSet',@(~,~)b.setEnable);
+         %  --> Changes face/font color when enable is toggled
          
-         switch lower(enable)
+         switch b.Enable
             case 'on'
-               b.Button.FaceColor = nigeLab.defaults.nigelColors('enable');
-               b.Label.Color = nigeLab.defaults.nigelColors('enabletext');
+               b.Button.FaceColor = b.FaceColorEnable;
+               b.Label.Color = b.FontColorEnable;
             case 'off'
-               b.Button.FaceColor = nigeLab.defaults.nigelColors('disable');
-               b.Label.Color = nigeLab.defaults.nigelColors('disabletext');
+               b.Button.FaceColor = b.FaceColorDisable;
+               b.Label.Color = b.FontColorDisable;
          end
+         drawnow;
       end
+      
+      % PROPERTY LISTENER CALLBACK: Set 'Hovered' status of button
+      function setHovered(b)
+         %SETHOVERED  Toggle 'Hovered' status of button
+         %
+         %  addlistener(b,'Hovered','PostSet',@(~,~)b.setHovered);
+         
+         if strcmp(b.Selected,'on') || strcmp(b.Enable,'off')
+            return;
+         end
+         
+         switch b.Hovered
+            case 'on'
+               b.Border.EdgeColor = b.HoveredColor;
+               b.Border.LineWidth = 1.5;
+               b.Label.FontWeight = 'normal';
+            case 'off'
+               b.Border.EdgeColor = 'none';
+         end
+         drawnow;
+      end
+      
+      % PROPERTY LISTENER CALLBACK: Set 'Selected' status of button
+      function setSelected(b)
+         %SETHOVERED  Toggle 'Selected' status of button
+         %
+         %  addlistener(b,'Selected','PostSet',@(~,~)b.setSelected);
+         
+         switch b.Selected
+            case 'on'
+               b.Border.EdgeColor = b.SelectedColor;
+               b.Border.LineWidth = 3;
+               b.Label.FontWeight = 'bold';
+            case 'off'
+               if strcmp(b.Hovered,'on')
+                  b.Border.EdgeColor = b.HoveredColor;
+               else
+                  b.Border.EdgeColor = 'none';
+               end
+         end
+         drawnow;
+      end
+
+      % PROPERTY LISTENER CALLBACK: Set 'String' for b.Label
+      function setString(b)
+         %SETSTRING  Set 'String' for b.Label
+         %
+         %  addlistener(b,'String','PostSet',@(~,~)b.setString);
+         
+         b.Label.String = b.String;         
+      end
+      
    end
    
    % STATIC methods

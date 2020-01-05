@@ -21,11 +21,15 @@ function [flag,p] = updateParams(blockObj,paramType)
 %   OUTPUT
 %  --------
 %    flag      :     Flag indicating if setting new path was successful.
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
 %% PARSE INPUT
 flag = false;
+if isempty(blockObj)
+   if nargout > 1
+      p = [];
+   end
+   return;
+end
 ConstructProps = {'Block','Shortcuts','Animal','Tank'};
 PropsToSkip ={'nigelColors','Tempdir'};
 
@@ -40,12 +44,17 @@ tmp = setdiff(allProps,[PropsToSkip,ConstructProps]);
 if isempty(blockObj.Pars)
    blockObj.Pars = struct;
 end
-if nargin < 2 % if not supplied, select from list...
+if nargin < 2 % if not supplied then it is 'loadParams: all'
+   if blockObj.HasParsFile
+      flag = loadParams(blockObj);
+      if ~flag
+         flag = blockObj.updateParams('all'); % Then set from +defaults
+      end
+   end
+   return;
+end
 
-   idx = promptForParamType(tmp);
-   paramType = tmp{idx};
-   
-elseif iscell(paramType) % Use recursion to run if cell array is given
+if iscell(paramType) % Use recursion to run if cell array is given
    N = numel(paramType);
    if N==0
       flag = true;
@@ -78,8 +87,8 @@ else
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(allProps,paramType,3),1,'first');
    if isempty(idx)
-      idx = promptForParamType(allProps);
-      paramType = allProps{idx};
+      error(['nigeLab:' mfilename ':BadParamsField'],...
+         'Bad blockObj.Pars field name (''%s'')\n',paramType);
    else % even if it does, make sure it has correct syntax...
       paramType = allProps{idx};
    end
@@ -87,19 +96,28 @@ else
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
-flag = true;
+if blockObj.HasParsFile
+   flag = loadParams(blockObj,paramType);
+   if ~flag
+      blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
+      nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for BLOCK %s (User: ''%s'')\n',...
+         paramType,blockObj.Name,blockObj.User);
+      blockObj.saveParams(blockObj.User,paramType);
+      flag = true;
+   end
+else
+   blockObj.Pars.(paramType) = nigeLab.defaults.(paramType)();
+   nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for BLOCK %s (User: ''%s'')\n',...
+         paramType,blockObj.Name,blockObj.User);
+   blockObj.saveParams(blockObj.User,paramType);
+   flag = true;
+end
+
 if nargout > 1
    p = blockObj.Pars.(paramType);
 end
-
-%% SUB-FUNCTIONS
-   function idx = promptForParamType(str_options)
-      [~,idx] = nigeLab.utils.uidropdownbox(...
-         'Select parameters to re-load',...
-         'Select parameter TYPE:',...
-         str_options);
-   end
 
 end
 

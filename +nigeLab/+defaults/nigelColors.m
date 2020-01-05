@@ -47,7 +47,7 @@ switch nargin
             nigeLab.utils.cprintf([125, 125, 125]./255,'medium gray\n');
             fprintf(1,'<strong>''light'',''light_grey''</strong> -> ');
             nigeLab.utils.cprintf([220, 220, 220]./255,'light gray\n');
-            fprintf(1,'''onsecondary'',''onbutton'',''onsurface'',''enabletext'',''w'' -> ');
+            fprintf(1,'''onsecondary'',''onbutton'',''onsurface'',''rollover'',''enabletext'',''w'' -> ');
             nigeLab.utils.cprintf([1 1 1],'white\n');
             fprintf(1,'<strong>''r'',''red''</strong> -> ');
             nigeLab.utils.cprintf([240, 25, 25]./255,'red\n');
@@ -75,7 +75,7 @@ switch nargin
             Col = [125, 125, 125]./255;
          case {'light_grey','light_gray','light'}
             Col = [220, 220, 220]./255; % light grey
-         case {'onsecondary','w','white','onbutton','enabletext','onsurface','onsfc',2.1,0.2} 
+         case {'onsecondary','w','white','rollover','onbutton','enabletext','onsurface','onsfc',2.1,0.2} 
             Col = [255, 255, 255]./255; % white
          case {'r','red'}
             Col = [240, 25, 25]./255; % red

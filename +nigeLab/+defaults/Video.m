@@ -183,7 +183,7 @@ pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 % Information about video scoring
 % pars.OutcomeEvent = [];
 pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
-pars.User = 'MM'; % Who did the scoring?
+% pars.User = 'MM'; % Who did the scoring? -- This is set elsewhere
 pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
                             % a given scoring "trial." It is useful to
                             % start at an earlier frame, because the

@@ -25,6 +25,9 @@ function flag = updateParams(tankObj,paramType)
 
 %% PARSE INPUT
 flag = false;
+if isempty(tankObj)
+   return;
+end
 ConstructProps = {'Block','Shortcuts','Animal','Tank'};
 PropsToSkip ={'nigelColors','Tempdir'};
 
@@ -35,25 +38,15 @@ allDefs = cellfun(@(x)x(1:(end-2)),tmp(1).m,'UniformOutput',false);
 % The following properties do not apply or should be set in constructor:
 tmp = setdiff(allDefs,[PropsToSkip,ConstructProps]);
 
-if nargin < 2 % if not supplied, select from list...
-   idx = promptForParamType(tmp);
-   paramType = tmp{idx};
+if nargin < 2 % if not supplied then it is 'loadParams: all'
+   if tankObj.HasParsFile
+      flag = tankObj.loadParams();
+      if ~flag
+         flag = tankObj.updateParams('all'); % Then load all from +defaults
+      end
+   end
+   return;
 elseif iscell(paramType) % Use recursion to run if cell array is given
-   %       flag = false(size(paramType));
-   %       for i = 1:numel(paramType)
-   %          flag(i) = tankObj.updateParams(paramType{i});
-   %       end
-   %       return;
-   % ;) Max do you like it? -- Isn't this less efficient? You have to load the
-   %                           full paramType array into memory each time, so
-   %                           you end up taking up a block that is
-   %                           N+(N/2)*(N-1). The other way, you take a single
-   %                           array element each time, resulting in the
-   %                           initial N elements (from the first instance),
-   %                           then only N more elements (each loop element).
-   %                           So I believe your way is less efficient :P
-   %
-   %                             But I'm not a computer scientist -- MM
    N = numel(paramType);
    if N==0, flag = true; return; end % ends recursion
    paramType = paramType(:); % just in case it wasn't a vector for some reason;
@@ -70,44 +63,56 @@ elseif strcmpi(paramType,'init')
    return;
    
 else
-% otherwise, check if not an appropriate member
-idx = find(strncmpi(allDefs,paramType,3),1,'first');
-if isempty(idx)
-   idx = promptForParamType(allDefs);
-   paramType = allDefs{idx};
-else % even if it does, make sure it has correct syntax...
-   paramType = allDefs{idx};
-end
+   % otherwise, check if not an appropriate member
+   idx = find(strncmpi(allDefs,paramType,3),1,'first');
+   if isempty(idx)
+      error(['nigeLab:' mfilename ':BadParamsField'],...
+         'Bad tankObj.Pars field name (''%s'')\n',paramType);
+   else % even if it does, make sure it has correct syntax...
+      paramType = allDefs{idx};
+   end
 end
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-% at this point paramType should be a simple string
-Pars = nigeLab.defaults.(paramType)();
-F = fields(Pars);
-if isempty(tankObj.Pars)
-   tankObj.Pars = struct;
-end
-for ii=1:numel(F)   % populate Pars struct preserving values
-   tankObj.Pars.(F{ii}) =  Pars.(F{ii}); % for backwards-compatible
-end
-tankObj.Pars.(paramType) = Pars; % For future
-if strcmp(paramType,'Block')
-   tankObj.Fields = Pars.Fields;
-   tankObj.FieldType = Pars.FieldType;
+% at this point paramType should be a simple char array
+if tankObj.HasParsFile
+   flag = tankObj.loadParams(paramType);
+   if ~flag % If could not load
+      applyUpdate(tankObj,paramType); % Then get Pars from defaults
+      nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for TANK %s (User: ''%s'')\n',...
+         paramType,tankObj.Name,tankObj.User);
+      saveParams(tankObj,tankObj.User,paramType); % Save to file
+      flag = true;
+   end
+else
+   applyUpdate(tankObj,paramType);
+   nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for TANK %s (User: ''%s'')\n',...
+         paramType,tankObj.Name,tankObj.User);
+   tankObj.saveParams(tankObj.User,paramType);
+   flag = true;
 end
 
 for i = 1:numel(tankObj.Animals)
    tankObj.Animals(i).updateParams(paramType);
 end
 
-flag = true;
-
-%% SUB-FUNCTIONS
-   function idx = promptForParamType(str_options)
-      [~,idx] = nigeLab.utils.uidropdownbox(...
-         'Select parameters to re-load',...
-         'Select parameter TYPE:',...
-         str_options);
+% Helper function to apply update to specific parameter field
+   function applyUpdate(tankObj,paramType)
+      Pars = nigeLab.defaults.(paramType)();
+      F = fields(Pars);
+      if isempty(tankObj.Pars)
+         tankObj.Pars = struct;
+      end
+      for ii=1:numel(F)   % populate Pars struct preserving values
+         tankObj.Pars.(F{ii}) =  Pars.(F{ii}); % for backwards-compatible
+      end
+      tankObj.Pars.(paramType) = Pars; % For future
+      if strcmp(paramType,'Block')
+         tankObj.Fields = Pars.Fields;
+         tankObj.FieldType = Pars.FieldType;
+      end
    end
 
 end

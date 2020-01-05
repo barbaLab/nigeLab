@@ -7,3 +7,4 @@
 *.rhd filter=lfs diff=lfs merge=lfs -binary
 *.PNG filter=lfs diff=lfs merge=lfs -binary
 *.JPG filter=lfs diff=lfs merge=lfs -binary
+*.bmp filter=lfs diff=lfs merge=lfs -binary

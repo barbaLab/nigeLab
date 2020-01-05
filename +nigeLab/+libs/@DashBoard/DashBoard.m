@@ -22,10 +22,14 @@ classdef DashBoard < handle
    properties(SetAccess = private, GetAccess = public)
       Children       cell                % Cell array of nigelPanels
       remoteMonitor  nigeLab.libs.remoteMonitor  % Monitor remote progress
+   end
+   
+   properties(SetAccess = ?nigeLab.libs.nigelButton, GetAccess = public)
       Tree           uiw.widget.Tree     % widget graphic for datasets as "nodes"
    end
    
    properties(SetAccess = immutable, GetAccess = public)
+      RollOver     
       Tank           nigeLab.Tank        % Tank associated with this DashBoard
    end
    
@@ -135,7 +139,7 @@ classdef DashBoard < handle
          %% Add listeners
          obj.Tree_ContextMenu = obj.initUICMenu();
          obj.Listener = obj.addAllListeners();
-         
+         obj.RollOver = nigeLab.utils.Mouse.rollover(obj.nigelGUI);
       end
       
       % Delete overload to handle child objects
@@ -167,6 +171,13 @@ classdef DashBoard < handle
          if ~isempty(obj.remoteMonitor)
             if isvalid(obj.remoteMonitor)
                delete(obj.remoteMonitor);
+            end
+         end
+         
+         % Delete "rollover" object
+         if ~isempty(obj.RollOver)
+            if isvalid(obj.RollOver)
+               delete(obj.RollOver);
             end
          end
          
@@ -204,6 +215,32 @@ classdef DashBoard < handle
             error(['nigeLab:' mfilename ':badPropertyName'],...
                'Could not match nigelPanel Tag (%s).',tagString);
          end
+      end
+      
+      % Returns the "highest-level" nigel object that is currently selected
+      function nigelObj = getHighestLevelNigelObj(obj)
+         %GETHIGHESTLEVELNIGELOBJ  Return "highest-level" nigel object that
+         %                          is currently selected. If it is Block
+         %                          or Animal, can return Array.
+         %
+         %  nigelObj = obj.getHighestLevelNigelObj(); Result depends on
+         %     current selection highlight on uiw.widget.Tree (obj.Tree)
+         
+         SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+         switch size(SelectedItems,2)
+            case 0 % Tank
+               nigelObj = obj.Tank;
+            case 1 % Animal
+               nigelObj = obj.Tank.Animals(SelectedItems);
+            case 2 % Block
+               tankObj = obj.Tank;
+               nigelObj = tankObj{SelectedItems};
+            otherwise
+               error(['nigeLab:' mfilename ':InvalidNodeUserData'],...
+                  'Invalid UserData: %g columns not allowed',...
+                  size(SelectedItems,2));
+         end
+         
       end
       
       % Return the current item selection
@@ -274,6 +311,24 @@ classdef DashBoard < handle
          end % case
       end % getSelectedItems
       
+      % Update the status table for TANK, ANIMAL, or BLOCK
+      function updateStatusTable(obj,~,~)
+         %UPDATESTATUSTABLE  Update status table for TANK, ANIMAL, or BLOCK
+         %
+         %
+         
+         SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
+         nCol = size(SelectedItems,2);
+         switch  nCol
+            case 0  % tank
+               setTankTable(obj);
+            case 1  % animal
+               setAnimalTable(obj,SelectedItems);
+            case 2  % block
+               setBlockTable(obj,SelectedItems);
+         end
+         
+      end
    end
    
    % PUBLIC
@@ -293,15 +348,18 @@ classdef DashBoard < handle
          %                  handle array that can be deleted on object
          %                  destruction.
          
-         lh = [];
+         % Add a listener that disables the selection UI button if no
+         % multiAnimal is selected
+         lh = addlistener(obj,'SelectionIndex','PostSet',...
+            @(~,~)obj.toggleSplitUIMenuEnable);
          
          % Add listeners for 'Completed' or 'Changed' events
          lh = [lh, addlistener(obj.Tank,'StatusChanged',...
-            @(~,~)obj.updateStatusTable)];
+            @obj.updateStatusTable)];
          lh = [lh, addlistener(obj.remoteMonitor,...
             'JobCompleted',@obj.refreshStats)];
          lh = [lh, addlistener(obj.splitMultiAnimalsUI,...
-            'splitCompleted',@(~,e)obj.addToTree(e.nigelObj))];
+            'SplitCompleted',@(~,e)obj.addToTree(e.nigelObj))];
          
          % Add listeners for Multi-Animals UI tree "pruning"
          for a = obj.Tank.Animals
@@ -415,19 +473,18 @@ classdef DashBoard < handle
          
          % Create array of nigelButtons
          obj.nigelButtons = [obj.nigelButtons, ...
-            nigeLab.libs.nigelButton(p, [0.15 0.10 0.70 0.275],'Add'), ...
-            ... % Add handle to 'ADD' function here               ^
-            nigeLab.libs.nigelButton(p, [0.15 0.40 0.70 0.275],'Save'), ...
-            ... % Add handle to 'SAVE' function here              ^
-            nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Split',...
-            @obj.toggleSplitMultiAnimalsUI,'start')];
-         
-         setButton(obj.nigelButtons,'Add','Enable','off');  % (WIP)
-         setButton(obj.nigelButtons,'Save','Enable','off'); % (WIP)
+            nigeLab.libs.nigelButton(p, [0.15 0.10 0.70 0.275],'Add',...
+               @obj.addNigelObj), ...
+            nigeLab.libs.nigelButton(p, [0.15 0.40 0.70 0.275],'Link Data',...
+               @obj.linkToData), ... 
+            nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Save',...
+               @obj.saveData),...
+            nigeLab.libs.nigelButton(p, [0.15 1.00 0.70 0.275],'Split',...
+               @obj.toggleSplitMultiAnimalsUI,'start')];
+
+         % By default, buttons are enabled
          if obj.SelectionIndex(1,2) == 0
             setButton(obj.nigelButtons,'Split','Enable','off');
-         else
-            setButton(obj.nigelButtons,'Split','Enable','on');
          end
          
          obj.Listener = [obj.Listener, ...
@@ -467,7 +524,7 @@ classdef DashBoard < handle
          str    = {'TreePanel'};
          strSub = {''};
          Tag      = 'TreePanel';
-         Position = [.01,.01,.33,.91];
+         Position = [.01,.01,.23,.91];
          %[left bottom width height]
          obj.Children{1} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
@@ -479,7 +536,7 @@ classdef DashBoard < handle
          str    = {'StatsPanel'};
          strSub = {''};
          Tag      = 'StatsPanel';
-         Position = [.35, .45, .43 ,.47];
+         Position = [.25, .45, .53 ,.47];
          obj.Children{2} = nigeLab.libs.nigelPanel(fig,...
             'String',str,'Tag',Tag,'Position',Position,...
             'PanelColor',nigeLab.defaults.nigelColors('surface'),...
@@ -939,32 +996,7 @@ classdef DashBoard < handle
          else
             setButton(obj.nigelButtons,'Split','Enable','off');
          end
-      end
-      
-      function setUIContextMenuVisibility(obj,src,evt)
-         % SETUICONTEXTMENUVISIBILITY  Set UI Context menu Visibility
-         
-         % SelectedItems = cat(1,src.SelectedNodes.UserData);
-         switch  unique(cellfun(@(x) numel(x),...
-               {src.SelectedNodes.UserData}))
-            case 0  % tank
-               ...
-            case 1  % animal
-            ...
-            case 2  % block
-            ...
-         end
-      
-      % Set menuItems active or inactive
-      menuItems = {src.UIContextMenu.Children.Label};
-      
-      indx = (startsWith(menuItems,'do'));
-      
-      
-      [src.UIContextMenu.Children(indx).Enable] = deal('on');
-      [src.UIContextMenu.Children(~indx).Enable] = deal('off');
-      end
-      
+      end      
    end
    
    % MultiAnimals methods
@@ -1086,6 +1118,86 @@ classdef DashBoard < handle
       
    end
    
+   % BUTTON CALLBACKS
+   methods (Access = ?nigeLab.libs.nigelButton)
+      % LISTENER Callback: Add ANIMAL or BLOCK
+      function addNigelObj(obj,~,~)
+         %ADDNIGELOBJ  Adds animal or block depending on what is selected
+         %
+         %  nigelButton(p, position,'Add',@obj.addNigelObj);
+         
+         nigelObj = getHighestLevelNigelObj(obj);
+         try
+            switch class(nigelObj)
+               case {'nigeLab.Tank','nigeLab.Animal'}
+                  %% Add nigeLab.Animal
+                  obj.Tank.addAnimal();
+               case 'nigeLab.Block'
+                  %% Add nigeLab.Block
+                  [~,a] = obj.getSelectedItems('obj');      
+                  if numel(a) > 1
+                     [~,idx]=nigeLab.utils.uidropdownbox('Animal Selector',...
+                        'Select "parent" Animal',...
+                        {a.Name},true);
+                     if isnan(idx)
+                        error(['nigeLab:' mfilename ':NoSelection'],...
+                           'Multiple Animals for adding Block; must choose.');
+                     else
+                        a = a(idx);
+                     end
+                  end
+                  a.addChildBlock();
+               otherwise
+                  error(['nigeLab:' mfilename ':InvalidNigelObj'],...
+                     'Bad nigelObj class name: %s',class(nigelObj));
+            end
+         catch me
+            strInfo = strsplit(me.identifier,':');
+            if ~strcmpi(strInfo{end},'NoSelection')
+               rethrow(me);
+            else
+               nigeLab.utils.cprintf('Comments','Selection canceled.\n');               
+            end
+         end
+         
+      end
+      
+      % LISTENER Callback: Link to data from button press
+      function linkToData(obj,~,~)
+         %LINKTODATA  Links the data to existing disk files
+         %
+         %  nigelButton(p,position,'Link Data',@obj.linkToData);
+         
+         nigelObj = getHighestLevelNigelObj(obj);
+         for i = 1:numel(nigelObj)
+            linkToData(nigelObj(i));
+         end
+      end
+      
+      % LISTENER Callback: Save data from button press
+      function saveData(obj,~,~)
+         %SAVEDATA  Saves the data to existing disk files
+         %
+         %  nigelButton(p,position,'Link Data',@obj.saveData);
+         
+         nigelObj = getHighestLevelNigelObj(obj);
+         for i = 1:numel(nigelObj)
+            try
+               save(nigelObj(i));
+               nigeLab.utils.cprintf('Comments',...
+                  'Saved %s successfully!\n',nigelObj(i).Name);
+            catch me
+               nigeLab.utils.cprintf('Errors',...
+                  'Could not save %s.\n',nigelObj(i).Name);
+               disp(me);
+               for k = 1:numel(me.stack)
+                  disp(me.stack(k));
+               end
+            end
+         end
+      end
+   end
+   
    % PRIVATE
    % Methods associated with the "Tables"
    methods (Access = private)
@@ -1123,25 +1235,6 @@ classdef DashBoard < handle
          obj.Tank = tankObj;
          delete(obj.Tree);
          obj.Tree = obj.initTankTree();
-      end
-      
-      % Update the status table for TANK, ANIMAL, or BLOCK
-      function updateStatusTable(obj,~)
-         %UPDATESTATUSTABLE  Update status table for TANK, ANIMAL, or BLOCK
-         %
-         %
-         
-         SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-         nCol = size(SelectedItems,2);
-         switch  nCol
-            case 0  % tank
-               setTankTable(obj);
-            case 1  % animal
-               setAnimalTable(obj,SelectedItems);
-            case 2  % block
-               setBlockTable(obj,SelectedItems);
-         end
-         
       end
       
       % Set the "TANK" table -- the display showing processing status
@@ -1369,8 +1462,7 @@ classdef DashBoard < handle
    
    % PRIVATE
    % Methods for UI Context Interactions (mostly callbacks)
-   methods(Access = private)
-      
+   methods(Access = private)      
       % Callback for when user clicks on tree interface
       function uiCMenuClick_doAction(obj,m,~)
          % UICMENUCLICK_DOACTION  Callback for clicks on tree interface

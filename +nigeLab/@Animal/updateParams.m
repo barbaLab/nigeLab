@@ -25,6 +25,9 @@ function flag = updateParams(animalObj,paramType)
 
 %% PARSE INPUT
 flag = false;
+if isempty(animalObj)
+   return;
+end
 ConstructProps = {'Block','Shortcuts','Animal','Tank'};
 PropsToSkip ={'nigelColors','Tempdir'};
 
@@ -35,18 +38,17 @@ allDefs = cellfun(@(x)x(1:(end-2)),tmp(1).m,'UniformOutput',false);
 % The following properties do not apply or should be set in constructor:
 tmp = setdiff(allDefs,[PropsToSkip,ConstructProps]);
 
-if nargin < 2 % if not supplied, select from list...
-   idx = promptForParamType(tmp);
-   paramType = tmp{idx};
+if nargin < 2 % if not supplied then it is 'loadParams: all'
+   if animalObj.HasParsFile
+      flag = loadParams(animalObj);
+   end
+   return;
 elseif iscell(paramType) % Use recursion to run if cell array is given
-   %       flag = false(size(paramType));
-   %       for i = 1:numel(paramType)
-   %          flag(i) = animalObj.updateParams(paramType{i});
-   %       end
-   %       return;
-   % ;) Max do you like it?
    N = numel(paramType);
-   if N==0, flag = true; return; end % ends recursion
+   if N==0
+      flag = true;
+      return;
+   end % ends recursion
    paramType = paramType(:); % just in case it wasn't a vector for some reason;
    flag = animalObj.updateParams(paramType{1}) && animalObj.updateParams(paramType(2:N));
    return;
@@ -59,13 +61,13 @@ elseif strcmpi(paramType,'init')
    paramType = ConstructProps;
    flag = animalObj.updateParams(paramType);
    return;
-
+   
 else
    % otherwise, check if not an appropriate member
    idx = find(strncmpi(allDefs,paramType,3),1,'first');
    if isempty(idx)
-      idx = promptForParamType(allDefs);
-      paramType = allDefs{idx};
+      error(['nigeLab:' mfilename ':BadParamsField'],...
+         'Bad animalObj.Pars field name (''%s'')\n',paramType);
    else % even if it does, make sure it has correct syntax...
       paramType = allDefs{idx};
    end
@@ -73,33 +75,47 @@ end
 
 
 %% LOAD CORRECT CORRESPONDING PARAMETERS
-% at this point paramType should be a simple string
-Pars = nigeLab.defaults.(paramType)();
-F = fields(Pars);
-if isempty(animalObj.Pars)
-   animalObj.Pars = struct;
-end
-for ii=1:numel(F)   % populate Pars struct preserving values
-   animalObj.Pars.(F{ii}) =  Pars.(F{ii}); % old
-end
-animalObj.Pars.(paramType) = Pars; % new
-if strcmp(paramType,'Block')
-   animalObj.Fields = Pars.Fields;
-   animalObj.FieldType = Pars.FieldType;
+% at this point paramType should be a simple char array
+if animalObj.HasParsFile
+   flag = loadParams(animalObj,paramType);
+   if ~flag % If could not load
+      applyUpdate(animalObj,paramType); % Then get Pars from defaults
+      nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for ANIMAL %s (User: ''%s'')\n',...
+         paramType,animalObj.Name,animalObj.User);
+      saveParams(animalObj,animalObj.User,paramType); % Save to file
+      flag = true;
+   end
+   
+else   
+   % Otherwise just apply update as normal
+   applyUpdate(animalObj,paramType);
+   nigeLab.utils.cprintf('Comments',...
+         '\n->\tSaving %s params for ANIMAL %s (User: ''%s'')\n',...
+         paramType,animalObj.Name,animalObj.User);
+   saveParams(animalObj,animalObj.User,paramType);
+   flag = true;
 end
 
 for i = 1:numel(animalObj.Blocks)
    animalObj.Blocks(i).updateParams(paramType);
 end
 
-flag = true;
-
-%% SUB-FUNCTIONS
-   function idx = promptForParamType(str_options)
-      [~,idx] = nigeLab.utils.uidropdownbox(...
-         'Select parameters to re-load',...
-         'Select parameter TYPE:',...
-         str_options);
+% Helper function to apply update to specific parameter field
+   function applyUpdate(animalObj,paramType)
+      Pars = nigeLab.defaults.(paramType)();
+      F = fields(Pars);
+      if isempty(animalObj.Pars)
+         animalObj.Pars = struct;
+      end
+      for ii=1:numel(F)   % populate Pars struct preserving values
+         animalObj.Pars.(F{ii}) =  Pars.(F{ii}); % old
+      end
+      animalObj.Pars.(paramType) = Pars; % new
+      if strcmp(paramType,'Block')
+         animalObj.Fields = Pars.Fields;
+         animalObj.FieldType = Pars.FieldType;
+      end
    end
 
 end

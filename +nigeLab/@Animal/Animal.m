@@ -36,10 +36,10 @@ classdef Animal < matlab.mixin.Copyable
    %% PROPERTIES
    % Can get and set publically; SetObservable is true for these.
    properties (GetAccess = public, SetAccess = public, SetObservable)
-      Name     char          % Animal identification code
-      Probes   struct        % Electrode configuration structure
-      Blocks   nigeLab.Block % Children (nigeLab.Block objects)
-      BlockMask  logical       % Block "Mask" logical vector
+      Name     char           % Animal identification code
+      Blocks   nigeLab.Block  % Children (nigeLab.Block objects)
+      BlockMask  logical      % Block "Mask" logical vector
+      Probes   struct         % Electrode configuration structure
    end
    
    % Cannot set but may want to see it publically. SetObservable.
@@ -47,9 +47,18 @@ classdef Animal < matlab.mixin.Copyable
       Mask       double        % Channel "Mask" vector (for all recordings)
    end
    
+   % Get/Set observable User property
+   properties (SetAccess=private,GetAccess=public,SetObservable,GetObservable)
+      User        char         % Name of current User
+   end
+   
    % More likely to externally reference
    properties (SetAccess = private, GetAccess = public)
+      HasParsFile  logical=false  % Flag --> True if _Pars.mat exists
+      IDFile       char        % Full filename of .nigelAnimal id file
+      IDInfo       struct      % Struct parsed from .nigelAnimal ID file
       Paths        struct      % Path to Animal folder
+      ParamsExpr   char = '%s_Pars.mat'  % Expression for parameters file
       UseParallel  logical     % Flag to indicate if parallel/remote processing can be done on this machine
    end
    
@@ -91,7 +100,7 @@ classdef Animal < matlab.mixin.Copyable
        KeyPair  struct  % Fields are "public" and "private" (hashes)
    end
    
-   events
+   events (ListenAccess = public, NotifyAccess = public)
       StatusChanged  % Issued any time a "child" BLOCK status is changed  
    end
    
@@ -117,7 +126,7 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.updateParams('Animal'); % old possibly
          animalObj.updateParams('all');
          animalObj.updateParams('init');
-         animalObj.addListeners();
+         animalObj.addPropListeners();
          
          % Parse input arguments
          if nargin < 1
@@ -169,7 +178,7 @@ classdef Animal < matlab.mixin.Copyable
             animalObj.RecDir = uigetdir(animalObj.Pars.DefaultRecLoc,...
                'Select directory with the recordings (Blocks)');
             if animalObj.RecDir == 0
-               error(['nigeLab:' mfilename ':selectionCanceled'],...
+               error(['nigeLab:' mfilename ':NoSelection'],...
                   'No ANIMAL input path selected. Object not created.');
             end
          else
@@ -267,6 +276,47 @@ classdef Animal < matlab.mixin.Copyable
          key = animalObj.KeyPair.(keyType);
       end
       
+      % Return a parameter (making sure Pars fields exist)
+      function varargout = getParams(animalObj,parsField,varargin)
+         %GETPARAMS  Return a parameter (making sure Pars fields exist)
+         %
+         %  val = animalObj.getParams('Sort','Debug');
+         %  --> Returns value of animalObj.Pars.Sort.Debug
+         %  --> If field doesn't exist, returns []
+         %
+         %  [val] = getParams(animalObjArray,'Sort','Debug');
+         %  --> Returns array for entire animalObjArray
+         
+         if numel(animalObj) > 1
+            varargout = cell(1,numel(animalObj));
+            for i = 1:numel(animalObj)
+               if numel(varargin)>0
+                  varargout{i} = animalObj(i).getParams(parsField,varargin{:});
+               else
+                  varargout{i}=animalObj(i).getParams(parsField);
+               end
+            end
+            return;
+         end
+         
+         if ~isfield(animalObj.Pars,parsField)
+            varargout = {[]};
+            return;
+         end
+         s = animalObj.Pars.(parsField);
+         
+         for i = 1:numel(varargin)
+            if ~isfield(s,varargin{i})
+               s = [];
+               break;
+            else
+               s = s.(varargin{i});
+            end            
+         end
+         varargout = {s};
+      end
+      
+      
       % Returns Status for each Operation/Block pairing
       function flag = getStatus(animalObj,opField)
          % GETSTATUS  Returns Status Flag for each Operation/Block pairing
@@ -319,6 +369,55 @@ classdef Animal < matlab.mixin.Copyable
          tf = animalObj.IsEmpty || builtin('isempty',animalObj);
       end         
          
+      % Load .Pars from _Pars.mat or load a sub-field .Pars.(parsField)
+      function flag = loadParams(animalObj,parsField)
+         %LOADPARAMS   Load .Pars or .Pars.(parsField) from (user) file
+         %
+         %  animalObj.loadParams();  Load all of animalObj.Pars from file
+         %  animalObj.loadParams(parsField); Load just that field of .Pars
+         
+         if numel(animalObj) > 1
+            flag = true;
+            for i = 1:numel(animalObj)
+               if nargin < 2
+                  flag = flag && animalObj(i).loadParams();
+               else
+                  flag = flag && animalObj(i).loadParams(parsField);
+               end
+            end
+            return;
+         else
+            flag = false;
+         end
+         
+         if nargin < 2
+            if ~animalObj.HasParsFile
+               if ~animalObj.checkParsFile()
+                  warning('No _Pars file for %s (.User: %s)',...
+                     animalObj.Name,animalObj.User);
+                  return;
+               end
+            end
+         else
+            if ~animalObj.checkParsFile(parsField)
+               warning('User (%s) not recognized in _Pars file for %s',...
+                     animalObj.User,animalObj.Name);
+               return;
+            end
+         end
+         fname_params = animalObj.getParsFilename();
+         in = load(fname_params);
+         if isempty(animalObj.Pars)
+            animalObj.Pars = struct;
+         end
+         if nargin < 2
+            animalObj.Pars = in.(animalObj.User);
+         else
+            animalObj.Pars.(parsField) = in.(animalObj.User).(parsField);
+         end
+         flag = true;
+      end
+      
       % Save Animal object
       function save(animalObj)
          % SAVE  Allows saving of the ANIMAL object
@@ -358,19 +457,8 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.Listener = L;
          animalObj.BlockListener = bL;
          
-         % Save "nigelAnimal" file for convenience of identifying this
-         % folder as an "ANIMAL" folder in the future
-         animalIDFile = nigeLab.utils.getUNCPath(...
-                     fullfile(animalObj.Paths.SaveLoc,...
-                              animalObj.Pars.FolderIdentifier));
-         
-         if exist(animalIDFile,'file')==0
-            fid = fopen(animalIDFile,'w');
-            if fid > 0
-               fwrite(fid,['ANIMAL|' animalObj.Name]);
-               fclose(fid);
-            end
-         end
+         animalObj.saveIDFile(); % .nigelAnimal file saver
+
       end
       
       % Overloaded function that is called when ANIMAL is being saved.
@@ -385,46 +473,214 @@ classdef Animal < matlab.mixin.Copyable
          animalObj.Listener(:) = [];
       end
       
-      % Method to set property (for example private property) for all
-      % animal objects in array
-      function setProp(animalObj,propName,propVal)
-         % SETPROP  Sets property of all animals in array to a value
+      % Method to save any parameters as a .mat file for a given User 
+      function saveParams(animalObj,userName,parsField)
+         %SAVEPARAMS  Method to save animalObj.Pars, given animalObj.User
          %
-         %  animalObj.setProp('PropName',propVal);
-
+         %  animalObj.saveParams();  Uses .Pars and .User fields to save
+         %  animalObj.saveParams('user'); Assigns current parameters to
+         %     username 'user' and updates animalObj.User to 'user'.
+         %  animalObj.saveParams('user','Sort'); Only saves 'Sort'
+         %     parameters under the variable 'user' in the _Pars.mat file
+         
          if isempty(animalObj)
             return;
          end
          
-         mc = metaclass(animalObj);
-         propList = {mc.PropertyList.Name};
-         idx = ismember(lower(propList),lower(propName));
-         if sum(idx) < 1
-            nigeLab.utils.cprintf('Comments','No ANIMAL property: %s',...
-               propName);
-            return;
-         elseif sum(idx) > 1
-            idx = ismember(propList,propName);
-            if sum(idx) < 1
-               nigeLab.utils.cprintf('Comments','No ANIMAL property: %s',...
-                  propName);
-               return;
-            end
+         if nargin < 2
+            userName = animalObj.User;
          end
-         propName = propList{idx};
+         
          if numel(animalObj) > 1
             for i = 1:numel(animalObj)
-               setProp(animalObj(i),propName,propVal);
+               if nargin < 3
+                  animalObj(i).saveParams(userName);
+               else
+                  animalObj(i).saveParams(userName,parsField);
+               end
             end
             return;
          end
-         animalObj.(propName) = propVal;         
+         
+         fname_params = animalObj.getParsFilename();
+
+         if exist(fname_params,'file')==0 % If absent, make new file
+            % Do this way to avoid 'eval' for weird names in workspace
+            out = struct;
+         else % otherwise, load old file and save as struct
+            out = load(fname_params);
+         end
+         
+         if nargin < 3
+            out.(userName) = animalObj.Pars; 
+         else
+            out.(userName).(parsField)=animalObj.getParams(parsField);
+         end
+         save(fname_params,'-struct','out');
+         animalObj.HasParsFile = true;
+         
+         if ~isempty(animalObj.Blocks)
+            if nargin < 3
+               saveParams(animalObj.Blocks,userName);
+            else
+               b = animalObj.Blocks(1);
+               if ismember(parsField,fieldnames(b.Pars))
+                  saveParams(animalObj.Blocks,userName,parsField);
+               end
+            end
+         end
+      end
+      
+      % Method to SET PARAMETERS (e.g. for updating saved parameters)
+      function setParams(animalObj,parsField,varargin)
+         % SETPARAMS  "Set" a parameter so that it is updated in diskfile
+         %
+         %  parsField : Char array; member of fieldnames(animalObj.Pars)
+         %
+         %  varargin : Intermediate fields; last element is always value.
+         %
+         %  value = animalObj.Pars.Sort;
+         %  animalObj.setParams('Sort',value);
+         %  --> First input is always name of .Pars field
+         %     --> This call would just update animalObj.Pars.Sort to
+         %         whatever is currently in animalObj.Pars.Sort (and
+         %         overwrite that in the corresponding 'User' variable of
+         %         the _Pars.mat file)
+         %
+         %  value = animalObj.Pars.Video.CameraKey.Index;
+         %  animalObj.setParams('Video','CameraKey','Index',value);
+         %  --> Updates specific field of CameraKey Video param (Index)
+         
+         if numel(varargin) > 5
+            error(['nigeLab:' mfilename ':TooManyStructFields'],...
+               ['Not currently configured for more than 4 fields deep.\n'...
+                'Add to switch ... case']);
+         end
+         
+         if numel(animalObj) > 1
+            for i = 1:numel(animalObj)
+               animalObj(i).setParams(parsField,varargin{:});
+            end
+            return;
+         end
+         
+         val = varargin{end};
+         f = varargin(1:(end-1));
+         if ~isfield(animalObj.Pars,parsField)
+            animalObj.updateParams(parsField);
+         end
+         s = animalObj.Pars.(parsField);
+         
+         % Do error check
+         for i = 1:f
+            if ~isfield(s,f{i})
+               error(['nigeLab:' mfilename ':MissingField'],...
+                  'Missing field (''%s'') of (animalObj.Pars.%s...)\n',...
+                     f{i},parsField);
+            end
+         end
+         
+         % If good, then make dynamic struct expression. Don't expect more
+         % than "4 fields deep" on a struct
+         switch numel(f)
+            case 0
+               animalObj.Pars.(parsField) = val;
+            case 1
+               animalObj.Pars.(parsField).(f{1}) = val;
+            case 2
+               animalObj.Pars.(parsField).(f{1}).(f{2}) = val;
+            case 3
+               animalObj.Pars.(parsField).(f{1}).(f{2}).(f{3}) = val;
+            case 4
+               animalObj.Pars.(parsField).(f{1}).(f{2}).(f{3}).(f{4}) = val;
+            otherwise
+               error(['nigeLab:' mfilename ':TooManyStructFields'],...
+                ['Not currently configured for more than 4 fields deep.\n'...
+                 'Add to switch ... case']);
+               
+         end
+         
+         animalObj.saveParams(animalObj.User,parsField);
+         if ~isempty(animalObj.Blocks)
+            b = animalObj.Blocks(1);
+            if isfield(b.Pars,parsField)
+               setParams(animalObj.Blocks,parsField,varargin{:});
+            end
+         end
+            
+      end
+      
+      % Method to set username
+      function setUser(animalObj,username)
+         %SETUSER  Method to set user currently working on animal
+         %
+         %  animalObj.setUser();      Sets User to animalObj.Pars.User
+         %                            (if it exists) or else random hash
+         %  animalObj.setUser('MM');  Sets User property to 'MM'
+         
+         if numel(animalObj) > 1
+            for i = 1:numel(animalObj)
+               if nargin < 2
+                  setUser(animalObj(i));
+               else
+                  setUser(animalObj(i),username);
+               end
+            end
+            return;
+         end
+         
+         if nargin < 2
+            if isstruct(animalObj.Pars) && ~isempty(animalObj.Pars)
+               if isfield(animalObj.Pars,'User')
+
+                  username = animalObj.Pars.Video.User;
+               else
+                  username = nigeLab.utils.makeHash();
+                  username = username{:}; % Should be char array
+               end
+            end
+         end
+         
+         animalObj.User = username; % Assignment
+         animalObj.checkParsFile();
+         if ~isempty(animalObj.Blocks)
+            setUser(animalObj.Blocks,username);
+         end
+      end
+      
+      % PROPERTY LISTENER CALLBACK: Username string validation
+      function validateUserString(animalObj,eventName)
+         %VALIDATEUSERSTRING  Check animalObj.User is set to valid chars
+         %
+         % addlistener(animalObj,'User','PostSet',...
+         %     @(~,evt)animalObj.ValidateUserString(evt.EventName));
+         % addlistener(animalObj,'User','PreGet',...
+         %     @(~,evt)animalObj.ValidateUserString(evt.EventName));
+         
+         switch eventName
+            case 'PostSet'
+               animalObj.User = strrep(animalObj.User,' ','_');
+               animalObj.User = strrep(animalObj.User,'-','_');
+               animalObj.User = strrep(animalObj.User,'.','_');
+               if regexp(animalObj.User(1),'\d')
+                  error(['nigeLab:' mfilename ':InvalidUsername'],...
+                     'animalObj.User must start with alphabetical element.');
+               end
+               
+            case 'PreGet'
+               if isempty(animalObj.User)
+                  setUser(animalObj);
+               end
+            otherwise
+               % does nothing
+         end
       end
    end
    
    % PUBLIC 
    % Methods that should go in Contents.m eventually
    methods (Access = public)
+      setProp(animalObj,varargin); % Set property for all Animals in array
       [animalObj,idx] = findByKey(animalObjArray,keyStr,keyType); % Find animal from animal array based on public or private hash
       
       table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
@@ -446,14 +702,14 @@ classdef Animal < matlab.mixin.Copyable
       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
       flag = checkParallelCompatibility(animalObj) % Check if parallel can be run
       flag = linkToData(animalObj)                    % Link disk data of all Blocks in Animal
-      flag = splitMultiAnimals(blockObj,tabpanel) % Split recordings that have multiple animals to separate recs
+      flag = splitMultiAnimals(animalObj,varargin) % Split recordings that have multiple animals to separate recs
    end
    
    % PUBLIC
    % "Hidden" methods that shouldn't typically be used
    methods (Access = public, Hidden = true, Static = false)
       clearSpace(animalObj,ask,usrchoice) % Remove files from disk
-      updateNotes(blockObj,str) % Update notes for a recording
+      updateNotes(animalObj,str) % Update notes for a recording
       
       flag = genPaths(animalObj,tankPath) % Generate paths property struct
       flag = findCorrectPath(animalObj,paths)   % Find correct Animal path
@@ -495,56 +751,190 @@ classdef Animal < matlab.mixin.Copyable
    end
    
    % PRIVATE
-   % Used during Initialization
+   % Used during Initialization or internally
    methods (Access = private)
       % Adds listener handles to array property of animalObj
-      function addListeners(animalObj)
-         % ADDLISTENERS  Called on initialization to build PropListener
-         %               property array.
+      function addPropListeners(animalObj)
+         % ADDPROPLISTENERS  Called on initialization to build PropListener
+         %                    property array.
          %
-         %  animalObj.addListeners();
+         %  animalObj.addPropListeners();
          %
          %  --> Creates 2-element vector of property listeners
          
-         animalObj.PropListener(1) = ...
-            addlistener(animalObj,'Name','PostSet',...
-            @(~,~)animalObj.updateAnimalNameInChildBlocks());
+         if isempty(animalObj)
+            return;
+         end
          
-         animalObj.PropListener(2) = ...
-            addlistener(animalObj,'Blocks','PostSet',...
-            @(~,~)animalObj.CheckBlocksForClones());
-         
-         animalObj.PropListener(3) = ...
-            addlistener(animalObj,'BlockMask','PostSet',...
-            @(~,~)animalObj.parseProbes());
+         animalObj.PropListener = ...
+            [addlistener(animalObj,'Name','PostSet',...
+               @(~,~)animalObj.updateAnimalNameInChildBlocks()),...
+             addlistener(animalObj,'Blocks','PostSet',...
+               @(~,~)animalObj.CheckBlocksForClones()),...
+             addlistener(animalObj,'BlockMask','PostSet',...
+               @(~,~)animalObj.parseProbes()),...
+             addlistener(animalObj,'User','PostSet',...
+               @(~,evt)animalObj.validateUserString(evt.EventName)),...
+             addlistener(animalObj,'User','PreGet',...
+               @(~,evt)animalObj.validateUserString(evt.EventName))];
             
       end
       
-            % Initialize .KeyPair property
-      function flag = initKey(animalObj)
-         %INITKEY  Initialize blockObj.KeyPair for use with unique ID later
+      % Check parameters file to set `HasParsFile` flag for this `User`
+      function flag = checkParsFile(animalObj,parsField)
+         %CHECKPARSFILE  Sets .HasParsFile for current .User
          %
-         %  keyPair = blockObj.initKey();
+         %  animalObj.checkParsFile();
+         %  flag = animalObj.checkParsFile(parsField); Returns flag
+         %     indicating whether 'parsField' is a field of .('user')
+         
+         params_fname = animalObj.getParsFilename();
+         if exist(params_fname,'file')==0
+            animalObj.HasParsFile = false;
+            return;
+         end
+         
+         userName = animalObj.User;
+         try
+            m = matfile(params_fname);
+         catch
+            warning('%s may be corrupt',params_fname);
+            animalObj.HasParsFile = false;
+            return;
+         end
+         allUsers = who(m);
+         animalObj.HasParsFile = ismember(userName,allUsers);
+         if nargin > 1
+            if animalObj.HasParsFile
+               flag = isfield(m.(userName),parsField);
+            else
+               flag = false;
+            end
+         else
+            flag = animalObj.HasParsFile;
+         end
+      end
+      
+      % Return full filename to parameters file
+      function f = getParsFilename(animalObj,useUNC)
+         %GETPARSFILENAME  Returns full (UNC) filename to parameters file
+         %
+         %  f = animalObj.getParsFilename(); Return UNC path (def)
+         %  f = animalObj.getParsFilename(false); Return `fullfile` version
+         
+         if nargin < 2
+            useUNC = true;
+         end
+         
+         if useUNC
+            f = nigeLab.utils.getUNCPath(animalObj.Paths.SaveLoc,...
+                   sprintf(animalObj.ParamsExpr,animalObj.Name));
+         else
+            f = fullfile(animalObj.Paths.SaveLoc,...
+               sprintf(animalObj.ParamsExpr,animalObj.Name));
+         end
+      end
+      
+      % Initialize .KeyPair property
+      function flag = initKey(animalObj)
+         %INITKEY  Initialize animalObj.KeyPair for use with unique ID later
+         %
+         %  keyPair = animalObj.initKey();
          
          % Ensure it works if input is array object
          n = numel(animalObj);
          flag = true;
          try
-         if n > 1
-            keyPair = struct('Public',cell(1,n),'Private',cell(1,n));
-            for i = 1:n
-               keyPair(i) = animalObj(i).initKey();
+            if n > 1
+               keyPair = struct('Public',cell(1,n),'Private',cell(1,n));
+               for i = 1:n
+                  keyPair(i) = animalObj(i).initKey();
+               end
+               return;
             end
-            return;
-         end
-         
-         hashPair = nigeLab.utils.makeHash(animalObj,2);
-         keyPair = struct('Public',hashPair(1),...
-                          'Private',hashPair(2));
-         animalObj.KeyPair = keyPair;
+
+            hashPair = nigeLab.utils.makeHash(animalObj,2);
+            keyPair = struct('Public',hashPair(1),...
+                             'Private',hashPair(2));
+            animalObj.KeyPair = keyPair;
          catch er
              flag = false;
              rethrow(er);
+         end
+      end
+      
+      % Load/parse ID file and associated parameters
+      function loadIDFile(animalObj)
+         %LOADIDFILE Load and parse .nigelAnimal file into .IDInfo property
+         %
+         %  animalObj.loadIDFile();
+         
+         if isempty(animalObj)
+            return;
+         end
+         
+         if isempty(animalObj.IDFile)
+            animalObj.IDFile = nigeLab.utils.getUNCPath(...
+               animalObj.Paths.SaveLoc,animalObj.FolderIdentifier);
+         end
+         
+         fid = fopen(animalObj.IDFile,'r+');
+         if fid < 0
+            % "ID" file doesn't exist; make it using current properties
+            animalObj.saveIDFile();
+            return;
+         end
+         C = textscan(fid,'%q %q','Delimiter','|');
+         fclose(fid);
+         propName = C{1};
+         propVal = C{2};
+         if ~strcmpi(propName{1},'ANIMAL')
+            error(['nigeLab:' mfilename ':BadFolderHierarchy'],...
+               'Attempt to load non-Animal from Animal folder.');
+         end
+         
+         mc = metaclass(animalObj);
+         mcp = {mc.PropertyList.Name};
+         animalObj.IDInfo = struct;
+         animalObj.IDInfo.ANIMAL = propVal{1};
+         for i = 2:numel(propName)
+            if ~contains(propName{i},'.')
+               animalObj.IDInfo.(propName{i}) = propVal{i};
+            end
+            if isempty(propVal{i})
+               warning('%s .nigelAnimal value missing.\n',propName{i});
+               continue;
+            end
+            setProp(animalObj,propName{i},propVal{i});
+         end
+         
+         if isempty(animalObj.User)
+            animalObj.saveIDFile(); % Make sure correct file is saved
+         end
+         
+      end
+      
+      % Save small folder identifier file
+      function saveIDFile(animalObj)
+         %SAVEIDFILE  Save small folder identifier file
+         %
+         %  animalObj.saveIDFile();
+         
+         % Save ".nigelAnimal" file for convenience of identifying this
+         % folder as an "ANIMAL" folder in the future
+         if isempty(animalObj.IDFile)
+            animalObj.IDFile = nigeLab.utils.getUNCPath(...
+                 animalObj.Paths.SaveLoc,animalObj.Pars.FolderIdentifier);
+         end
+         
+         fid = fopen(animalObj.IDFile,'w');
+         if fid > 0
+            fprintf(fid,'ANIMAL|%s\n',animalObj.Name);
+            fprintf(fid,'KeyPair.Public|%s\n',animalObj.KeyPair.Public);
+            fprintf(fid,'User|%s', animalObj.User);
+            fclose(fid);
+         else
+            warning('Could not write .nigelAnimal (%s)',animalObj.IDFile);
          end
       end
    end
@@ -649,12 +1039,20 @@ classdef Animal < matlab.mixin.Copyable
          %  Just makes sure that a is correct, and returns it on loading as
          %  b to avoid infinite recursion.
 
+         if isempty(a.KeyPair)
+            a.initKey();
+         end
+         
+         a.addPropListeners();
+         a.loadIDFile();
+         
          if ~isfield(a.Paths,'SaveLoc')
-            a.addListeners();
             a.parseProbes();
             b = a;
             return;
          end
+         a.PropListener(2).Enabled = false; % .Blocks listener
+         a.PropListener(3).Enabled = false; % .BlockMask listener
          
          BL = dir(fullfile(a.Paths.SaveLoc,'*_Block.mat'));
          if isempty(a.Blocks)
@@ -662,14 +1060,19 @@ classdef Animal < matlab.mixin.Copyable
             % during save method and then re-added.
             a.Blocks = nigeLab.Block.Empty([1,numel(BL)]);
             for ii=1:numel(BL)
-               in = load(fullfile(BL(ii).folder,BL(ii).name));
-               a.addChildBlock(in.blockObj,ii);
+               try
+                  in = load(fullfile(BL(ii).folder,BL(ii).name));
+                  a.addChildBlock(in.blockObj,ii);
+               catch
+                  warning('Failed to load %s',BL(ii).name);
+               end
             end
          else
             % Nothing specific, a.Blocks isempty is typical (expected) case
             warning('Animal (%s) was loaded with non-empty Blocks',a.Name);
          end
-         a.addListeners();
+         a.PropListener(2).Enabled = true;
+         a.PropListener(3).Enabled = true;
          b = a;
       end
 

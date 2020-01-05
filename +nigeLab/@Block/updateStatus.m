@@ -101,6 +101,14 @@ switch nargin
             notifyStatus(blockObj,allPossibleOperations{i},false(1,n));
          end
          blockObj.Fields = allPossibleOperations;
+      elseif strcmpi('notify',operation)
+         allOps = reshape(fieldnames(blockObj.Status),1,...
+            numel(fieldnames(blockObj.Status)));
+         for op = allOps           
+            notifyStatus(blockObj,op{:},blockObj.Status.(op{:}));
+         end
+         opOut = [];
+         return;
       else
          error(['nigeLab:' mfilename ':BadInputType3'],...
             'If only "operation" is provided, must be ''init''');
@@ -117,11 +125,11 @@ switch nargin
       if ~isempty(idx)
          opOut = allPossibleOperations{idx};
          blockObj.Status.(opOut) = value;
-         notifyStatus(blockObj,opOut,value);
          % If it hadn't been parsed into Fields property, add it
          if ~ismember(opOut,blockObj.Fields)
             blockObj.Fields = [blockObj.Fields; opOut];
          end
+         notifyStatus(blockObj,opOut,blockObj.Status.(opOut));
       else
          opOut = [];
       end
@@ -133,13 +141,13 @@ switch nargin
             class(operation));
       end
       idx = find(strncmpi(allPossibleOperations,operation,N_CHAR_COMPARE));
-      if ~isempty(idx)
+      if sum(idx)==1
          opOut = allPossibleOperations{idx};
          blockObj.Status.(opOut)(channel) = value;
-         notifyStatus(blockObj,opOut,value,channel);
          if ~ismember(opOut,blockObj.Fields)
             blockObj.Fields = [blockObj.Fields; opOut];
          end
+         notifyStatus(blockObj,opOut,blockObj.Status.(opOut));
       else
          opOut = [];
       end
@@ -149,30 +157,5 @@ switch nargin
       error(['nigeLab:' mfilename ':TooManyInputArgs'],...
          'Too many input arguments (%d; max: 4).',nargin);
 end
-
-% Helper function to notify the block of change in current status
-   function notifyStatus(Block,field,status,channel)
-      %NOTIFYSTATUS  Emits the `StatusChanged` event notification to Block
-      %
-      %  notifyStatus(Block,field,status);
-      %  notifyStatus(Block,field,status,channel);
-      %
-      %  channel : (optional) If not specified, then it is assigned the
-      %                       value 1:numel(status). Otherwise if it is
-      %                       used, it should be the INDEXING used (not the
-      %                       channel number e.g. A-022; if A-022 is the
-      %                       first channel in Channels array, then channel
-      %                       == 1 is correct).
-      
-      if nargin < 4
-         channel = 1:numel(status);
-      end
-      
-      fieldType = Block.getFieldType(field);
-      pubKey = Block.getKey();
-      evt = nigeLab.evt.statusChanged(field,fieldType,pubKey,...
-         status,channel);
-      notify(Block,'StatusChanged',evt);
-   end
 
 end
