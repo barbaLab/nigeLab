@@ -1298,14 +1298,13 @@ classdef DashBoard < matlab.mixin.SetGet
          %
          %  nigelObj  :  Array of currently-selected nigelObj objects
 
-         
-         Fnames = fieldnames(nigelObj.Pars);
+         pars = nigelObj(1).Pars;
+         Fnames = fieldnames(pars);
          Pan = getChild(obj,'ParametersPanel');
          h =  Pan.Children{1};
          delete(h.Children);
          for ii=1:numel(Fnames)
-            ActPars = nigelObj.Pars.(Fnames{ii});
-            
+            ActPars = pars.(Fnames{ii});
             
             dd=struct2cell(ActPars);
             inx=cellfun(@(x) (isnumeric(x) && isscalar(x))||islogical(x)||ischar(x), dd);

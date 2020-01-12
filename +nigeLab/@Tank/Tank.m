@@ -246,6 +246,26 @@ classdef Tank < nigeLab.nigelObj
          end
       end
 
+      % Method in case need to reset flags for GUI
+      function resetGUI(tankObj)
+         %RESETGUI  Method in case it is necessary to reset flags for GUI
+         %
+         %  tankObj.resetGUI();
+         
+         tankObj.GUI = [];
+         tankObj.IsDashOpen = false;
+         tankObj.SortGUI = [];
+         for i = 1:numel(tankObj.Children)
+            tankObj.Children(i).IsDashOpen = false;
+            tankObj.Children(i).GUI = [];
+            tankObj.Children(i).SortGUI = [];
+            for k = 1:numel(tankObj.Children(i).Children)
+               tankObj.Children(i).Children(k).IsDashOpen = false;
+               tankObj.Children(i).Children(k).GUI = [];
+               tankObj.Children(i).Children(k).SortGUI = [];
+            end
+         end
+      end
    end
    
    % STATIC

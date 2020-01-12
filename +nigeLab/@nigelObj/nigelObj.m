@@ -129,10 +129,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    properties (Hidden,Transient,Access=public)
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
-      GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
+      GUIContainer                              % Container for handle to GUI (nigeLab.libs.DashBoard)
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
-      SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
+      SortGUIContainer                          % Container for handle to Spike Sorting GUI (nigeLab.Sort)
    end
    
    % HIDDEN,PUBLIC (Index)
@@ -1820,6 +1820,87 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
+      function [a,idx] = findByKey(objArray,keyStr,keyType)
+         %FINDBYKEY  Returns the animal corresponding to keyStr from array
+         %
+         %  example:
+         %  animalObjArray = tankObj{:}; % Get all animals from tank
+         %  a = findByKey(animalObjArray,keyStr); % Find specific animal
+         %  [a,idx] = findByKey(animalObjArray,keyStr); % Return index into
+         %                                   animal array as well
+         %
+         %  a = findByKey(animalObjArray,privateKey,'Private');
+         %  --> By default, uses 'Public' key to find the Block; this would
+         %      find the associated 'Private' key that matches the contents
+         %      of privateKey.
+         %
+         %  keyStr : Can be char array or cell array. If it's a cell array,
+         %           then b is returned as a row vector with number of
+         %           elements corresponding to number of cell elements.
+         %
+         %  keyType : (optional) Char array. Should be 'Private' or
+         %                          'Public' (default if not specified)
+
+         if nargin < 2
+            error(['nigeLab:' mfilename ':tooFewInputs'],...
+               'Need to provide animal array and hash key at least.');
+         else
+            if isa(keyStr,'nigeLab.nigelObj') || ...
+               isa(keyStr,'nigeLab.Tank') || ...
+               isa(keyStr,'nigeLab.Animal') || ...
+               isa(keyStr,'nigeLab.Block')
+               keyStr = getKey(keyStr);
+            end
+
+            if ~iscell(keyStr)
+               keyStr = {keyStr};
+            end
+         end
+
+         if nargin < 3
+            keyType = 'Public';
+         else
+            if ~ischar(keyType)
+               error(['nigeLab:' mfilename ':badInputType2'],...
+                  'Unexpected class for ''keyType'' (%s): should be char.',...
+                  class(keyType));
+            end
+            % Ensure it is the correct capitalization
+            keyType = lower(keyType);
+            keyType(1) = upper(keyType(1));
+            if ~ismember(keyType,{'Public','Private'})
+               error(['nigeLab:' mfilename ':badKeyType'],...
+                  'keyType must be ''Public'' or ''Private''');
+            end
+         end
+
+         a = nigeLab.(objArray(1).Type).Empty(); % Initialize empty array
+         idx = [];
+
+         % Loop through array of animals, breaking the loop if an actual
+         % animal is found. If animal index is greater than the size of
+         % array, then returns an empty double ( [] )
+         nKeys = numel(keyStr);
+         if nKeys > 1
+            cur = 0;
+            while ((numel(a) < numel(keyStr)) && (cur < nKeys))
+               cur = cur + 1;
+               [a_tmp,idx_tmp] = findByKey(objArray,keyStr(cur),keyType);
+               a = [a,a_tmp];%#ok<*AGROW>
+               idx = [idx, idx_tmp];
+            end
+            return;
+         end
+
+         % If any of the keys match, return the corresponding block.
+         thisKey = getKey(objArray,keyType);
+         idx = find(ismember(thisKey,keyStr),1,'first');
+         if ~isempty(idx)
+            a = objArray(idx);
+         end
+
+      end
+      
       % Returns descriptive status for all fields in nigelObj
       function pars_status_struct = getDescriptivePars(obj)
          %GETDESCRIPTIVEPARS  Returns descriptive status for all pars
@@ -1963,6 +2044,46 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
       end
       
+      % Returns the public hash key for this obj
+      function key = getKey(obj,keyType)
+         %GETKEY  Return the public hash key for this obj
+         %
+         %  publicKey = obj.getKey('Public');
+         %  privateKey = obj.getKey('Private'); Really not useful but
+         %                                            there for future
+         %                                            expansion.
+         %
+         %  key --  .Public field of obj.Key
+         %
+         %  If obj is array, then publicKey is returned as cell array
+         %  of dimensions equivalent to obj.
+         
+         if nargin < 2
+            keyType = 'Public';
+         end
+         if ~ismember(keyType,{'Public','Private','Name'})
+            error(['nigeLab:' mfilename ':BadKeyType'],...
+               'keyType must be ''Public'' or ''Private''');
+         end
+         
+         n = numel(obj);
+         if n > 1
+            key = cell(size(obj));
+            for i = 1:n
+               key{i} = obj(i).getKey();
+            end
+            return;
+         end
+         
+         if isempty(obj.Key)
+            obj.Key = obj.InitKey();
+         elseif ~isfield(obj.Key,keyType)
+            obj.Key = obj.InitKey();
+         end
+         key = obj.Key.(keyType);
+         
+      end
+      
       % Returns a formatted string that prints a link to browse files
       function linkStr = getLink(obj,field,promptString)
          %GETLINK  Returns formatted string for link to Block in cmd window
@@ -2072,6 +2193,47 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          s = inputname(1);
       end
       
+      % Return a parameter (making sure Pars fields exist)
+      function varargout = getParams(obj,parsField,varargin)
+         %GETPARAMS  Return a parameter (making sure Pars fields exist)
+         %
+         %  val = obj.getParams('Sort','Debug');
+         %  --> Returns value of obj.Pars.Sort.Debug
+         %  --> If field doesn't exist, returns []
+         %
+         %  [val] = getParams(objArray,'Sort','Debug');
+         %  --> Returns array for entire objArray
+         
+         varargout = cell(1,nargout);
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               if numel(varargin) > 0
+                  varargout{i} = obj(i).getParams(parsField,varargin{:});
+               else
+                  varargout{i} = obj(i).getParams(parsField);
+               end
+            end
+            return;
+         end
+         
+         if ~isfield(obj.Pars,parsField)
+            varargout{1} = [];
+            return;
+         end
+         s = obj.Pars.(parsField);
+         
+         for i = 1:numel(varargin)
+            if ~isfield(s,varargin{i})
+               obj.updateParams(parsField);
+               s = getParams(obj,parsField);
+               return;
+            else
+               s = s.(varargin{i});
+            end
+         end
+         varargout{1} = s;
+      end
+      
       % Set the save location for
       function flag = getSaveLocation(obj,saveLoc)
          % GETSAVELOCATION   Set the save location for container folder
@@ -2121,87 +2283,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                flag = true;
             end
          end
-      end
-      
-      % Returns the public hash key for this obj
-      function key = getKey(obj,keyType)
-         %GETKEY  Return the public hash key for this obj
-         %
-         %  publicKey = obj.getKey('Public');
-         %  privateKey = obj.getKey('Private'); Really not useful but
-         %                                            there for future
-         %                                            expansion.
-         %
-         %  key --  .Public field of obj.Key
-         %
-         %  If obj is array, then publicKey is returned as cell array
-         %  of dimensions equivalent to obj.
-         
-         if nargin < 2
-            keyType = 'Public';
-         end
-         if ~ismember(keyType,{'Public','Private','Name'})
-            error(['nigeLab:' mfilename ':BadKeyType'],...
-               'keyType must be ''Public'' or ''Private''');
-         end
-         
-         n = numel(obj);
-         if n > 1
-            key = cell(size(obj));
-            for i = 1:n
-               key{i} = obj(i).getKey();
-            end
-            return;
-         end
-         
-         if isempty(obj.Key)
-            obj.Key = obj.InitKey();
-         elseif ~isfield(obj.Key,keyType)
-            obj.Key = obj.InitKey();
-         end
-         key = obj.Key.(keyType);
-         
-      end
-      
-      % Return a parameter (making sure Pars fields exist)
-      function varargout = getParams(obj,parsField,varargin)
-         %GETPARAMS  Return a parameter (making sure Pars fields exist)
-         %
-         %  val = obj.getParams('Sort','Debug');
-         %  --> Returns value of obj.Pars.Sort.Debug
-         %  --> If field doesn't exist, returns []
-         %
-         %  [val] = getParams(objArray,'Sort','Debug');
-         %  --> Returns array for entire objArray
-         
-         varargout = cell(1,nargout);
-         if numel(obj) > 1
-            for i = 1:numel(obj)
-               if numel(varargin) > 0
-                  varargout{i} = obj(i).getParams(parsField,varargin{:});
-               else
-                  varargout{i} = obj(i).getParams(parsField);
-               end
-            end
-            return;
-         end
-         
-         if ~isfield(obj.Pars,parsField)
-            varargout{1} = [];
-            return;
-         end
-         s = obj.Pars.(parsField);
-         
-         for i = 1:numel(varargin)
-            if ~isfield(s,varargin{i})
-               obj.updateParams(parsField);
-               s = getParams(obj,parsField);
-               return;
-            else
-               s = s.(varargin{i});
-            end
-         end
-         varargout{1} = s;
       end
       
       % Connect data saved diskfile to the obj
