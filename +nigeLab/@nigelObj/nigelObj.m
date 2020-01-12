@@ -922,13 +922,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  --> Returns value of obj.Out.Tank if obj is Animal
          %  --> Returns value of obj.Out.Experiment if obj is Tank
 
+         value = '';
          switch obj.Type
             case 'Block'
-               value = obj.Out.Animal;
+               if isfield(obj.Out,'Animal')
+                  value = obj.Out.Animal;
+               end
             case 'Animal'
-               value = obj.Out.Tank;
+               if isfield(obj.Out,'Tank')
+                  value = obj.Out.Tank;
+               end
             case 'Tank'
-               value = obj.Out.Experiment;
+               if isfield(obj.Out,'Experiment')
+                  value = obj.Out.Experiment;
+               end
          end
 
          if isempty(value)
@@ -1080,21 +1087,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          % Do all Dependent variable 'gets' prior to try in case that is
          % where an error occurs:
-         type = obj.Type;
-         switch type
-            case 'Block'
-               fmt = 'Text*';
-               idt = sprintf('\t\t->\t');
-            case 'Animal'
-               fmt = 'Strings*';
-               idt = sprintf('\t->\t');
-            case 'Tank'
-               fmt = 'Comments*';
-               idt = sprintf('->\t');
-            otherwise
-               fmt = 'Cyan*';
-               idt = '?? ';
-         end
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
          fname = obj.File;
          name = obj.ShortFile;
          
@@ -2116,12 +2109,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                if obj.HasParsInit.(thisProp)
                   pars_status_struct.(thisProp) = 'Initialized';
                else
-                  pars_status_struct.(thisProp) = 'Not Initialized';
+                  pars_status_struct.(thisProp) = ...
+                     '<strong>Not Initialized</strong>';
                end
             else
-               pars_status_struct.(thisProp) = 'Out of Scope';
+               pars_status_struct.(thisProp) = 'Missing';
             end
-            if obj.HasParsFile
+            if ~obj.HasParsFile
                pars_status_struct.HasParsFile = '<strong>No</strong>';
             else
                pars_status_struct.HasParsFile = 'Yes';
@@ -2155,6 +2149,41 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                status_struct.(field) = 'Missing';
             end
          end         
+      end
+      
+      % Returns descriptive formatting metacharacters
+      function [fmt,idt,type] = getDescriptiveFormatting(obj)
+         %GETDESCRIPTIVEFORMATTING  Return descriptive formatting
+         %                          metacharacters
+         %
+         %  [fmt,idt,type] = obj.getDescriptiveFormatting();
+         %  fmt : First argument to nigeLab.utils.cprintf
+         %  --> e.g. 'Comments*'
+         %
+         %  idt : Indentation formatted sprintf corresponding to level of
+         %        folder hierarchy (e.g. Block gets 2 indents; tank only
+         %        the arrow, etc...)
+         %  --> e.g. sprintf('-->\t');    [tank]
+         %        vs sprintf('\t\t-->\t') [block]
+         %
+         %  type : Equivalent to obj.Type (just not Dependent, so it isn't
+         %                                   a "get" call)
+         
+         type = obj.Type;
+         switch type
+            case 'Block'
+               fmt = 'Text*';
+               idt = sprintf('\t\t->\t');
+            case 'Animal'
+               fmt = 'Strings*';
+               idt = sprintf('\t->\t');
+            case 'Tank'
+               fmt = 'Comments*';
+               idt = sprintf('->\t');
+            otherwise
+               fmt = 'Cyan*';
+               idt = '?? ';
+         end
       end
       
       % Returns `paths` struct from folder tree heirarchy
@@ -2629,35 +2658,57 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          else
             flag = false;
          end
-         
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
          if nargin < 2
             if ~obj.HasParsFile
                if ~obj.checkParsFile()
-                  nigeLab.utils.cprintf('Text*',...
-                     'No _Pars file for %s (.User: %s)',...
-                     obj.Name,obj.User);
+                  nigeLab.utils.cprintf(fmt,...
+                     '%sNo [%s_Pars] file for %s (.User: %s)',...
+                     idt,type,obj.Name,obj.User);
+                  % Flag returns false
                   return;
                end
             end
          else
             if ~obj.checkParsFile(parsField)
-               nigeLab.utils.cprintf('Text*',...
-                  'No Pars.%s field saved in _Pars file for %s (.User: %s)',...
-                  parsField,obj.Name,obj.User);
+               nigeLab.utils.cprintf(fmt,...
+                  '%sNo Pars.%s field saved in [%s_Pars] file for %s (.User: %s)',...
+                  idt,parsField,type,obj.Name,obj.User);
+               % Flag returns false
                return;
             end
          end
+         [~,~,s_all] = listInitializedParams(obj);
+         
          fname_params = obj.getParsFilename();
-         in = load(fname_params);
+         try
+            in = load(fname_params);
+            flag = true;
+         catch
+            nigeLab.utils.cprintf('Errors*',...
+               '%sFailed to load [%s_Pars] %s\n',idt,type,fname_params);
+            % Flag returns false
+            return;
+         end
          if isempty(obj.Pars)
             obj.Pars = struct;
          end
          if nargin < 2
             obj.Pars = in.(obj.User);
+            F = fieldnames(obj.Pars);
+            for iF = 1:numel(F)
+               f = F{iF};
+               if ismember(f,s_all)
+                  obj.HasParsInit.(f) = true;
+               end
+            end
          else
             obj.Pars.(parsField) = in.(obj.User).(parsField);
+            obj.HasParsInit.(parsField) = true;
+            nigeLab.utils.cprintf(fmt,...
+                  '%sPars.%s loaded from [%s_Pars] file for %s (.User: %s)\n',...
+                  idt,parsField,type,obj.Name,obj.User);
          end
-         flag = true;
       end
       
       % Method to request nigeLab.libs.DashBoard constructor
@@ -2760,16 +2811,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          if nargin < 2
             userName = obj.User;
+         elseif isempty(userName)
+            userName = obj.User;
+         end
+         
+         if nargin < 3
+            parsField = 'all';
+         elseif isempty(parsField)
+            parsField = 'all';
          end
          
          if numel(obj) > 1
             flag = true;
             for i = 1:numel(obj)
-               if nargin < 3
-                  flag = flag && obj(i).saveParams(userName);
-               else
-                  flag = flag && obj(i).saveParams(userName,parsField);
-               end
+               flag = flag && obj(i).saveParams(userName,parsField);
             end
             return;
          end
@@ -2782,19 +2837,31 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             return;
          end
          
-         if exist(fname_params,'file')==0 % If absent, make new file
-            % Do this way to avoid 'eval' for weird names in workspace
-            out = struct;
-            newStructFlag = true;
-         else % otherwise, load old file and save as struct
-            out = load(fname_params);
-            newStructFlag = false;
-         end
+         [~,~,s_all] = listInitializedParams(obj);
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
          
-         if (nargin < 3) || newStructFlag
+         if exist(fname_params,'file')==0
+            out = struct;
             out.(userName) = obj.Pars;
+            nigeLab.utils.cprintf(fmt,...
+               '%sCreating new [%s_Pars] file: %s\n',...
+               idt,type,fname_params);
          else
-            out.(userName).(parsField)=obj.getParams(parsField);
+            out = load(fname_params);
+            nigeLab.utils.cprintf(fmt(1:(end-1)),...
+               '%sMerging [%s_Pars] for : %s\n',idt,type,obj.Name);
+            switch parsField
+               case 'all'
+                  for i = 1:numel(s_all)
+                     if isfield(obj.Pars,s_all{i})
+                        out.(userName).(s_all{i})=obj.Pars.(s_all{i});
+                     end
+                  end
+               case 'reset'
+                  out.(userName)=struct;
+               otherwise
+                  out.(userName).(parsField)=obj.getParams(parsField);
+            end
          end
          save(fname_params,'-struct','out');
          obj.HasParsFile = true;
@@ -3102,6 +3169,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %                             fields in them, if they already have
          %                             'init' flag
          %
+         %                       * 'reset' -- wipe current parameters and
+         %                                   reset using defaults
+         %
          %  forceFromDefaults : [default - false]; if set to true,
          %                       automatically loads `paramType` from 
          %                       `nigelab.defaults.(paramType)`
@@ -3123,22 +3193,21 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             obj.HasParsInit = struct;
          end
          
+         [fmt,idt,type] = obj.getDescriptiveFormatting(); % For saves
          if nargin < 3
             forceFromDefaults = false;
+            directParsFlag = false;
          elseif isstruct(forceFromDefaults)
             p = forceFromDefaults; % Pars struct given directly
-            obj.setParams(paramType,p);
-            flag = true;
-            return;
+            forceFromDefaults = false;
+            directParsFlag = true;
+         else
+            directParsFlag = false;
          end
          
          %
          ConstructProps = {'Block','Shortcuts','Animal','Tank'};
          [~,nonInitProps,allProps] = obj.listInitializedParams();
-         
-         for i = 1:numel(nonInitProps)
-            obj.HasParsInit.(nonInitProps{i}) = false;
-         end
          
          if nargin < 2 % if not supplied then it is 'loadParams: all'
             if obj.HasParsFile
@@ -3165,13 +3234,16 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                ['nigeLab.%s/updateParams expects paramType ' ...
                'to be cell or char'],class(obj));
          end
-         
+
          switch lower(paramType)
             case 'all'
                paramType = allProps;
                flag = obj.updateParams(paramType);
                return;
             case 'init'
+                for i = 1:numel(nonInitProps)
+                  obj.HasParsInit.(nonInitProps{i}) = false;
+               end
                flag = obj.updateParams('all',true);
                return;
             case 'check'
@@ -3197,7 +3269,24 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                flag = isempty(nonInitProps); 
                p = reshape(nonInitProps,1,numel(nonInitProps));
                return;
-               
+
+            case 'reset'
+               obj.Params.Pars = struct;
+               flag = obj.saveParams(obj.User,'reset');
+               if ~isempty(obj.HasParsInit)
+                  f = fieldnames(obj.HasParsInit);
+                  for iF = 1:numel(f)
+                     obj.HasParsInit.(f{iF}) = false;
+                  end
+               end
+               flag = flag && obj.updateParams('all',true);
+%                if numel(obj.Children) > 0
+%                   for i = 1:numel(obj.Children)
+%                      flag = flag && obj.Children(i).updateParams('reset');
+%                   end
+%                end
+               return;
+
             otherwise
                % otherwise, check if not an appropriate member
                idx = find(strcmpi(allProps,paramType),1,'first');
@@ -3212,9 +3301,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          % LOAD CORRECT CORRESPONDING PARAMETERS
          loadExisting = obj.HasParsFile && ...
             obj.HasParsInit.(paramType) && ...
-            ~forceFromDefaults;
-         p = nigeLab.defaults.(paramType)(); % Load parameter defaults
-         
+            ~forceFromDefaults && ~directParsFlag;
+         if directParsFlag
+            % Then p was already given via `forceFromDefaults` arg
+         else
+            p = nigeLab.defaults.(paramType)(); % Load parameter defaults
+         end
          if loadExisting
             flag = loadParams(obj,paramType); % First, try to LOAD file
             if flag % Then we loaded successfully
@@ -3226,47 +3318,93 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                   for i = 1:numel(fmiss)
                      obj.Params.Pars.(paramType).(fmiss{i}) = p.(fmiss{i}); % So add
                   end
-                  nigeLab.utils.cprintf('Text*',...
-                     '%s.Pars.%s was missing these fields:\n',...
-                     obj.Name,paramType);
-                  for i = 1:numel(fmiss)
-                     nigeLab.utils.cprintf('Strings*',...
-                        '\t--> <strong>%s</strong>\n',fmiss{i});
+                  if isempty(obj.HasParsInit)
+                     obj.HasParsInit = struct;
                   end
-                  nigeLab.utils.cprintf('Text',...
-                     '\n\t--> Loaded other parameters successfully\n\n');
-                  nigeLab.utils.cprintf('Comments',...
-                     '\n->\tSaving UPDATED %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                     paramType,upper(obj.Type),obj.Name,obj.User);
-                  obj.saveParams(obj.User,paramType);
+                  obj.HasParsInit.(paramType) = true;
+                  nigeLab.utils.cprintf(fmt,...
+                     '%s%s.Pars.%s was missing these fields:\n',...
+                     idt,obj.Name,paramType);
+                  for i = 1:numel(fmiss)
+                     nigeLab.utils.cprintf(fmt(1:end-1),...
+                        '\t%s<strong>%s</strong>\n',idt,fmiss{i});
+                  end
+                  nigeLab.utils.cprintf(fmt,...
+                     '\n%sLoaded other parameters successfully\n\n',idt);
+                  nigeLab.utils.cprintf(fmt,...
+                     '\n%sSaving UPDATED %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
+                     idt,paramType,upper(type),obj.Name,obj.User);
+                  flag = obj.saveParams(obj.User,paramType);
+                  updateChildrenFlag = true;
+               else
+                  nigeLab.utils.cprintf(fmt(1:end-1),...
+                     '%s%s parameters [%s] up-to-date\n',...
+                     idt,paramType,type);
+                  updateChildrenFlag = false;
                end
             else % Otherwise, couldn't load params from User file
+               updateChildrenFlag = true;
                obj.Params.Pars.(paramType) = p;
-               nigeLab.utils.cprintf('Strings*',...
-                  '\n->\tCould not load saved parameters.\n');
-               nigeLab.utils.cprintf('Comments',...
-                  '-->\tSaving %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                  paramType,upper(obj.Type),obj.Name,obj.User);
-               obj.saveParams(obj.User,paramType);
-               flag = true;
+               nigeLab.utils.cprintf(fmt,...
+                  '\n%sCould not load saved parameters.\n',idt);
+               nigeLab.utils.cprintf(fmt,...
+                  '%sSaving NEW %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
+                  idt,paramType,upper(type),obj.Name,obj.User);
+               if isempty(obj.HasParsInit)
+                  obj.HasParsInit = struct;
+               end
+               obj.HasParsInit.(paramType) = true;
+               flag = obj.saveParams(obj.User,paramType);
             end
-         else
-            % Parameters were loaded directly
-            obj.Params.Pars.(paramType) = nigeLab.defaults.(paramType)();
-            if ~isempty(obj.User) && obj.HasParsInit.(obj.Type)
-               nigeLab.utils.cprintf('Comments',...
-                  '\n->\tSaving %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                  paramType,upper(obj.Type),obj.Name,obj.User);
-               obj.saveParams(obj.User,paramType);
+         else            
+            % Parameters were loaded directly from defaults
+            if directParsFlag
+               updateChildrenFlag = isequal(p,obj.Params.Pars.(paramType));
+               if updateChildrenFlag
+                  obj.Params.Pars.(paramType) = p;
+                  if isempty(obj.HasParsInit)
+                     obj.HasParsInit = struct;
+                  end
+                  obj.HasParsInit.(paramType) = true;
+                  if ~isempty(obj.User)
+                     nigeLab.utils.cprintf(fmt,...
+                        '\n%sSaving PARENT %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
+                        idt,paramType,upper(type),obj.Name,obj.User);
+                     flag = obj.saveParams(obj.User,paramType);
+                  else
+                     flag = true;
+                  end
+               else
+                  nigeLab.utils.cprintf(fmt,...
+                        '\n%s%s params for %s are CURRENT\n',...
+                        idt,paramType,upper(type));
+                  obj.HasParsInit.(paramType) = true;
+                  flag = true;
+               end
+            else
+               updateChildrenFlag = true;
+               obj.Params.Pars.(paramType) = p;
+               if isempty(obj.HasParsInit)
+                  obj.HasParsInit = struct;
+               end
+               obj.HasParsInit.(paramType) = true;
+               if ~isempty(obj.User)
+                  nigeLab.utils.cprintf(fmt,...
+                     '\n%sSaving DEFAULT %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
+                     idt,paramType,upper(type),obj.Name,obj.User);
+                  flag = obj.saveParams(obj.User,paramType);
+               else
+                  flag = true;
+               end
             end
-            obj.HasParsInit.(paramType) = true;
-            flag = true;
          end
          
-         p = obj.Pars.(paramType);
-         for i = 1:numel(obj.Children)
-            if isvalid(obj.Children(i))
-               obj.Children(i).updateParams(paramType,p);
+         if updateChildrenFlag
+            p = obj.Pars.(paramType);
+            for i = 1:numel(obj.Children)
+               if isvalid(obj.Children(i))
+                  flag = flag && obj.Children(i).updateParams(paramType,p);
+               end
             end
          end
          
@@ -3746,7 +3884,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                      obj.HasParsInit = rmfield(obj.HasParsInit,parsField);
                   else
                      if ~obj.HasParsInit.(parsField)
-                        obj.updateParams(parsField,true);
+                        obj.HasParsInit.(parsField) = ...
+                           obj.updateParams(parsField,true);
                      end
                   end
                end
@@ -3914,7 +4053,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          methodInputs = [];
          for i = 1:numel(S)
             if iscell(S(i).subs)
-               if ischar(S(i).subs{1})
+               if isempty(S(i).subs)
+                  continue;
+               elseif ischar(S(i).subs{1})
                   idx = ismember(m,S(i).subs{1});
                   if sum(idx) == 1
                      methodSubs = [methodSubs,i];

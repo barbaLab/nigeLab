@@ -137,17 +137,22 @@ switch S(1).type
                         end
                   end
                else
-                  ans = builtin('subsref',obj,S) %#ok<NOPRT,NOANS>
-                  nigeLab.utils.mtb(ans); %#ok<NOANS>
-                  return;
+                  tmp = builtin('subsref',obj,S);
+                  if isscalar(tmp) && islogical(tmp)
+                     return;
+                  else
+                     ans = tmp %#ok<NOPRT,*NOANS>
+                     nigeLab.utils.mtb(ans); 
+                     return;
+                  end
                end
             else
                builtin('subsref',obj,S);
                return;
             end
          end
-         ans = builtin('subsref',obj,S) %#ok<NOPRT,NOANS>
-         nigeLab.utils.mtb(ans); %#ok<NOANS>
+         ans = builtin('subsref',obj,S) %#ok<NOPRT>
+         nigeLab.utils.mtb(ans);
       end
 end
 end
