@@ -2006,8 +2006,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
+      % Returns nigelObj or key depending if keyStr is key or obj.
       function [a,idx] = findByKey(objArray,keyStr,keyType)
-         %FINDBYKEY  Returns the animal corresponding to keyStr from array
+         %FINDBYKEY  Returns nigelObj corresponding to keyStr from array
          %
          %  example:
          %  animalObjArray = tankObj{:}; % Get all animals from tank
@@ -2771,13 +2772,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          varName = sprintf('%sObj',lower(obj.Type));
          new = load(obj.File,varName);
-         ff=fieldnames(new.obj);
+         ff=fieldnames(new.(varName));
          if strcmpi(field,'all')
             field = ff;
          end
          indx = find(ismember(ff,field))';
          for f=indx
-            obj.(ff{f}) = new.obj.(ff{f});
+            obj.(ff{f}) = new.(varName).(ff{f});
          end
       end
       

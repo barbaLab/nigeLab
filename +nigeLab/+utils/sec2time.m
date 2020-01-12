@@ -18,7 +18,7 @@ function [timeString,t,timeString_long] = sec2time(nSeconds)
 %                             information in numeric format.
 %
 %  timeString_long:     (Optional) String in "long format" :
-%                       '%02g hours, %02g mins, %02g sec'
+%                       '%02g h, %02g m, %02g s'
 
 %% DEFAULTS
 SEC_PER_HR = 3600;
@@ -41,7 +41,7 @@ t.timestamp = timestamp;
 
 timeString = sprintf('%02g:%02g:%02g',t.hrs,t.mins,round(t.secs));
 if nargout > 2
-   timeString_long = sprintf('%02g hours, %02g mins, %02g sec',...
+   timeString_long = sprintf('%02g h, %02g m, %02g s',...
       t.hrs,t.mins,round(t.secs));
 end
 
