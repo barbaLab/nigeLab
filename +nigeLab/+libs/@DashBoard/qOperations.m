@@ -31,10 +31,7 @@ import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
 import nigeLab.utils.findGoodCluster
 
 %%
-% Set indexing to assign to UserData property of Jobs, so that on
-% job completion the corresponding "jobIsRunning" property array
-% element can be updated appropriately.
-
+% Set indexing to assign to UserData property of Jobs
 if nargin < 4
    sel = [1 1];
 end
@@ -43,19 +40,22 @@ end
 % manage Job/Task creation depending on the input target class
 switch class(target)
    case 'nigeLab.Tank'
-      for ii = 1:numel(target.Animals)
-         for ik = 1:target.Animals(ii).getNumBlocks
+      for ii = 1:numel(target.Children)
+         for ik = 1:target.Children(ii).getNumBlocks
             qOperations(obj,operation,...
-               target.Animals(ii).Blocks(ik),[ii ik]);
-            
+               target.Children(ii).Children(ik),[ii ik]);
+            drawnow;
          end
       end
+      return;
    case 'nigeLab.Animal'
-      for ii = 1:numel(target.Blocks)
-         qOperations(obj,operation,target.Blocks(ii),[sel ii]);
+      for ii = 1:numel(target.Children)
+         qOperations(obj,operation,target.Children(ii),[sel ii]);
+         drawnow;
       end
+      return;
    case 'nigeLab.Block'
-      % checking licences and parallel flags to determine where to execute the
+      % checking licenses and parallel flags to determine where to execute the
       % computation. Three possible outcomes:
       % local - Serialized
       % local - Distributed
@@ -128,17 +128,16 @@ switch class(target)
             'UserData',sel,...
             'Tag',tagStr); %#ok<*PROPLC>
          
-         bar = obj.remoteMonitor.startBar(barName,sel,job);
+         bar = obj.RemoteMonitor.startBar(barName,sel,job);
 
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)bar.indicateCompletion();
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else
-            targetFile = getUNCPath(...
-               [target.Paths.SaveLoc.dir '_Block.mat']);
-            fprintf(1,'\n->\tTarget: %s\n',targetFile);
-            createTask(job,@qWrapper,0,{targetFile});
+            % Will always run on _Block
+            fprintf(1,'\n->\tTarget: %s\n',target.File);
+            createTask(job,@qWrapper,0,{target.File});
          end
          submit(job);
          if ~isempty(qPars.RemoteRepoPath)
@@ -159,7 +158,7 @@ switch class(target)
          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();
-         bar = obj.remoteMonitor.startBar(barName,sel);
+         bar = obj.RemoteMonitor.startBar(barName,sel);
          bar.setState(0,'Pending...');
          try
             feval(operation,target);

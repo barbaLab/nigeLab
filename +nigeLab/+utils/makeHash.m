@@ -32,6 +32,8 @@ OFFSET_NUM = 48; % double('0') (numeric zero)
 %%
 if nargin <1
    nigelObj = nigeLab.Block.Empty(1);
+   keyMode = 'random';
+   n = 1;
 elseif nargin <2
    keyMode = 'random';
    n = 1;
@@ -73,10 +75,10 @@ switch class(nigelObj)
          hashString = prependSignature(hashString,'BB');
       end
    case  'nigeLab.Animal'
-      if all(isempty(nigelObj.Blocks)) || strcmp(keyMode,'random')
+      if all(isempty(nigelObj.Children)) || strcmp(keyMode,'random')
          hashString=GenRandomStrings(n);
       elseif strcmpi(keyMode,'unique')
-         blockStrings = nigelObj.Blocks.getKey;
+         blockStrings = nigelObj.Children.getKey;
          hash = xorcascade(blockStrings);
          hashString = char(mod(hash,42)+OFFSET_NUM);
       end

@@ -86,7 +86,7 @@ if numel(varargin)==1
 end
 
 for iV = 1:2:length(varargin)
-   eval([pars.(upper(varargin{iV})) '=varargin{iV+1};']);
+   pars.(upper(varargin{iV}))=varargin{iV+1};
 end
 
 %% PARSE OTHER PARAMETERS BASED ON SELECTED PARAMETERS

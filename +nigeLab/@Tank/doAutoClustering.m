@@ -10,7 +10,7 @@ function flag = doAutoClustering(tankObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% RUN SPIKE DETECTION FOR EACH ANIMAL IN BLOCK
-A=tankObj.Animals;
+A=tankObj.Children;
 flag = false(1,numel(A));
 for ii=1:numel(A)
     flag(ii) = doAutoClustering(A(ii));

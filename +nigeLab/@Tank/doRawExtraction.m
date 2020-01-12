@@ -7,7 +7,7 @@ function flag = doRawExtraction(tankObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOOP THROUGH EACH ANIMAL IN TANK AND EXTRACT RAW DATA
-A=tankObj.Animals;
+A=tankObj.Children;
 flag = false(1,numel(A));
 for ii=1:numel(A)
    flag(ii) = doRawExtraction(A(ii)); 

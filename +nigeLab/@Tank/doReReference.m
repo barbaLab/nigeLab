@@ -9,7 +9,7 @@ function flag = doReReference(tankObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOOP THROUGH EACH ANIMAL IN TANK AND DO COMMON AVERAGE RE-REFERENCE
-A=tankObj.Animals;
+A=tankObj.Children;
 flag = false(1,numel(A));
 for ii=1:numel(A)
     flag(ii) = doReReference(A(ii));

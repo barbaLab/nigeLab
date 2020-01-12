@@ -34,7 +34,6 @@ flag = false;
 
 %% CHECK FILE PATH INFO
 if any(~ismember({'Spikes','SpikeFeatures','Artifact'},blockObj.Fields))
-   [~,blockObj.Fields] = nigeLab.defaults.Block();
    if ~blockObj.genPaths
       warning('Could not make correct paths.');
       return;

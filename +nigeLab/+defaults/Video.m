@@ -1,4 +1,4 @@
-function pars = Video(name)
+function varargout = Video(varargin)
 %% VIDEO  Template for initializing parameters related to experiment trigger synchronization
 %
 %  pars = nigeLab.defaults.Video();
@@ -197,8 +197,6 @@ pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
 pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
 
 %% Less-likely to change these parameters
-
-
 % Paths information
 pars.File = [];
 
@@ -222,7 +220,6 @@ pars.HasVidStreams = ...
 
 if pars.HasVidStreams
    n = numel(pars.VidStreamName);
-   
    if ~isempty(pars.CameraSourceVar)
       pars.VidStreamField = cell(n,1);
       pars.VidStreamFieldType = cell(n,1);
@@ -268,14 +265,12 @@ if pars.HasVidStreams
             'equal number of elements of pars.VidStreamSubGroup (%g).'],...
             n,m);
       end
-
       m = numel(pars.VidStreamSource);
       if n ~= m
          error(['Number of elements of pars.VidStreamName (%g) must ' ...
             'equal number of elements of pars.VidStreamSource (%g).'],...
             n,m);
       end
-
       pars.VidStreamField = repmat({'VidStreams'},1,n);
       pars.VidStreamFieldType= repmat({'Videos'},1,n);
       pars.VidStream = nigeLab.utils.signal(...
@@ -286,9 +281,7 @@ if pars.HasVidStreams
          pars.VidStreamName,...
          pars.VidStreamSubGroup); 
    end
-
 end
-
 eventType = nigeLab.defaults.Event('EventType');
 f = fieldnames(eventType);
 % Check which one is the 'manual' "key" if variables should be scored
@@ -307,10 +300,6 @@ if (~isempty(pars.VarsToScore))
 else
    pars.ScoringEventFieldName = [];   
 end
-
-
-
-
 % Check that number of elements of VarsToScore matches number of elements
 % of VarType.
 if numel(pars.VarsToScore) ~= numel(pars.VarType)
@@ -318,12 +307,21 @@ if numel(pars.VarsToScore) ~= numel(pars.VarType)
       numel(pars.VarsToScore), numel(pars.VarType));
 end
 
-if nargin > 0
-   if isfield(pars,name)
-      pars = pars.(name);
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
    end
 end
 
+%%
    % Helper function to isolate this part of parameters
    function [VarsToScore,VarType] = setScoringVars()
       % SETSCORINGVARS  Variables for video scoring are set here

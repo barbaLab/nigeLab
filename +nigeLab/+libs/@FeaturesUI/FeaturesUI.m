@@ -1,24 +1,36 @@
 classdef FeaturesUI < handle
-   %%  FEATURESUI    Class for displaying features of a set of spikes
+   %FEATURESUI    Class for displaying features of a set of spikes
    %
    %  obj = FeaturesUI()
    %
    %  --------
    %   INPUTS
    %  --------
+   %   sortObj    :     * nigeLab.Sort class object or
+   %                    * nigeLab.libs.ChannelsUI class object
+   %                    --> Requires 'Name', value pairs for:
+   %                       + 'SpikeImage'
+   %                       + 'Data'
+   %
+   %                    --> Can also not be specified, if given correct
+   %                        'Name',value pairs
+   %  
    %  --------
    %   OUTPUT
    %  --------
-   %    obj       :     FeaturesUI object. Displays clusters in some features
-   %                    space and other usefull elementsd as cluster quality
-   %
+   %    obj       :     FeaturesUI object. Displays clusters in some 
+   %                    features space and other useful elements, such as
+   %                    cluster quality, etc
    
-   %%
-   properties (Access = public)
+   % % % PROPERTIES % % % % % % % % % %
+   % PUBLIC
+   properties (Access=public)
       ChannelSelector
       SpikeImage
-      HighDimUI
-      HighDim
+      HighDimsUI
+      HighDims
+      
+      Pars
       
       CurClass = 1;
       
@@ -39,8 +51,8 @@ classdef FeaturesUI < handle
                          'correlation',...
                          'Hamming',...
                          'Jaccard'};
-      SilScores                                  % Silhuette scores; nMethods x NCLUS_MAX (9, maximum number of clusters)
-      QualityScores                              % A matrix nClusters by nQuality
+      SilScores           % Silhouette scores; nMethods x NCLUS_MAX (9, maximum number of clusters)
+      QualityScores       % A matrix nClusters by nQuality
       QualityBars
       Data
       Parent
@@ -73,7 +85,8 @@ classdef FeaturesUI < handle
          [0,0.450000000000000,0.750000000000000]};
    end
    
-   properties (Access = private)
+   % PROTECTED
+   properties (Access=protected)
       rotateImg
       rotateButton
       rsel
@@ -102,13 +115,72 @@ classdef FeaturesUI < handle
       
    end
    
-   events
+   % TRANSIENT,PROTECTED
+   properties (Transient,Access=protected)
+      Listeners  event.listener
+   end
+   % % % % % % % % % % END PROPERTIES %
+   
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
       ClassAssigned
    end
+   % % % % % % % % % % END EVENTS % % %
    
-   methods (Access = public)
-      function obj = FeaturesUI(sortObj,varargin)
-         %%
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (overloaded methods)
+   methods
+      % Overloaded delete method
+      function delete(obj)
+         %DELETE  Overloaded delete to ensure child destruction
+         %
+         %  delete(obj);
+         
+         % Destroy any listener handles
+         if ~isempty(obj.Listeners)
+            for i = 1:numel(obj.Listeners)
+               if isvalid(obj.Listeners(i))
+                  delete(obj.Listeners(i));
+               end
+            end
+         end
+         
+         % Destroy HighDimsUI "child"
+         if ~isempty(obj.HighDimsUI)
+            if isvalid(obj.HighDimsUI)
+               delete(obj.HighDimsUI);
+            end
+         end
+         
+         % Destroy Figure
+         if ~isempty(obj.Figure)
+            if isvalid(obj.Figure)
+               delete(obj.Figure);
+            end
+         end
+         
+      end
+   end
+   
+   % PUBLIC
+   methods (Access=public)
+      function obj = FeaturesUI(SpikeImage,Data,Pars,ChannelSelector,varargin)
+         %FEATURESUI  Constructor to build UI displaying derived features
+         %
+         %  obj = nigeLab.libs.FeaturesUI(SpikeImage,Data,Pars,ChannelSelector);
+         %  --> Standard
+         %
+         %  obj = nigeLab.libs.FeaturesUI(sortObj); 
+         %  --> Parses first 3 inputs from nigeLab.Sort object
+         %
+         %  obj = nigeLab.libs.FeaturesUI(SortUI);
+         %  --> Parses first 3 inputs from nigeLab.libs.SortUI object
+         %
+         %  obj = nigeLab.libs.FeaturesUI(___);
+         %  --> As long as 'SpikeImage', and 'Pars' can
+         %      be parsed then this will work.
+         
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue
@@ -120,36 +192,47 @@ classdef FeaturesUI < handle
             obj.(varargin{iV}) = varargin{iV+1};
          end
          
-         %% PARSE FIRST INPUT
-         
-         if isa(sortObj,'nigeLab.Sort')
-            obj.Parent = sortObj;
-            obj.ChannelSelector = sortObj.UI.ChannelSelector;
-            obj.SpikeImage = sortObj.UI.SpikeImage;
-            obj.HighDimUI = nigeLab.libs.HighDimsUI(obj);
-            
-            addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.ExitFeatures);
-            addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotQuality);
-            addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
-            addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);
-            addlistener(obj.SpikeImage,'SpikeAxesSelected',@obj.SetCurrentCluster);
-            addlistener(obj.SpikeImage,'VisionToggled',@obj.SetClusterVisibility);
-            obj.Data = obj.Parent.spk;
-         elseif isa(sortObj,'nigeLab.libs.ChannelUI')
+         % Behavior depends upon class of `sortObj` input
+         if isa(SpikeImage,'nigeLab.Sort')
+            error(['nigeLab:' mfilename ':BadClass'],...
+               ['nigeLab.libs.FeaturesUI should be called by ' ...
+                'nigeLab.libs.SortUI, not nigeLab.Sort']);
+         elseif isa(SpikeImage,'nigeLab.libs.SortUI')
+            sortUI = SpikeImage;
+            obj.Parent = sortUI;
+            obj.ChannelSelector = sortUI.ChannelSelector;
+            obj.SpikeImage = sortUI.SpikeImage;
+            obj.Pars = sortUI.feat;
+            obj.Data = sortUI.Parent.spk;
+         elseif isa(SpikeImage,'nigeLab.libs.SpikeImage')
             obj.Parent = [];
-            obj.ChannelSelector = sortObj;
-            % Needs 'SpikeImage'
-            % Needs 'Data' and data struct name,value pair
+            obj.ChannelSelector = ChannelSelector;
+            obj.SpikeImage = SpikeImage;
+            obj.Data = Data;
+            obj.Pars = Pars;
+            
          else
             obj.Parent = [];
             obj.ChannelSelector = struct('Channel',1);
-            % Needs 'SpikeImage'
-            % Needs 'Data' and data struct name,value pair
+            obj.SpikeImage = SpikeImage;
+            obj.Data = Data;
          end
-                  
-         obj.Init(sortObj);
-         obj.PlotFeatures;
-         obj.PlotQuality;
+         
+         obj.HighDimsUI = nigeLab.libs.HighDimsUI(obj);
+         
+         obj.Listeners(1) = addlistener(obj.SpikeImage,'MainWindowClosed',@(~,~)obj.ExitFeatures);
+         obj.Listeners(2) = addlistener(obj.SpikeImage,'ClassAssigned',@obj.UpdateClasses);
+         obj.Listeners(3) = addlistener(obj.SpikeImage,'SpikeAxesSelected',@obj.SetCurrentCluster);
+         obj.Listeners(4) = addlistener(obj.SpikeImage,'VisionToggled',@obj.SetClusterVisibility);
+               
+         if isa(obj.ChannelSelector,'nigeLab.libs.ChannelUI')
+            obj.Listeners(5) = addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotQuality);
+            obj.Listeners(6) = addlistener(obj.ChannelSelector,'NewChannel',@(~,~)obj.PlotFeatures);
+         end
+         
+         obj.Init();
+         obj.PlotFeatures();
+         obj.PlotQuality();
       end
       
       PlotFeatures(obj)
@@ -161,32 +244,32 @@ classdef FeaturesUI < handle
       
       function ReopenWindow(obj)
          if ~isvalid(obj.Figure)
-            obj.Init(obj.Parent);
+            obj.Init();
             obj.PlotFeatures();
             obj.PlotQuality();
          end
       end
    end
    
-   methods (Access = private)
+   % PROTECTED
+   methods (Access=protected)
       
       CountExclusions(obj,ch);
       FeatPopCallback(obj,src,~);
       ExitFeatures(obj);
       
-      function Init(obj,sortObj)
+      function Init(obj)
          
-         %% init data
+         % Initialize data
          obj.InitTimescale;
          obj.InitNewMeshMap;
          
          obj.VisibleClusters = cellfun(@(x) x.Value, ...
-            sortObj.UI.SpikeImage.VisibleToggle);
+            obj.SpikeImage.VisibleToggle);
          obj.nFeat = cellfun(@(x) size(x,2),obj.Data.feat);
          obj.projVecs = zeros(2,obj.nFeat(obj.ChannelSelector.Channel));
  
-         %% init graphical objects
-         
+         % Initialize graphical objects
          obj.Figure = figure('Name','Features', ... 'Units','Normalized',...
             'MenuBar','none',...
             'Units','Normalized',...
@@ -257,43 +340,45 @@ classdef FeaturesUI < handle
          img = imresize(obj.rotateImg,sz(4:-1:3)-5);
          set(obj.rotateButton,'CData',img);
          
-         vals=unique(sortObj.UI.feat.combo(:,1));
-         str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(:,1)));
-         obj.FeatX = uicontrol(featureComboSelectorPanel,...
-            'Style','popupmenu',...
-            'Units','Normalized',...
-            'Position',[0.05  0.7  0.9 0.25],...
-            'Tag','Dim1',...
-            'UserData',vals,...
-            'String',str,...
-            'Value',find(vals==obj.featInd(1)));
-         obj.FeatX.Callback = {@obj.FeatPopCallback};
          obj.projVecs(1,obj.featInd(1)) = 1;
-         
-         ind = sortObj.UI.feat.combo(:,1)==1;
-         str = sortObj.UI.feat.name(unique(sortObj.UI.feat.combo(ind,2)));
-         vals=unique(sortObj.UI.feat.combo(ind,2));
-         
-         obj.FeatY = uicontrol(featureComboSelectorPanel,...
-            'Style','popupmenu',...
-            'Units','Normalized',...
-            'Position',[0.05  0.5  0.9 0.25],...
-            'Tag','Dim2',...
-            'UserData',vals,...
-            'String',str,...
-            'Value',find(vals==obj.featInd(2)));
-         obj.FeatY.Callback = {@obj.FeatPopCallback};
          obj.projVecs(2,obj.featInd(2)) = 1;
+         if ~isempty(obj.Pars)
+            vals=unique(obj.Pars.combo(:,1));
+            str = obj.Pars.name(unique(obj.Pars.combo(:,1)));
+            obj.FeatX = uicontrol(featureComboSelectorPanel,...
+               'Style','popupmenu',...
+               'Units','Normalized',...
+               'Position',[0.05  0.7  0.9 0.25],...
+               'Tag','Dim1',...
+               'UserData',vals,...
+               'String',str,...
+               'Value',find(vals==obj.featInd(1)));
+            obj.FeatX.Callback = {@obj.FeatPopCallback};
+
+            ind = obj.Pars.combo(:,1)==1;
+            str = obj.Pars.name(unique(obj.Pars.combo(ind,2)));
+            vals=unique(obj.Pars.combo(ind,2));
+
+            obj.FeatY = uicontrol(featureComboSelectorPanel,...
+               'Style','popupmenu',...
+               'Units','Normalized',...
+               'Position',[0.05  0.5  0.9 0.25],...
+               'Tag','Dim2',...
+               'UserData',vals,...
+               'String',str,...
+               'Value',find(vals==obj.featInd(2)));
+            obj.FeatY.Callback = {@obj.FeatPopCallback};
+         end
 
          
-         obj.HighDim = uicontrol(featureComboSelectorPanel,...
+         obj.HighDims = uicontrol(featureComboSelectorPanel,...
             'Style','pushbutton',...
             'Units','Normalized',...
             'Position',[0.05  0.05  0.9 0.25],...
             'Tag','Dim2',...
-            'String','HighDim');
+            'String','HighDims');
         tmpfcn = @(a,b,x) x.PlotFig;
-        obj.HighDim.Callback = {tmpfcn,obj.HighDimUI};
+        obj.HighDims.Callback = {tmpfcn,obj.HighDimsUI};
          
          obj.Features2D = axes(featureDisplayPanel,...
             'Color',nigeLab.defaults.nigelColors('background'), ...
@@ -359,8 +444,16 @@ classdef FeaturesUI < handle
          obj.InitEventListeners;
       end
       
+      % Initializes mesh map for the 2D featurespace
       function InitNewMeshMap(obj,nSD,nMeshEdges)
-         %% INITNEWMESHMAP    Initialize mesh for 2D featurespace
+         %INITNEWMESHMAP    Initialize mesh for 2D featurespace
+         %
+         %  obj.InitNewMeshMap(nSD,nMeshEdges);
+         %  nSD : # Standard Deviations for axes limits of 2D feature axes
+         %  nMeshEdges : Number of edges on binning vector for features
+         %               mesh, which allows selection of spikes by
+         %               co-registration with features meeting <x,y> values
+         %               for the selected features.
          
          if nargin < 3
             nSD = obj.SD_MAX_DEF;
@@ -379,8 +472,12 @@ classdef FeaturesUI < handle
                   
       end
       
+      % Initialize timescale for Z-axis on 3D scatter
       function InitTimescale(obj)
-         %% INITTIMESCALE  Initialize timescale for Z-axis on 3D scatter
+         %INITTIMESCALE  Initialize timescale for Z-axis on 3D scatter
+         %
+         %  obj.InitTimescale();
+         
          obj.zMax = obj.Data.tMax;
          obj.nZtick = min(obj.nZtick,round(obj.zMax));
          obj.zTickLoc = linspace(0,obj.zMax,obj.nZtick);
@@ -391,17 +488,18 @@ classdef FeaturesUI < handle
          end
       end
       
+      % Initialize all event listeners
       function InitEventListeners(obj)
-         %% INITEVENTLISTENERS   Initalize event-listeners on other objects
+         %INITEVENTLISTENERS   Initalize event-listeners on other objects
          
          if isa(obj.SpikeImage,'nigeLab.libs.SpikeImage')
             obj.SpikeImage.NewAssignmentListener(obj,'ClassAssigned');
          end
-         
       end
       
+      % CALLBACK: On button down, based on type of click, invoke a method
       function ButtonDownFcnSelect2D(obj,src,~)
-         %% BUTTONDOWNFCNSELECT  Determine which callback to use for click
+         %BUTTONDOWNFCNSELECT  Determine which callback to use for click
          
          % Make sure we're referring to the axes
          if isa(src,'matlab.graphics.primitive.Line')
@@ -421,15 +519,24 @@ classdef FeaturesUI < handle
          
       end
       
-      function RotateBtnPress(~,src,~)         
-            ax = src.Parent.Children(3);         
-            rotate3d(ax);
+      % CALLBACK: Rotate button click
+      function RotateBtnPress(~,src,~)    
+         %ROTATEBTNPRESS  Callback when "rotate button" is pressed
+         %
+         %  --> Rotates axes in 3D space
          
+         ax = src.Parent.Children(3);         
+         rotate3d(ax);
       end
       
+      % CALLBACK: Double-click on Silhouette listbox
       function ListClick(obj,src,~)
+         %LISTCLICK  Callback for double-click on Silhouette distances list
+         %
+         %  --> Adds or removes that particular distance metric to the
+         %      Silhouette score calculation.
+         
          f=src.Parent.Parent;
-%          pause(0.2);
          
          switch get(f,'SelectionType')
             case 'normal'
@@ -451,7 +558,13 @@ classdef FeaturesUI < handle
          obj.PlotQuality();
       end
       
-      function ChangeSize(obj,src,~)
+      % Change size of display
+      function ChangeSize(obj,~,~)
+         %CHANGESIZE  Callback for change of size of image when
+         %            rotateButton is clicked
+         %
+         %  Changes size of obj.rotateImg
+         
          if ~isempty(obj.rotateButton) && isvalid(obj.rotateButton)
             sz = getpixelposition(obj.rotateButton);
             img = imresize(obj.rotateImg,sz(4:-1:3)-5);
@@ -459,8 +572,9 @@ classdef FeaturesUI < handle
          end
       end
       
+      % Find subset of spikes to move based on convex-hull polygon
       function GetSpikesToMove(obj,ax)
-         %% GETSPIKESTOMOVE  Draw polygon, move spikes 
+         %GETSPIKESTOMOVE  Draw polygon, move spikes 
          if ~obj.isVisible % If it's not visible, can't do cutting here
             return;
          end
@@ -508,7 +622,8 @@ classdef FeaturesUI < handle
          set(obj.Figure,'Pointer','arrow');
       end
       
-      PlotHighDims(obj,~,~)
+      PlotHighDims(obj,~,~) % Callback to plot features in "High-Dims UI"
       
    end
+   % % % % % % % % % % END METHODS% % %
 end

@@ -1,4 +1,4 @@
-function pars = Queue(paramName)
+function varargout = Queue(varargin)
 %% QUEUE  Template for initializing parameters for submitting jobs to queue
 %
 %  pars = nigeLab.defaults.Queue;
@@ -42,11 +42,17 @@ pars.InitTimeSec = 5; % Time to wait when initializing cluster
 %             '//kumc-data04/research/SOM RSCH/NUDOLAB/Scripts_Circuits/Communal_Code/nigeLab/'};
 pars.RemoteRepoPath = {'//kumc.edu/data/research/SOM RSCH/NUDOLAB/Scripts_Circuits/Communal_Code/nigeLab/'};
 
-if nargin > 0
-   if isfield(pars,paramName)
-      pars = pars.(paramName);
-   else
-      warning('%s is not a field. Returning full parameters struct.',paramName);
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
    end
 end
 

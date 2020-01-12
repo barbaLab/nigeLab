@@ -6,7 +6,7 @@ function flag = doUnitFilter(animalObj)
 %  flag = doUnitFilter(a);
 
 %% DO BANDPASS FILTER ON EACH BLOCK IN ANIMAL
-B=animalObj.Blocks;
+B=animalObj.Children;
 flag = false(1,numel(B));
 for ii=1:numel(B)
     flag(ii) = doUnitFilter(B(ii));

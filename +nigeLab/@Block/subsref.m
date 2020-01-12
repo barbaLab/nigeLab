@@ -32,7 +32,6 @@ switch S(1).type
       %% Handle '.' subscripted references
       % . means Block was referenced as __.Block.[method or property]
       % . also could reference something like __.Block.raw as a shortcut.
-      
       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
       % Shortcut case:
       if ~isempty(idx)

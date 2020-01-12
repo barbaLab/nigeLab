@@ -8,7 +8,7 @@ function flag = doUnitFilter(tankObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% DO BANDPASS FILTER ON EACH BLOCK IN TANK
-A=tankObj.Animals;
+A=tankObj.Children;
 flag = false(1,numel(A));
 for ii=1:numel(A)
     flag(ii) = doUnitFilter(A(ii));

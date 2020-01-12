@@ -8,7 +8,7 @@ function flag = doLFPExtraction(tankObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOOP THROUGH EACH ANIMAL IN TANK AND DO DECIMATION
-A=tankObj.Animals;
+A=tankObj.Children;
 flag = false(1,numel(A));
 for ii=1:numel(A)
    flag(ii) = A(ii).doLFPExtraction;

@@ -138,7 +138,7 @@ end
 if (numel(blockObj) > 1)
    [eventData,blockIdx] = nigeLab.utils.initEmpty;
    if isnumeric(ch)
-      masterID = parseChannelID(blockObj(1));
+      masterID = ChannelID(blockObj); % Gets "biggest" ChannelID matrix
       masterIdx = matchChannelID(blockObj,masterID);
       for iBk = 1:numel(blockObj)
          [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),field,prop,...

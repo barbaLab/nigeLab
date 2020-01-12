@@ -9,30 +9,15 @@ function flag = init(blockObj)
 
 %% INITIALIZE PARAMETERS
 flag = false;
-if any(~blockObj.updateParams('all'))
-   warning('Could not properly initialize parameters.');
-   return;
-end
-blockObj.checkParallelCompatibility();
-pars = blockObj.Pars.Block;
+blockObj.checkParallelCompatibility(true);
    
 %% PARSE NAME INFO
 % Set flag for output if something goes wrong
-meta = parseNamingMetadata(blockObj);
+[blockObj.Name,blockObj.Meta] = parseNamingMetadata(blockObj);
 
-%% PARSE FILE NAME USING THE NAMING CONVENTION FROM TEMPLATE
-str = [];
-nameCon = blockObj.NamingConvention;
-for ii = 1:numel(nameCon)
-   if isfield(meta,nameCon{ii})
-      str = [str,meta.(nameCon{ii}),pars.Concatenater]; %#ok<AGROW>
-   end
-end
-blockObj.Name = str(1:(end-1));
-
-%% Check for multiple Animals
-for ii = fieldnames(meta)'
-   if contains(meta.(ii{:}),pars.MultiAnimalsChar)
+%% CHECK FOR MULTI-ANIMALS
+for ii = fieldnames(blockObj.Meta)'
+   if contains(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar)
        blockObj.MultiAnimals = true;
        break;
    end
@@ -72,13 +57,7 @@ if ~blockObj.initEvents
    return;
 end
 
-%% INITIALIZE KEYS
-if ~blockObj.initKey()
-   warning('Could not initialize unque keys for the block.');
-   return;
-end
-
-
+%% INITIALIZE STATUS
 blockObj.updateStatus('init');
 
 % Prior to link to data, check if a function handle for conversion has been

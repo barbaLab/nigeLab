@@ -44,17 +44,17 @@ GatherFunction = { @(an) {num2str(an.UserData)};
                    @(an) an.Name;
                    @(an) getAnimalDate(an)
                    @(an) getRecDate(an);
-                   @(an) numel(an.Blocks);
+                   @(an) numel(an.Children);
                    @(an) getNChannel(an);
                    @(an) getAnimalStatus(an);
     };
 
 Lstruc=cell2struct(cell(1,numel(VariableNames)),VariableNames,2);
 
-for ii=1:numel(tankObj.Animals)
-    an=tankObj.Animals(ii);
+for ii=1:numel(tankObj.Children)
+    an=tankObj.Children(ii);
     an.UserData = ii;
-    if isempty(an.Blocks)
+    if isempty(an.Children)
        Lstruc(ii).(VariableNames{1}) = GatherFunction{1}(an);
        Lstruc(ii).(VariableNames{2}) = 'Empty';
        for kk=3:numel(VariableNames)
@@ -70,7 +70,7 @@ for ii=1:numel(tankObj.Animals)
 end
 
 Lstruc=struct2table(Lstruc);
-Lstruc.Properties.RowNames=cellstr(num2str((1:numel(tankObj.Animals))'));
+Lstruc.Properties.RowNames=cellstr(num2str((1:numel(tankObj.Children))'));
 
 
 if nargout==0
@@ -89,7 +89,7 @@ end
 
 function D = getAnimalDate(animalObj)
    try
-      tmp = cat(1,animalObj.Blocks.Meta);
+      tmp = cat(1,animalObj.Children.Meta);
       D = unique(datetime({tmp.RecDate},'InputFormat','yyMMdd'));
    catch
       D = NaT;
@@ -97,12 +97,12 @@ function D = getAnimalDate(animalObj)
 end
 
 function N = getNChannel(animalObj)
-b = animalObj.Blocks;
-N = {unique(cat(1,b.NumChannels))};
+b = animalObj.Children;
+N = {unique(b.NumChannels)};
 end
 
 function R = getRecDate(animalObj)
-b = animalObj.Blocks;
+b = animalObj.Children;
 rt = unique({b.RecType});
 fe = unique({b.FileExt});
 R = [rt, fe];

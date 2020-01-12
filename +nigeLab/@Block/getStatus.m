@@ -200,7 +200,11 @@ end
             for ii = 1:numel(stage) 
                channelStage = strcmp(blockObj.getFieldType(stage{ii}),...
                                      'Channels');
-               flags = blockObj.Status.(stage{ii});
+               if isfield(blockObj.Status,stage{ii})
+                  flags = blockObj.Status.(stage{ii});
+               else
+                  flags = false;
+               end
                % If this is a 'Channels' FieldType Stage AND there is a
                % Channel Mask specified, then require ALL elements to be
                % true; otherwise, just require 'Any' element to be true

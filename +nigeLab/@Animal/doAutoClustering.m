@@ -5,17 +5,17 @@ par = nigeLab.defaults.AutoClustering;
 %% runs automatic clustering algorithms
 switch nargin
     case 1
-        chan = animalObj.Blocks(1).Mask;
-        for ii=2:numel(animalObj.Blocks)
-            [chan,~,iB] = intersect(chan,animalObj.Blocks(ii).Mask);
-            if numel(iB)<numel(animalObj.Blocks(ii).Mask)
-                warningFlag{ii-1} = {ii,setdiff(animalObj.Blocks(ii).Mask,animalObj.Blocks(ii).Mask(iB))};
+        chan = animalObj.Children(1).Mask;
+        for ii=2:numel(animalObj.Children)
+            [chan,~,iB] = intersect(chan,animalObj.Children(ii).Mask);
+            if numel(iB)<numel(animalObj.Children(ii).Mask)
+                warningFlag{ii-1} = {ii,setdiff(animalObj.Children(ii).Mask,animalObj.Children(ii).Mask(iB))};
             end
         end
         if ~isempty(warningFlag)
             nigeLab.utils.cprintf('Masks between blocks are not uniform.\n');
             nigeLab.utils.cprintf('The following channels in the following blocks will not be scored:\n');
-            cellfun(@(x) nigeLab.utils.cprintf('UnterminatedStrings','\tBlock %s,\n\t\tChannels %s\b\n',animalObj.Blocks(x{1}).Name,num2str(x{2}(:)','%d,')),warningFlag)
+            cellfun(@(x) nigeLab.utils.cprintf('UnterminatedStrings','\tBlock %s,\n\t\tChannels %s\b\n',animalObj.Children(x{1}).Name,num2str(x{2}(:)','%d,')),warningFlag)
         end
         unit = 'all';
     case 2
@@ -80,8 +80,8 @@ for iCh = chan
     classes(subsetIndex) = classes_;
     
     %% saving clustering results to the appropriate block
-    for bb=1:numel(animalObj.Blocks)
-        blockObj = animalObj.Blocks(bb);
+    for bb=1:numel(animalObj.Children)
+        blockObj = animalObj.Children(bb);
         saveClusters(blockObj,classes(BlInd == bb),iCh,temp);
         blockObj.updateStatus('Clusters',true,iCh);
     end
@@ -111,8 +111,8 @@ classes = [];
 BlInd = [];
 subsetIndex = false(0);
 
-for bb=1:numel(animalObj.Blocks)
-    blockObj = animalObj.Blocks(bb);
+for bb=1:numel(animalObj.Children)
+    blockObj = animalObj.Children(bb);
     if not(ismember(iCh,blockObj.Mask)),continue;end
     [inspk_] = blockObj.getSpikes(iCh,nan,'feat');                    %Extract spike features.
     

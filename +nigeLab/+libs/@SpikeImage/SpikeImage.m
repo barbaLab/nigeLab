@@ -1,5 +1,5 @@
 classdef SpikeImage < handle
-%% SPIKEIMAGE Quickly aggregates spikes into one image object.
+%SPIKEIMAGE Quickly aggregates spikes into one image object.
 %
 %  obj = SPIKEIMAGE(spikes,fs,peak_train,class)
 %
@@ -28,11 +28,10 @@ classdef SpikeImage < handle
 %    obj       :     SPIKEIMAGE object that compresses the spike
 %                    waveforms into flattened image objects that
 %                    allows them to be visualized more easily.
-%
-% By: Max Murphy  v1.0  08/25/2017  Original version (R2017a)
 
-%%
-   properties (Access = public)
+   % % % PROPERTIES % % % % % % % % % %
+   % PUBLIC
+   properties (Access=public)
       Spikes % Contains all info relating to spike waves and classes
       Figure = figure('Name','Spike Profiles',... % Container for graphics
                       'Units','Normalized',...
@@ -46,9 +45,7 @@ classdef SpikeImage < handle
       VisibleToggle % checkbox for selecting visiblity in the feature panel
       Axes     % Axes containers for images
       Parent   % Only set if called by nigeLab.Sort class object
-   end
    
-   properties (Access = public)
       PlotCB;
       NumClus_Max = 9;
       CMap;
@@ -68,7 +65,15 @@ classdef SpikeImage < handle
       UnsavedChanges
    end
    
-   events
+   % TRANSIENT,PROTECTED
+   properties (Transient,Access=protected)
+      Listeners  event.listener  % Event listener handles
+   end
+   % % % % % % % % % % END PROPERTIES %
+   
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
       MainWindowClosed
       ClassAssigned
       SpikeAxesSelected
@@ -76,10 +81,37 @@ classdef SpikeImage < handle
       SaveData
       VisionToggled
    end
-
-   methods (Access = public)
+   % % % % % % % % % % END EVENTS % % %
+   
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (overloaded methods)
+   methods
+      % Overloaded `delete` method
+      function delete(obj)
+         %DELETE  Ensure child objects are destroyed
+         %
+         %  delete(obj);
+         
+         if ~isempty(obj.Listeners)
+            for i = 1:numel(obj.Listeners)
+               if isvalid(obj.Listeners(i))
+                  delete(obj.Listeners(i));
+               end
+            end
+         end
+         
+         if ~isempty(obj.Figure)
+            if isvalid(obj.Figure)
+               delete(obj.Figure);
+            end
+         end
+      end
+   end
+   
+   % PUBLIC
+   methods (Access=public)
       function obj = SpikeImage(spikes,fs,class,varargin)
-         %% SPIKEIMAGE Quickly aggregates spikes into one image object.
+         %SPIKEIMAGE Quickly aggregates spikes into one image object.
          %
          %  obj = SPIKEIMAGE(nigeLab.sortObj)
          %  -------------------------------------------
@@ -119,7 +151,7 @@ classdef SpikeImage < handle
          %                                   depending on the number of
          %                                   unique clusters.
          
-         %% PARSE VARARGIN
+         % Parse <'Name',value> pairs
          for iV = 1:2:numel(varargin) % Can specify properties on construct
             if ~ischar(varargin{iV})
                continue
@@ -131,9 +163,14 @@ classdef SpikeImage < handle
             obj.(varargin{iV}) = varargin{iV+1};
          end
          
-         %% PARSE FIRST INPUT
+         % First input class affects behavior
          if isa(spikes,'nigeLab.Sort')
-            obj.Parent = spikes;
+            error(['nigeLab:' mfilename ':BadClass'],...
+               ['nigeLab.libs.SpikeImage should be called by ' ...
+                'nigeLab.libs.SortUI, not nigeLab.Sort']);
+         elseif isa(spikes,'nigeLab.libs.SortUI')
+            sortUI = spikes;
+            obj.Parent = sortUI.Parent;
             fs = obj.Parent.spk.fs;
             class = obj.Parent.spk.class;
             spikes = obj.Parent.spk.spikes;
@@ -144,13 +181,14 @@ classdef SpikeImage < handle
             obj.Parent.spk.class = {class};
             obj.Parent.spk.spikes = {spikes};
          end
+         
          % Initialize object properties
          obj.Init(fs);
          obj.UpdateChannel;
       end
       
       function UpdateChannel(obj,~,~)
-         %% UPDATECHANNEL  Update the spike data structure to new channel
+         %UPDATECHANNEL  Update the spike data structure to new channel
          
          % Check if it's okay to lose changes if there are any
          if obj.UnconfirmedChanges
@@ -181,7 +219,7 @@ classdef SpikeImage < handle
       end
       
       function Refresh(obj)
-         %% REFRESH  Re-display all the spikes
+         %REFRESH  Re-display all the spikes
          
          if isa(obj.Parent,'nigeLab.Sort')
             % Set spike classes
@@ -195,16 +233,19 @@ classdef SpikeImage < handle
          obj.Build;
       end
       
+      % Add a listener for cluster assignments
       function NewAssignmentListener(obj,src,evt)
-         %% NEWASSIGNMENTLISTENER   Add a listener for cluster assignments
+         %NEWASSIGNMENTLISTENER   Add a listener for cluster assignments
          if nargin < 3
             evt = 'ClassAssigned';
          end
-         addlistener(src,evt,@obj.UpdateClusterAssignments);
+         obj.Listeners = [obj.Listeners, ...
+            addlistener(src,evt,@obj.UpdateClusterAssignments)];
       end
       
+      % Overload `set` method
       function set(obj,NAME,value)
-         %% SET   Overloaded class method
+         %SET   Overloaded class method
          
          % Set 'numclus_max', 'ylim', or 'plotnames' properties and update.
          switch lower(NAME)
@@ -265,19 +306,17 @@ classdef SpikeImage < handle
       
    end
    
-   methods (Access = private)    
-      
+   % PROTECTED
+   methods (Access=protected)    
+      % Check that FeaturesUI is valid
       function flag = checkFeaturesUI(obj)
+         %CHECKFEATURESUI  Check to see if FeaturesUI is present
          flag = false;
          if ~isvalid(obj.Parent)
             return;
          end
          
-         if (~isfield(obj.Parent,'UI')) && (~isprop(obj.Parent,'UI'))
-            return;
-         end
-         
-         if ~isfield(obj.Parent.UI,'FeaturesUI')
+         if ~isfield(obj.Parent,'FeaturesUI')
             return;
          end
          
@@ -287,8 +326,12 @@ classdef SpikeImage < handle
          flag = true;
       end
       
+      % Initialize parameters
       function Init(obj,fs)
-         %% INIT  Initialize parameters
+         %INIT  Initialize parameters
+         %  
+         %  obj.Init(fs);  
+         %  fs: Sample rate
          
          % No changes have been made yet
          obj.UnconfirmedChanges = false;
@@ -310,8 +353,15 @@ classdef SpikeImage < handle
          obj.Spikes.CurClass = 1;
       end
       
+      % Sets the names (titles) of spike plots
       function SetPlotNames(obj,plotNum)
-         %% SETPLOTNAMES   Set names (titles) of each plot
+         %SETPLOTNAMES   Set names (titles) of each plot
+         %
+         %  obj.SetPlotNames();
+         %  --> Set names (titles) of all plots
+         %
+         %  obj.SetPlotNames(plotNum);
+         %  --> Set names (titles) of plot indexed by plotNum
          
          if nargin < 2
             plotNum = 1:obj.NumClus_Max;
@@ -332,8 +382,9 @@ classdef SpikeImage < handle
          end
       end
       
+      % Interpolate and make waveforms smoother
       function Interpolate(obj,spikes)
-         %% INTERPOLATE    Interpolate spikes to make waveforms smoother
+         %INTERPOLATE    Interpolate spikes to make waveforms smoother
          
          x = [1, size(spikes,2)];
          xv = linspace(x(1),x(2),obj.XPoints);
@@ -357,8 +408,9 @@ classdef SpikeImage < handle
 
       end
       
+      % Build graphics: (figure, if needed) and axes/images associated
       function Build(obj)
-         %% BUILD    Build the figure (if needed) and axes/images
+         %BUILD    Build the figure (if needed) and axes/images
          
          % Get plot names
          obj.SetPlotNames;
@@ -415,7 +467,13 @@ classdef SpikeImage < handle
          fprintf(1,'complete.\n\n');
       end
       
+      % Initialize checkboxes on axes
       function InitCheckBoxes(obj,iC)
+         %INITCHECKBOXES  Initialize all checkboxes on axes 
+         %
+         %  obj.InitCheckBoxes(iC);  
+         %  --> Initializes checkbox on axes indexed by `iC`
+         
           pos = obj.Axes{iC}.Position;
           pos(3:4) = 0.015;
           obj.VisibleToggle{iC} = uicontrol('Style','checkbox',...
@@ -428,7 +486,9 @@ classdef SpikeImage < handle
               'UserData',iC);
       end
       
+      % CALLBACK: Checkbox (toggle visibility of features on 2D axes)
       function CheckCallBack(obj,this,~)
+         %CHECKCALLBACK  Sets features as visible or not on Features axes
          if ~isvalid(obj.Parent.UI.FeaturesUI.Features2D)
             return;
          end
@@ -437,8 +497,16 @@ classdef SpikeImage < handle
 
       end
       
+      % Re-draw spike image on all or a subset of axes
       function Draw(obj,plotNum)
-         %% DRAW  Re-draw specified axis
+         %DRAW  Re-draw specified axis
+         %
+         %  obj.Draw();
+         %  --> Re-draws all axes
+         %
+         %  obj.Draw(plotNum);
+         %  --> Re-draws axes indexed by plotNum
+         
          if nargin < 2
             plotNum = 1:obj.NumClus_Max;
          else
@@ -460,8 +528,15 @@ classdef SpikeImage < handle
          
       end
       
+      % Initializes a given axes (container for `SpikeImage` image)
       function initAxes(obj,plotNum)
-         %% INITAXES    Initialize axes properties
+         %INITAXES    Initialize axes properties
+         %
+         %  obj.initAxes(); 
+         %  --> Initialize all axes
+         %
+         %  obj.initAxes(plotNum);
+         %  --> Initialize axes subset indexed by `plotNum`
          
          if nargin < 2
             plotNum = 1:obj.NumClus_Max;
@@ -490,8 +565,16 @@ classdef SpikeImage < handle
          end
       end
       
+      % Initializes a given image ("flattened" graphics of Spike)
       function initImages(obj,plotNum)
-         %% INITIMAGES  Init spike plot images
+         %INITIMAGES  Init spike plot images
+         %
+         %  obj.initImages();
+         %  --> Initializes "flattened" spike image on all axes
+         %
+         %  obj.initImages(plotNum);
+         %  --> Initializes "flattened" spike image on axes indexed by
+         %      `plotNum` only
          
          if nargin < 2
             plotNum = 1:obj.NumClus_Max;
@@ -508,8 +591,9 @@ classdef SpikeImage < handle
          end
       end
       
+      % "Flatten" spikes (use mesh to 2D discretize them into an image)
       function Flatten(obj,plotNum)
-         %% FLATTEN   Condense spikes into matrix scaled from 0 to 1
+         %FLATTEN   Condense spikes into matrix scaled from 0 to 1
          
          if nargin < 2
             
@@ -554,8 +638,9 @@ classdef SpikeImage < handle
          end
       end
       
+      % CALLBACK: Triggered when figure window closes
       function CloseSpikeImageFigure(obj,src,~)
-         %% CLOSESPIKEIMAGEFIGURE  Trigger event when figure window closed
+         %CLOSESPIKEIMAGEFIGURE  Trigger event when figure window closed
          if obj.UnsavedChanges
             str = questdlg('Unsaved changes on this channel. Exit anyways?',...
                'Exit?','Yes','No','Yes');
@@ -569,8 +654,9 @@ classdef SpikeImage < handle
          end
       end
       
+      % CALLBACK: Determine method based on type of button click
       function ButtonDownFcnSelect(obj,src,~)
-         %% BUTTONDOWNFCNSELECT  Determine which callback to use for click
+         %BUTTONDOWNFCNSELECT  Determine which callback to use for click
          
          % Make sure we're referring to the axes
          if isa(gco,'matlab.graphics.primitive.Image')
@@ -597,8 +683,15 @@ classdef SpikeImage < handle
          
       end
       
+      % Determine which axes "selected" spikes will go to
       function SetAxesWhereSpikesGo(obj,curAxes)
-         %% SETAXESWHERESPIKESGO    Set current cluster to this axes
+         %SETAXESWHERESPIKESGO    Set current cluster to this axes
+         %
+         %  obj.SetAxesWhereSpikesGo(curAxes);
+         %  --> curAxes indexes the axes that spikes "inside" the bounded
+         %      convex hull polygon formed by "cluster cutting" will be
+         %      moved into (effectively assigning them that "cluster"
+         %      index)
          
          plotNum = curAxes.UserData;
          pastNum = obj.Spikes.CurClass;
@@ -609,12 +702,17 @@ classdef SpikeImage < handle
          
          visible = obj.VisibleToggle{plotNum}.Value;
          evtData = nigeLab.evt.spikeAxesClicked(plotNum,visible);
-         notify(obj,'SpikeAxesSelected',evtData);
-                  
+         notify(obj,'SpikeAxesSelected',evtData);   
       end
       
+      % Determine which spikes to move using "cluster cutting"
       function GetSpikesToMove(obj,curAxes)
-         %% GETSPIKESTOMOVE  Draw polygon, move spikes 
+         %GETSPIKESTOMOVE  Draw polygon, move spikes 
+         %
+         %  obj.GetSpikesToMove(curAxes);
+         %  --> curAxes indexes the axes where the cutting is being drawn,
+         %      so that the corresponding spikes can be "subtracted" from
+         %      association to that axes
 
          % Track cluster assignment changes
          thisClass = curAxes.UserData;
@@ -658,8 +756,9 @@ classdef SpikeImage < handle
          obj.UpdateClusterAssignments(nan,evtData);
       end
       
+      % CALLBACK: Execute keyboard shortcut on keyboard button press
       function WindowKeyPress(obj,~,evt)
-         %% WINDOWKEYPRESS    Issue different events on keyboard presses
+         %WINDOWKEYPRESS    Issue different events on keyboard presses
          switch evt.Key
             case 'space'
                obj.ConfirmChanges;
@@ -725,15 +824,23 @@ classdef SpikeImage < handle
          end
       end
       
+      % Save changes based on scoring that has been done
       function SaveChanges(obj)
-         %% SAVECHANGES    Save the scoring that has been done
+         %SAVECHANGES    Save the scoring that has been done
+         %
+         %  obj.SaveChanges();
+         
          notify(obj,'SaveData');
          obj.UnsavedChanges = false;
          disp('Scoring saved.');
       end
       
+      % Undo sorting of class ID
       function UndoChanges(obj)
-         %% UNDOCHANGES    Undo sorting to class ID
+         %UNDOCHANGES    Undo sorting to class ID
+         %
+         %  obj.UndoChanges();
+         
          if isa(obj.Parent,'nigeLab.Sort')
             obj.Spikes.Class = obj.Parent.spk.class{get(obj.Parent,'channel')};
          else
@@ -751,8 +858,12 @@ classdef SpikeImage < handle
          notify(obj,'ClassAssigned',evtData);
       end
       
+      % Confirms the changes to class ID for this channel
       function ConfirmChanges(obj)
-         %% CONFIRMCHANGES    Confirm that changes to class ID are made
+         %CONFIRMCHANGES    Confirm that changes to class ID are made
+         %
+         %  obj.ConfirmChanges();
+         
          if isa(obj.Parent,'nigeLab.Sort')
             obj.Parent.setClass(obj.Spikes.Class);
          else
@@ -764,8 +875,12 @@ classdef SpikeImage < handle
             obj.Parent.UI.ChannelSelector.Channel);
       end
       
+      % CALLBACK: Zoom in or out on an axes by mouse-wheel scroll
       function WindowMouseWheel(obj,~,evt)
-         %% WINDOWMOUSEWHEEL     Zoom in or out on all plots
+         %WINDOWMOUSEWHEEL     Zoom in or out on all plots
+         %
+         %  fig.WindowScrollWheelFcn = @obj.WindowMouseWheel;
+         
          obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
          obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
          obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
@@ -773,9 +888,13 @@ classdef SpikeImage < handle
          obj.Draw;
       end
       
+      % CALLBACK: Updates cluster assignments
       function UpdateClusterAssignments(obj,~,evt)
-         %% UPDATECLUSTERASSIGNMENTS   Update cluster assigns and notify  
-         if ~isprop(evt,'subs'),return;end
+         %UPDATECLUSTERASSIGNMENTS   Update cluster assigns and notify  
+         
+         if ~isprop(evt,'subs')
+            return;
+         end
          % Identify plots to update
          plotsToUpdate = unique(obj.Spikes.Class(evt.subs));
          plotsToUpdate = reshape(plotsToUpdate,1,numel(plotsToUpdate));
@@ -796,8 +915,15 @@ classdef SpikeImage < handle
          notify(obj,'ClassAssigned',evt);
       end
       
+      % Assign spikes to a given class
       function Assign(obj,class,subsetIndex)
-         %% ASSIGN   Assign spikes to a given class
+         %ASSIGN   Assign spikes to a given class
+         %
+         %  obj.Assign(class);
+         %  --> Assigns all spikes to class indexed by `class`
+         %
+         %  obj.Assign(class,subsetIndex);
+         %  --> Assign subset of spikes indexed by `subsetIndex` to `class`
          
          if nargin < 3
             if numel(class) == 1 % If only 1 value given assign all to that
@@ -824,9 +950,19 @@ classdef SpikeImage < handle
       Recluster(obj)
    end
    
-   methods (Static = true, Access = private)
+   % PROTECTED
+   methods (Static,Access=protected)
       function SetAxesHighlight(ax,col,fontSize)
-         %% SETAXESHIGHLIGHT     Set highlight on an axes handle
+         %SETAXESHIGHLIGHT     Set highlight on an axes handle
+         %
+         %  nigeLab.libs.SpikeImage.SetAxesHighlight(ax,col,fontSize);
+         %  --> Sets axes `ax` to have a border of color "col" and if 3
+         %      inputs are given, also changes fontSize of that axes to the
+         %      `fontSize` input (otherwise, does not change).
+         %
+         %  --> If `fontSize` >  18, then it also becomes `bold`
+         %  --> If `fontSize` <= 18, then it returns to `normal`
+         
          set(ax,'XColor',col);
          set(ax,'YColor',col);
          set(ax,'Color',col);
@@ -842,4 +978,5 @@ classdef SpikeImage < handle
          end
       end
    end
+   % % % % % % % % % % END METHODS% % %
 end

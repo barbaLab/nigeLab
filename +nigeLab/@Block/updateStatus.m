@@ -31,11 +31,6 @@ function opOut = updateStatus(blockObj,operation,value,channel)
 %    opOut     :     Returns a list of operations from Block defaults m
 %                       file, which can be adjusted as a template by the
 %                       user.
-%
-% By: Max Murphy  & Fred Barban MAECI 2018 collaboration
-
-%% DEFAULTS
-N_CHAR_COMPARE = 7;
 
 %% PARSE INPUT FOR MULTIPLE COMMANDS
 if nargin > 2
@@ -56,11 +51,7 @@ if nargin > 2
 end
 
 %%
-% Do it this way instead of referencing blockObj.Fields, so that in case
-% Block.m in +defaults is modified, the possible fields can be changed
-% dynamically.... Although I am not sure that this will ever come up in
-% practice once debugging is complete (I hope?)
-[~,allPossibleOperations] = nigeLab.defaults.Block();
+allOps = blockObj.Fields;
 
 switch nargin
    case 0 % Must have input arguments (method of nigeLab.Block class)
@@ -68,7 +59,7 @@ switch nargin
              'Not enough input arguments.');
       
    case 1 % If no input just return all the possible operations
-      opOut=allPossibleOperations(1:end);
+      opOut=allOps(1:end);
       return;
       
    case 2 % If only 1 input, 'init' command resets status of all
@@ -78,33 +69,33 @@ switch nargin
             class(operation));
       end
       
-      if strncmpi('init',operation,N_CHAR_COMPARE)
+      if strcmpi('init',operation)
          blockObj.Status = struct; % Change this to a struct
-         for i = 1:numel(allPossibleOperations)
+         for i = 1:numel(allOps)
             switch blockObj.FieldType{i}
                case 'Channels'
                   n = blockObj.NumChannels;
                case 'Streams'
-                  n = numel(blockObj.Streams.(allPossibleOperations{i}));
+                  n = numel(blockObj.Streams.(allOps{i}));
                case 'Videos'
                   n = numel(blockObj.Videos);
                otherwise
-                  strNumCh = ['Num' allPossibleOperations{i}];
+                  strNumCh = ['Num' allOps{i}];
                   if isprop(blockObj,strNumCh)
                      n = blockObj.(strNumCh);
                   else
                      n = 1;
                   end
             end
-            blockObj.Status.(allPossibleOperations{i}) = ...
+            blockObj.Status.(allOps{i}) = ...
                false(1,n);
-            notifyStatus(blockObj,allPossibleOperations{i},false(1,n));
+            notifyStatus(blockObj,allOps{i},false(1,n));
          end
-         blockObj.Fields = allPossibleOperations;
+         blockObj.Fields = allOps;
       elseif strcmpi('notify',operation)
          allOps = reshape(fieldnames(blockObj.Status),1,...
             numel(fieldnames(blockObj.Status)));
-         for op = allOps           
+         for op = allOps
             notifyStatus(blockObj,op{:},blockObj.Status.(op{:}));
          end
          opOut = [];
@@ -121,9 +112,9 @@ switch nargin
             '"operation" input argument must be a char (currently: %s)',...
             class(operation));
       end
-      idx = find(strncmpi(allPossibleOperations,operation,N_CHAR_COMPARE));
+      idx = find(strcmpi(allOps,operation));
       if ~isempty(idx)
-         opOut = allPossibleOperations{idx};
+         opOut = allOps{idx};
          blockObj.Status.(opOut) = value;
          % If it hadn't been parsed into Fields property, add it
          if ~ismember(opOut,blockObj.Fields)
@@ -140,9 +131,9 @@ switch nargin
             '"operation" input argument must be a char (currently: %s)',...
             class(operation));
       end
-      idx = find(strncmpi(allPossibleOperations,operation,N_CHAR_COMPARE));
+      idx = strcmpi(allOps,operation);
       if sum(idx)==1
-         opOut = allPossibleOperations{idx};
+         opOut = allOps{idx};
          blockObj.Status.(opOut)(channel) = value;
          if ~ismember(opOut,blockObj.Fields)
             blockObj.Fields = [blockObj.Fields; opOut];

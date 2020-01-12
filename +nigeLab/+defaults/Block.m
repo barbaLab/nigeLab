@@ -1,4 +1,4 @@
-function [pars,Fields] = Block(name)
+function varargout = Block(varargin)
 % defaults.Block  Sets default parameters for BLOCK object
 %
 %  [pars,Fields] = nigeLab.defaults.Block();
@@ -13,7 +13,6 @@ function [pars,Fields] = Block(name)
 % structure:
 pars             = struct;
 
-% pars.SupportedFormats = {'rhs','rhd','tdt','mat'};
 % If you have pre-extracted data, the workflow can be customized here
 % pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfo; % Standard (AA - IIT)  
 pars.MatFileWorkflow.ReadFcn = @nigeLab.workflow.readMatInfoRC; % RC project (MM - KUMC)
@@ -21,12 +20,9 @@ pars.MatFileWorkflow.ConvertFcn = []; % Most cases, this will be blank (AA - IIT
 % pars.MatFileWorkflow.ConvertFcn = @nigeLab.workflow.rc2Block; % RC project (MM - KUMC; only needs to be run once)
 % pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2Block; % Standard (AA - IIT)
 pars.MatFileWorkflow.ExtractFcn = @nigeLab.workflow.mat2BlockRC; % RC project (MM - KUMC)
-pars.RecLocDefault  = 'R:/Rat';
-
+pars.DefaultRecLoc  = 'R:/Rat';
 pars.SaveFormat  = 'Hybrid'; % refers to save/load format
-pars.AnimalLocDefault = 'P:/Rat';
-pars.ForceSaveLoc = true; % create directory if save location doesn't exist
-
+pars.SaveLocDefault = 'P:/Rat';
 pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 
 %% Explanation of DynamicVarExp and NamingConvention pars fields
@@ -88,11 +84,11 @@ pars.NamingConvention={'AnimalID','Year','Month','Day','SessionID'}; % MM Audio 
 %  used). The same goes for "AnimalID"
 
 pars.SpecialMeta = struct;
+pars.SpecialMeta.SpecialVars = {'RecID','AnimalID'};
 pars.SpecialMeta.RecID.cat = '-'; % Concatenater (if used) for names
 pars.SpecialMeta.AnimalID.cat = '-'; % Concatenater (if used) for names
 
-% pars.SpecialMeta.RecID.vars = {}; % Default case (or if RecID is included)
-% pars.SpecialMeta.AnimalID.vars = {}; % Default case (or if AnimalID is included)
+% pars.SpecialMeta.SpecialVars = {}; % Default case
 
 % (All must be included in DynamicVarExp):
 pars.SpecialMeta.RecID.vars = {'Month','Day','SessionID'}; % KUMC "RC"  
@@ -101,10 +97,10 @@ pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'}; % KUMC "standard"
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
-pars.Concatenater = '_';
-pars.VarExprDelimiter = {'-','_'};
-pars.IncludeChar='$';
-pars.DiscardChar='~';
+pars.Concatenater = '_'; % concatenater for variables INCLUDED in BLOCK name
+pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
+pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
 %% Many animals in one block 
 %
@@ -369,12 +365,17 @@ for ii=1:numel(Fields)
    pars.PathExpr.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end
 
-if nargin > 0
-   if isfield(pars,name)
-      pars = pars.(name);
-      return;
-   else
-      error('Bad pars field: %s',name);
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
    end
 end
 

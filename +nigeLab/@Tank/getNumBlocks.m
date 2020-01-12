@@ -5,8 +5,8 @@ function N = getNumBlocks(tankObj)
 
 %%
 N = 0;
-for ii = 1:numel(tankObj.Animals)
-   N = N + tankObj.Animals(ii).getNumBlocks;
+for ii = 1:numel(tankObj.Children)
+   N = N + tankObj.Children(ii).getNumBlocks;
 end
 
 end

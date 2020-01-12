@@ -8,7 +8,7 @@ function masterIdx = matchChannelID(blockObj,masterID)
 %  --------
 %  blockObj    :     nigeLab.Block class object, or array of blockObj.
 %
-%  masterID    :     Output from nigeLab.Block.parseChannelID; master ID
+%  masterID    :     Output from nigeLab.Block.ChannelID; master ID
 %                       that is used to match the other channels.
 %
 %  --------
@@ -37,23 +37,17 @@ function masterIdx = matchChannelID(blockObj,masterID)
 %                        1; ...
 %                        NaN; ...
 %                        2];
-%
-% By: Max Murphy   v1.0 2019/01/08   Original version (R2017a)
 
 %% INITIALIZE
 N = size(masterID,1);
 M = numel(blockObj);
-
 masterIdx = nan(N,M);
-
 %% ITERATE AND ASSIGN MASTER INDICES
 for iBk = 1:M % For each block   
-   channelID = parseChannelID(blockObj(iBk)); % parse the channel IDs
-   
+   C = blockObj(iBk).ChannelID; % parse the channel IDs
    for iCh = 1:N % For each channel
       % Match the channel ID to the correct row (if it exists)
-      tmp = find(ismember(masterID,channelID(iCh,:),'rows'),...
-         1,'first');
+      tmp = find(ismember(masterID,C(iCh,:),'rows'),1,'first');
       if ~isempty(tmp)
          masterIdx(iCh,iBk) = tmp;
       end

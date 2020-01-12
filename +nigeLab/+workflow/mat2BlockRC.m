@@ -7,7 +7,7 @@ function flag = mat2BlockRC(blockObj)
 
 %%
 flag = false;
-paths.SaveLoc.dir = fullfile(blockObj.AnimalLoc,blockObj.Name); % Only difference from DEFAULT
+paths.SaveLoc = fullfile(blockObj.AnimalLoc,blockObj.Name); % Only difference from DEFAULT
 paths = blockObj.getFolderTree(paths);
 for iCh = 1:blockObj.NumChannels
    chName = blockObj.Channels(iCh).chStr;

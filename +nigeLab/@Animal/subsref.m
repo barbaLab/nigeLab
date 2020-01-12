@@ -2,7 +2,7 @@ function varargout = subsref(animalObj,S)
 % SUBSREF  Overloaded function modified so that BLOCK can be
 %          referenced by indexing from ANIMAL using {} operator. 
 %          NOTE: {} indexing does not support
-%          additional subscripts (e.g. can't do animalObj{:,:}.Blocks).
+%          additional subscripts (e.g. can't do animalObj{:,:}.Children).
 %
 %  childBlockArray = animalObjArray{[2,1;1,4;3,1]}
 %  --> childBlockArray is the 1st Child Block of 2nd Animal in
@@ -93,7 +93,7 @@ switch S(1).type
                end
             end
             S = substruct('()',{ones(size(subs,1),1),subs{2}});
-            varargout = {subsref(animalObj.Blocks,S)};
+            varargout = {subsref(animalObj.Children,S)};
             return;
             
             % Otherwise, too many subscript args were given
@@ -119,7 +119,7 @@ switch S(1).type
                         varargout = cell(1,nargout);
                         for i = 1:numel(animalObj)
                            varargout{1} = [varargout{1},...
-                              animalObj(i).Blocks];
+                              animalObj(i).Children];
                         end
                      otherwise
                         error(['nigeLab:' mfilename ':badReference'],...
@@ -134,7 +134,7 @@ switch S(1).type
                   varargout = {[]};
                   for i = 1:numel(subs)
                      varargout{1} = [varargout{1},...
-                        animalObj(subs(i)).Blocks];
+                        animalObj(subs(i)).Children];
                   end
                   return;
                   
@@ -177,7 +177,7 @@ switch S(1).type
                               idx2 = subs{2}(i);
                            end
                            varargout{1} = [varargout{1},...
-                              animalObj(i).Blocks(idx2)];
+                              animalObj(i).Children(idx2)];
                         end
                         
                      otherwise
@@ -206,7 +206,7 @@ switch S(1).type
                      idx2 = subs{2}(i);
                   end
                   varargout{1} = [varargout{1},...
-                     animalObj(idx1(i)).Blocks(idx2)];
+                     animalObj(idx1(i)).Children(idx2)];
                end
                return;
                

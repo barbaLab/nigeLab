@@ -1,4 +1,4 @@
-function pars = Sort()
+function varargout = Sort(varargin)
 %SORT      Template for initializing params for Spike Sorting UI
 %
 %   pars = nigeLab.defaults.Sort;
@@ -59,6 +59,20 @@ pars.FeatTTick = 5;           % # Z-tick (time ticks)
 pars.FeatPointsMax = 2000;    % Max. # feature points to plot
 pars.FeatView = [-5 13];      % 3-D view angle
 pars.FeatMinSpikes = 30;      % Minimum # spikes in order to plot
+
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
+end
 
 end
 
