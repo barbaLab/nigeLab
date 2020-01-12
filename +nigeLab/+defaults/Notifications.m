@@ -11,6 +11,7 @@ pars = struct;
 pars.NMaxNameChars = 15;  % If less than this, uses full name on notifications
 pars.DBLoc = 'C:/Remote_Matlab_Debug_Logs';
 pars.DBFile = 'logs.txt';
+pars.DebugOn = false; % Set to true to turn on "remote debug" mode (slower)
 
 % For below, see nigeLab.utils.jobTag2Pct()
 pars.TagDelim = '||'; % This should separate TagString between naming and % complete

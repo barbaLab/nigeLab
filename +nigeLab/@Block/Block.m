@@ -84,18 +84,16 @@ classdef Block < nigeLab.nigelObj
       Channels struct                        % Struct array of neurophysiological stream data
       Events   struct                        % Struct array of asynchronous events
       Streams  struct                        % Struct array of non-electrode data streams
-      Videos   nigeLab.libs.VideosFieldType  % Array of nigeLab.libs.VideosFieldType
+      Videos                                 % Array of nigeLab.libs.VideosFieldType
    end
    
    % RESTRICTED:nigelObj/PUBLIC
    properties (GetAccess = public,SetAccess = ?nigeLab.nigelObj)
-      FileType    cell=nigeLab.Block.Default('FileType')  % Indicates DiskData file type for each Field
+      FileType    cell=nigeLab.nigelObj.Default('FileType','Block')  % Indicates DiskData file type for each Field
       Mask {logical,double}% Vector of indices of included elements of Channels
       Notes       struct   % Notes from text file
       Probes      struct  % Probe configurations associated with saved recording
       RMS         table   % RMS noise table for different waveforms
-      RecSystem   nigeLab.utils.AcqSystem  % 'RHS', 'RHD', or 'TDT' (must be one of those)
-      RecType     char                     % Intan / TDT / other
       SampleRate  double   % Recording sample rate
       Samples     double   % Total number of samples in original record
       Scoring     struct   % Metadata about any scoring done
@@ -440,6 +438,8 @@ classdef Block < nigeLab.nigelObj
 %       --> Deprecated (inherited from `nigelObj`)
 %       [name,meta] = parseNamingMetadata(blockObj); % Get metadata struct from recording name
 %       --> Deprecated (inherited from `nigelObj`)
+%       parseRecType(blockObj)              % Parse the recording type
+%       --> Deprecated (inherited from `nigelObj`)
 % % % % % % % % % % % % % % % % % % % % % % % % % % End Deprecated % % % %
 
       flag = intan2Block(blockObj,fields,paths) % Convert Intan to BLOCK
@@ -452,7 +452,6 @@ classdef Block < nigeLab.nigelObj
       flag = initStreams(blockObj);    % Initialize Streams property
       flag = initVideos(blockObj);     % Initialize Videos property
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
-      parseRecType(blockObj)              % Parse the recording type
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    end

@@ -266,6 +266,91 @@ classdef Tank < nigeLab.nigelObj
             end
          end
       end
+      
+      % Method in case need to reset tree paths manually
+      function resetTreeManual(tankObj,skipSelection)
+         %RESETTREEMANUAL  Brings up UI to manually refresh associated
+         %  OUTPUT paths without completely going through the constructor 
+         %  etc. This does not change any values of .Input, only values of
+         %  .Out (and accordingly, .Output). It also refreshes (overwrites)
+         %  existing .nigelObj files at the corresponding defined
+         %  locations. Parsing works "down" the tree, starting with the
+         %  Tank and then going through each Animal followed by its
+         %  Children.
+         %
+         %  tankObj.resetTreeManual();
+         %  --> Prompts selection of tankObj ID file from UI
+         %
+         %  tankObj.resetTreeManual(true);
+         %  --> Use current ID file
+         
+         if nargin < 2
+            skipSelection = false;
+         end
+         
+         if skipSelection
+            [p,~,f] = fileparts(tankObj.IDFile);
+         else
+            [f,p] = uigetfile({'.nigelTank','nigeLab Tank Files (.nigelTank)'},...
+               'Select nigeLab Tank file',tankObj.IDFile);
+            if f == 0
+               nigeLab.sounds.play('pop',0.8);
+               nigeLab.utils.cprintf('Comments','Tree reset canceled.\n');
+               return;
+            end
+         end
+         
+         % This sets .Output:
+         tankObj.IDFile = fullfile(p,f);
+         tankObj.saveIDFile();
+         F_an = dir(tankObj.Output);
+         F_an = F_an([F_an.isdir]);
+         iRemove = ismember({F_an.name},{'.','..'});
+         F_an(iRemove) = [];
+         nigeLab.utils.cprintf('Comments','Tank (%s) set.\n',tankObj.Name);
+         nigeLab.utils.cprintf('Comments',...
+            '->\tDetected %g Child Animals\n',numel(F_an));
+         
+         A = tankObj.Children;
+         
+         for i = 1:numel(F_an)
+            iA = find(ismember({A.Name},F_an(i).name),1,'first');
+            if isempty(iA)
+               nigeLab.libs.cprintf('Text*','Could not match: %s\n',...
+                  F_an(i).name);
+               continue;
+            end
+            % This sets .Output:
+            A(iA).IDFile = fullfile(tankObj.Output,...
+               F_an(i).name,'.nigelAnimal');
+            A(iA).saveIDFile();
+            F_bl = dir(A(iA).Output);
+            F_bl = F_bl([F_bl.isdir]);
+            iRemove = ismember({F_bl.name},{'.','..'});
+            F_bl(iRemove) = [];
+            nigeLab.utils.cprintf('Strings','\tAnimal (%s) set.\n',...
+               A(iA).Name);
+            nigeLab.utils.cprintf('Strings',...
+               '\t->\tDetected %g Child Blocks\n',numel(F_bl));
+            
+            B = A(iA).Children;
+            for k = 1:numel(F_bl)
+               iB = find(ismember({B.Name},F_bl(k).name),1,'first');
+               if isempty(iA)
+                  nigeLab.libs.cprintf('Text*','Could not match: %s\n',...
+                     F_bl(k).name);
+                  continue;
+               end
+               % This sets .Output:
+               B(iB).IDFile = fullfile(A(iA).Output,...
+                  F_bl(k).name,'.nigelBlock');
+               B(iB).saveIDFile();
+               nigeLab.utils.cprintf('Text*','\t\tBlock (%s) set.\n',...
+                  B(iB).Name);
+            end            
+         end
+         return;
+      end
    end
    
    % STATIC

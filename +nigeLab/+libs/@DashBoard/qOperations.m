@@ -97,7 +97,7 @@ switch class(target)
             % Create a worker config file that adds the remote repository,
             % then loads the corresponding block matfile and runs the
             % desired operation.
-            add_debug_outputs = true;
+            add_debug_outputs = nPars.DebugOn;
             [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p,...
                add_debug_outputs);
             attachedFiles = {c, w};

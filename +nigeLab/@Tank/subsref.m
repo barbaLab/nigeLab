@@ -96,21 +96,54 @@ switch S(1).type
       if nargout > 0
          [varargout{1:nargout}] = builtin('subsref',tankObj,S);
       else
-         [methodSubs,~,methodOutputs] = tankObj.findMethodSubsIndices(S);
+         [methodSubs,~,methodOutputs,methodInputs] = ...
+            tankObj.findMethodSubsIndices(S);
          obj = tankObj;
          while ~isempty(methodSubs)
-            if methodOutputs(1) > 0  
-               tmp = builtin('subsref',obj,S(1:methodSubs(1)));
-               if ismethod(tmp,'findMethodSubsIndices')
-                  obj = tmp;
-                  S(1:methodSubs(1)) = [];
-                  [methodSubs,~,methodOutputs] = ...
-                     obj.findMethodSubsIndices(S);
+            if methodOutputs(1) > 0 
+               if numel(S) > methodSubs(1)
+                  switch S(methodSubs(1)+1).type
+                     case '()' % Then arguments were given
+                        if methodInputs(1) >= numel(S(methodSubs(1)+1).subs)
+                           tmp = builtin('subsref',obj,S(1:(methodSubs(1)+1)));
+                           if ismethod(tmp,'findMethodSubsIndices')
+                              obj = tmp;
+                              S(1:(methodSubs(1)+1)) = [];
+                              [methodSubs,~,methodOutputs,methodInputs] = ...
+                                 obj.findMethodSubsIndices(S);
+                           else
+                              methodSubs = [];
+                           end
+                        else
+                           tmp = builtin('subsref',obj,S(1:methodSubs(1)));
+                           if ismethod(tmp,'findMethodSubsIndices')
+                              obj = tmp;
+                              S(1:methodSubs(1)) = [];
+                              [methodSubs,~,methodOutputs,methodInputs] = ...
+                                 obj.findMethodSubsIndices(S);
+                           else
+                              methodSubs = [];
+                           end
+                        end
+                     otherwise % Then it was "obj.method.method" call
+                        tmp = builtin('subsref',obj,S(1:methodSubs(1)));
+                        if ismethod(tmp,'findMethodSubsIndices')
+                           obj = tmp;
+                           S(1:methodSubs(1)) = [];
+                           [methodSubs,~,methodOutputs] = ...
+                              obj.findMethodSubsIndices(S);
+                        else
+                           methodSubs = [];
+                        end
+                  end
                else
-                  methodSubs = [];
+                  ans = builtin('subsref',obj,S) %#ok<NOPRT,NOANS>
+                  nigeLab.utils.mtb(ans); %#ok<NOANS>
+                  return;
                end
             else
-               builtin('subsref',obj,S(1:methodSubs(1)));
+               builtin('subsref',obj,S);
+               return;
             end
          end
          ans = builtin('subsref',obj,S) %#ok<NOPRT,NOANS>

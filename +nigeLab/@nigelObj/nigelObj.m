@@ -76,9 +76,11 @@ classdef nigelObj < matlab.mixin.Copyable & ...
       GUI                     % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
       Input       char        % Path to input file or folder
       Name        char        % Name of the obj (char array)
+      OnRemote   (1,1)logical = false  % Is this object running a job on remote worker?
       Output      char        % Path to output folder (same as .Paths.SaveLoc)
       Pars   (1,1)struct      % Parameters struct
       Paths  (1,1)struct      % Detailed paths specifications
+      ShortFile   char        % Shortened filename
       SortGUI                 % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
       Type        char        %'Block', 'Animal' or 'Tank'
    end
@@ -90,15 +92,17 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    
    % DEPENDENT,HIDDEN,PROTECTED (Old properties go here)
    properties (Dependent,Hidden,Access=protected)
-      AnimalLoc  % (char)   Saving path of extracted/processed animal
-      Animals    % (nigeLab.Animal)  "Child" Animal objects
-      Blocks     % (nigeLab.Block)   "Child" Block objects
-      FileExt    % (char)   .rhd, .rhs, or other (for this recording) -- Block only
-      KeyPair    % (struct) .Public, .Private random alphanumeric id
-      RecDir     % (char)   Tank or Animal INPUT folder
-      RecFile    % (char)   Full filename of raw binary recording file
-      SaveLoc    % (char)   Top-level OUTPUT folder
-      TankLoc    % (char)   directory for saving Animal
+      AnimalLoc  char                     % Saving path of extracted/processed animal
+      Animals                             % (nigeLab.Animal)  "Child" Animal objects
+      Blocks                              % (nigeLab.Block)   "Child" Block objects
+      FileExt    char                     % .rhd, .rhs, or other (for this recording) -- Block only
+      RecType    char                     % Intan / TDT / other
+      KeyPair                             % (struct) .Public, .Private random alphanumeric id
+      RecDir     char                     % Tank or Animal INPUT folder
+      RecFile    char                     % Full filename of raw binary recording file
+      RecSystem                           % (nigeLab.utils.AcqSystem) 'RHS', 'RHD', or 'TDT' (must be one of those)
+      SaveLoc    char                     % Top-level OUTPUT folder
+      TankLoc    char                     % directory for saving Animal
    end
    
    % DEPENDENT,HIDDEN,PUBLIC
@@ -121,7 +125,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
       IsEmpty    (1,1)logical = false  % True if no data in this (e.g. Empty() method used)
       IsDashOpen (1,1)logical = false  % Is nigeLab.libs.DashBoard GUI open?
       IsMasked   (1,1)logical = true   % true --> obj is "enabled"
-      OnRemote   (1,1)logical = false  % Is this object running a job on remote worker?
       Verbose    (1,1)logical = true   % Display debug output?
    end
    
@@ -142,8 +145,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
 
    % HIDDEN,PROTECTED
    properties (Hidden,Access=protected)
-      In     (1,1) struct   % Input  (folder tree or recording file/dir) paths
-      Out    (1,1) struct   % Output (folder tree) paths      
+      AcqSystem    nigeLab.utils.AcqSystem % 'RHS', 'RHD', or 'TDT' (must be one of those)
+      In     (1,1) struct                  % Input  (folder tree or recording file/dir) paths
+      Out    (1,1) struct                  % Output (folder tree) paths      
       Key    (1,1) struct = nigeLab.nigelObj.InitKey()   % Fields are "public" and "private" (reserved for later)
       Params (1,1) struct = struct('Pars',struct,'Paths',struct,'Type','') % Holds dependent properties
    end
@@ -409,7 +413,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  value = get(obj,'AnimalLoc');
          %  --> Returns value of obj.Out.Animal instead
          
-         value = obj.Out.Animal;
+         value = nigeLab.utils.getUNCPath(obj.Out.Animal);
+         value = strrep(value,'\','/');
       end
       
       % [DEPENDENT] Get method for .Animals (backwards compatibility)
@@ -617,8 +622,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             value = '';
             return;
          end
-         value = strrep(obj.In.(obj.Type),'\','/');
-
+         value = nigeLab.utils.getUNCPath(obj.In.(obj.Type));
+         value = strrep(value,'\','/');
       end
       
       % [DEPENDENT] Get method for .InPrompt
@@ -688,6 +693,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          value = obj.Paths.Name;
       end
       
+      % [DEPENDENT] Get method for .OnRemote (running remote job if true)
+      function value = get.OnRemote(obj)
+         %GET.ONREMOTE  Returns value of OnRemote flag
+         %
+         %  value = get(obj,'OnRemote');
+         
+         if isfield(obj.Paths,'OnRemote')
+            value = obj.Paths.OnRemote;
+            return;
+         else
+            value = false; % It is always set in qWrapper
+         end
+      end
+      
       % [DEPENDENT] Get method for .Output
       function value = get.Output(obj)
          %GET.OUTPUT  Return output folder tree container folder
@@ -695,7 +714,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  value = get(obj,'Output');         
 
          if isfield(obj.Out,obj.Type)
-            value = strrep(obj.Out.(obj.Type),'\','/');
+            value = nigeLab.utils.getUNCPath(obj.Out.(obj.Type));
+            value = strrep(value,'\','/');
             return;
          end
 
@@ -728,7 +748,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
          % If we find the correct FolderIdentifier, return the value
          if strcmp(F.name,obj.FolderIdentifier)
-            value = p;
+            value = nigeLab.utils.getUNCPath(p);
+            value = strrep(value,'\','/');
          else
             obj.PlayAlertPing(4,0.66,1.5,0.75,-1);
             error(['nigeLab:' mfilename ':BadFolderTree'],...
@@ -816,7 +837,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             f = uigetdir(obj.InDef,obj.InPrompt);
             obj.Input = nigeLab.utils.getUNCPath(f);
          end
-         value = strrep(obj.Input,'\','/');
+         value = nigeLab.utils.getUNCPath(obj.Input);
+         value = strrep(value,'\','/');
       end
       
       % [DEPENDENT] Get method for .RecFile (backwards compatibility)
@@ -843,39 +865,114 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          else
             return;
          end
-         value = strrep(obj.Input,'\','/');
+         value = nigeLab.utils.getUNCPath(obj.Input);
+         value = strrep(value,'\','/');
+      end
+      
+      % [DEPENDENT] Get method for .RecSystem
+      function value = get.RecSystem(obj)
+         %GET.RECSYSTEM  Returns value .RecSystem property
+         %
+         %  value = get(obj,'RecSystem');
+         %  --> Depends upon value of obj.AcqSystem
+         
+         if isempty(obj.AcqSystem)
+            value = nigeLab.utils.AcqSystem('UNKNOWN');
+            return;
+         end
+         
+         value = obj.AcqSystem;
+      end
+      
+      % [DEPENDENT] Get method for .RecType
+      function value = get.RecType(obj)
+         %GET.RECTYPE  Returns value .RecType property
+         %
+         %  value = get(obj,'RecType');
+         %  --> Depends upon value of obj.FileExt
+         
+         if isfield(obj.In,'RecType')
+            value = obj.In.RecType;
+            return;
+         end
+         
+         if ismember(obj.Type,{'Animal','Tank'})
+            value = '';
+            return;
+         end
+         
+         if isempty(obj.FileExt)
+            value = 'Other';
+            return;
+         end
+         
+         value = obj.parseRecType();
       end
       
       % [DEPENDENT] Get method for .SaveLoc (backwards compatibility)
       function value = get.SaveLoc(obj)
          %GET.SAVELOC  Dependent property for backwards compatibility
          %
+         %  NOTE: .SaveLoc should ALWAYS be the folder that CONTAINS the
+         %        Output folder tree. Therefore it is always one level
+         %        "higher" than nigeLab.nigelObj.Output.
+         %
          %  value = get(obj,'SaveLoc');
          %  --> Returns value of obj.Out.Animal if obj is Block
          %  --> Returns value of obj.Out.Tank if obj is Animal
          %  --> Returns value of obj.Out.Experiment if obj is Tank
 
-         if ~isfield(obj.Paths,'SaveLoc')
-            value = '';
-         else
-            value = obj.Paths.SaveLoc;
-            if isstruct(value)
-               value = value.dir;
-            end
+         switch obj.Type
+            case 'Block'
+               value = obj.Out.Animal;
+            case 'Animal'
+               value = obj.Out.Tank;
+            case 'Tank'
+               value = obj.Out.Experiment;
          end
+
          if isempty(value)
-            switch obj.Type
-               case 'Block'
-                  value = obj.Out.Animal;
-               case 'Animal'
-                  value = obj.Out.Tank;
-               case 'Tank'
-                  value = obj.Out.Experiment;
+            if ~isfield(obj.Paths,'SaveLoc')
+               value = '';
+            else
+               value = obj.Paths.SaveLoc;
+               if isstruct(value)
+                  value = value.dir;
+               end
             end
          end
+         value = nigeLab.utils.getUNCPath(value);
          value = strrep(value,'\','/');
       end
       
+      % [DEPENDENT] Get method for .ShortFile (for printing names)
+      function value = get.ShortFile(obj)
+         %GET.SHORTFILE  Get shortened _Obj.mat file name
+         %
+         %  value = get(obj,'ShortFile');
+
+         value = obj.File;
+         [p,f,e] = fileparts(value);
+         name = [f e];
+         if numel(name) > 16
+            nameParts = strsplit(name,'_');
+            if numel(nameParts) > 1
+               name = [nameParts{1} '_..._' nameParts{end}];
+            end
+         end
+         fParts = strsplit(p,'/');
+         if numel(fParts) > 1
+            switch numel(fParts) 
+               case 2
+                  value = ['//' fParts{2} '/' name];
+               otherwise
+                  value = ['//' fParts{2} '/' fParts{3}  '/.../' name];
+            end
+         else
+            value = ['~/' name];
+         end
+      end
+
       % [DEPENDENT] Get method for .SortGUI (handle to nigeLab.Sort)
       function value = get.SortGUI(obj)
          %GET.SORTGUI  Returns handle to nigeLab.Sort object
@@ -896,7 +993,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  value = get(obj,'TankLoc');
          %  --> Returns value of obj.Out.Tank instead
          
-         value = obj.Out.Tank;
+         value = nigeLab.utils.getUNCPath(obj.Out.Tank);
+         value = strrep(value,'\','/');
       end
       
       % [DEPENDENT] Get method for .Type (ensure returns good .Type)
@@ -980,16 +1078,39 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          flag = false;         
          obj.updateParams(obj.Type);
          
+         % Do all Dependent variable 'gets' prior to try in case that is
+         % where an error occurs:
+         type = obj.Type;
+         switch type
+            case 'Block'
+               fmt = 'Text*';
+               idt = sprintf('\t\t->\t');
+            case 'Animal'
+               fmt = 'Strings*';
+               idt = sprintf('\t->\t');
+            case 'Tank'
+               fmt = 'Comments*';
+               idt = sprintf('->\t');
+            otherwise
+               fmt = 'Cyan*';
+               idt = '?? ';
+         end
+         fname = obj.File;
+         name = obj.ShortFile;
+         
          % Save obj. No longer needs to drop and re-add handles, due
-         % to use of `Transient` property attribute
-         varName = [lower(obj.Type) 'Obj'];
+         % to use of `Transient` property attribute         
+         varName = [lower(type) 'Obj'];
          out = struct;
          out.(varName) = obj;
-         try
-            save(obj.File,'-struct','out');
+         try % The only thing here that can go wrong is something with save
+            save(fname,'-struct','out');
             flag = true;
+            nigeLab.utils.cprintf(fmt,...
+               '%s[%s]: %s saved successfully!\n',idt,type,name);
          catch
-            nigeLab.utils.cprintf('Errors','Failed to save %s\n',obj.Name);
+            nigeLab.utils.cprintf('Errors*',...
+               'Failed to save [%s]: %s\n',type,name);
             return;
          end
          flag = flag && obj.saveIDFile(); % .nigelBlock file saver
@@ -1240,9 +1361,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                if strcmp(ext,obj.FolderIdentifier)
                   obj.In.Block = a;
                   [a,b,~] = fileparts(obj.In.Block);
-               end
-               if ~isempty(ext)
+               elseif ~isempty(ext)
                   obj.In.FileExt = ext;
+                  obj.RecFile = value;
+                  obj.RecDir = a;
                end
                obj.In.Animal = a;
                obj.In.BlockName = b;
@@ -1250,12 +1372,14 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.BlockName;
             case 'Animal'
-               obj.In.Animal = value;
+               % obj.In.Animal = value;
+               obj.RecDir = value;
                [obj.In.Tank,obj.In.AnimalName,~] = fileparts(value);
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.AnimalName;
             case 'Tank'
-               obj.In.Tank = value;
+               % obj.In.Tank = value;
+               obj.RecDir = value;
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(value);
                obj.In.Name = obj.In.TankName;
             otherwise
@@ -1378,6 +1502,38 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
+      % [DEPENDENT] Set method for .OnRemote (running remote job if true)
+      function set.OnRemote(obj,value)
+         %SET.ONREMOTE  Sets value of OnRemote flag
+         %
+         %  set(obj,'OnRemote',value);
+         %  --> Toggles leading string to .Input and .Output property to
+         %        properly reflect the configured path on local or remote
+         %        machine.
+         
+         obj.Paths.OnRemote = value;
+         if ~isfield(obj.Pars,'Queue')
+            obj.updateParams('Queue',true);
+         end
+         out = obj.Output;
+         in = obj.Input;
+         if value
+            in = strrep(in,obj.Pars.Queue.Remote.SaveRoot,...
+               obj.Pars.Queue.Local.SaveRoot);
+            obj.Input = in;
+            out = strrep(out,obj.Pars.Queue.Remote.SaveRoot,...
+               obj.Pars.Queue.Local.SaveRoot);
+            obj.Output = out;
+         else
+            in = strrep(in,obj.Pars.Queue.Local.SaveRoot,...
+               obj.Pars.Queue.Remote.SaveRoot);
+            obj.Input = in;
+            out = strrep(out,obj.Pars.Queue.Local.SaveRoot,...
+               obj.Pars.Queue.Remote.SaveRoot);
+            obj.Output = out;
+         end
+      end
+      
       % [DEPENDENT] Set method for .OutDef (default output location)
       function set.OutDef(obj,value)
          %SET.OUTDEF  Default output location (char array)
@@ -1432,7 +1588,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             case 'Tank'
                obj.Out.Tank = value;
                [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Tank;
+               obj.SaveLoc = obj.Out.Experiment;
             otherwise
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
@@ -1465,7 +1621,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          if ~ischar(value)
             return;
          end
-         obj.In.(obj.Type) = value;
+         switch obj.Type
+            case 'Block'
+               obj.In.Animal = value;
+            otherwise
+               obj.In.(obj.Type) = value;
+         end
          obj.Paths.RecDir = value;
       end
       
@@ -1484,6 +1645,33 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          obj.Paths.RecFile = value;
       end
       
+      % [DEPENDENT] Set method for .RecSystem
+      function set.RecSystem(obj,value)
+         %SET.RECSYSTEM  Sets value .RecSystem property
+         %
+         %  set(obj,'RecSystem',value);
+         
+         % Block can only have one Acquisition system; 
+         % Similarly, if property is empty, then just make assignment
+         if isempty(obj.AcqSystem) || strcmp(obj.Type,'Block')
+            obj.AcqSystem = value;
+            return;
+         end
+         
+         % Otherwise, include any unique acquisition systems used
+         obj.AcqSystem = unique([obj.AcqSystem, value]);
+      end
+      
+      % [DEPENDENT] Set method for .RecType
+      function set.RecType(obj,value)
+         %SET.RECTYPE  Sets value .RecType property
+         %
+         %  set(obj,'RecType',value);
+         %  --> Depends upon value of obj.FileExt
+         
+         obj.In.RecType = value;
+      end
+      
       % [DEPENDENT] Set method for .SaveLoc (backwards compatibility)
       function set.SaveLoc(obj,value)
          %SET.SAVELOC  Dependent property for backwards compatibility
@@ -1499,6 +1687,11 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             return;
          end
          obj.Paths.SaveLoc = value;
+      end
+      
+      % [DEPENDENT] Set method for .ShortFile (for printing names)
+      function set.ShortFile(~,~)
+         %SET.SHORTFILE  No set method for this property
       end
       
       % [DEPENDENT] Set method for .SortGUI (handle to nigeLab.Sort object)
@@ -3703,18 +3896,22 @@ classdef nigelObj < matlab.mixin.Copyable & ...
       end
       
       % Return `Substruct` array indices to "Methods" subscripts
-      function [methodSubs,methodName,methodOutputs] = findMethodSubsIndices(obj,S)
+      function [methodSubs,methodName,methodOutputs,methodInputs] = findMethodSubsIndices(obj,S)
          %FINDMETHODSUBSINDICES  Return array indices to methods subscripts
          %
-         %  [methodSubs,methodIndex] = obj.findMethodSubsIndices(S);
+         %  [methodSubs,methodName,methodOutputs,methodInputs] = ...
+         %     obj.findMethodSubsIndices(S);
          %  methodSubs : Indices to substruct S that are methods
          %  methodName : Corresponding method name in metaclass method list
+         %  methodOutputs : Number of outputs for corresponding method
+         %  methodInputs : Number of inputs for corresponding method
          
          mc = metaclass(obj);
          m = {mc.MethodList.Name};
          methodSubs = [];
          methodName = [];
          methodOutputs = [];
+         methodInputs = [];
          for i = 1:numel(S)
             if iscell(S(i).subs)
                if ischar(S(i).subs{1})
@@ -3724,6 +3921,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                      methodName = [methodName,m(idx)]; %#ok<*AGROW>
                      methodOutputs = [methodOutputs, ...
                         numel(mc.MethodList(idx).OutputNames)];
+                     methodInputs = [methodInputs, ...
+                        numel(mc.MethodList(idx).InputNames)];
                   end
                end
             elseif ischar(S(i).subs)
@@ -3733,6 +3932,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                   methodName = [methodName,m(idx)];
                   methodOutputs = [methodOutputs, ...
                         numel(mc.MethodList(idx).OutputNames)];
+                  methodInputs = [methodInputs, ...
+                        numel(mc.MethodList(idx).InputNames)];
                end
             end
          end
@@ -3755,10 +3956,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
          
          if useUNC
-            fname = nigeLab.utils.getUNCPath(obj.Output,...
+            fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
                sprintf(obj.ParamsExpr,obj.Name));
          else
-            fname = fullfile(obj.Output,...
+            fname = fullfile(obj.SaveLoc,...
                sprintf(obj.ParamsExpr,obj.Name));
          end
       end
@@ -4245,6 +4446,91 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          obj.Pars.(obj.Type).Parsing = pars;
       end
       
+      % Parse recording type based on file extension
+      function recType = parseRecType(obj)
+         %PARSERECTYPE   Figure out what kind of recording this is
+         %
+         %  recType = nigelObj.parseRecType();
+         %
+         %  Sets the 'RecType' property of nigelObj
+
+         switch obj.FileExt
+            case '.rhd'
+               recType = 'Intan';
+               obj.RecType=recType;
+               obj.RecSystem = nigeLab.utils.AcqSystem('RHD');
+               return;
+               
+            case '.rhs'
+               recType = 'Intan';
+               obj.RecType=recType;
+               obj.RecSystem = nigeLab.utils.AcqSystem('RHS');
+               return;
+               
+            case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+               recType = 'TDT';
+               obj.RecType=recType;
+               obj.RecSystem = nigeLab.utils.AcqSystem('TDT');
+               return;
+               
+            case '.mat'
+               recType = 'Matfile';
+               obj.RecType=recType;
+               return;
+               
+            case '.nigelBlock'
+               recType = 'nigelBlock';
+               obj.RecType=recType;
+               return;
+               
+            case ''
+               files = dir(nigeLab.utils.getUNCPath(obj.RecFile));
+               files = files(~[files.isdir]);
+               if isempty(files)
+                  recType = 'nigelBlock';
+                  obj.RecType = recType;
+                  return;
+               end
+               [~,~,ext] = fileparts(files(1).name);
+               switch ext
+                  case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+                     recType = 'TDT';
+                     obj.RecType=recType;
+                     obj.FileExt = ext;
+                     
+                  case '.nigelBlock'
+                     recType = 'nigelBlock';
+                     obj.RecType=recType;
+                     obj.FileExt = ext;
+                     
+                  case '.mat'
+                     recType = 'Matfile';
+                     obj.RecType=recType;
+                     obj.FileExt = '.mat';
+                     
+                  otherwise
+                     recType = 'other';
+                     obj.RecType=recType;
+                     obj.FileExt = ext;
+                     nigeLab.utils.cprintf('Errors*',...
+                        'Not a recognized file extension: %s\n',ext);
+                     
+               end
+               % Ensure that RecFile is a file, not a folder
+               obj.RecFile = fullfile(files(1).folder,files(1).name);
+               return;
+               
+            otherwise
+               recType = 'other';
+               obj.RecType=recType;
+               nigeLab.utils.cprintf('Errors*',...
+                        'Not a recognized file extension: %s\n',...
+                        obj.FileExt);
+               return;
+         end
+         
+      end
+      
       % Request that DashBoard opens
       function requestDash(obj,evt)
          %REQUESTDASH  Request to open the GUI
@@ -4300,7 +4586,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             end
             if strcmp(obj.Type,'Block')
                fprintf(fid,'FileExt|%s\n',obj.FileExt);
+               fprintf(fid,'RecType|%s\n',obj.RecType);
+               fprintf(fid,'RecFile|%s\n',obj.RecFile);
             end
+            fprintf(fid,'RecDir|%s\n',obj.RecDir);
             fprintf(fid,'User|%s', obj.User);
             fclose(fid);
             flag = true;
