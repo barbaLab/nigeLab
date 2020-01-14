@@ -157,11 +157,13 @@ end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
       fprintf(fid,'curJob = getCurrentJob;\n\n');
+      fprintf(fid,'[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
+      fprintf(fid,'curJob(1).Tag=strrep(curJob(1).Tag,tag,''Loading'');\n');
       
       fprintf(fid,'%%%% Attempt to load target Block.\n');
-      fprintf(fid,['blockObj.reportProgress(' ...
-         '''Loading'',0,''toWindow'',''Loading'');\n']);
       fprintf(fid,'blockObj = nigeLab.Block.loadRemote(targetFile);\n\n');
+      fprintf(fid,['blockObj.reportProgress(' ...
+         '''Updating'',0,''toWindow'',''Updating'');\n']);
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Update properties\n');
       fprintf(fid,'blockObj.OnRemote = true; %% Currently on REMOTE\n');

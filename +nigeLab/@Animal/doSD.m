@@ -10,7 +10,7 @@ function flag = doSD(animalObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% RUN SPIKE DETECTION FOR EACH BLOCK IN ANIMAL
-B=animalObj.Blocks;
+B=animalObj.Children;
 flag = false(1,numel(B));
 for ii=1:numel(B)
     flag(ii) = doSD(B(ii));

@@ -25,6 +25,8 @@ if nargin < 2
    nigelObj = getFromFileSelection(sortObj);
 end
 
+sortObj.Input = nigelObj;
+
 % Parse input argument type
 switch class(nigelObj)
    case 'nigeLab.Block'
@@ -42,7 +44,7 @@ switch class(nigelObj)
          warning('Only 1 nigeLab.Tank object can be scored at a time.');
          return;            
       else
-         if ~parseAnimals(sortObj,nigelObj.Animals)
+         if ~parseAnimals(sortObj,nigelObj.Children)
             warning('Could not parse nigeLab.Animal objects.');
             return;
          end

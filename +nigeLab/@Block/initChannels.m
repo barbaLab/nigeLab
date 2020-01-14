@@ -20,21 +20,31 @@ if ~blockObj.parseProbeNumbers % Depends on recording system
    warning('Could not properly parse probe identifiers.');
    return;
 end
-blockObj.NumChannels = header.num_raw_channels;
-blockObj.NumProbes = header.num_probes;
 blockObj.SampleRate = header.sample_rate;
 blockObj.Samples = header.num_raw_samples;
 
 %% SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
-blockObj.parseChannelID();
 if isfield(header,'Mask')
    blockObj.Mask = reshape(find(header.Mask),1,numel(header.Mask));
 elseif isempty(blockObj.Mask)
    blockObj.Mask = 1:blockObj.NumChannels;
-else
+elseif islogical(blockObj.Mask)
+   if numel(blockObj.Mask)~=numel(blockObj.NumChannels)
+      error(['nigeLab:' mfilename ':MaskChannelsMismatch'],...
+         ['%s.Mask is a logical vector but has %g elements ',...
+          'while there are %g Channels\n'],...
+            blockObj.Name,numel(blockObj.Mask),blockObj.NumChannels);
+   end
+   % Convert to `double`
+   blockObj.Mask = find(blockObj.Mask); 
+elseif isnumeric(blockObj.Mask)
    blockObj.Mask(blockObj.Mask > blockObj.NumChannels) = [];
    blockObj.Mask(blockObj.Mask < 1) = [];
    blockObj.Mask = reshape(blockObj.Mask,1,numel(blockObj.Mask));
+else
+   error(['nigeLab:' mfilename ':InvalidMaskType'],...
+      '%s.Mask is assigned an invalid class of value (%s)\n',...
+         blockObj.Name,class(blockObj.Mask));
 end
 
 flag = true;

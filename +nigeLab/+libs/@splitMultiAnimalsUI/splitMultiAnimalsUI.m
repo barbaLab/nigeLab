@@ -196,7 +196,7 @@ classdef splitMultiAnimalsUI < handle
          % TODO case where only blockobj is initialized
          obj.Tree = obj.buildBlockTrees();
          obj.AcceptBtn.UserData.reviewedBlocks = false(1,...
-            numel(obj.animalObj.Blocks));
+            numel(obj.animalObj.Children));
          obj.animalObj.splitMultiAnimals('init');
          
       end
@@ -211,8 +211,8 @@ classdef splitMultiAnimalsUI < handle
          Tree = gobjects(numel(obj.DashObj.B_split),...
                          numel(obj.blockObj.MultiAnimalsLinkedBlocks));
                       
-         for jj = 1:numel(obj.animalObj.Blocks)
-            thisBlock = obj.animalObj.Blocks(jj);
+         for jj = 1:numel(obj.animalObj.Children)
+            thisBlock = obj.animalObj.Children(jj);
             if thisBlock == obj.blockObj
                visible = 'on';
             else
@@ -359,7 +359,7 @@ classdef splitMultiAnimalsUI < handle
                obj.blockObj.MultiAnimalsLinkedBlocks);
          end
          populateTree(Tree_);
-         obj.animalObj.removeBlocks(find(obj.animalObj.Blocks == obj.blockObj)); %#ok<FNDSB>
+         obj.animalObj.removeChild(find(obj.animalObj.Children == obj.blockObj)); %#ok<FNDSB>
          notify(obj,'SplitCompleted',splitCompletedEvt);
          % if an animal obj is available, move everything to the correct
          % animal
@@ -402,7 +402,7 @@ classdef splitMultiAnimalsUI < handle
                dropOk = true;               
                
             elseif strcmpi(e.DropAction,'move')
-               blockID = (obj.blockObj==obj.animalObj.Blocks);
+               blockID = (obj.blockObj==obj.animalObj.Children);
                set(obj.AcceptBtn,'Enable','on');
                obj.AcceptBtn.UserData.reviewedBlocks(blockID) = true;
                
@@ -451,7 +451,7 @@ classdef splitMultiAnimalsUI < handle
          %  DashBoard, so that they can be used in the splitting interface.
          
          [obj.blockObj,obj.animalObj]= obj.DashObj.getSelectedItems;
-         indx = obj.animalObj.Blocks == obj.blockObj;
+         indx = obj.animalObj.Children == obj.blockObj;
          
          [obj.Tree(:).Visible] = deal('off');
          [obj.Tree(indx,:).Visible] = deal('on');

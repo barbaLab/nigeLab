@@ -54,7 +54,7 @@ classdef (ConstructOnLoad) treeSelectionChanged < event.EventData
                evt.initAll(selectionIndex);
             case 2
                %% Normal case
-               evt.Animal = tankObj.Animals(unique(selectionIndex(:,1)));
+               evt.Animal = tankObj.Children(unique(selectionIndex(:,1)));
                evt.Block = tankObj{selectionIndex(:,1),selectionIndex(:,2)};
                evt.SelectionIndex = selectionIndex;
             case 3
@@ -67,7 +67,7 @@ classdef (ConstructOnLoad) treeSelectionChanged < event.EventData
                   evt.Block = tankObj{evt.SelectionIndex(:,1),...
                                       evt.SelectionIndex(:,2)};
                   iA = unique(evt.SelectionIndex(:,1));
-                  evt.Animal = tankObj.Animals(iA);
+                  evt.Animal = tankObj.Children(iA);
                end
             otherwise
                error(['nigeLab:' mfilename ':InvalidInputSize'],...
@@ -87,16 +87,16 @@ classdef (ConstructOnLoad) treeSelectionChanged < event.EventData
          %                               blocks for those animals
          
          if nargin < 2
-            evt.Animal = evt.Tank.Animals;
+            evt.Animal = evt.Tank.Children;
          else
-            evt.Animal = evt.Tank.Animals(unique(animalIndices));
+            evt.Animal = evt.Tank.Children(unique(animalIndices));
          end
          selectionIndex = [];
          iA = 0;
          for a = evt.Animal
             iA = iA + 1;
-            evt.Block = [evt.Block, a.Blocks];
-            n = numel(a.Blocks);
+            evt.Block = [evt.Block, a.Children];
+            n = numel(a.Children);
             selectionIndex = [selectionIndex; ...
                ones(n,1)*iA, (1:n)']; %#ok<*AGROW>
          end

@@ -1,4 +1,4 @@
-function pars = Plot()
+function varargout = Plot(varargin)
 %% PLOT   Template for initializing parameters for plotting data
 %
 %   pars = nigeLab.defaults.Plot;
@@ -22,6 +22,20 @@ pars.Bregma = [5100 1750]; % pixel location of bregma
 pars.XScale = 350; % pixels for 1 mm
 pars.YScale = 150; % pixels for 1 mm
 pars.Size = 18;    % pixels
+
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
+end
 
 end
 

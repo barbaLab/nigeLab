@@ -27,7 +27,7 @@ else
          field = {suppressWarning};
          f = intersect(field,blockObj.Fields);
          if isempty(f)
-            error(['nigeLab:' mfilename ':badInputType2'],...
+            error(['nigeLab:' mfilename ':BadInputChar'],...
                'Invalid field: %s (%s)',field{:},blockObj.Name);
          end
          field = f;
@@ -36,7 +36,7 @@ else
          field = suppressWarning;
          f = intersect(field,blockObj.Fields);
          if isempty(f)
-            error(['nigeLab:' mfilename ':badInputType2'],...
+            error(['nigeLab:' mfilename ':BadInputChar'],...
                'Invalid field: %s (%s)',field{:},blockObj.Name);
          end
          field = f;
@@ -44,7 +44,7 @@ else
       case 'logical'
          field = blockObj.Fields;
       otherwise
-         error(['nigeLab:' mfilename ':badInputType2'],...
+         error(['nigeLab:' mfilename ':BadInputClass'],...
             'Unexpected class for ''suppressWarning'': %s',...
             class(suppressWarning));
    end
@@ -57,7 +57,7 @@ warningFold = false(1,N);
 for ii = 1:N
    fieldIndex = find(ismember(blockObj.Fields,field{ii}),1,'first');
    if isempty(fieldIndex)
-      error(['nigeLab:' mfilename ':invalidField'],...
+      error(['nigeLab:' mfilename ':BadField'],...
          'Invalid field: %s (%s)',field{ii},blockObj.Name);
    end
    pcur = parseFolder(blockObj,fieldIndex);

@@ -7,7 +7,6 @@ classdef (ConstructOnLoad) barStarted < event.EventData
 %  the `nigeLab.libs.nigelProgress/startBar()` method is invoked.
 %
 %  BARSTARTED Properties:
-%
 %     BarIndex  --  Index of bar into remote monitor 'bars' array
 %
 %     BlockSelectionIndex  --  Index of [animal block] from tank{} ref

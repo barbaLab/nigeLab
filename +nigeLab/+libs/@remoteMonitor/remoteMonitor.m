@@ -108,10 +108,10 @@ classdef remoteMonitor < handle
 
          monitorObj.bars = nigeLab.libs.nigelProgress(0);
          
-         for iA = 1:numel(tankObj.Animals)
-            a = tankObj.Animals(iA);
-            for iB = 1:numel(a.Blocks)
-               b = a.Blocks(iB);
+         for iA = 1:numel(tankObj.Children)
+            a = tankObj.Children(iA);
+            for iB = 1:numel(a.Children)
+               b = a.Children(iB);
                monitorObj.bars = [monitorObj.bars, ...
                   monitorObj.addBar(b,[iA,iB])];
             end

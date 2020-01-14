@@ -16,7 +16,7 @@ function flag = parseBlocks(sortObj,blockObj)
 %% INITIALIZE CHANNELS PROPERTY
 flag = false;
 
-sortObj.Channels.ID = parseChannelID(blockObj(1));
+sortObj.Channels.ID = ChannelID(blockObj(1));
 sortObj.Channels.Mask = blockObj(1).Mask;
 sortObj.Channels.Name = parseChannelName(sortObj);
 sortObj.Channels.N = size(sortObj.Channels.ID,1);
@@ -32,9 +32,11 @@ for ii = 1:numel(blockObj)
    
    % Check the format of files
    fprintf(1,'\nChecking SORTED for %s...000%%\n',blockObj(ii).Name);
+   curCh = 0; nCh = numel(blockObj(ii).Mask);
    for iCh = blockObj(ii).Mask
       blockObj(ii).checkSpikeFile(blockObj(ii).Mask);
-      pct = 100 * (iCh / blockObj(ii).NumChannels);
+      curCh = curCh+1;
+      pct = 100 * (curCh / nCh);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
    end
    

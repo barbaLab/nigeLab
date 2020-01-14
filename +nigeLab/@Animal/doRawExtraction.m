@@ -7,7 +7,7 @@ function flag = doRawExtraction(animalObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOOP THROUGH EACH BLOCK IN ANIMAL AND EXTRACT RAW DATA
-B=animalObj.Blocks;
+B=animalObj.Children;
 flag = false(1,numel(B));
 for ii=1:numel(B)
     flag = doRawExtraction(B(ii));

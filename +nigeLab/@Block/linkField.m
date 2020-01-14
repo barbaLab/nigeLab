@@ -19,7 +19,8 @@ function flag = linkField(blockObj,fieldIndex)
 flag = false;
 if isnumeric(fieldIndex)
    if ~isscalar(fieldIndex)
-      error('fieldIndex must be scalar if it is numeric');
+      error(['nigeLab:' mfilename ':BadInputSize'],...
+         'fieldIndex must be scalar if it is numeric');
    end
    field = blockObj.Fields{fieldIndex};
 elseif ischar(fieldIndex)
