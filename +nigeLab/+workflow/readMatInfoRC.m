@@ -59,6 +59,12 @@ blockName = strjoin(namestr(1:4),'_');
 FS = 24414.0625; % TDT
 FC = [300 5000]; % Cutoff frequencies used in recording
 
+%% GET NUMBER OF SAMPLES
+N = getNumSamples(pathName,blockName);
+num_raw_samples = N;
+num_analogIO_samples = 0;
+num_digIO_samples = N;
+
 %%
 header = struct; % Has fields from DESIREDOUTPUTS as defined below
 sample_rate = FS;
@@ -69,20 +75,15 @@ frequency_parameters = struct(...
    'desired_dsp_cutoff_frequency',FC(1),... % not actually "desired" :(
    'desired_lower_bandwidth',FC(1),... % not actually "desired" :(
    'desired_upper_bandwidth',FC(2));
-raw_channels = doInfoConversion(ChannelInfo);
+
+raw_channels = doInfoConversion(ChannelInfo,N);
 analogIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
-digIO_channels = makeRCdigIO(digFields);
+digIO_channels = makeRCdigIO(digFields,N);
 num_raw_channels = numel(raw_channels);
 num_digIO_channels = numel(digFields);
 num_analogIO_channels = 0;
 probes = [1;2];
 num_probes = 2;
-
-N = getNumSamples(pathName,blockName);
-num_raw_samples = N;
-num_analogIO_samples = 0;
-num_digIO_samples = N;
-   
 
 if isfield(in,'block')
    duration = in.block.info.duration;
@@ -112,15 +113,19 @@ end
 
    % Does the actual conversion from "ChannelInfo" array used in 'rc-proj'
    % repository to the "Intan-like" struct array format for channels
-   function c = doInfoConversion(info)
+   function c = doInfoConversion(info,nSamples)
       % DOINFOCONVERSION   Helps convert ChannelInfo to "Intan-like" format
+      
+      if nargin < 2
+         nSamples = 0;
+      end
       
       n = numel(info);
       probe = {'A','B'};
       % Note that most of these aren't really representative, but rather to
       % fit the existing workflow; for example, there is no "chip_channel"
       % for the TDT system on which this data was acquired.
-      c = makeChannelStruct(n,'Channels');
+      c = makeChannelStruct(n,'Channels',nSamples);
       
       for i = 1:n
          p = info(i).probe;
@@ -162,10 +167,14 @@ end
    % struct array format for channels. Specify addExtraInfo as 'true' to
    % add fields for 'icms' 'area' and 'ml' that had been parsed from the
    % probe layout previously from elsewhere.
-   function c = makeChannelStruct(n,FieldType)
+   function c = makeChannelStruct(n,FieldType,nSamples)
       % MAKECHANNELSTRUCT  Helper to return struct n x 1 struct array
       if nargin < 2
          FieldType = 'Channels';
+      end
+      
+      if nargin < 3
+         nSamples = 0;
       end
       
       switch FieldType
@@ -173,7 +182,7 @@ end
             c = nigeLab.utils.initChannelStruct(FieldType,n,...
                   'electrode_impedance_magnitude',nan,...
                   'electrode_impedance_phase',nan,...
-                  'signal',nigeLab.utils.signal('Raw'),...
+                  'signal',nigeLab.utils.signal('Raw',nSamples),...
                   'ml',cell(1,n),...
                   'icms',cell(1,n),...
                   'area',cell(1,n),...
@@ -182,7 +191,7 @@ end
             c = nigeLab.utils.initChannelStruct(FieldType,n,...
                   'port_name',{'Board Digital Inputs'},...
                   'port_prefix',{'DIN'},...
-                  'signal',nigeLab.utils.signal('DigIn'),...
+                  'signal',nigeLab.utils.signal('DigIn',nSamples),...
                   'fs',24414.0625/2); % From TDT FS
          otherwise
             error('Unrecognized FieldType: %s',FieldType);
@@ -191,10 +200,14 @@ end
 
    % The DIG_IO and alignment etc. is already parsed, so this is just to
    % represent the parsed streams
-   function c = makeRCdigIO(names)
+   function c = makeRCdigIO(names,nSamples)
       % MAKERCDIGIO  Return RC "digital IO" channel struct 
       
-      c = makeChannelStruct(numel(names),'Streams');
+      if nargin < 2
+         nSamples = 0;
+      end
+      
+      c = makeChannelStruct(numel(names),'Streams',nSamples);
       for i = 1:numel(names)    
          c(i).native_channel_name = sprintf('DIN-%02g',i);
          c(i).custom_channel_name = names{i};

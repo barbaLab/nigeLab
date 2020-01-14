@@ -48,7 +48,7 @@ end
 if isnumeric(n)
    N = n;
 else
-   N = 1;
+   N = numel(n);
 end
 
 %%
@@ -133,7 +133,8 @@ end
 
 
 if isstruct(n) % n := struct_in
-   channel_struct_ = matchFieldNames(channel_struct_,n);
+   struct_in = n;
+   channel_struct_ = matchFieldNames(channel_struct_,struct_in,N);
 end
 
 %% Parse additional input
@@ -156,42 +157,48 @@ for iV = 1:2:numel(varargin)
    end
 end
 
-   function channel_struct_ = matchFieldNames(channel_struct_,struct_in)
+   function channel_struct_ = matchFieldNames(channel_struct_,struct_in,N)
       % MATCHFIELDNAMES  Matches field names of channel_struct_ in
       %                  struct_in, and assigns field values from struct_in
       %                  to the corresponding field of channel_struct_
-      
-      
-      
+
       fn = fieldnames(struct_in);
       fn_reduced = fieldnames(channel_struct_);
-      tmp = nigeLab.utils.fixNamingConvention(struct_in);
-      fn_ = fieldnames(tmp);
+      fn_ = nigeLab.utils.fixNamingConvention(fn);
       fn_reduced_ = nigeLab.utils.fixNamingConvention(fieldnames(channel_struct_));
       
-      for i = 1:numel(fn)
-         if isempty(struct_in)
-            data_assign = [];
-         else
-            data_assign = struct_in.(fn{i});
-         end
-         
-         if ismember(fn{i},fn_reduced) % If it's a member, assign it
-            channel_struct_.(fn{i}) = data_assign;
-            
-         else % If not, check for match agnostic to capitalization
-            i_match = find(ismember(lower(fn_reduced),lower(fn{i})),1,'first');
-            if numel(i_match) == 1
-               channel_struct_.(fn_reduced{i_match}) = data_assign;
-               
-            else % If still no, fix naming convention and check for match
-               i_match = find(ismember(fn_reduced_,fn_{i}),1,'first');
+      for iN = 1:N
+         fn_rm = false(size(fn));
+         for i = 1:numel(fn)
+            if isempty(struct_in)
+               data_assign = [];
+            else
+               data_assign = struct_in(iN).(fn{i});
+            end
+
+            if ismember(fn{i},fn_reduced) % If it's a member, assign it
+               channel_struct_(iN).(fn{i}) = data_assign;
+
+            else % If not, check for match agnostic to capitalization
+               i_match = find(ismember(lower(fn_reduced),...
+                  lower(fn{i})),1,'first');
                if numel(i_match) == 1
-                  channel_struct_.(fn_reduced{i_match}) = data_assign;
-               end % If still no, then it is not a field to match
-            end            
-         end
-      end
+                  channel_struct_(iN).(fn_reduced{i_match}) = data_assign;
+
+               else % If still no, fix naming convention and check for match
+                  i_match = find(ismember(fn_reduced_,fn_{i}),1,'first');
+                  if numel(i_match) == 1
+                     channel_struct_(iN).(fn_reduced{i_match}) = ...
+                        data_assign;
+                  else % If still no, then it is not a field to match
+                     fn_rm(i) = true;
+                  end
+               end            
+            end
+         end % for i
+         fn(fn_rm) = [];
+         fn_(fn_rm) = [];
+      end % for iN
    end
 
 end

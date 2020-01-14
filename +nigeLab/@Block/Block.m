@@ -156,13 +156,13 @@ classdef Block < nigeLab.nigelObj
             blockSavePath = '';
          end
          blockObj@nigeLab.nigelObj('Block',blockPath,blockSavePath,varargin{:}); 
-         if isempty(blockObj)
+         if isempty(blockObj) % Handle empty init case
             return;
          end
-         [blockObj.Name,blockObj.Meta] = blockObj.parseNamingMetadata();
-         if isstruct(blockPath)
+         if isstruct(blockPath) % Handle loadobj case
             return;
          end
+         blockObj.addPropListeners();
          if ~blockObj.init()
             error(['nigeLab:' mfilename ':BadInit'],...
                'Block object construction unsuccessful.');
@@ -409,7 +409,7 @@ classdef Block < nigeLab.nigelObj
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
       parseNotes(blockObj,str)            % Update notes for a recording
-      header = parseHeader(blockObj)      % Parse header depending on structure
+      header = parseHeader(blockObj,fid)  % Parse header depending on structure
       
       % Methods for parsing Fields info:
       fileType = getFileType(blockObj,field) % Get file type corresponding to field
@@ -449,7 +449,7 @@ classdef Block < nigeLab.nigelObj
       flag = init(blockObj) % Initializes the BLOCK object
       flag = initChannels(blockObj,header);   % Initialize Channels property
       flag = initEvents(blockObj);     % Initialize Events property
-      flag = initStreams(blockObj);    % Initialize Streams property
+      flag = initStreams(blockObj,header);    % Initialize Streams property
       flag = initVideos(blockObj);     % Initialize Videos property
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy

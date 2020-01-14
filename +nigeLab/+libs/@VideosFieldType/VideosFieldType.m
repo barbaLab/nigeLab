@@ -11,7 +11,18 @@ classdef VideosFieldType < handle
 %  --> Uses file struct 'F' (as returned by `dir`) to associate
 %        the videos in 'F' with nigeLab.Block object 'blockObj'
    
-   properties (GetAccess = public, SetAccess = private)
+   % % % PROPERTIES % % % % % % % % % %
+   % HIDDEN, PUBLIC/PROTECTED
+   properties (Hidden,GetAccess=public,SetAccess=protected)
+      isConfigured logical % Flag indicating that pars.HasVideo is true or not
+      isParsed = false   % Flag indicating that vid metadata has been parsed
+      isEmpty  = true    % Flag to indicate that this is an "empty" data object
+      meta         % Struct with metadata parsed from name and DynamicVars parameter
+      pars         % Parameters struct
+   end
+   
+   % PUBLIC/PROTECTED
+   properties (GetAccess=public,SetAccess=protected)
       Streams nigeLab.libs.VidStreamsType    % nigeLab.libs.VidStreamsType video parsed streams
       Duration double   % Duration of video (seconds)      
       FS double         % Sample rate
@@ -24,31 +35,27 @@ classdef VideosFieldType < handle
       
    end
    
-   properties (GetAccess = public, SetAccess = private, Hidden = true)
-      isConfigured logical % Flag indicating that pars.HasVideo is true or not
-      isParsed = false   % Flag indicating that vid metadata has been parsed
-      isEmpty  = true    % Flag to indicate that this is an "empty" data object
-      meta         % Struct with metadata parsed from name and DynamicVars parameter
-      pars         % Parameters struct
-   end
-   
-   properties (Access = public)
+   % PUBLIC
+   properties (Access=public)
       tStart double
       tStop double
       offset double
    end
    
-   properties (Access = private)
+   % PROTECTED
+   properties (Access=protected)
       fname char      % Full filename of video
    end
    
-   properties (SetAccess = immutable, GetAccess = private)
+   % PROTECTED/IMMUTABLE
+   properties (GetAccess=protected,SetAccess=immutable)
       Block nigeLab.Block  % Internal reference property
    end
+   % % % % % % % % % % END PROPERTIES %
    
-   % PUBLIC
-   % Constructor
-   methods (Access = public)
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (Constructor)
+   methods
       % Class constructor
       function obj = VideosFieldType(blockObj,F)
          % VIDEOSFIELDTYPE  Constructor for class to track video file info
@@ -123,7 +130,7 @@ classdef VideosFieldType < handle
    
    % PUBLIC
    % Common methods
-   methods (Access = public, Hidden = false)   
+   methods (Access = public)   
       % Add video streams to this object based on 'signals'
       function addStreams(obj,vidStreamSignals)
          % ADDSTREAMS  Add video streams to this object based on 'signals'
@@ -163,6 +170,7 @@ classdef VideosFieldType < handle
                   numel(obj.pars.VidStreamGroup{signalIndex}));
                vidStreamSignals = nigeLab.utils.signal(...
                   obj.pars.VidStreamGroup{signalIndex},...
+                  0,...
                   obj.pars.VidStreamField{signalIndex},...
                   obj.pars.VidStreamFieldType{signalIndex},...
                   source,...
@@ -291,9 +299,8 @@ classdef VideosFieldType < handle
 
    end
    
-   % PRIVATE
-   % Sets properties for internal reference
-   methods (Access = private)      
+   % PROTECTED
+   methods (Access=protected)      
       % Find videos (for constructor)
       function F = findVideos(obj)
          %FINDVIDEOS Get string for parsing matched video file names
@@ -449,9 +456,8 @@ classdef VideosFieldType < handle
       end
    end
    
-   % PUBLIC
-   % STATIC  -- for making "empty" arrays
-   methods (Access = public, Static = true)
+   % STATIC,PUBLIC (Empty)
+   methods (Static,Access=public)
       % Create "Empty" object or object array
       function obj = Empty(n)
          % EMPTY  Create "empty" object or object array
@@ -468,5 +474,5 @@ classdef VideosFieldType < handle
          obj = nigeLab.libs.VideosFieldType(dims);
       end
    end
-   
+   % % % % % % % % % % END METHODS% % %
 end
