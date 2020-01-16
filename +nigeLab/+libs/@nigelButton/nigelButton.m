@@ -1,4 +1,4 @@
-classdef nigelButton < handle
+classdef nigelButton < handle & matlab.mixin.SetGet
 %NIGELBUTTON   Buttons in format of nigeLab interface
 %
 %  NIGELBUTTON Properties:
@@ -34,12 +34,21 @@ classdef nigelButton < handle
 %           string to go into the button. In this case, the fourth input
 %           (fcn) should be provided as a function handle for ButtonDownFcn
    
-   properties (Access = public)
+   % % % PROPERTIES % % % % % % % % % %
+   % PUBLIC
+   properties (Access=public)
       SelectedColor    % Color for border change on "selected" highlight
       HoveredColor     % Color for border change on "rollover" mouse hover
    end
-
-   properties (Access = public,SetObservable = true)
+   
+   % DEPENDENT,PUBLIC
+   properties (Dependent,Access=public)
+      FontName    char = 'DroidSans'
+      FontWeight  char = 'normal'
+   end
+   
+   % SETOBSERVABLE,PUBLIC
+   properties (SetObservable,Access=public)
       Enable char = 'on'  % Is the button enabled?
       FaceColorEnable     % b.Button.FaceColor
       FaceColorDisable    % Color for face when button disabled
@@ -48,34 +57,63 @@ classdef nigelButton < handle
       String char         % String displayed on b.Label
    end
 
-   properties (Access = public, SetObservable = false)
-      Fcn     function_handle  % Function to be executed
+   % HIDDEN,PUBLIC
+   properties (Hidden,Access=public)
+      Fcn                      % Function to be executed
       Fcn_Args    cell         % (Optional) function arguments
    end
    
-   properties (Access = ?nigeLab.utils.Mouse.rollover,SetObservable = true)
+   % SETOBSERVABLE,RESTRICTED:nigeLab.utils.Mouse.rollover
+   properties (SetObservable,Access=?nigeLab.utils.Mouse.rollover)
       Hovered char = 'off'    % Does this button have mouse over it?
    end
    
-   properties (GetAccess = public,SetAccess = private,SetObservable = true)
+   % SETOBSERVABLE,PUBLIC/PROTECTED
+   properties (SetObservable,GetAccess=public,SetAccess=protected)
       Selected char = 'off'   % Is this button currently clicked
       Button  matlab.graphics.primitive.Rectangle  % Curved rectangle
       Label   matlab.graphics.primitive.Text       % Text to display
    end
    
-   properties (GetAccess = public, SetAccess = immutable)
+   % PUBLIC/IMMUTABLE
+   properties (GetAccess=public,SetAccess=immutable)
       Figure  matlab.ui.Figure           % Figure containing the object
       Group   matlab.graphics.primitive.Group  % "Container" object
       Parent  matlab.graphics.axis.Axes  % Axes container
    end
    
-   properties (Access = private)
+   % PROTECTED
+   properties (Access=protected)
       Border    matlab.graphics.primitive.Rectangle  % Border of "button"
       Listener  event.listener                   % Property event listener
    end
+   % % % % % % % % % % END PROPERTIES %
+   
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (overloaded methods)
+   methods
+      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      function value = get.FontName(obj)
+         value = obj.Label.FontName;
+      end
+      
+      function value = get.FontWeight(obj)
+         value = obj.Label.FontWeight;
+      end
+      % % % % % % % % % % END GET.PROPERTY METHODS % % %
+      
+      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
+      function set.FontName(obj,value)
+         obj.Label.FontName = value;
+      end
+      
+      function set.FontWeight(obj,value)
+         obj.Label.FontWeight = value;
+      end
+      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+   end
    
    % PUBLIC
-   % Class constructor and overloaded methods
    methods (Access = public)
       % Class constructor
       function b = nigelButton(container,buttonPropPairs,labPropPairs,varargin)
@@ -230,9 +268,8 @@ classdef nigelButton < handle
       end
    end
    
-   % PRIVATE
-   % Initialization methods
-   methods (Access = private, Hidden = true)
+   % HIDDEN,PROTECTED
+   methods (Hidden,Access=protected)
       function addListeners(b)
          % ADDLISTENERS  Adds all listeners to propertly .Listener
          %
@@ -379,7 +416,7 @@ classdef nigelButton < handle
                b.Label = text(b.Group,pos(1),pos(2),'',...
                   'Color',b.FontColorEnable,...
                   'FontName','Droid Sans',...
-                  'Units','normalized',...
+                  'Units','data',...
                   'FontUnits','normalized',...
                   'FontSize',0.8 * b.Button.Position(4),...
                   'Tag','Label',...
@@ -561,9 +598,8 @@ classdef nigelButton < handle
       
    end
    
-   % STATIC methods
-   % PRIVATE
-   methods (Access = private, Static = true)
+   % STATIC,PROTECTED
+   methods (Static,Access=protected)
       % Return the center coordinates based on position
       function txt_pos = getCenter(pos,xoff,yoff)
          % GETTEXTPOS  Returns the coordinates for text to go in center
@@ -667,6 +703,6 @@ classdef nigelButton < handle
          end
       end
    end
-   
+   % % % % % % % % % % END METHODS% % %
 end
 

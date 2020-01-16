@@ -60,31 +60,28 @@ classdef nigelPanel < handle
       DeleteFcn  % Function handle to execute on object deletion
    end
    
-   properties (SetAccess = private, GetAccess = public)
-      Panel;      % Handle to the uipanel that is the nigelPanel basically ("inner scroll region")
-      TitleBar    % Struct for titleBox with fields: 'axes', 'r1', 'r2', and 'ann'
-   end
-   
    properties(SetObservable)
       Children    % Cell Array of nigeLab.libs.nigelPanel objects
       Color       % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
       String      % Char array for string in obj.textBox.ann
       Units       % 'Normalized' or 'Pixels'
-      FontName          % Default: 'DroidSans'
-      MinTitleBarHeightPixels % Default: 20
-      TitleFontSize     % Default: 13
-      TitleFontWeight   % Default: 'bold'
-      TitleVerticalAlignment % Default: 'middle'
-      TitleAlignment    % Default: 'left'
+      FontName          char = 'DroidSans' % Default: 'DroidSans'
+      MinTitleBarHeightPixels  double = 20 % Default: 20
+      TitleFontSize     double = 13 % Default: 13
+      TitleFontWeight   char = 'bold' % Default: 'bold'
+      TitleVerticalAlignment char = 'middle' % Default: 'middle'
+      TitleAlignment    char = 'left' % Default: 'left'
       TitleBarLocation  % Location of title bar (can be 'top' or 'bot')
       TitleBarPosition  % Coordinate [px py width height] vector for titleBox position
       TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
       TitleStringY  % Y-coordinate of middle of Title String (default: 0.5)
    end
    
-   properties (Access = private)
+   properties (GetAccess=public,SetAccess={?nigeLab.libs.nigelPanel,?nigeLab.libs.nigelBar})
       ChildName   % Cell array of names corresponding to elements of Children
       OutPanel;   % Handle to the uipanel that is an "outer" container
+      Panel;      % Handle to the uipanel that is the nigelPanel basically ("inner scroll region")
+      TitleBar    % Struct for titleBox with fields: 'axes', 'r1', 'r2', and 'ann'
       lh          % Array of listener handles
    end
    

@@ -53,7 +53,6 @@ if isempty(s)
    blockObj.reportProgress('<strong>No files found!</strong> Extraction aborted ::',...
       100,'toWindow','Aborted');
    blockObj.reportProgress('',100,'toEvent');
-   delete(lh);
    return;
 end
 filesize = s.bytes;

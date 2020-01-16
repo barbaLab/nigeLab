@@ -25,12 +25,6 @@ function qOperations(obj,operation,target,sel)
 %  NIGELAB.BLOCK/DOAUTOCLUSTERING, NIGELAB.BLOCK/DOLFPEXTRACTION,
 %  NIGELAB.DEFAULTS.QUEUE
 
-%% Define imports within scope of qOperations
-import nigeLab.utils.buildWorkerConfigScript
-import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
-import nigeLab.utils.findGoodCluster
-
-%%
 % Set indexing to assign to UserData property of Jobs
 if nargin < 4
    sel = [1 1];
@@ -55,13 +49,24 @@ switch class(target)
       end
       return;
    case 'nigeLab.Block'
+      % Define imports within scope of qOperations
+      import nigeLab.utils.buildWorkerConfigScript
+      import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
+      import nigeLab.utils.findGoodCluster
+      
       % checking licenses and parallel flags to determine where to execute the
       % computation. Three possible outcomes:
       % local - Serialized
       % local - Distributed
       % remote - Distributed
-      [~,qPars] = target.updateParams('Queue');
-      [~,nPars] = target.updateParams('Notifications');
+      
+      if ~target.checkParsInit({'Queue','Notifications'})
+         [~,qPars] = target.updateParams('Queue');
+         [~,nPars] = target.updateParams('Notifications');
+      else
+         qPars = target.Pars.Queue;
+         nPars = target.Pars.Notifications;
+      end
       opLink = getNigeLink('nigeLab.Block',operation);
                  
       if obj.Tank.UseParallel
@@ -129,6 +134,10 @@ switch class(target)
             'Tag',tagStr); %#ok<*PROPLC>
          
          bar = obj.RemoteMonitor.startBar(barName,sel,job);
+         if isempty(bar)
+            return;
+         end
+         bar.IsRemote = true;
 
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)bar.indicateCompletion();
@@ -159,7 +168,11 @@ switch class(target)
          barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();
          bar = obj.RemoteMonitor.startBar(barName,sel);
+         if isempty(bar)
+            return;
+         end
          bar.setState(0,'Pending...');
+         bar.IsRemote = false;
          try
             feval(operation,target);
             flag = true;
@@ -178,6 +191,7 @@ switch class(target)
             lasterror(s); %#ok<LERR> % Set the last error struct
          end
          if flag
+            bar.IsRunning = false;
             field = target.getOperationField(operation);
             if ~iscell(field)
                field = {field};

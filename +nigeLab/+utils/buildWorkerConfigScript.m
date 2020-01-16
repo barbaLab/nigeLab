@@ -157,19 +157,25 @@ end
 
       fprintf(fid,'\n%%%% Get handle to current job\n');
       fprintf(fid,'curJob = getCurrentJob;\n\n');
-      fprintf(fid,'[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
-      fprintf(fid,'curJob(1).Tag=strrep(curJob(1).Tag,tag,''Loading'');\n');
+      fprintf(fid,'if numel(curJob) > 1 %% Just in case\n\t');
+      fprintf(fid,'curJob = curJob(1);\n');
+      fprintf(fid,'elseif numel(curJob) < 1 %% Should never happen\n\t');
+      fprintf(fid,'error([''nigeLab:'' mfilename '':BadJobInit''],...\n');
+      fprintf(fid,'\t\t\t''Could not find current job.'');\n');
+      fprintf(fid,'end\n');
+      
+      fprintf(fid,'[~,tag]=nigeLab.utils.jobTag2Pct(curJob.Tag);\n');
+      fprintf(fid,'curJob.Tag=strrep(curJob(1).Tag,tag,''Loading'');\n');
       
       fprintf(fid,'%%%% Attempt to load target Block.\n');
       fprintf(fid,'blockObj = nigeLab.Block.loadRemote(targetFile);\n\n');
-      fprintf(fid,'[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
-      fprintf(fid,'curJob(1).Tag=strrep(curJob(1).Tag,tag,''Updating'');\n');
+      fprintf(fid,'delim = blockObj.Pars.Notifications.TagDelim;\n');
+      fprintf(fid,'[~,tag,name]=nigeLab.utils.jobTag2Pct(curJob.Tag,delim);\n');
+      fprintf(fid,'curJob.Tag=strrep(curJob.Tag,tag,''Updating'');\n');
       
       fprintf(fid,'%%%% Now Block is successfully loaded. Update properties\n');
       fprintf(fid,'blockObj.OnRemote = true; %% Currently on REMOTE\n');
-      fprintf(fid,'blockObj.CurrentJob = curJob(1); %% Assign JOB\n');
-%       fprintf(fid,'blockObj.updateParams(''Notifications'');\n');
-%       fprintf(fid,'blockObj.updateParams(''Queue'');\n\n');
+      fprintf(fid,'blockObj.CurrentJob = curJob; %% Assign JOB\n');
       
       fprintf(fid,'%%%% Finally, we run the queued `doAction`\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
@@ -177,8 +183,7 @@ end
       fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
       fprintf(fid,'blockObj.CurrentJob = []; %% Remove JOB\n');
       fprintf(fid,'save(blockObj);\n\n');
-      fprintf(fid,'[~,tag]=nigeLab.utils.jobTag2Pct(curJob(1).Tag);\n');
-      fprintf(fid,'curJob(1).Tag=strrep(curJob(1).Tag,tag,''Done'');\n');
+      fprintf(fid,'curJob.Tag=sprintf(''%%s %%s||%%g%%%%'',name,''Done'',100);\n');
       fprintf(fid,'end');
       fclose(fid);
    end

@@ -45,6 +45,7 @@ catch
 end
 
 info.Key = {num2str(keyIdx)};
+info.Enabled = blockObj.IsMasked;
 info.Recording_date=DateTime;
 % info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
 info.Duration = blockObj.Duration;

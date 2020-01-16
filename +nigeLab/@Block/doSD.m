@@ -38,7 +38,7 @@ end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = blockObj.Mask
-   
+   curCh = curCh + 1;
    % Parse file-name information
    pNum  = num2str(blockObj.Channels(iCh).probe);
    chNum = blockObj.Channels(iCh).chStr;
@@ -58,7 +58,6 @@ for iCh = blockObj.Mask
    end
    
    % Status updates done in saveChannelSpikingEvents
-   curCh = curCh + 1;
    pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Spike-Detection.',pct,'toEvent','Spike-Detection');
