@@ -5,7 +5,7 @@ function flag = initVideos(blockObj)
 
 %% Get parameters associated with video
 flag = false; % Initialize to false
-[~,pars] = blockObj.updateParams('Video');
+[~,pars] = blockObj.updateParams('Video',true);
 if ~pars.HasVideo
    flag = true;
    return;
@@ -13,6 +13,10 @@ end
 
 % Make "Videos" fieldtype object or array
 blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+if isempty(blockObj.Videos)
+   flag = true;
+   return;
+end
 
 %% Initialize "VidStreams" if it is a Field (special case)
 if ~ismember('VidStreams',blockObj.Fields)

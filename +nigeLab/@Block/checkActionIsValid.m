@@ -26,7 +26,11 @@ if numel(blockObj) > 1
    return;
 end
 
-blockObj.updateParams('doActions');
+if isempty(blockObj.HasParsInit)
+   blockObj.updateParams('doActions');
+elseif ~blockObj.HasParsInit.doActions
+   blockObj.updateParams('doActions');
+end
 nigeLab.utils.checkForWorker(blockObj,'config');
 
 % Get dbstack, ignoring first N "cards"

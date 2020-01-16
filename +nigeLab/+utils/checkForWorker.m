@@ -1,4 +1,4 @@
-function flag = checkForWorker(nigelObj,checkMode)
+function flag = checkForWorker(obj,checkMode)
 % CHECKFORWORKER  Checks for worker to determine if this is being run on
 %                 local machine or remote server. Also uses the settings in
 %                 nigeLab.defaults.Queue as a heuristic if no input
@@ -49,9 +49,9 @@ if nargin < 1
 end
 
 %% If more than one input is given
-switch class(nigelObj)
+switch class(obj)
    case 'char'
-      checkMode = nigelObj;
+      checkMode = obj;
       if strcmpi(checkMode,'config')  % nargin > 0
          %% in config mode checkForWorker and run the config script
          flag = false;
@@ -61,24 +61,24 @@ switch class(nigelObj)
          end
 
       end
-   case {'nigeLab.Block','nigeLab.Animal','nigeLab.Tank'}
-      if nigelObj.OnRemote
+   case {'nigeLab.Block','nigeLab.Animal','nigeLab.Tank','nigeLab.nigelObj'}
+      if obj.OnRemote
          flag = true;
          return;
       end
       
-      if ~isempty(nigelObj.UseParallel)
-         compat_flag = nigelObj.UseParallel;
+      if ~isempty(obj.UseParallel)
+         compat_flag = obj.UseParallel;
       else
-         compat_flag = nigelObj.checkParallelCompatibility();
+         compat_flag = obj.checkParallelCompatibility();
       end
       
-      config_flag = nigelObj.Pars.Queue.UseParallel || ...
-                    nigelObj.Pars.Queue.UseRemote;
+      config_flag = obj.Pars.Queue.UseParallel || ...
+                    obj.Pars.Queue.UseRemote;
       if compat_flag ~= config_flag
          nigeLab.utils.cprintf('SystemCommands',['Mismatch between parsed '...
             'parallel configuration and default parameters. \n']);
-         str = nigeLab.utils.getNigeLink(class(nigelObj),...
+         str = nigeLab.utils.getNigeLink(class(obj),...
             'checkParallelCompatibility');
          fprintf(1,'Consider re-running %s\n',str);
          objName = inputname(1);

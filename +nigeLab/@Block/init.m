@@ -8,6 +8,9 @@ function flag = init(blockObj)
 
 %INITIALIZE PARAMETERS
 flag = false;
+% Put the .nigelBlock file... (forgot this -MM)
+blockObj.saveIDFile();
+
 blockObj.checkParallelCompatibility(true);
 
 %CHECK FOR MULTI-ANIMALS
@@ -19,7 +22,8 @@ for ii = fieldnames(blockObj.Meta)'
 end
 
 %GET/CREATE SAVE LOCATION FOR BLOCK
-% blockObj.AnimalLoc is probably empty [] at this point, which will prompt 
+% blockObj.AnimalLoc is empty [] at this point, if no output path was given
+% to the constructor as an input argument. this will bring up
 % a UI to point to the block save directory:
 if ~isempty(blockObj.SaveLoc)
    outLoc = blockObj.SaveLoc;

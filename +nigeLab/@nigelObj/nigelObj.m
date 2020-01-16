@@ -76,7 +76,7 @@ classdef nigelObj < handle & ...
       GUI                     % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
       Input       char        % Path to input file or folder
       Name        char        % Name of the obj (char array)
-      OnRemote   (1,1)logical = false  % Is this object running a job on remote worker?
+      OnRemote   (1,1)logical % Is this object running a job on remote worker?
       Output      char        % Path to output folder (same as .Paths.SaveLoc)
       Pars   (1,1)struct      % Parameters struct
       Paths  (1,1)struct      % Detailed paths specifications
@@ -126,6 +126,11 @@ classdef nigelObj < handle & ...
       IsDashOpen (1,1)logical = false  % Is nigeLab.libs.DashBoard GUI open?
       IsMasked   (1,1)logical = true   % true --> obj is "enabled"
       Verbose    (1,1)logical = true   % Display debug output?
+   end
+   
+   % HIDDEN,ABORTSET,PROTECTED (Flags)
+   properties (Hidden,AbortSet,Access=protected)
+      RemoteFlag (1,1)logical = false % "Container" for .OnRemote prop
    end
    
    % HIDDEN,TRANSIENT,PUBLIC (Listeners and Object "Containers")
@@ -495,8 +500,11 @@ classdef nigelObj < handle & ...
             end
             return;
          end
-         
-         tf = obj.IsEmpty || builtin('isempty',obj);
+         if isvalid(obj)
+            tf = obj.IsEmpty || builtin('isempty',obj);
+         else
+            tf = false;
+         end
       end
       
       % % % GET.PROPERTY METHODS % % % % % % % % % % % %
@@ -507,6 +515,13 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'AnimalLoc');
          %  --> Returns value of obj.Out.Animal instead
          
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isfield(obj.Out,'Animal')
             value = nigeLab.utils.getUNCPath(obj.Out.Animal);
             value = strrep(value,'\','/');
@@ -522,12 +537,26 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'Animals');
          %  --> Returns obj.Children
          
+         value = nigeLab.Animal.Empty();
          if numel(obj) > 1
-            value = nigeLab.Animal.Empty();
             for i = 1:numel(obj)
-               value = [value, obj(i).Children];
+               if isempty(obj(i))
+                  continue;
+               end
+               if ~isvalid(obj(i))
+                  continue;
+               end
+               if ~isempty(obj(i).Children)
+                  value = [value, obj(i).Children];
+               end
             end
          else
+            if isempty(obj)
+               return;
+            end
+            if ~isvalid(obj)
+               return;
+            end
             if all(isempty(obj.Children))
                value = nigeLab.Animal.Empty();
             else
@@ -543,14 +572,27 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'Blocks');
          %  --> Returns obj.Children
          
+         value = nigeLab.Block.Empty();
          if numel(obj) > 1
-            value = nigeLab.Block.Empty();
+            
             for i = 1:numel(obj)
+               if isempty(obj(i))
+                  continue;
+               end
+               if ~isvalid(obj(i))
+                  continue;
+               end
                if ~isempty(obj(i).Children)
                   value = [value, obj(i).Children];
                end
             end
          else
+            if isempty(obj)
+               return;
+            end
+            if ~isvalid(obj)
+               return;
+            end
             if all(isempty(obj.Children))
                value = nigeLab.Block.Empty();
             else
@@ -567,6 +609,13 @@ classdef nigelObj < handle & ...
          %  --> Returns appropriate Empty array of correct subclass if no 
          %      Children in obj.C container array
          
+         value = [];
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = obj.ChildContainer;
          if all(isempty(value))
             switch obj.Type
@@ -589,6 +638,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'Duration');
          
+         value = 'Empty';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         
          if ~isempty(obj.SampleRate) && ~isempty(obj.Samples)
             nSec = obj.Samples / obj.SampleRate;
             [~,~,value] = nigeLab.utils.sec2time(nSec);
@@ -604,9 +661,30 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'File');
          %  e.g '/c/path/tank/.nigelTank'
          
+         value = 'Empty';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = obj.getObjfname();
          if isempty(value)
-            keyboard;
+            dbstack;
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            if isempty(obj.Name)
+               nigeLab.utils.cprintf(fmt,...
+                  '%s[GET.FILE]: Unknown %s .File is missing\n',...
+                  idt,type);
+               nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                  '\t%s(Could not parse .Name property)\n',idt);
+            else
+               nigeLab.utils.cprintf(fmt,...
+                  '%s[GET.FILE]: %s (%s) .File is missing\n',...
+                  idt,obj.Name,type);
+               nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                  '\t%s(Could not get .SaveLoc path)\n',idt);
+            end
          end
       end
       
@@ -616,6 +694,14 @@ classdef nigelObj < handle & ...
          %
          %  >> value = get(obj,'FileExt');
          %  --> assign obj.In.FileExt to value
+         
+         value = 'Unknown';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          
          if ismember(obj.Type,{'Tank','Animal'})
             value = '';
@@ -669,9 +755,15 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'GUI');
          
-         if isempty(obj.GUIContainer)
-            value = [];
-         else
+         value = [];
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         
+         if ~isempty(obj.GUIContainer)
             value = obj.GUIContainer;
          end
       end
@@ -682,14 +774,34 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'IDFile');
          
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isempty(obj.FolderIdentifier)
             fname = ['.nigel' obj.Type];
             obj.FolderIdentifier = fname;
          else
             fname = obj.FolderIdentifier;
          end
+         if isempty(fname)
+            return;
+         end
          
-         value = nigeLab.utils.getUNCPath(obj.Output,fname);
+         if isempty(obj.Output)
+            if ~isempty(obj.Name) && isfield(obj.Paths,'SaveLoc')
+               if ~isempty(obj.Paths.SaveLoc)
+                  outPath = fullfile(obj.Paths.SaveLoc,obj.Name);
+                  obj.setOutputPath(outPath,true); % "Force" set
+                  value = fullfile(outPath,fname);
+               end
+            end
+         else
+            value = fullfile(obj.Output,fname);
+         end
       end
       
       % [DEPENDENT] Get method for .InDef (default input location)
@@ -698,6 +810,13 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'InDef');
          
+         value = pwd;
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isfield(obj.In,'Default')
             value = obj.In.Default;
             return;
@@ -719,8 +838,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'Input');
          
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if ~isfield(obj.In,obj.Type)
-            value = '';
             return;
          end
          value = nigeLab.utils.getUNCPath(obj.In.(obj.Type));
@@ -733,6 +858,13 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'InPrompt');
          
+         value = 'Select INPUT folder';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          switch obj.Type
             case 'Block'
                value = '[input] BLOCK file or indicator'; 
@@ -753,6 +885,13 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'KeyPair');
          %  --> Returns value of obj.Key instead
          
+         value = nigeLab.nigelObj.InitKey();
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = obj.Key;
       end
       
@@ -762,6 +901,13 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'Name');
 
+         value = 'Unknown';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if ~isfield(obj.Paths,'Name')
             if ~isfield(obj.Pars,obj.Type)
                [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type,true);
@@ -800,12 +946,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'OnRemote');
          
-         if isfield(obj.Paths,'OnRemote')
-            value = obj.Paths.OnRemote;
+         value = false;
+         if isempty(obj)
             return;
-         else
-            value = false; % It is always set in qWrapper
          end
+         if ~isvalid(obj)
+            return;
+         end
+         value = obj.RemoteFlag;
       end
       
       % [DEPENDENT] Get method for .Output
@@ -814,6 +962,13 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'Output');         
 
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isfield(obj.Out,obj.Type)
             value = nigeLab.utils.getUNCPath(obj.Out.(obj.Type));
             value = strrep(value,'\','/');
@@ -868,7 +1023,14 @@ classdef nigelObj < handle & ...
          %GET.OUTDEF  Default output location (char array)
          %
          %  value = get(obj,'OutDef');
-         
+
+         value = pwd;
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isfield(obj.Out,'Default')
             value = strrep(obj.Out.Default,'\','/');
             return;
@@ -896,6 +1058,13 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'OutPrompt');
 
+         value = 'Select OUTPUT folder';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          switch obj.Type
             case 'Block'
                value = '[output] BLOCK container folder (Animal)'; 
@@ -913,7 +1082,12 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'Pars',pathStruct);
          %  --> Returns value held in .Params.Pars
          
-         value = obj.Params.Pars;
+         value = struct.empty;
+         if ~isempty(obj)
+            if isvalid(obj)
+               value = obj.Params.Pars;
+            end
+         end
       end
       
       % [DEPENDENT] Get method for 'Paths' property
@@ -923,7 +1097,12 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'Paths',pathStruct);
          %  --> Returns value held in .Params.Paths
          
-         value = obj.Params.Paths;
+         value = struct.empty;
+         if ~isempty(obj)
+            if isvalid(obj)
+               value = obj.Params.Paths;
+            end
+         end
       end
       
       % [DEPENDENT] Get method for .RecDir (backwards compatibility)
@@ -934,6 +1113,13 @@ classdef nigelObj < handle & ...
          %  --> Returns value of obj.Paths.RecDir; if empty prompts user to
          %      input this value.
 
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = obj.Input;
          if isempty(value)
             p = obj.getRecLocation('Folder');
@@ -954,6 +1140,13 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'RecFile');
          %  --> Returns value of obj.In.Block instead
          
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = obj.Input;
          if isempty(value)
             [p,f] = obj.getRecLocation('File');
@@ -977,8 +1170,14 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'RecSystem');
          %  --> Depends upon value of obj.AcqSystem
          
+         value = nigeLab.utils.AcqSystem('UNKNOWN');
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isempty(obj.AcqSystem)
-            value = nigeLab.utils.AcqSystem('UNKNOWN');
             return;
          end
          
@@ -991,6 +1190,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'RecType');
          %  --> Depends upon value of obj.FileExt
+         
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          
          if isfield(obj.In,'RecType')
             value = obj.In.RecType;
@@ -1024,6 +1231,12 @@ classdef nigelObj < handle & ...
          %  --> Returns value of obj.Out.Experiment if obj is Tank
 
          value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          switch obj.Type
             case 'Block'
                if isfield(obj.Out,'Animal')
@@ -1060,8 +1273,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'ShortFile');
 
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          if isempty(obj.File)
-            value = '';
             return;
          end
          
@@ -1077,9 +1296,14 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'SortGUI');
          
-         if isempty(obj.SortGUIContainer)
-            value = [];
-         else
+         value = [];
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         if ~isempty(obj.SortGUIContainer)
             value = obj.SortGUIContainer;
          end
       end
@@ -1091,6 +1315,13 @@ classdef nigelObj < handle & ...
          %  value = get(obj,'TankLoc');
          %  --> Returns value of obj.Out.Tank instead
          
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
          value = nigeLab.utils.getUNCPath(obj.Out.Tank);
          value = strrep(value,'\','/');
       end
@@ -1103,10 +1334,19 @@ classdef nigelObj < handle & ...
          %  --> Returns value in obj.Params.Type if it is non-empty,
          %      otherwise attempts to parse value from object class.
          
-         value = obj.Params.Type; % A default field of obj.Params         
-         if isempty(value)
-            c = class(obj);
-            value = strrep(c,'nigeLab.','');
+         c = class(obj);
+         value = strrep(c,'nigeLab.','');
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         % Only access this if it is set and valid
+         if isfield(obj.Params,'Type')
+            if ~isempty(obj.Params.Type)
+               value = obj.Params.Type; % A default field of obj.Params     
+            end
          end
       end
       
@@ -1119,12 +1359,26 @@ classdef nigelObj < handle & ...
          if numel(obj) > 1
             value = cell(size(obj));
             for i = 1:numel(obj)
+               value{i} = '';
+               if isempty(obj(i))
+                  continue;
+               end
+               if ~isvalid(obj(i))
+                  continue;
+               end
                if isempty(obj(i).User)
                   setUser(obj(i));
                end
                value{i} = obj.User;
             end
          else
+            value = '';
+            if isempty(obj)
+               return;
+            end
+            if ~isvalid(obj)
+               return;
+            end
             if isempty(obj.User)
                setUser(obj);
             end
@@ -1158,19 +1412,27 @@ classdef nigelObj < handle & ...
          %
          %  flag returns true if the save did not throw an error.
          
-         if all(isempty(obj))
-            return;
-         end
-         
          % Make sure array isn't saved to same file
          if numel(obj) > 1
-            flag = false(size(obj));
+            flag = true(size(obj));
             for i = 1:numel(obj)
-               if isvalid(obj(i))
-                  flag(i) = obj(i).save;
+               if ~isempty(obj(i))
+                  if isvalid(obj(i))
+                     flag(i) = obj(i).save;
+                  end
                end
             end
             return;
+         else
+            flag = true;
+         end
+         
+         for i = 1:numel(obj.Children)
+            if ~isempty(obj.Children(i))
+               if isvalid(obj.Children(i))
+                  flag = flag && save(obj.Children(i));
+               end
+            end
          end
          
          flag = false;
@@ -1181,6 +1443,11 @@ classdef nigelObj < handle & ...
          elseif ~obj.HasParsInit.(obj.Type)
             obj.updateParams(obj.Type);
          end
+         % Detach unwanted properties
+         isDashOpen = obj.IsDashOpen;
+         obj.IsDashOpen = false;
+         onRemote = obj.OnRemote;
+         obj.OnRemote = false;
          
          % Do all Dependent variable 'gets' prior to try in case that is
          % where an error occurs:
@@ -1201,8 +1468,12 @@ classdef nigelObj < handle & ...
          catch
             nigeLab.utils.cprintf('Errors*',...
                'Failed to save [%s]: %s\n',type,name);
+            obj.OnRemote = onRemote;
+            obj.IsDashOpen = isDashOpen;
             return;
          end
+         obj.OnRemote = onRemote;
+         obj.IsDashOpen = isDashOpen;
          flag = flag && obj.saveIDFile(); % .nigelBlock file saver
 
          % save multianimals if present
@@ -1214,10 +1485,6 @@ classdef nigelObj < handle & ...
                   flag = flag && bl.save();
                end
             end
-         end
-         
-         if ~all(isempty(obj.Children))
-            flag = flag && all(save(obj.Children));
          end
          
       end
@@ -1630,10 +1897,11 @@ classdef nigelObj < handle & ...
          %        properly reflect the configured path on local or remote
          %        machine.
          
-         obj.Paths.OnRemote = value;
+         obj.RemoteFlag = value;
          if ~isfield(obj.Pars,'Queue')
             obj.updateParams('Queue',true);
          end
+         % Toggle "path root" based on remote flag value
          out = obj.Output;
          in = obj.Input;
          if value
@@ -2285,7 +2553,9 @@ classdef nigelObj < handle & ...
          status_struct = struct;
          for iF = 1:numel(obj.Fields)
             field = obj.Fields{iF};
-            if all(s(:,iF))
+            if isempty(s)
+               status_struct.(field) = 'Empty';
+            elseif all(s(:,iF))
                status_struct.(field) = 'Complete';
             elseif sum(s(:,iF) > 1)
                status_struct.(field) = 'Incomplete';
@@ -2354,6 +2624,13 @@ classdef nigelObj < handle & ...
                'nigeLab.obj/getFolderTree expects BLOCK input.');
          end
          
+         if isempty(obj.HasParsInit)
+            obj.updateParams('Block',true);
+         elseif ~isfield(obj.HasParsInit,'Block')
+            obj.updateParams('Block',true);
+         elseif ~obj.HasParsInit.Block
+            obj.updateParams('Block',true);
+         end
          F = fieldnames(obj.Pars.Block.PathExpr);
          del = obj.Pars.Block.Delimiter;
          
@@ -2364,6 +2641,11 @@ classdef nigelObj < handle & ...
                % Get the current "Spike Detection method," which gets
                % added onto the front part of the _Spikes and related
                % folders
+               if ~isfield(obj.HasParsInit,'SD')
+                  obj.updateParams('SD',true);
+               elseif ~obj.HasParsInit.SD
+                  obj.updateParams('SD',true);
+               end
                p.Folder = sprintf(strrep(p.Folder,'\','/'),...
                   obj.Pars.SD.ID.(F{iF}));
             end
@@ -4905,13 +5187,37 @@ classdef nigelObj < handle & ...
          %  flag = obj.saveIDFile();
          %  --> Returns true if save was successful
          
+         flag = false;
          if strcmp(obj.Type,'Block')
             if isempty(obj.RecFile)
                return;
             end
          end
          
-         % Save .nigel___ file to identify this "Type" of folder     
+         % Save .nigel___ file to identify this "Type" of folder
+         if isempty(obj.IDFile)
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            dbstack;
+            if isempty(obj.Name)
+               nigeLab.utils.cprintf(fmt,...
+                  '%s[SAVEIDFILE]: %s cannot save .nigelFile\n',...
+                  idt,type);
+               nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                  '\t%s(Missing parsed .Name of %s)\n',idt,type);
+            else
+               nigeLab.utils.cprintf(fmt,...
+                  '%s[SAVEIDFILE]: %s (%s) cannot save .nigelFile\n',...
+                  idt,obj.Name,type);
+               nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                  '\t%s(Output path location data is missing.)\n',idt);
+            end
+            return;
+         else
+            [outPath,~,~] = fileparts(obj.IDFile);
+         end
+         if exist(outPath,'dir')==0
+            mkdir(outPath); % Make sure the output folder exists
+         end
          fid = fopen(obj.IDFile,'w');
          if fid > 0
             fprintf(fid,'%s|%s\n',upper(obj.Type),obj.Name);
@@ -4942,7 +5248,7 @@ classdef nigelObj < handle & ...
       end
       
       % Search for Children "_Obj.mat" files in SaveLoc path
-      function C = searchForChildren(obj)
+      function [C,varName] = searchForChildren(obj)
          %SEARCHFORCHILDREN  Returns `dir` file struct for potential
          %                    .Children array members
          %
@@ -4968,11 +5274,6 @@ classdef nigelObj < handle & ...
             otherwise % i.e. 'Block'
                C = [];
                return;
-         end
-         
-         for ii=1:numel(C)
-            in = load(fullfile(C(ii).folder,C(ii).name),varName);
-            obj.addChild(in.(varName),ii);
          end
       end
       
@@ -5016,16 +5317,24 @@ classdef nigelObj < handle & ...
       end
       
       % Sets .Output path
-      function setOutputPath(obj,outPath)
+      function setOutputPath(obj,outPath,forceSet)
          %SETOUTPUTPATH  Sets .Output path
          %
          %  obj.setOutputPath(outPath);
+         %  --> Will not set if .nigelFile is not present
+         %
+         %  obj.setOutputPath(outPath,true);
+         %  --> Forces Output location regardless of .nigelFile presence
          %
          %  outPath : The output location that conatins the
          %              obj.FolderIdentifier for this nigelObj
          
+         if nargin < 3
+            forceSet = false;
+         end
+         
          f = obj.FolderIdentifier;
-         if exist(fullfile(outPath,f),'file')~=0
+         if (exist(fullfile(outPath,f),'file')~=0) || forceSet
             obj.Output = outPath;
             return;
          end
@@ -5275,7 +5584,11 @@ classdef nigelObj < handle & ...
             case {'Animal','Tank'}
                a.PropListener(1).Enabled = false;
                % Adds Children if it finds them
-               a.searchForChildren();
+               [C,varName] = a.searchForChildren();
+               for ii=1:numel(C)
+                  in = load(fullfile(C(ii).folder,C(ii).name),varName);
+                  a.addChild(in.(varName),ii);
+               end
                a.PropListener(1).Enabled = true;
          end
          b = a;

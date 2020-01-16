@@ -10,6 +10,9 @@ if ~isscalar(animalObj)
       'nigelab.Animal should only be initialized as a scalar.');
 end
 flag = false;
+% Put the .nigelAnimal file... (forgot this -MM)
+animalObj.saveIDFile();
+
 supportedFormats = animalObj.Pars.Experiment.SupportedFormats;
 
 %GET BLOCKS
@@ -17,7 +20,6 @@ supportedFormats = animalObj.Pars.Experiment.SupportedFormats;
 Recordings = dir(fullfile(animalObj.RecDir));
 Recordings = Recordings(~ismember({Recordings.name},{'.','..'}));
 animalObj.checkParallelCompatibility();
-animalObj.Children = nigeLab.Block.Empty([1,numel(Recordings)]);
 skipVec = false([1,numel(Recordings)]);
 for bb=1:numel(Recordings)
    if skipVec(bb)
@@ -121,7 +123,5 @@ for bb=1:numel(Recordings)
    skipVec(bb) = ~addThisBlock;
 end
 flag = true;
-% Remove any empty Blocks that were not initialized
-animalObj.Children(isempty(animalObj.Children)) = [];
 flag = flag && animalObj.save;
 end
