@@ -180,8 +180,9 @@ end
       fprintf(fid,'%%%% Finally, we run the queued `doAction`\n');
       fprintf(fid,'%s(blockObj); %% Runs queued `doAction (%s)`\n',...
          operation,operation);
-      fprintf(fid,'blockObj.OnRemote = false; %% Turn off REMOTE\n');
-      fprintf(fid,'blockObj.CurrentJob = []; %% Remove JOB\n');
+      fprintf(fid,'field = blockObj.getOperationField(''%s'');\n',...
+         operation);
+      fprintf(fid,'blockObj.linkToData(field); %% Link\n');
       fprintf(fid,'save(blockObj);\n\n');
       fprintf(fid,'curJob.Tag=sprintf(''%%s %%s||%%g%%%%'',name,''Done'',100);\n');
       fprintf(fid,'end');

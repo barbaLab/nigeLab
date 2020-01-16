@@ -10,12 +10,12 @@ end
 % unzip data
 if ~exist('myTank','dir'), unzip('myTank.zip');end
 % create destination folder for analysis
-mkdir('myTank_analysis')
+mkdir('demo_experiment')
 
 %% create a tank object 
 % you will be asked to select the source (myTank) and destination (you can 
 % choose every folder, we suggest to use myTank_anamysis) 
-tank = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'myTank_analysis')); 
+tankobj = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'demo_experiment')); 
 
 % this will create a tank object with all the linked metadata and will save
 % it in the destination folder. check the folder tree that was created. If
@@ -23,19 +23,19 @@ tank = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'myTank_analysis'));
 % on github.
 
 %% extract raw data and save it in the corresponding folder
-tank.doRawExtraction;
+tankobj.doRawExtraction;
 
 %% Perform multi-unit bandpass filter for spike detection for all Animals and Blocks within Tank.
-tank.doUnitFilter
+tankobj.doUnitFilter
 
 %% Perform common-average re-reference for all Animals and Blocks within Tank.
-tank.doReReference
+tankobj.doReReference
 
 %% Perform spike detection and feature extraction (wavelet decomposition)
 %% on all Animals and all Blocks within the Tank
-tank.doSD
+tankobj.doSD
 
 %% downsample raw data to LFP
-tank.doLFPExtraction;
+tankobj.doLFPExtraction;
 
 %% 

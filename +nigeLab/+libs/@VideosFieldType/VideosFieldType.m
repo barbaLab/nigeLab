@@ -104,10 +104,19 @@ classdef VideosFieldType < handle
          if isempty(F)
             F = obj.findVideos();
             if isempty(F)
-               F = obj.getVidFileUI();
-               if isempty(F)
-                  error(['nigeLab:' mfilename ':noVideosFound'],...
-                     'No video files could be parsed in that location.');
+               choice = questdlg('Are videos associated?',...
+                  'No videos detected','Yes','No','No');
+               if strcmp(choice,'Yes')
+                  F = obj.getVidFileUI();
+                  if isempty(F)
+                     error(['nigeLab:' mfilename ':noVideosFound'],...
+                        'No video files could be parsed in that location.');
+                  end
+               else
+                  obj.isEmpty = true; % Mark it as Empty and return
+                  blockObj.Pars.Video.HasVideo = false;
+                  saveParams(blockObj,'Video');
+                  return;
                end
             end
          end
@@ -326,9 +335,11 @@ classdef VideosFieldType < handle
          end
          % Throw error if no videos are found
          if isempty(F)
-            error(['nigeLab:' mfilename ':noVideosFound'],...
-               ['Couldn''t find video files (matchStr: ''%s''). '...
-                'Check defaults.Video(''DynamicVars'')'], matchStr);
+            nigeLab.utils.cprintf('Errors*',...
+               '\t\t->\tCouldn''t find video files (matchStr: ''%s'').\n',...
+               matchStr);
+            nigeLab.utils.cprintf('Errors',...
+                '\t\t\t->\tCheck defaults.Video(''DynamicVars'')\n');
          end
       end
       

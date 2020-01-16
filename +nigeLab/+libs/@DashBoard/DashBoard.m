@@ -1161,6 +1161,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          idx = evt.BlockSelectionIndex;
          obj.Tank.Children(idx(1)).Children(idx(2)).reload;
+         obj.Tank.Children(idx(1)).Children(idx(2)).IsDashOpen = true;
          selEvt = struct('Nodes',obj.Tree.SelectedNodes,...
             'AddedNodes',obj.Tree.SelectedNodes);
          obj.treeSelectionFcn(obj.Tree, selEvt)
@@ -1173,9 +1174,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %
          %  obj.reloadTank();
          
-         %             [block,animal] = getSelectedItems(obj,'index');
-         load([obj.Tank.Paths.SaveLoc '_tank.mat'],'tankObj');
-         obj.Tank = tankObj;
+         in = load([obj.Tank.Paths.SaveLoc '_tank.mat'],'tankObj');
+         obj.Tank = in.tankObj;
+         obj.Tank.IsDashOpen = true;
          pTree = obj.getChild('TreePanel');
          obj.Tree = obj.buildTree(pTree);
       end
