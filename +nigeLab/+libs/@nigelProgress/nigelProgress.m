@@ -415,6 +415,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
             bar.setState(bar.Progress,'Interrupted');
             bar.Color = 'r';
          end
+         reload(bar.Block);
       end 
       
       % Overloaded minus function to change indexing

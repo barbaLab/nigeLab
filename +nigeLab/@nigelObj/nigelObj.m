@@ -5261,7 +5261,6 @@ classdef nigelObj < handle & ...
                if isempty(C)
                   return;
                end
-               obj.Children = nigeLab.Block.Empty([1,numel(C)]);
                varName = 'blockObj';
             case 'Tank'
                C = dir(nigeLab.utils.getUNCPath(...
@@ -5269,7 +5268,6 @@ classdef nigelObj < handle & ...
                if isempty(C)
                   return;
                end
-               obj.Children = nigeLab.Animal.Empty([1,numel(C)]);
                varName = 'animalObj';
             otherwise % i.e. 'Block'
                C = [];
@@ -5557,45 +5555,46 @@ classdef nigelObj < handle & ...
             end
             switch type
                case {'Block','nigelBlock'}
-                  a = nigeLab.Block(a);
+                  b = nigeLab.Block(a);
                case {'Animal','nigelAnimal'}
-                  a = nigeLab.Animal(a);
+                  b = nigeLab.Animal(a);
                case {'Tank','nigelTank'}
-                  a = nigeLab.Tank(a);
+                  b = nigeLab.Tank(a);
                otherwise
                   error(['nigeLab:' mfilename ':BadLoad'],...
                      'Could not load object due to unknown Type');
             end
+         else
+            b = a;
          end
          
-         a.addPropListeners();
-         a.loadIDFile();
-         a.checkParsInit();
+         b.addPropListeners();
+         b.loadIDFile();
+         b.checkParsInit();
          
-         switch a.Type
+         switch b.Type
             case 'Block'
                % So we are allowing Block Object to be saved as a property
                % in this case?
-               if a.MultiAnimals > 0
-                  for bl=a.MultiAnimalsLinkedBlocks
+               if b.MultiAnimals > 0
+                  for bl=b.MultiAnimalsLinkedBlocks
                      bl.reload();
                   end
                end
             case {'Animal','Tank'}
-               a.PropListener(1).Enabled = false;
+               b.PropListener(1).Enabled = false;
                % Adds Children if it finds them
-               [C,varName] = a.searchForChildren();
+               [C,varName] = b.searchForChildren();
                for ii=1:numel(C)
                   in = load(fullfile(C(ii).folder,C(ii).name),varName);
-                  a.addChild(in.(varName),ii);
+                  b.addChild(in.(varName));
                end
-               a.PropListener(1).Enabled = true;
+               b.PropListener(1).Enabled = true;
          end
-         b = a;
-         [fmt,idt,type] = a.getDescriptiveFormatting();
+         [fmt,idt,type] = b.getDescriptiveFormatting();
          nigeLab.utils.cprintf(fmt,...
-            '%s\b[LOAD]: %s (%s) loaded successfully!\n',...
-            idt,a.Name,type);
+            '%s\b\b\b[LOAD]: %s (%s) loaded successfully!\n',...
+            idt,b.Name,type);
       end
       
       % Print detailed description to Command Window
