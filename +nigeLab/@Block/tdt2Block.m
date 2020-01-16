@@ -17,8 +17,7 @@ TDTNaming =  nigeLab.defaults.TDT();
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Read the file header
 
-header = ReadTDTHeader('NAME',recFile);
-blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
+header = ReadTDTHeader(recFile);
 
 % this is laziness at its best, I should go through the code and change
 % each variable that was inserted in the header structure to header.variable
@@ -32,8 +31,6 @@ if ~data_present
    warning('No data found in %s.',recFile);
    return;
 end
-
-   
 
 %% PRE-ALLOCATE MEMORY FOR WRITING RECORDED VARIABLES TO DISK FILES
 % preallocates matfiles for varible that otherwise would require

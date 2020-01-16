@@ -211,7 +211,7 @@ end
                if channelStage && maskExists
                   status(ii) = all(flags(blockObj.Mask));
                else
-                  status(ii) = any(flags);
+                  status(ii) = all(flags);
                end
                
             end

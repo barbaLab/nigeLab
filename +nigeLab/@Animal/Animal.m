@@ -82,13 +82,13 @@ classdef Animal < nigeLab.nigelObj
             animalSavePath = '';
          end
          animalObj@nigeLab.nigelObj('Animal',animalPath,animalSavePath,varargin{:});
-         if isempty(animalObj)
+         if isempty(animalObj) % Handle empty init case
             return;
          end
-         [animalObj.Name,animalObj.Meta] = animalObj.parseNamingMetadata();
-         if isstruct(animalPath)
+         if isstruct(animalPath) % Handle loadobj case
             return;
          end
+         animalObj.addPropListeners();
          if ~animalObj.init()
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize ANIMAL object.');

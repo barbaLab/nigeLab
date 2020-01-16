@@ -91,35 +91,18 @@ classdef Tank < nigeLab.nigelObj
             tankSavePath = '';
          end
          tankObj@nigeLab.nigelObj('Tank',tankRecPath,tankSavePath,varargin{:}); 
-         if isempty(tankObj)
+         if isempty(tankObj) % Handle Empty case
             return;
          end
-         [tankObj.Name,tankObj.Meta] = tankObj.parseNamingMetadata();
+         if isstruct(tankRecPath) % Handle loadobj case
+            return;
+         end
          tankObj.addPropListeners();
-         if isstruct(tankRecPath)
-            return;
-         end
          if ~tankObj.init
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize TANK object.');
          end
       end
-      
-%       % Overload to 'end' indexing operator
-%       function ind = end(tankObj,k,~)
-%          % END  Operator to index end of tankObj.Children or
-%          %      tankObj.Children.Children
-%          
-%          switch k
-%             case 1
-%                ind = numel(tankObj.Children);
-%             case 2
-%                ind = getNumBlocks(tankObj.Children);
-%             otherwise
-%                error(['nigeLab:' mfilename ':badReference'],...
-%                   'Invalid subscript: end cannot be index %g',k);
-%          end
-%       end
    end
    
    % HIDDEN,PUBLIC

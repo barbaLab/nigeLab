@@ -4,7 +4,7 @@ function flag = init(animalObj)
 %  flag = animalObj.init;
 %  --> Returns true if init complets successfully
 
-%%
+
 if ~isscalar(animalObj)
    error(['nigeLab:' mfilename ':BadSize'],...
       'nigelab.Animal should only be initialized as a scalar.');
@@ -12,7 +12,7 @@ end
 flag = false;
 supportedFormats = animalObj.Pars.Experiment.SupportedFormats;
 
-%% GET BLOCKS
+%GET BLOCKS
 % Remove other folder names
 Recordings = dir(fullfile(animalObj.RecDir));
 Recordings = Recordings(~ismember({Recordings.name},{'.','..'}));
@@ -24,7 +24,7 @@ for bb=1:numel(Recordings)
       continue;
    end
    [~,fname,ext] = fileparts(Recordings(bb).name);
-   nameParts = strsplit(fname,animalObj.Pars.Animal.VarExprDelimiter);
+   nameParts = strsplit(fname,animalObj.Pars.Block.VarExprDelimiter);
    if isempty(fname) % If it is empty,
       if ~Recordings(bb).isdir % but it is a file,
          if ~strcmpi(fname,animalObj.Pars.Block.FolderIdentifier)
@@ -49,7 +49,7 @@ for bb=1:numel(Recordings)
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
          RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
          
-         % handling already extracted to matfile case
+         % handling already-extracted to matfile case
       elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
          addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));

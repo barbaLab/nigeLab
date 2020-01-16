@@ -1,21 +1,16 @@
 function flag = init(blockObj)
-% INIT Initialize BLOCK object
+%INIT Initialize BLOCK object
 %
 %  b = nigeLab.Block();
 %
-%  Note: INIT is a protected function and will always be called on
-%        construction of BLOCK. Returns a "true" flag if executed
-%        successfully.
+%  Note: INIT is a protected function that is called from the blockObj
+%        constructor when the Block is being created (not loaded).
 
-%% INITIALIZE PARAMETERS
+%INITIALIZE PARAMETERS
 flag = false;
 blockObj.checkParallelCompatibility(true);
-   
-%% PARSE NAME INFO
-% Set flag for output if something goes wrong
-[blockObj.Name,blockObj.Meta] = parseNamingMetadata(blockObj);
 
-%% CHECK FOR MULTI-ANIMALS
+%CHECK FOR MULTI-ANIMALS
 for ii = fieldnames(blockObj.Meta)'
    if contains(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar)
        blockObj.MultiAnimals = true;
@@ -23,41 +18,47 @@ for ii = fieldnames(blockObj.Meta)'
    end
 end
 
-%% GET/CREATE SAVE LOCATION FOR BLOCK
+%GET/CREATE SAVE LOCATION FOR BLOCK
 % blockObj.AnimalLoc is probably empty [] at this point, which will prompt 
 % a UI to point to the block save directory:
-if ~blockObj.getSaveLocation(blockObj.AnimalLoc)
+if ~isempty(blockObj.SaveLoc)
+   outLoc = blockObj.SaveLoc;
+else
+   outLoc = blockObj.AnimalLoc;
+end
+   
+if ~blockObj.getSaveLocation(outLoc)
    flag = false;
    warning('Save location not set successfully.');
    return;
 end
 
-%% EXTRACT HEADER INFORMATION
+%EXTRACT HEADER INFORMATION
 header = blockObj.parseHeader();
 if ~blockObj.initChannels(header)
    warning('Could not initialize Channels structure headers properly.');
    return;
 end
 
-%% INITIALIZE VIDEOS STRUCT
+%INITIALIZE VIDEOS STRUCT
 if ~blockObj.initVideos
    warning('Could not initialize Videos structure properly.');
    return;
 end
 
-%% INITIALIZE STREAMS STRUCT
-if ~blockObj.initStreams
+%INITIALIZE STREAMS STRUCT
+if ~blockObj.initStreams(header)
    warning('Could not initialize Streams structure headers properly.');
    return;
 end
 
-%% INITIALIZE EVENTS STRUCT
+%INITIALIZE EVENTS STRUCT
 if ~blockObj.initEvents
    warning('Could not initialize Events structure properly.');
    return;
 end
 
-%% INITIALIZE STATUS
+%INITIALIZE STATUS
 blockObj.updateStatus('init');
 
 % Prior to link to data, check if a function handle for conversion has been

@@ -62,6 +62,11 @@ switch class(nigelObj)
 
       end
    case {'nigeLab.Block','nigeLab.Animal','nigeLab.Tank'}
+      if nigelObj.OnRemote
+         flag = true;
+         return;
+      end
+      
       if ~isempty(nigelObj.UseParallel)
          compat_flag = nigelObj.UseParallel;
       else

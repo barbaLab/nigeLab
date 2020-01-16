@@ -176,7 +176,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    % NO ATTRIBUTES (overloaded methods)
    methods
       % nigeLab.nigelObj Superclass Constructor
-      function obj = nigelObj(Type,inPath,outPath,varargin)
+      function obj = nigelObj(Type,inPath,savePath,varargin)
          %NIGELOBJ  Superclass constructor to point to files
          %
          %  obj = nigeLab.nigelObj(Type);
@@ -185,12 +185,113 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  obj = nigeLab.nigelObj(Type,inPath);
          %  --> Specifies the folder or filename of input data
          %
-         %  obj = nigeLab.nigelObj(Type,inPath,outPath);
+         %  obj = nigeLab.nigelObj(Type,inPath,savePath);
          %  --> Specifies the folder tree location of output data. This is
          %      a folder that will contain the _Block or _Animal or _Tank
          %      matfile, which is one level above the actual "Block" or
-         %      "Animal" or "Tank" folder (which contains the .nigelBlock,
+         %      "Animal" or "Tank" folders (which contain the .nigelBlock,
          %      .nigelAnimal, or .nigelTank file respectively).
+         %
+         % # Usage #
+         %
+         % ## Example 1: For a tank 'myTank' ##
+         %
+         % >> inPath = '//kumc.edu/recorded/myTank;'
+         % >> savePath = '//kumc.edu/processed/myData';
+         % >> myTank = nigeLab.Tank(inPath,savePath);
+         %
+         % ### Output ###
+         %
+         % --> myTank.IDFile:
+         %     * '//kumc.edu/processed/myData/myTank/.nigelTank'
+         % --> myTank.SaveLoc:
+         %     * '//kumc.edu/processed/myData'
+         % --> myTank.Input == myTank.RecDir:
+         %     * '//kumc.edu/recorded/myTank'
+         % --> myTank.Output:
+         %     * '//kumc.edu/processed/myData/myTank'
+         %
+         % ## Example 2: For a block 'myBlock' ##
+         %
+         % >> blockPath = ...
+         %    '//kumc.edu/recorded/myTank/R20-001/R20-001_data-A_0.rhd';
+         % >> blockSavePath = ...
+         %    '//kumc.edu/processed/myData/myTank/R20-001;
+         % >> myBlock = nigeLab.Block(blockPath,blockSavePath);
+         %  
+         % ### Output ###
+         %  
+         % --> myBlock.IDFile:
+         %     * '//kumc.edu/processed/myData/myTank/R20-001/.nigelBlock'
+         % --> myBlock.SaveLoc:
+         %     * '//kumc.edu/processed/myData/myTank/R20-001'
+         % --> myBlock.Input == myBlock.RecFile:
+         %     * '//kumc.edu/processed/myData/myTank/R20-001_data-A_0.rhd'
+         % _Note: myBlock.Output depends upon how name parsing is
+         %  set up in +nigeLab/+defaults/Block.m_
+         %
+         % --> myBlock.Output:
+         %     * '//kumc.edu/processed/myData/myTank/R20-001/R20-001_0'
+         %       + Note that '_data-A' is dropped from .Output
+         %       + This would be the case given the following setup:
+         %        >> pars.DynamicVarExp = ...
+         %           {'$SurgYear','$SurgID','~Const','$Tag','$RecID'}
+         %        >> pars.VarExprDelimiter = {'-','_'};
+         %        >> pars.Concatenater = '_';
+         %        >> pars.IncludeChar = '$';
+         %        >> pars.DiscardChar = '~';
+         %        >> pars.SpecialMeta.SpecialVars = {'AnimalID'};
+         %        >> pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgID'}
+         %        >> pars.SpecialMeta.AnimalID.cat = '-';
+         %        >> pars.NamingConvention = {'AnimalID', 'RecID'};
+         %  
+         %        + blockObj.parseNamingMetadata will make extract a name:
+         %           1. Name will be parsed from the filename part of
+         %              myBlock.RecFile, resulting in:
+         %              >> 'R20-001_data-A_0'
+         %              
+         %           2. Name is split into tokens using
+         %              pars.VarExprDelimiter, resulting in 4 "variables":
+         %              >> {'R20','001','data','A','0'}
+         %
+         %           3. Variable data is assigned to fields using
+         %              pars.DynamicVarExp, resulting in a metadata struct:
+         %              >> meta.SurgYear = 'R20' [kept due to '$' char]
+         %              >> meta.SurgID = '001' [kept due to '$' char]
+         %              >> x meta.Const = 'data' [removed due to '~' char]
+         %              >> meta.Tag = 'A' [kept due to '$' char]
+         %              >> meta.RecID = '0' [kept due to '$' char]
+         %
+         %           4. From this expression, using pars.SpecialMeta,
+         %              'AnimalID' field of meta struct is parsed also
+         %              >> meta.AnimalID = 'R20-001'
+         %
+         %              _note that pars.SpecialMeta.AnimalID.cat = '-',
+         %                 which sticks together the variables listed in
+         %                 pars.SpecialMeta.AnimalID.vars ('SurgYear' and
+         %                 'SurgID')_
+         %
+         %              _note that no other SpecialMeta is formed this way,
+         %                 as only the only pars.SpecialMeta.SpecialVars
+         %                 element is 'AnimalID'_
+         %
+         %           5. Finally, myBlock.Name is parsed using
+         %              pars.NamingConvention ({'AnimalID', 'RecID'}) and
+         %              pars.Concatenater
+         %              >> myBlock.Name = 'R20-001_0'
+         %
+         %           6. Thus, myBlock.Output is the combination:
+         %              >> myBlock.Output = ...
+         %                    fullfile(myBlock.SaveLoc,myBlock.Name);
+         %
+         %           7. Because we specified '$Tag' and not '~Tag', our
+         %              metadata struct (myBlock.Meta) still has 
+         %              >> myBlock.Meta.Tag = 'A'
+         %              It is just not used due 'Tag' not being in the
+         %              variables listed for pars.NamingConvention
+         %  ---
+         %
+         %  # <Name, value> Syntax #
          %
          %  <'Name',value> input pair lists are accepted if all other
          %  inputs are given (to skip, specify an input as []). To set a
@@ -222,7 +323,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
          
          if nargin < 3
-            outPath = '';
+            savePath = '';
          end
          
          obj.Type = Type;
@@ -299,25 +400,23 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                   if isfield(obj.Paths,'RecDir')
                      obj.Input = obj.Paths.RecDir;
                   end
-            end    
-            if ~isempty(outPath)
-               obj.Output = outPath;
             end
             return; % Skip .updateParams('init')
-         elseif ~(ischar(inPath) && ischar(outPath))
+         elseif ~(ischar(inPath) && ischar(savePath))
             error(['nigeLab:' mfilename ':BadClass'],...
-               'Both inPath and outPath must be `char`');
+               'Both inPath and savePath must be `char`');
          end
          
-         % Assign input and output paths (handled in property set/get)
-         if ~isempty(inPath)
-            obj.Input  = inPath;                 
+         % Handle I/O path specifications
+         if ~obj.parseInputPath(inPath)
+            nigeLab.utils.cprintf('Errors*',...
+               '[constructor canceled]: Input file/folder not given\n');
+            return;
          end
-         
-         if isempty(outPath)
-            obj.getSaveLocation();
-         else
-            obj.Output = outPath;
+         if ~obj.parseSavePath(savePath)
+            nigeLab.utils.cprintf('Errors*',...
+               '[constructor canceled]: Output file/folder not given\n');
+            return;
          end
          
          % Initialize parameters
@@ -413,8 +512,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  value = get(obj,'AnimalLoc');
          %  --> Returns value of obj.Out.Animal instead
          
-         value = nigeLab.utils.getUNCPath(obj.Out.Animal);
-         value = strrep(value,'\','/');
+         if isfield(obj.Out,'Animal')
+            value = nigeLab.utils.getUNCPath(obj.Out.Animal);
+            value = strrep(value,'\','/');
+         else
+            value = '';
+         end
       end
       
       % [DEPENDENT] Get method for .Animals (backwards compatibility)
@@ -507,6 +610,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  e.g '/c/path/tank/.nigelTank'
          
          value = obj.getObjfname();
+         if isempty(value)
+            keyboard;
+         end
       end
       
       % [DEPENDENT] Get method for .FileExt (recording file type)
@@ -726,10 +832,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                warning('Save location (%s) is not set.',obj.Type);
                return;
             else
-               p = strrep(obj.Paths.SaveLoc,'\','/');
+               p = obj.SaveLoc;
             end
          end
-         F = dir(fullfile(p,obj.Name,'.nigel*'));
+         
+         value = nigeLab.utils.getUNCPath(p,obj.Name);
+         F = dir(fullfile(value,'.nigel*'));
          if numel(F) > 1
             % If too many FolderIdentifier files, there is a problem.
             obj.PlayAlertPing(4,0.66);
@@ -738,18 +846,17 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                 'Multiple FolderIdentifier files at same tree level.\n' ...
                 'A given folder should only contain one .nigelFile!']);
          elseif numel(F) < 1
-            % If no FolderIdentifier file yet, then put one there
-            obj.saveIDFile();
-            nigeLab.utils.cprintf('Comments',...
-               'Saved %s (%s) %s file.\n',obj.In.(obj.Type),obj.Type,...
-               obj.FolderIdentifier);
-            value = p;
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            nigeLab.utils.cprintf(fmt,...
+               '%s[%s]: Could not find .nigelFile at %s\n',...
+               idt,type,nigeLab.utils.shortenedPath(value));
+            value = '';            
             return;
          end
          % If we find the correct FolderIdentifier, return the value
          if strcmp(F.name,obj.FolderIdentifier)
-            value = nigeLab.utils.getUNCPath(p);
             value = strrep(value,'\','/');
+            obj.setOutputPath(value);
          else
             obj.PlayAlertPing(4,0.66,1.5,0.75,-1);
             error(['nigeLab:' mfilename ':BadFolderTree'],...
@@ -780,8 +887,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          % Otherwise, update and save for later
          obj.updateParams(obj.Type,true);
          value = obj.getParams(obj.Type,'SaveLocDefault');
-         if ~ischar(obj.Out.Default)
-            obj.Out.Default = 'R:\Rat\Intan';
+         if ~ischar(value)
+            obj.Out.Default = 'P:\Rat\Intan';
          else
             value = strrep(value,'\','/');
             obj.Out.Default = value;
@@ -834,8 +941,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
 
          value = obj.Input;
          if isempty(value)
-            f = uigetdir(obj.InDef,obj.InPrompt);
-            obj.Input = nigeLab.utils.getUNCPath(f);
+            p = obj.getRecLocation('Folder');
+            if isempty(p)
+               value = '';
+               nigeLab.utils.cprintf('Errors*','No selection\n');
+            end
+            obj.Input = nigeLab.utils.getUNCPath(p);
          end
          value = nigeLab.utils.getUNCPath(obj.Input);
          value = strrep(value,'\','/');
@@ -850,15 +961,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          value = obj.Input;
          if isempty(value)
-            [f,p] = uigetfile(...
-               {'*.rhd;*.rhs', 'Intan (*.rhd,*.rhs)'; ...
-               '*.Tbk,*.Tdx,*.tev,*.tnt,*.tsq', ...
-               'TDT (*.Tbk,*.Tdx,*.tev,*.tnt,*.tsq)'; ...
-               '*.mat', 'MATLAB (*.mat)'; ...
-               '*.nigelBlock', 'nigelBlock (*.nigelBlock)'; ...
-               '*.*', 'All Files (*.*)'},obj.InPrompt,obj.InDef);
-            if f == 0
+            [p,f] = obj.getRecLocation('File');
+            if isempty(f)
                value = '';
+               nigeLab.utils.cprintf('Errors*','No selection\n');
                return;
             end
             obj.Input = nigeLab.utils.getUNCPath(p,f);
@@ -941,6 +1047,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          if isempty(value)
             if ~isfield(obj.Paths,'SaveLoc')
                value = '';
+               return;
             else
                value = obj.Paths.SaveLoc;
                if isstruct(value)
@@ -958,26 +1065,15 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %
          %  value = get(obj,'ShortFile');
 
-         value = obj.File;
-         [p,f,e] = fileparts(value);
-         name = [f e];
-         if numel(name) > 16
-            nameParts = strsplit(name,'_');
-            if numel(nameParts) > 1
-               name = [nameParts{1} '_..._' nameParts{end}];
-            end
+         if isempty(obj.File)
+            value = '';
+            return;
          end
-         fParts = strsplit(p,'/');
-         if numel(fParts) > 1
-            switch numel(fParts) 
-               case 2
-                  value = ['//' fParts{2} '/' name];
-               otherwise
-                  value = ['//' fParts{2} '/' fParts{3}  '/.../' name];
-            end
-         else
-            value = ['~/' name];
-         end
+         
+         [p,f,e] = fileparts(obj.File);
+         short_name = nigeLab.utils.shortenedName([f e]);
+         short_path = nigeLab.utils.shortenedPath(p);
+         value = [short_path short_name];
       end
 
       % [DEPENDENT] Get method for .SortGUI (handle to nigeLab.Sort)
@@ -1082,8 +1178,14 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             return;
          end
          
-         flag = false;         
-         obj.updateParams(obj.Type);
+         flag = false;
+         if isempty(obj.HasParsInit)
+            obj.updateParams(obj.Type);
+         elseif ~isfield(obj.HasParsInit,obj.Type)
+            obj.updateParams(obj.Type);
+         elseif ~obj.HasParsInit.(obj.Type)
+            obj.updateParams(obj.Type);
+         end
          
          % Do all Dependent variable 'gets' prior to try in case that is
          % where an error occurs:
@@ -1244,7 +1346,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  set(obj,'GUI',value);
          
          if isempty(value)
-            obj.GUIContainer(:) = []; % Remove handle association
+            if ~isempty(obj.GUIContainer)
+               obj.GUIContainer(:) = []; % Remove handle association
+            end
             obj.IsDashOpen = false;   % Set flag to false
          else
             obj.GUIContainer = value; % Store association to handle object
@@ -1349,29 +1453,51 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          % Assign this to the "container" folder
          switch obj.Type
             case 'Block'
-               obj.In.Block = value;
                [a,b,ext] = fileparts(value);
                if strcmp(ext,obj.FolderIdentifier)
-                  obj.In.Block = a;
-                  [a,b,~] = fileparts(obj.In.Block);
+                  obj.Output = a;
+                  obj.loadIDFile();
+                  if isfield(obj.IDInfo,'RecFile')
+                     obj.RecFile = obj.IDInfo.RecFile;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: RecFile|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  if isfield(obj.IDInfo,'RecDir')
+                     obj.RecDir = obj.IDInfo.RecDir;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: RecDir|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  if isfield(obj.IDInfo,'FileExt')
+                     obj.In.FileExt = obj.IDInfo.FileExt;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: FileExt|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  [~,obj.In.BlockName,~] = fileparts(obj.RecFile);
                elseif ~isempty(ext)
-                  obj.In.FileExt = ext;
+                  % obj.In.Block = value; % same as line below
                   obj.RecFile = value;
+                  obj.In.FileExt = ext;
+                  % obj.In.Animal = a; % same as line below
                   obj.RecDir = a;
-               end
-               obj.In.Animal = a;
-               obj.In.BlockName = b;
+                  obj.In.BlockName = b;
+               end               
                [obj.In.Tank,obj.In.AnimalName,~] = fileparts(obj.In.Animal);
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.BlockName;
             case 'Animal'
-               % obj.In.Animal = value;
+               % obj.In.Animal = value; % same as line below
                obj.RecDir = value;
                [obj.In.Tank,obj.In.AnimalName,~] = fileparts(value);
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.AnimalName;
             case 'Tank'
-               % obj.In.Tank = value;
+               % obj.In.Tank = value; % same as line below
                obj.RecDir = value;
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(value);
                obj.In.Name = obj.In.TankName;
@@ -1379,10 +1505,10 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
-         
+         [obj.Name,obj.Meta] = obj.parseNamingMetadata();
       end
       
-      % [DEPENDENT] Set method for .IsDashOpen (flag true if GUI is open)
+      % [FLAG] Set method for .IsDashOpen (flag true if GUI is open)
       function set.IsDashOpen(obj,value)
          %SET.ISDASHOPEN  Set method for .IsDashOpen (flag for GUI)
          %
@@ -1635,6 +1761,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          if ~ischar(value)
             return;
          end
+         obj.In.Block = value;
          obj.Paths.RecFile = value;
       end
       
@@ -1673,13 +1800,35 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %  --> Sets value of obj.Out.Animal if obj is Block
          %  --> Sets value of obj.Out.Tank if obj is Animal
          %  --> Sets value of obj.Out.Experiment if obj is Tank
+         
          if isempty(value)
             return;
          end
+         
          if ~ischar(value)
             return;
          end
-         obj.Paths.SaveLoc = value;
+         
+         if exist(fullfile(value,obj.FolderIdentifier),'file')==0
+            obj.Paths.SaveLoc = value;
+            switch obj.Type
+               case 'Block'
+                  obj.Out.Animal = value;
+               case 'Animal'
+                  obj.Out.Tank = value;
+               case 'Tank'
+                  obj.Out.Experiment = value;
+            end
+         else
+            [~,idt,type] = obj.getDescriptiveFormatting();
+            dbstack;
+            nigeLab.utils.cprintf('Errors*',...
+               '%s[INVALID]: Tried to set bad [%s] SaveLoc.\n',...
+               idt,type);
+            nigeLab.utils.cprintf('Errors',...
+               '\t%sAssigned ''%s'', which contains ID File (%s)\n',...
+               idt,nigeLab.utils.shortenedPath(value),obj.FolderIdentifier);
+         end
       end
       
       % [DEPENDENT] Set method for .ShortFile (for printing names)
@@ -1778,7 +1927,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    end
   
    % PUBLIC
-   methods (Access = public)      
+   methods (Access=public)      
       % Add a child object to parent obj.Children array
       function addChild(obj,childData,idx)
          % ADDCHILD  Add to .Children property
@@ -2211,10 +2360,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                'nigeLab.obj/getFolderTree expects BLOCK input.');
          end
          
-         if nargin < 2
-            paths = struct();
-         end
-         
          F = fieldnames(obj.Pars.Block.PathExpr);
          del = obj.Pars.Block.Delimiter;
          
@@ -2231,7 +2376,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             
             % Set folder name for this particular Field
             paths.(F{iF}).dir = nigeLab.utils.getUNCPath(...
-               paths.SaveLoc,[p.Folder]);
+               paths.Output,[p.Folder]);
             
             % Parse for both old and new versions of file naming convention
             paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
@@ -2457,17 +2602,63 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          varargout{1} = s;
       end
       
-      % Set the save location for
+      % Returns the recording location for nigelobj
+      function [p,f] = getRecLocation(obj,inputType)
+         %GETRECLOCATION  Returns path to recording file or folder
+         %
+         %  [p,f] = obj.getRecLocation('File');
+         %  --> Prompts for file selection (Block)
+         %  p: path to file
+         %  f: filename (no path)
+         %
+         %  p = obj.getRecLocation('Folder');
+         %  --> Prompts for folder selection (Animal, Tank)
+         %  p: path to folder
+         
+         if nargin < 2
+            error(['nigeLab:' mfilename ':TooFewInputs'],...
+               ['Must specify ''inputType'' with getRecLocation\n',...
+                '->\t (Must be ''File'' or ''Folder'')\n']);
+         end
+         
+         switch lower(inputType)
+            case 'file'
+               [f,p] = uigetfile(...
+                  {'*.rhd;*.rhs', 'Intan (*.rhd,*.rhs)'; ...
+                  '*.Tbk,*.Tdx,*.tev,*.tnt,*.tsq', ...
+                  'TDT (*.Tbk,*.Tdx,*.tev,*.tnt,*.tsq)'; ...
+                  '*.mat', 'MATLAB (*.mat)'; ...
+                  '*.nigelBlock', 'nigelBlock (*.nigelBlock)'; ...
+                  '*.*', 'All Files (*.*)'},obj.InPrompt,obj.InDef);
+               if f == 0
+                  p = '';
+                  f = '';
+                  return;
+               end
+            case 'folder'
+               f = '';
+               p = uigetdir(obj.InDef,obj.InPrompt);
+               if p == 0
+                  p = '';
+               end
+            otherwise
+               error(['nigeLab:' mfilename ':BadString'],...
+               '"InputType" must be ''File'' or ''Folder''');
+         end
+         
+      end
+      
+      % Set the save location for nigelobj
       function flag = getSaveLocation(obj,saveLoc)
-         % GETSAVELOCATION   Set the save location for container folder
+         % GETSAVELOCATION   Set obj.SaveLoc for container folder
          %                   that holds the file hierarchy referenced by
          %                   nigelObj.
          %
-         %  flag = obj.GETSAVELOCATION; --> Prompts for NIGELOBJ location
-         %  from a user interface (UI)
+         %  flag = obj.GETSAVELOCATION; 
+         %  --> Prompts for NIGELOBJ location from a user interface (UI)
          %
-         %  flag = obj.GETSAVELOCATION('save/path/here'); --> Skips the
-         %  selection interface
+         %  flag = obj.GETSAVELOCATION('save/path/here'); 
+         %  --> Skips the selection interface
          
          % Reporter flag for whether this was executed properly
          flag = false;
@@ -2498,11 +2689,11 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                if ~obj.genPaths(tmp)
                   warning('Still no valid save location.');
                else
-                  obj.Output = tmp;
+                  obj.SaveLoc = tmp;
                   flag = true;
                end
             else
-               obj.Output = tmp;
+               obj.SaveLoc = tmp;
                flag = true;
             end
          end
@@ -2709,6 +2900,44 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             nigeLab.utils.cprintf(fmt,...
                   '%sPars.%s loaded from [%s_Pars] file for %s (.User: %s)\n',...
                   idt,parsField,type,obj.Name,obj.User);
+         end
+      end
+      
+      % Method to MOVE files to new location
+      function Move(obj,newLocation)
+         %MOVE  Moves files to new location and updates paths
+         %
+         %  obj.Move();  
+         %  --> Brings up UI to select "move to" location
+         %
+         %  obj.Move(newLocation);
+         %  --> Similar to calling "updatePaths(newLocation)"
+         
+         if nargin < 2
+            newLocation = uigetdir(obj.SaveLocation,obj.OutPrompt);
+            if newLocation == 0
+               nigeLab.utils.cprintf('Errors','No selection\n');
+               return;
+            end
+         end
+         new = nigeLab.utils.getUNCPath(newLocation);
+         old = nigeLab.utils.getUNCPath(obj.SaveLoc);
+         if ~strcmp(new,old)
+            choice = questdlg(...
+               sprintf('Move %s files?\n-> %s\n to\n-> %s',...
+               obj.Type,nigeLab.utils.shortenedPath(old),...
+               nigeLab.utils.shortenedPath(new)),...
+               'Confirm File Move','Yes','No','Yes');
+            if strcmp(choice,'No')
+               nigeLab.utils.cprintf('Errors','Move canceled\n');
+               return;
+            end
+         end
+         if ~obj.updatePaths(new)
+            [~,idt,type] = obj.getDescriptiveFormatting();
+            error(['nigeLab:' mfilename ':BadFileMove'],...
+               '%sFile move unsuccessful for [%s]: %s\n',idt,type,...
+               obj.Name);
          end
       end
       
@@ -3389,7 +3618,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                   obj.HasParsInit = struct;
                end
                obj.HasParsInit.(paramType) = true;
-               if ~isempty(obj.User)
+               if ~isempty(obj.User) && ~isempty(obj.SaveLoc)
                   nigeLab.utils.cprintf(fmt,...
                      '\n%sSaving DEFAULT %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
                      idt,paramType,upper(type),obj.Name,obj.User);
@@ -3411,167 +3640,109 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
-      % Update Paths
-      function flag = updatePaths(obj,saveLoc)
-         %UPDATEPATHS  Update the path tree of the Block object
+   end
+   
+   % HIDDEN,PUBLIC
+   methods (Hidden,Access=public)
+      % Set some useful path variables to file locations
+      function flag = genPaths(obj,SaveLoc)
+         %GENPATHS    Set some useful path variables to file locations
          %
-         %  flag = obj.updatePaths();
-         %  flag = obj.updatePaths(SaveLoc);
+         %  flag = GENPATHS(obj);
+         %  flag = GENPATHS(obj,SaveLoc);
          %
-         % Generates a new path tree starting from the SaveLoc input and
-         %  moves any files found in the old path to the new one.
+         %     Defines all the paths where data will be saved.
+         %     The folder tree is also created (if it doesn't exist)
          %
-         % In order to match the old path with the new one the Paths struct
-         %  in object is used.
-         %
-         % The script detects <strong> any variable part </strong> of the
-         %  name (eg %s) and replicates it in the new file.
-         %
-         % This means that if the old file had two variable parts,
-         %  typically probe and channels, the new one must have two varible
-         %  parts as well.
-         %
-         % This is a problem only when changing the naming in the
-         %  defaults params.
+         %  obj.Paths is updated in this method.
          
          flag = false;
-         switch obj.Type
-            case 'Animal'
-               if nargin ==2
-                  obj.Params.Paths.SaveLoc = saveLoc;
-               end
-               for child = obj.Children
-                  p.dir = fullfile(obj.Params.Paths.SaveLoc,child.Name);
-                  flag = flag && child.updatePaths(p);
-               end
-               flag = flag && obj.save;
+         if nargin < 2
+            SaveLoc = obj.SaveLoc;
+            if isempty(SaveLoc)
+               [fmt,idt,type] = obj.getDescriptiveFormatting();
+               dbstack;
+               nigeLab.utils.cprintf('Errors*','%s[GENPATHS]: ',idt);
+               nigeLab.utils.cprintf(fmt,...
+                  'Tried to build [%s].Paths using empty base\n',type);
                return;
-            case 'Tank'
-               if nargin ==2
-                  obj.Params.Paths.SaveLoc = saveLoc;
-               else
-                  obj.Params.Paths.SaveLoc = fullfile(...
-                     fileparts(obj.Paths.SaveLoc),obj.Name);
-               end
-               for a = obj.Animals
-                  p = fullfile(obj.Paths.SaveLoc,a.Name);
-                  flag = flag &&a.updatePaths(p);
-               end
-               flag = flag && obj.save;
-               return;
-         end
-         % Otherwise, obj is nigeLab.Block class
-         
-         % remove old block matfile
-         blockFile = obj.File;
-         if exist(blockFile,'file')
-            delete(blockFile);
-         end
-         
-         if nargin == 2
-            obj.Params.Paths.SaveLoc = saveLoc;
-         end
-         
-         % Get old paths, removing 'SaveLoc' from the list of Fields
-         %  that need Paths found for them.
-         OldP = obj.Paths;
-         OldFN_ = fieldnames(OldP);
-         OldFN_(strcmp(OldFN_,'SaveLoc'))=[];
-         OldFN = [];
-         
-         % generate new obj.Paths
-         obj.genPaths(fileparts(obj.Paths.SaveLoc));
-         P = obj.Paths;
-         
-         uniqueTypes = unique(obj.FieldType);
-         
-         % look for old data to move
-         filePaths = [];
-         for jj=1:numel(uniqueTypes)
-            if ~isempty(obj.(uniqueTypes{jj}))
-               ff = fieldnames(obj.(uniqueTypes{jj})(1));
-               
-               fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),...
-                  'DiskData.\w', 'once')),...
-                  struct2cell(obj.(uniqueTypes{jj})(1))));
-               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))]; %#ok<*AGROW>
-               for hh=1:numel(fieldsToMove)
-                  if all(obj.getStatus(fieldsToMove{hh}))
-                     filePaths = [filePaths; ...
-                        cellfun(@(x)x.getPath,...
-                        {obj.(uniqueTypes{jj}).(fieldsToMove{hh})},...
-                        'UniformOutput',false)'];
-                  end %fi
-               end %hh
-            end %fi
-         end %jj
-         
-         % moves all the files from folder to folder
-         for ii=1:numel(filePaths)
-            source = filePaths{ii};
-            [~,target] = strsplit(source,'\\\w*\\\w*.mat',...
-               'DelimiterType', 'RegularExpression');
-            target = fullfile(P.SaveLoc,target{1});
-            [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
-         end
-         
-         % copy all the info files from one folder to the new one
-         for jj = 1:numel(OldFN)
-            %     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
-            d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
-               {'.','..'}));
-            if isempty(d)
-               rmdir(OldP.(OldFN{jj}).dir);
             end
          end
-         flag = flag && obj.linkToData;
-         flag = flag && obj.save;
-         
-         function moveFilesAround(oldPath,NewPath,str)
-            %MOVEFILESAROUND  Actually moves the files after they are split
-            %
-            %  moveFilesAround(oldPath,NewPath,str);
-            %  --> For example, after splitting MultiAnimalsLinkedBlocks,
-            %      you need to also move the diskfile locations to reflect
-            %      the splitting.
-            
-            oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
-            newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
-            source_ = dir([oldPathSplit{1} '*']);
-            numVarParts = numel(strfind(oldPath,'%'));
-            for kk = 1:numel(source_)
-               src = fullfile(source_(kk).folder,source_(kk).name);
-               offs=1;
-               ind=[];VarParts={};
-               for iV=1:numVarParts
-                  tmp = strfind(src(offs:end),oldPathSplit{iV}) + ...
-                     length(oldPathSplit{iV});
-                  ind(1,iV) = offs -1 + tmp(1);
-                  offs = ind(1,iV);
-                  tmp = strfind(src(offs:end),oldPathSplit{iV+1})-1;
-                  if isempty(tmp),tmp=length(src(offs:end));end
-                  ind(2,iV) = offs -1 + tmp(1);
-                  offs = ind(2,iV);
-                  VarParts{iV} = src(ind(1,iV):ind(2,iV));
-               end % iV
-               tgt = fullfile( sprintf(strrep(strjoin(newPathSplit, ...
-                  '%s'),'\','/'),  VarParts{:}));
-               
-               switch str
-                  case 'mv'
-                     [~,~] = nigeLab.utils.FileRename.FileRename(src,tgt);
-                  case 'cp'
-                     [~,~] = copyfile(src,tgt);
-               end %str
-            end %kk
+         paths = struct;
+         paths.SaveLoc = SaveLoc;
+         paths.Output = nigeLab.utils.getUNCPath(SaveLoc,obj.Name);
+         if exist(paths.Output,'dir')==0
+            mkdir(paths.Output);
          end
+         if strcmp(obj.Type,'Block')
+            paths = obj.getFolderTree(paths);
+            % Iterate on all the fieldnames, making the folder if it doesn't exist yet
+            F = fieldnames(paths);
+            F = setdiff(F,{'SaveLoc','Output'});
+            for ff=1:numel(F)
+               if exist(paths.(F{ff}).dir,'dir')==0
+                  mkdir(paths.(F{ff}).dir);
+               end
+            end
+            flag = true;
+         else % 'Animal', 'Tank'
+            if exist(paths.SaveLoc,'dir')==0
+               mkdir(paths.SaveLoc);
+            end
+            flag = true;
+            for i = 1:numel(obj.Children)
+               flag = flag && genPaths(obj.Children(i));
+            end
+         end
+         
+         obj.Params.Paths = paths;
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
+         nigeLab.utils.cprintf(fmt,...
+            '%s[GENPATHS]: Paths updated for %s (%s)\n',...
+            idt,upper(type),obj.Name);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            '\t%s%sObj.Ouput is now %s\n',...
+            idt,lower(type),nigeLab.utils.shortenedPath(paths.Output));
+      end
+      
+      % Request that DashBoard opens
+      function requestDash(obj,~,evt)
+         %REQUESTDASH  Request to open the GUI
+         %
+         %  addlistener(child,'DashChanged',@obj.requestDash);
+         
+         if nargin < 3
+            evt = nigeLab.evt.dashChanged('Requested');
+         end
+         doRequest = strcmpi(evt.Type,'Requested') && ~obj.IsDashOpen;
+         if ~doRequest
+            return;
+         end
+         switch obj.Type % Since source is child object, cannot be Block
+            case 'Block'
+               % "Pass the notification up the chain"
+               notify(obj,'DashChanged',evt);        
+            case 'Animal'
+               % "Pass the notification up the chain"
+               notify(obj,'DashChanged',evt);
+            case 'Tank'
+               % Note that nigeLab.libs.DashBoard constructor is only
+               % available from tankObj method nigeLab.nigelObj/nigelDash.
+               obj.GUI = nigeLab.libs.DashBoard(obj);
+               % --> This is INTENTIONAL, so that the object corresponding
+               %     to the figure is always "cleaned up" from the base
+               %     workspace upon DashBoard destruction.
+            otherwise
+               error(['nigeLab:' mfilename ':BadType'],...
+                     'nigelObj has bad Type (%s)',obj.Type);
+         end
+            
       end
       
    end
    
    % PROTECTED
-   methods (Access = protected)
+   methods (Access=protected)
       % Re-adds all child listeners to obj
       function addChildListeners(obj,C)
          %ADDCHILDLISTENERS  Re-adds all child listeners to obj
@@ -3611,7 +3782,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                addlistener(child,'StatusChanged',...
                   @(~,evt)notify(obj,'StatusChanged',evt)), ...
                addlistener(child,'DashChanged',...
-                  @(~,evt)obj.requestDash(evt))];
+                  @obj.requestDash)];
             if strcmp(obj.Type,'Animal')
                obj.ChildListener = [obj.ChildListener, ...
                   addlistener(child,'IsMasked','PostSet',...
@@ -3993,7 +4164,14 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                         if ~regexpi(name,'[a-z]')
                            name = ['Block_' name];
                         end
-                        data_out.(name) = getLink(obj.Children(i),[],'Link');
+                        str_view = ...
+                           ['<a href="matlab: ' ...
+                           'nigeLab.sounds.play(''pop'',1.5);' ...
+                           'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
+                           sprintf(['Children(%g).Children(%g),'...
+                            '''simple'');"'], obj.Index,i) '>View</a>'];
+                        
+                        data_out.(name) = str_view;
                      end
                      groups = [...
                         matlab.mixin.util.PropertyGroup(data_out,...
@@ -4013,7 +4191,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                         if ~regexpi(name,'[a-z]')
                            name = ['Animal_' name];
                         end
-                        data_out.(name) = getLink(obj.Children(i),[],'Link');
+                        str_view = ...
+                           ['<a href="matlab: ' ...
+                           'nigeLab.sounds.play(''pop'',1.5);' ...
+                           'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
+                           sprintf('Children(%g),''simple'');"',i) ...
+                           '>View</a>'];
+                        data_out.(name) = str_view;
                      end
                      groups = [...
                         matlab.mixin.util.PropertyGroup(data_out,...
@@ -4081,99 +4265,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
       end
       
-      % Return full filename to parameters file
-      function fname = getParsFilename(obj,useUNC)
-         %GETPARSFILENAME  Returns full (UNC) filename to parameters file
-         %
-         %  f = obj.getParsFilename(); Return UNC path (def)
-         %  f = obj.getParsFilename(false); Return `fullfile` version
-         
-         fname = '';
-         if isempty(obj.Name)
-            return;
-         end
-         
-         if nargin < 2
-            useUNC = true;
-         end
-         
-         if useUNC
-            fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
-               sprintf(obj.ParamsExpr,obj.Name));
-         else
-            fname = fullfile(obj.SaveLoc,...
-               sprintf(obj.ParamsExpr,obj.Name));
-         end
-      end
-      
-      % Returns the "_Object.mat" file name as char array
-      function fname = getObjfname(obj,pname)
-         %GETOBJFNAME  Return the "_Object.mat" file name as char array
-         %
-         %  fname = getObjfname(obj);  Return default file
-         %  fname = getObjfname(obj,pname);
-         %     --> For example, use this to express pname as
-         %        obj.Children(i).Paths.SaveLoc
-         
-         % Do it this way so that if creating filename for "child" with
-         % "parent" .nigelFolderIdentifier (such as during splitting
-         % animals), the path to use in combination with id_ext can be
-         % changed.
-         if nargin < 2
-            pname = obj.SaveLoc;
-         end
-         
-         id_ext = sprintf(obj.FileExpr,obj.Type);
-         fname = strrep(...
-            nigeLab.utils.getUNCPath(pname,[obj.Name id_ext]),...
-            '\','/');
-      end
-      
-      % Set some useful path variables to file locations
-      function flag = genPaths(obj,SaveLoc)
-         %GENPATHS    Set some useful path variables to file locations
-         %
-         %  flag = GENPATHS(obj);
-         %  flag = GENPATHS(obj,SaveLoc);
-         %
-         %     Defines all the paths where data will be saved.
-         %     The folder tree is also created (if it doesn't exist)
-         %
-         %  obj.Paths is updated in this method.
-         
-         flag = false;
-         if nargin < 2
-            switch obj.Type
-               case 'Tank'
-                  SaveLoc = obj.SaveLoc;
-               case 'Animal'
-                  SaveLoc = obj.TankLoc;
-               case 'Block'
-                  SaveLoc = obj.AnimalLoc;
-            end
-         end
-         paths.SaveLoc = nigeLab.utils.getUNCPath(SaveLoc,obj.Name);
-         
-         if strcmp(obj.Type,'Block')
-            paths = obj.getFolderTree(paths);
-            % Iterate on all the fieldnames, making the folder if it doesn't exist yet
-            F = fieldnames(paths);
-            F = setdiff(F,'SaveLoc');
-            for ff=1:numel(F)
-               if exist(paths.(F{ff}).dir,'dir')==0
-                  mkdir(paths.(F{ff}).dir);
-               end
-            end
-         else % 'Animal', 'Tank'
-            if exist(paths.SaveLoc,'dir')==0
-               mkdir(paths.SaveLoc);
-            end
-         end
-         
-         obj.Params.Paths = paths;
-         flag = true;
-      end
-      
       % Overloaded method from CustomDisplay superclass
       function s = getFooter(obj,displayType)
          %GETFOOTER  Method overload from CustomDisplay superclass
@@ -4199,6 +4290,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             return;
          end
          
+         
          guiLinkStr = ...
             [sprintf('\t-->\t'), ...
             '<a href="matlab: addpath(nigeLab.utils.getNigelPath()); ' ...
@@ -4208,6 +4300,16 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             '(<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '];
          switch obj(1).Type
             case 'Block'
+               if isempty(obj.Index)
+                  pLinkStr = '';
+               else
+                  pLinkStr = [sprintf(...
+                     '\t-->\tView <strong>Parent</strong> '),...
+                     '<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '...
+                     'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
+                     sprintf('Children(%g),''simple'');">', obj.Index(1))...
+                     'Animal Object</a>'];
+               end
                switch inputname(1)
                   case {'obj',''}
                      if isempty(obj(1).Index)
@@ -4216,7 +4318,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                               promptStr)];
                         dLink = [dLink, ...
                            sprintf(...
-                           ['nigeLab.nigelObj.DisplayCurrent(blockObj); ' ...
+                           ['nigeLab.nigelObj.DisplayCurrent' ...
+                           '(blockObj,''detailed''); ' ...
                            '">More Details</a>)'])];
                      else
                         guiLinkStr = [guiLinkStr, ...
@@ -4224,7 +4327,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                               obj(1).Index(1),obj(1).Index(2),promptStr)];
                         dLink = [dLink, ...
                            sprintf(...
-                           ['nigeLab.nigelObj.DisplayCurrent(tankObj.Children(%g).Children(%g)); ' ...
+                           ['nigeLab.nigelObj.DisplayCurrent'...
+                           '(tankObj.Children(%g).Children(%g),''detailed''); ' ...
                            '">More Details</a>)'],obj(1).Index(1),obj(1).Index(2))];
                      end
                   otherwise
@@ -4233,10 +4337,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                            inputname(1),promptStr)]; 
                      dLink = [dLink, ...
                         sprintf(...
-                        ['nigeLab.nigelObj.DisplayCurrent(%s); ' ...
+                        ['nigeLab.nigelObj.DisplayCurrent'...
+                        '(%s,''detailed''); ' ...
                         '">More Details</a>)'],inputname(1))];
                end
             case 'Animal'
+               if isempty(obj.Index)
+                  pLinkStr = '';
+               else
+                  pLinkStr = [sprintf(...
+                     '\t-->\tView <strong>Parent</strong> '),...
+                     '<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '...
+                     'nigeLab.nigelObj.DisplayCurrent(tankObj,''simple'');">' ...
+                     'Tank Object</a>'];
+               end
                switch inputname(1)
                   case {'obj',''}
                      if isempty(obj(1).Index)
@@ -4245,7 +4359,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                               promptStr)];
                         dLink = [dLink, ...
                            sprintf(...
-                           ['nigeLab.nigelObj.DisplayCurrent(animalObj); ' ...
+                           ['nigeLab.nigelObj.DisplayCurrent'...
+                           '(animalObj,''detailed''); ' ...
                            '">More Details</a>)'])];
                      else
                         guiLinkStr = [guiLinkStr, ...
@@ -4253,7 +4368,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                               obj(1).Index,promptStr)];
                         dLink = [dLink, ...
                            sprintf(...
-                           ['nigeLab.nigelObj.DisplayCurrent(tankObj.Children(%g)); ' ...
+                           ['nigeLab.nigelObj.DisplayCurrent' ...
+                           '(tankObj.Children(%g),''detailed''); ' ...
                            '">More Details</a>)'],obj(1).Index)];
                      end
                   otherwise
@@ -4262,16 +4378,19 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                            inputname(1),promptStr)];
                      dLink = [dLink, ...
                         sprintf(...
-                        ['nigeLab.nigelObj.DisplayCurrent(%s); ' ...
+                        ['nigeLab.nigelObj.DisplayCurrent'...
+                        '(%s,''detailed''); ' ...
                         '">More Details</a>)'],inputname(1))];
                end
             case 'Tank'
+               pLinkStr = '';
                switch inputname(1)
                   case {'obj',''}
                      guiLinkStr = [guiLinkStr, ...
                         sprintf('nigelDash(tankObj);">%s</a>',promptStr)];
                      dLink = [dLink, ...
-                        'nigeLab.nigelObj.DisplayCurrent(tankObj); ' ...
+                        'nigeLab.nigelObj.DisplayCurrent' ...
+                        '(tankObj,''detailed''); ' ...
                         '">More Details</a>)'];
                   otherwise
                      guiLinkStr = [guiLinkStr, ...
@@ -4279,7 +4398,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                         inputname(1),promptStr)];
                      dLink = [dLink, ...
                         sprintf(...
-                        ['nigeLab.nigelObj.DisplayCurrent(%s); ' ...
+                        ['nigeLab.nigelObj.DisplayCurrent'...
+                        '(%s,''detailed''); ' ...
                         '">More Details</a>)'],inputname(1))];
                end
             otherwise
@@ -4289,13 +4409,64 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          switch lower(displayType)
             case 'detailed'
-               s = sprintf('%s\n%s\n',getLink(obj),guiLinkStr);
+               s = sprintf('%s\n%s\n%s\n',pLinkStr,getLink(obj),...
+                  guiLinkStr);
             case 'simple'
-               s = sprintf('%s\n%s\n%s\n',getLink(obj),guiLinkStr,dLink);
+               s = sprintf('%s\n%s\n%s\n%s\n',pLinkStr,getLink(obj),...
+                  guiLinkStr,dLink);
          end
 
       end
+      
+      % Returns the "_Object.mat" file name as char array
+      function fname = getObjfname(obj,pname)
+         %GETOBJFNAME  Return the "_Object.mat" file name as char array
+         %
+         %  fname = getObjfname(obj);  Return default file
+         %  fname = getObjfname(obj,pname);
+         %     --> For example, use this to express pname as
+         %        obj.Children(i).Paths.SaveLoc
+         
+         % Do it this way so that if creating filename for "child" with
+         % "parent" .nigelFolderIdentifier (such as during splitting
+         % animals), the path to use in combination with id_ext can be
+         % changed.
+         if nargin < 2
+            pname = obj.SaveLoc;
+         end
+         
+         if isempty(pname)
+            fname = '';
+            return;
+         end
+         
+         id_ext = sprintf(obj.FileExpr,obj.Type);
+         fname = strrep(...
+            nigeLab.utils.getUNCPath(pname,[obj.Name id_ext]),...
+            '\','/');
+      end
+      
+      % Return full filename to parameters file
+      function fname = getParsFilename(obj)
+         %GETPARSFILENAME  Returns full (UNC) filename to parameters file
+         %
+         %  f = obj.getParsFilename(); 
+         
+         fname = '';
+         if isempty(obj.Name)
+            return;
+         end
+         
+         if isempty(obj.SaveLoc)
+            error(['nigelab:' mfilename ':BadSaveLoc'],...
+               'Tried to save params before SaveLoc was set.');
+         end
 
+         fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
+               sprintf(obj.ParamsExpr,obj.Name));
+         fname = strrep(fname,'\','/');
+      end
+      
       % Return list of initialized parameters
       function [s_init,s_miss,s_all] = listInitializedParams(obj)
          %LISTINITIALIZEDPARAMS  Return list of initialized parameters
@@ -4385,6 +4556,41 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             end
             setProp(obj,propName{i},propVal{i});
          end         
+      end
+      
+      % Parse input path (constructor probably always)
+      function flag = parseInputPath(obj,inPath)
+         %PARSEINPUTPATH  Parses an input path `inPath`
+         %
+         %  flag = obj.parseInputPath(inPath);
+         %  --> Returns true if parsing was completed without cancellation
+         
+         flag = false;
+         if isempty(inPath)
+            if isempty(obj.Input)
+               switch obj.Type
+                  case 'Block'
+                     [p,f] = obj.getRecLocation('File');
+                     if isempty(f)
+                        nigeLab.utils.cprintf('Errors*','No selection\n');
+                        return;
+                     else
+                        obj.Input = fullfile(p,f);
+                     end
+                  case {'Animal','Tank'}
+                     p = obj.getRecLocation('Folder');
+                     if isempty(p)
+                        nigeLab.utils.cprintf('Errors*','No selection\n');
+                        return;
+                     else
+                        obj.Input = p;
+                     end
+               end
+            end
+         else
+            obj.Input  = inPath;                 
+         end
+         flag = true;
       end
       
       % Parse metadata from file or folder name of INPUT
@@ -4588,6 +4794,27 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          obj.Pars.(obj.Type).Parsing = pars;
       end
       
+      % Parse output path (constructor probably always)
+      function flag = parseSavePath(obj,savePath)
+         %PARSESAVEPATH  Parses an output path `savePath`
+         %
+         %  flag = obj.parseSavePath(savePath);
+         %  --> Returns true if parsing was completed without cancellation
+         
+         flag = false;
+         if isempty(savePath)
+            if isempty(obj.SaveLoc)
+               if ~obj.getSaveLocation()
+                  nigeLab.utils.cprintf('Errors*','No selection\n');
+                  return;
+               end
+            end
+         else
+            obj.SaveLoc = savePath;
+         end
+         flag = true;
+      end
+      
       % Parse recording type based on file extension
       function recType = parseRecType(obj)
          %PARSERECTYPE   Figure out what kind of recording this is
@@ -4673,46 +4900,18 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
-      % Request that DashBoard opens
-      function requestDash(obj,evt)
-         %REQUESTDASH  Request to open the GUI
-         %
-         %  addlistener(child,'DashChanged',@(~,evt)obj.requestDash(evt));
-         
-         if nargin < 2
-            evt = nigeLab.evt.dashChanged('Requested');
-         end
-         doRequest = strcmpi(evt.Type,'Requested') && ~obj.IsDashOpen;
-         if ~doRequest
-            return;
-         end
-         switch obj.Type % Since source is child object, cannot be Block
-            case 'Block'
-               % "Pass the notification up the chain"
-               notify(obj,'DashChanged',evt);        
-            case 'Animal'
-               % "Pass the notification up the chain"
-               notify(obj,'DashChanged',evt);
-            case 'Tank'
-               % Note that nigeLab.libs.DashBoard constructor is only
-               % available from tankObj method nigeLab.nigelObj/nigelDash.
-               obj.GUI = nigeLab.libs.DashBoard(obj);
-               % --> This is INTENTIONAL, so that the object corresponding
-               %     to the figure is always "cleaned up" from the base
-               %     workspace upon DashBoard destruction.
-            otherwise
-               error(['nigeLab:' mfilename ':BadType'],...
-                     'nigelObj has bad Type (%s)',obj.Type);
-         end
-            
-      end
-      
       % Save small folder identifier file
       function flag = saveIDFile(obj)
          %SAVEIDFILE  Save small folder identifier file
          %
          %  flag = obj.saveIDFile();
          %  --> Returns true if save was successful
+         
+         if strcmp(obj.Type,'Block')
+            if isempty(obj.RecFile)
+               return;
+            end
+         end
          
          % Save .nigel___ file to identify this "Type" of folder     
          fid = fopen(obj.IDFile,'w');
@@ -4818,6 +5017,30 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          end
       end
       
+      % Sets .Output path
+      function setOutputPath(obj,outPath)
+         %SETOUTPUTPATH  Sets .Output path
+         %
+         %  obj.setOutputPath(outPath);
+         %
+         %  outPath : The output location that conatins the
+         %              obj.FolderIdentifier for this nigelObj
+         
+         f = obj.FolderIdentifier;
+         if exist(fullfile(outPath,f),'file')~=0
+            obj.Output = outPath;
+            return;
+         end
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
+         dbstack;
+         nigeLab.utils.cprintf('Errors*','%s[INVALID]: ',idt);
+         nigeLab.utils.cprintf(fmt,...
+            'Tried to set unknown [%s] .Output path\n',type)
+         nigeLab.utils.cprintf(fmt,...
+            '\t%sAssigned ''%s'' (but %s was missing)\n',...
+            idt,nigeLab.utils.shortenedPath(outPath),f);
+      end
+      
       % Toggle .IsDashOpen of all Children
       function toggleChildDashStatus(obj,value)
          %TOGGLECHILDDASHSTATUS  Toggles all Child object dash status
@@ -4845,6 +5068,158 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          [~,idx] = findByKey(obj.Children,childObj);
          if obj.ChildMask(idx)~=childObj.IsMasked
             obj.ChildMask(idx) = childObj.IsMasked;
+         end
+      end
+      
+      % Update Paths
+      function flag = updatePaths(obj,saveLoc)
+         %UPDATEPATHS  Update the path tree of the Block object
+         %
+         %  flag = obj.updatePaths();
+         %  flag = obj.updatePaths(SaveLoc);
+         %
+         % Generates a new path tree starting from the SaveLoc input and
+         %  moves any files found in the old path to the new one.
+         %
+         % In order to match the old path with the new one the Paths struct
+         %  in object is used.
+         %
+         % The script detects <strong> any variable part </strong> of the
+         %  name (eg %s) and replicates it in the new file.
+         %
+         % This means that if the old file had two variable parts,
+         %  typically probe and channels, the new one must have two varible
+         %  parts as well.
+         %
+         % This is a problem only when changing the naming in the
+         %  defaults params.
+         
+         flag = false;
+         if nargin < 2
+            saveLoc = obj.SaveLoc;
+         end
+         
+         if isempty(saveLoc)
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            dbstack;
+            nigeLab.utils.cprintf('Errors*','%s[UPDATEPATHS]: ',idt);
+            nigeLab.utils.cprintf(fmt,...
+               'Tried to update [%s].Paths using empty base\n',type);
+            return;
+         end
+         
+         % Assign .Paths save location (container of object folder tree)
+         obj.Params.Paths.SaveLoc = saveLoc;
+
+         % Update all files for Animal, Tank
+         if ismember(obj.Type,{'Animal','Tank'})
+            p = obj.Output;
+            for child = obj.Children
+               flag = flag && child.updatePaths(p);
+            end
+            flag = flag && obj.save;
+            return;
+         end
+         
+         % remove old block matfile
+         objFile = obj.File;
+         if exist(objFile,'file')
+            delete(objFile);
+         end
+
+         % Get old paths, removing 'SaveLoc' from the list of Fields
+         %  that need Paths found for them.
+         OldP = obj.Paths;
+         OldFN_ = fieldnames(OldP);
+         OldFN_(strcmp(OldFN_,'SaveLoc'))=[];
+         OldFN = [];
+         
+         % generate new obj.Paths
+         obj.genPaths(saveLoc);
+         P = obj.Paths;
+         
+         uniqueTypes = unique(obj.FieldType);
+         
+         % look for old data to move
+         filePaths = [];
+         for jj=1:numel(uniqueTypes)
+            if ~isempty(obj.(uniqueTypes{jj}))
+               ff = fieldnames(obj.(uniqueTypes{jj})(1));
+               
+               fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),...
+                  'DiskData.\w', 'once')),...
+                  struct2cell(obj.(uniqueTypes{jj})(1))));
+               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))]; %#ok<*AGROW>
+               for hh=1:numel(fieldsToMove)
+                  if all(obj.getStatus(fieldsToMove{hh}))
+                     filePaths = [filePaths; ...
+                        cellfun(@(x)x.getPath,...
+                        {obj.(uniqueTypes{jj}).(fieldsToMove{hh})},...
+                        'UniformOutput',false)'];
+                  end %fi
+               end %hh
+            end %fi
+         end %jj
+         
+         % moves all the files from folder to folder
+         for ii=1:numel(filePaths)
+            source = filePaths{ii};
+            [~,target] = strsplit(source,'\\\w*\\\w*.mat',...
+               'DelimiterType', 'RegularExpression');
+            target = fullfile(P.SaveLoc,target{1});
+            [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
+         end
+         
+         % copy all the info files from one folder to the new one
+         for jj = 1:numel(OldFN)
+            %     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
+            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
+            d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
+               {'.','..'}));
+            if isempty(d)
+               rmdir(OldP.(OldFN{jj}).dir);
+            end
+         end
+         flag = flag && obj.linkToData;
+         flag = flag && obj.save;
+         
+         function moveFilesAround(oldPath,NewPath,str)
+            %MOVEFILESAROUND  Actually moves the files after they are split
+            %
+            %  moveFilesAround(oldPath,NewPath,str);
+            %  --> For example, after splitting MultiAnimalsLinkedBlocks,
+            %      you need to also move the diskfile locations to reflect
+            %      the splitting.
+            
+            oldPathSplit = regexpi(oldPath,'%[\w\W]*?[diuoxfegcs]','split');
+            newPathSplit = regexpi(NewPath,'%[\w\W]*?[diuoxfegcs]','split');
+            source_ = dir([oldPathSplit{1} '*']);
+            numVarParts = numel(strfind(oldPath,'%'));
+            for kk = 1:numel(source_)
+               src = fullfile(source_(kk).folder,source_(kk).name);
+               offs=1;
+               ind=[];VarParts={};
+               for iV=1:numVarParts
+                  tmp = strfind(src(offs:end),oldPathSplit{iV}) + ...
+                     length(oldPathSplit{iV});
+                  ind(1,iV) = offs -1 + tmp(1);
+                  offs = ind(1,iV);
+                  tmp = strfind(src(offs:end),oldPathSplit{iV+1})-1;
+                  if isempty(tmp),tmp=length(src(offs:end));end
+                  ind(2,iV) = offs -1 + tmp(1);
+                  offs = ind(2,iV);
+                  VarParts{iV} = src(ind(1,iV):ind(2,iV));
+               end % iV
+               tgt = fullfile( sprintf(strrep(strjoin(newPathSplit, ...
+                  '%s'),'\','/'),  VarParts{:}));
+               
+               switch str
+                  case 'mv'
+                     [~,~] = nigeLab.utils.FileRename.FileRename(src,tgt);
+                  case 'cp'
+                     [~,~] = copyfile(src,tgt);
+               end %str
+            end %kk
          end
       end
    end
@@ -4913,16 +5288,32 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                a.PropListener(1).Enabled = true;
          end
          b = a;
+         [fmt,idt,type] = a.getDescriptiveFormatting();
+         nigeLab.utils.cprintf(fmt,...
+            '%s\b[LOAD]: %s (%s) loaded successfully!\n',...
+            idt,a.Name,type);
       end
       
       % Print detailed description to Command Window
-      function DisplayCurrent(obj)
+      function DisplayCurrent(obj,displayStyle)
          %DISPLAYCURRENT  Print detailed description to Command Window
          %
          %  nigeLab.nigelObj.DisplayCurrent(tankObj);
+         %
+         %  nigeLab.nigelObj.DisplayCurrent(tankObj,'detailed'); 
+         %  --> Forces "detailed" display instead of "simple"
+         
+         if nargin < 2
+            displayStyle = 'simple';
+         else
+            displayStyle = lower(displayStyle);
+            if ~ismember(displayStyle,{'simple','detailed'})
+               displayStyle = 'simple';
+            end
+         end
          
          if isscalar(obj) && isvalid(obj)
-            obj.displayScalarObject('detailed');
+            obj.displayScalarObject(displayStyle);
          else
             disp(obj);
          end

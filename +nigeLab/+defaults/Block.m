@@ -1,8 +1,8 @@
 function varargout = Block(varargin)
 % defaults.Block  Sets default parameters for BLOCK object
 %
-%  [pars,Fields] = nigeLab.defaults.Block();
-%  pars = nigeLab.defaults.Block('parName');
+%  pars = nigeLab.defaults.Block();
+%  param = nigeLab.defaults.Block('parName');
 
 %% Modify all properties here
 % NOTE: Capitalization is important here, as some of the properties are

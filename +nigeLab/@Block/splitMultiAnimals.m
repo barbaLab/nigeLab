@@ -140,7 +140,7 @@ for ii=1:numel(SplittedMeta)
    end
 %    bl.NumProbes = 0;
    bl.Mask = [];
-   bl.Paths.SaveLoc = fullfile(bl.AnimalLoc,bl.Name);
+   bl.Output = fullfile(bl.SaveLoc,bl.Name);
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    splittedBlocks(ii) = bl;
@@ -150,7 +150,7 @@ end %ii
 % save new blocks under the Parent block folder
 %     for ii=1:numel(splittedBlocks)
 %         newPath = fullfile(fileparts(splittedBlocks(ii).Paths.SaveLoc),splittedBlocks(ii).Name);
-%         splittedBlocks(ii).updatePaths(newPath);
+%         splittedBlocks(ii).Move(newPath);
 %     end
 
 blockObj.MultiAnimalsLinkedBlocks = splittedBlocks;
@@ -214,7 +214,7 @@ for kk=1:size(Tree_,1)
       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
-      bl.updatePaths(bl.Paths.SaveLoc);
+      bl.Move(bl.Paths.SaveLoc);
       bl.save();
    end
 end
