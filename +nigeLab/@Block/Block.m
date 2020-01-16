@@ -74,8 +74,8 @@ classdef Block < nigeLab.nigelObj
    %     Empty - Create an Empty BLOCK object or array
    
    % % % PROPERTIES % % % % % % % % % %   
-   % HIDDEN, PUBLIC
-   properties (Hidden,Access=public)
+   % HIDDEN,TRANSIENT,PUBLIC
+   properties (Hidden,Transient,Access=public)
       CurrentJob                % parallel.job.MJSCommunicatingJob
    end
    

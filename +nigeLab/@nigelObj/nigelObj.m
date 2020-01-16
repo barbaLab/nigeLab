@@ -1,11 +1,10 @@
-classdef nigelObj < matlab.mixin.Copyable & ...
+classdef nigelObj < handle & ...
+                    matlab.mixin.Copyable & ...
                     matlab.mixin.SetGet & ...
                     matlab.mixin.CustomDisplay
    %NIGELOBJ    Superclass of nigeLab data access objects
    %
    %  NIGELOBJ Properties:
-   %     ChildMask - Logical array for masking .Children
-   %
    %     Status - Stores status of a given processing step.
    %     --> Struct with fields corresponding to
    %         <strong>obj.Fields</strong>.
@@ -39,6 +38,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    %  NIGELOBJ Methods:
    %     nigelObj - Class constructor
    %        --> nigelObj is derived from the following superclasses:
+   %           * handle
    %           * matlab.mixin.Copyable
    %           * matlab.mixin.CustomDisplay
    %           * matlab.mixin.SetGet
@@ -114,8 +114,8 @@ classdef nigelObj < matlab.mixin.Copyable & ...
       OutPrompt   char        % To print for output path prompts
    end
    
-   % DEPENDENT,SETOBSERVABLE,PUBLIC (Children Objects)
-   properties (Dependent,SetObservable,Access=public)
+   % DEPENDENT,TRANSIENT,SETOBSERVABLE,PUBLIC (Children Objects)
+   properties (Dependent,Transient,SetObservable,Access=public)
       Children                % Array of "child" objects
    end
    
@@ -156,11 +156,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
    properties (GetObservable,SetObservable,GetAccess=public,SetAccess=protected)
       User  char  = nigeLab.nigelObj.Default('User','Experiment')  % Name of current User
    end
-   
-   % SETOBSERVABLE,PUBLIC
-   properties (SetObservable,Access=public)
-      ChildMask   logical     % Logical array for masking .Children
-   end   
    % % % % % % % % % % END PROPERTIES %
    
    % % % EVENTS % % % % % % % % % % % %
@@ -1227,6 +1222,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
       end
       
+      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT] Set method for .AnimalLoc (backwards compatibility)
       function set.AnimalLoc(obj,value)
          %SET.ANIMALLOC  Dependent property for backwards compatibility
@@ -1546,18 +1542,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                for i = 1:numel(obj)
                   switch class(obj)
                      case 'nigeLab.Tank'
-                        if ~all(isempty(obj(i).Children))
-                           for child = obj(i).Children
-                              if isvalid(child)
-                                 child.Meta.TankID = value;
+                        for k = 1:numel(obj.Children)
+                           if ~isempty(obj.Children(k))
+                              c = obj.Children(k);
+                              if isvalid(c)
+                                 c.Meta.TankID = value;
                               end
                            end
                         end
                      case 'nigeLab.Animal'
-                        if ~all(isempty(obj(i).Children))
-                           for child = obj(i).Children
-                              if isvalid(child)
-                                 child.Meta.AnimalID = value;
+                        for k = 1:numel(obj.Children)
+                           if ~isempty(obj.Children(k))
+                              c = obj.Children(k);
+                              if isvalid(c)
+                                 c.Meta.AnimalID = value;
                               end
                            end
                         end
@@ -1569,18 +1567,20 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             obj.Paths.Name = value;
             switch class(obj)
                case 'nigeLab.Tank'
-                  if ~all(isempty(obj.Children))
-                     for child = obj.Children
-                        if isvalid(child)
-                           child.Meta.TankID = value;
+                  for k = 1:numel(obj.Children)
+                     if ~isempty(obj.Children(k))
+                        c = obj.Children(k);
+                        if isvalid(c)
+                           c.Meta.TankID = value;
                         end
                      end
                   end
                case 'nigeLab.Animal'
-                  if ~all(isempty(obj.Children))
-                     for child = obj.Children
-                        if isvalid(child)
-                           child.Meta.AnimalID = value;
+                  for k = 1:numel(obj.Children)
+                     if ~isempty(obj.Children(k))
+                        c = obj.Children(k);
+                        if isvalid(c)
+                           c.Meta.AnimalID = value;
                         end
                      end
                   end
@@ -1924,6 +1924,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             obj(i).User = value;
          end
       end
+      % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
   
    % PUBLIC
@@ -1996,29 +1997,22 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                S,childObj);
          end % if nargin < 3
          
-         % Initialize mask to true if we are adding NEW blocks. 
-         % If they have already been added and this is invoked by loadobj,
-         % the mask will be bigger than obj.Children
-         maskDiff = sum(~isempty(obj.Children)) - numel(obj.ChildMask);
-         if maskDiff > 0
-            obj.ChildMask = [obj.ChildMask, true(1,maskDiff)];
-         end
          for i = 1:numel(childObj)
-            
             obj.ChildListener = [obj.ChildListener, ...
                addlistener(childObj(i),'ObjectBeingDestroyed',...
                @(~,evt)obj.assignNULL(evt.AffectedObject)), ...
                addlistener(childObj(i),'StatusChanged',...
-               @(~,evt)notify(obj,'StatusChanged',evt)), ...
-               addlistener(childObj(i),'IsMasked','PostSet',...
-               @(~,propEvt)obj.updateChildMask(propEvt.AffectedObject)),...
+               @(~,evt)notify(obj,'StatusChanged',evt)), ...,...
                addlistener(childObj(i),'DashChanged',...
                   @(~,evt)obj.requestDash(evt))];
+            if strcmp(obj.Type,'Animal')
+               obj.ChildListener = [obj.ChildListener, ...
+                  addlistener(childObj(i),'IsMasked','PostSet',...
+                     @(~,~)obj.parseProbes)];
+            end
          end % i
          if strcmp(obj.Type,'Animal')
-            if maskDiff >= 0
-               obj.parseProbes();
-            end
+            obj.parseProbes();
          end
       end
       
@@ -2721,8 +2715,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          
          if ismember(obj.Type,{'Animal','Tank'})
             flag = true;
-            for child = obj.Children
-               flag = flag && child.linkToData;
+            for i = 1:numel(obj.Children)
+               if ~isempty(obj.Children(i))
+                  c = obj.Children(i);
+                  if isvalid(c)
+                     flag = flag && linkToData(c);
+                  end
+               end
             end
             flag = flag && obj.save();
             return;
@@ -2812,7 +2811,9 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                   obj.Name,field{warningIdx(ii)});
             end
          end
-         obj.updateStatus('notify'); % Just emits the event in case listeners
+         if strcmp(obj.Type,'Block')
+            obj.updateStatus('notify'); % Just emits the event in case listeners
+         end
          obj.save;
          flag = true;
          
@@ -3354,17 +3355,6 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          set(obj,'SortGUI',nigeLab.Sort(obj));
       end
       
-      % Set ChildMask flag (.IsMasked) for this block
-      function updateMaskFlag(obj,childObj)
-         %UPDATEMASKFLAG  Sets the ChildMask flag (.IsMasked)
-         %
-         %  addlistener(obj,'ChildMask','PostSet',...
-         %     @obj.updateMaskFlag);
-         
-         [~,idx] = findByKey(obj.Children,childObj);
-         childObj.IsMasked = obj.ChildMask(idx);
-      end
-      
       % Update .Pars property
       function [flag,p] = updateParams(obj,paramType,forceFromDefaults)
          % UPDATEPARAMS   Update the parameters struct property for
@@ -3767,26 +3757,29 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             C = obj.Children;
          end
          
-         for child = C
-            if ~strcmp(child.User,obj.User)
-               child.setUser(obj.User);
+         for i = 1:numel(C)
+            if isempty(C(i))
+               continue;
+            else
+               c = C(i);
+               if ~isvalid(c)
+                  continue;
+               end
             end
-            
-            child.ParentListener =  addlistener(obj,...
-               'ChildMask','PostSet',...
-               @(~,propEvt)childObj.updateMaskFlag(propEvt.AffectedObject));
-            
+            if ~strcmp(c.User,obj.User)
+               c.setUser(obj.User);
+            end            
             obj.ChildListener = [obj.ChildListener, ...
-               addlistener(child,'ObjectBeingDestroyed',...
+               addlistener(c,'ObjectBeingDestroyed',...
                   @(src,~)obj.assignNULL(src)), ...
-               addlistener(child,'StatusChanged',...
+               addlistener(c,'StatusChanged',...
                   @(~,evt)notify(obj,'StatusChanged',evt)), ...
-               addlistener(child,'DashChanged',...
+               addlistener(c,'DashChanged',...
                   @obj.requestDash)];
             if strcmp(obj.Type,'Animal')
                obj.ChildListener = [obj.ChildListener, ...
-                  addlistener(child,'IsMasked','PostSet',...
-                     @(~,evt)obj.updateChildMask(evt.AffectedObject))];
+                  addlistener(c,'IsMasked','PostSet',...
+                     @(~,~)obj.parseProbes)];
             end
          end
       end
@@ -3814,9 +3807,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             case 'Animal'
                obj.PropListener = [obj.PropListener, ...
                   addlistener(obj,'Children','PostSet',...
-                     @(~,~)obj.checkBlocksForClones()), ...
-                  addlistener(obj,'ChildMask','PostSet',...
-                     @(~,~)obj.parseProbes())];
+                     @(~,~)obj.checkBlocksForClones())];
             case 'Tank'
                obj.PropListener = [obj.PropListener,...
                   addlistener(obj,'Children','PostSet',...
@@ -3884,15 +3875,15 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          %                                   obj.Children.
          
          % If no animals or only 1 animal, no need to check
-         C = obj.Children;
-         if sum(isempty(C)) == 1
+         A = obj.Children;
+         if sum(isempty(A)) == 1
             return;
          else
-            idx = ~isempty(C);
-            C = C(idx);
+            idx = ~isempty(A);
+            A = A(idx);
          end
          % Get names for comparison
-         cname = {C.Name};
+         cname = {A.Name};
          % look for animals with the same name
          comparisons_cell = cellfun(@(s) strcmp(s,cname),...
             cname,...
@@ -3914,7 +3905,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             comparisons_mat(1,:) = []; % ensure this row is dropped
             
             % ii indexes current "good" Animal
-            child = C(ii);
+            a = A(ii);
             ii = ii + 1; % ensure it is incremented
             
             % If no redundancies, then continue.
@@ -3930,14 +3921,14 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             % Add child blocks from removed animals to this animal to
             % ensure they aren't accidentally discarded
             aidx = find(animalIsSame);
-            B = C{aidx,:}; %#ok<*FNDSB>
-            addChild(child,B);
+            B = A{aidx,:}; %#ok<*FNDSB>
+            addChild(a,B);
             
             % Now, remove redundant animals from array and also remove them
             % from the comparisons matrix since we don't need to redo them
             mask = find(idx);
             obj.Children(mask(animalIsSame)) = []; % Remove from property
-            C(animalIsSame) = []; % Remove them from consideration in the array
+            A(animalIsSame) = []; % Remove them from consideration in the array
             idx(animalIsSame) = []; % Remove corresponding indexes
             
             % Lastly, update the comparisons matrices
@@ -4300,15 +4291,22 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             '(<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '];
          switch obj(1).Type
             case 'Block'
-               if isempty(obj.Index)
+               if isempty(obj(1).Index)
                   pLinkStr = '';
                else
+                  idx = cat(1,obj.Index);
+                  idx = unique(idx(:,1));
+                  if numel(idx) > 1
+                     s_str = 's';
+                  else
+                     s_str = '';
+                  end
                   pLinkStr = [sprintf(...
                      '\t-->\tView <strong>Parent</strong> '),...
                      '<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '...
-                     'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
-                     sprintf('Children(%g),''simple'');">', obj.Index(1))...
-                     'Animal Object</a>'];
+                     'nigeLab.nigelObj.DisplayCurrent(tankObj.Children([' ...
+                     sprintf('%g ',idx),']),''simple'');">', ...
+                     sprintf('Animal Object%s',s_str) '</a>'];
                end
                switch inputname(1)
                   case {'obj',''}
@@ -4342,7 +4340,7 @@ classdef nigelObj < matlab.mixin.Copyable & ...
                         '">More Details</a>)'],inputname(1))];
                end
             case 'Animal'
-               if isempty(obj.Index)
+               if isempty(obj(1).Index)
                   pLinkStr = '';
                else
                   pLinkStr = [sprintf(...
@@ -5051,23 +5049,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          if nargin < 2
             value = obj.IsDashOpen;
          end
-         for child = obj.Children
-            if isvalid(child)
-               child.IsDashOpen = value;
+         for i = 1:numel(obj.Children)
+            if ~isempty(obj.Children(i))
+               c = obj.Children(i);
+               if isvalid(c)
+                  c.IsDashOpen = value;
+               end
             end
-         end
-      end
-      
-      % LISTENER CALLBACK: Updates .ChildMask
-      function updateChildMask(obj,childObj)
-         %UPDATECHILDMASK  Updates .ChildMask based on childObj.IsMasked
-         %
-         %  addlistener(childObj,'IsMasked','PostSet',...
-         %     @obj.updateChildMask);
-         
-         [~,idx] = findByKey(obj.Children,childObj);
-         if obj.ChildMask(idx)~=childObj.IsMasked
-            obj.ChildMask(idx) = childObj.IsMasked;
          end
       end
       
@@ -5114,8 +5102,13 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
             p = obj.Output;
-            for child = obj.Children
-               flag = flag && child.updatePaths(p);
+            for i = 1:numel(obj.Children)
+               if ~isempty(obj.Children(i))
+                  c = obj.Children(i);
+                  if isvalid(c)
+                     flag = flag && c.updatePaths(p);
+                  end
+               end
             end
             flag = flag && obj.save;
             return;
@@ -5246,14 +5239,12 @@ classdef nigelObj < matlab.mixin.Copyable & ...
          % Block, and it is loaded, this makes sure it handles the
          % differences (otherwise it is just a struct obj at this point):
          if isstruct(a)
-            if ~isfield(a,'Type')
-               type = strsplit(a.IDFile,'.');
-               type = type{end};
-            elseif isempty(a.Type)
-               type = strsplit(a.IDFile,'.');
-               type = type{end};
-            else
-               type = a.Type;
+            type = nigeLab.nigelObj.ParseType(a);
+            if isfield(a,'Children')
+               a = rmfield(a,'Children');
+            end
+            if isfield(a,'ChildContainer')
+               a = rmfield(a,'ChildContainer');
             end
             switch type
                case {'Block','nigelBlock'}
@@ -5432,6 +5423,59 @@ classdef nigelObj < matlab.mixin.Copyable & ...
             end
          end
          
+      end
+      
+      % Parse (important) '.Type' property on load
+      function type = ParseType(a)
+         %PARSETYPE  Parses .Type property on load
+         %
+         %  type = nigeLab.nigelObj.ParseType(a);
+         %
+         %     a : struct (from loadobj)
+         
+         if ~isfield(a,'Type')
+            if ~isfield(a,'IDFile')
+               if ~isfield(a,'FolderIdentifier')
+                  type = inputdlg(...
+                     ['Please input nigelObj.Type (must be: ' ...
+                     'Tank, Animal, or Block)'],...
+                     'Insufficient Load Info',...
+                     1,'Tank');
+                  if ~ismember(type,{'Tank','Animal','Block'})
+                     error(['nigeLab:' mfilename ':BadType'],...
+                        'Invalid .Type: %s\n',type);
+                  end
+               else
+                  type = strsplit(a.FolderIdentifier,'.');
+                  type = type{end};
+               end
+            else
+               type = strsplit(a.IDFile,'.');
+               type = type{end};
+            end
+         elseif isempty(a.Type)
+            if ~isfield(a,'IDFile')
+               if ~isfield(a,'FolderIdentifier')
+                  type = inputdlg(...
+                     ['Please input nigelObj.Type (must be: ' ...
+                     'Tank, Animal, or Block)'],...
+                     'Insufficient Load Info',...
+                     1,'Tank');
+                  if ~ismember(type,{'Tank','Animal','Block'})
+                     error(['nigeLab:' mfilename ':BadType'],...
+                        'Invalid .Type: %s\n',type);
+                  end
+               else
+                  type = strsplit(a.FolderIdentifier,'.');
+                  type = type{end};
+               end
+            else
+               type = strsplit(a.IDFile,'.');
+               type = type{end};
+            end
+         else
+            type = a.Type;
+         end
       end
    end
    % % % % % % % % % % END METHODS% % %

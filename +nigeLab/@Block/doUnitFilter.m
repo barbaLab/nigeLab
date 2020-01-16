@@ -39,7 +39,10 @@ end
 
 blockObj.reportProgress(str,0,'toWindow','Filtering');
 
+curCh = 0;
+nCh = numel(blockObj.Mask);
 for iCh = blockObj.Mask   
+   curCh = curCh + 1;
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
@@ -71,15 +74,14 @@ for iCh = blockObj.Mask
    end
    
    blockObj.updateStatus('Filt',true,iCh);
-   curCh = find(blockObj.Mask == iCh,1,'first');
-   pct = round(curCh/numel(blockObj.Mask) * 100);
+   pct = round(curCh/nCh * 90);
    blockObj.reportProgress(str,pct,'toWindow','Filtering');
    blockObj.reportProgress('Filtering.',pct,'toEvent');
 end
 
 if blockObj.OnRemote
    str = 'Saving-Block';
-   blockObj.reportProgress(str,100,'toWindow',str);
+   blockObj.reportProgress(str,95,'toWindow',str);
 else
    blockObj.save;
    linkStr = blockObj.getLink('Filt');

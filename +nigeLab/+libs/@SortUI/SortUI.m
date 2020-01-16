@@ -1,4 +1,4 @@
-classdef SortUI < matlab.mixin.SetGet
+classdef SortUI < handle & matlab.mixin.SetGet
    %SORTUI  Handle class to graphics handles for Spike Sorting Interface
    %
    %  Small "helper" class with property handles that integrate the

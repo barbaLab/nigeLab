@@ -23,10 +23,14 @@ end
 
 if numel(name_str) > maxChar
    nameParts = strsplit(name_str,delim);
-   if numel(nameParts) > 1
-      short_str = [nameParts{1} delim '...' delim nameParts{end}];
-   else
-      short_str = name_str;
+   switch numel(nameParts)
+      case 1
+         short_str = name_str;
+      case 2
+         short_str = [nameParts{1} delim '...' delim nameParts{end}];
+      otherwise
+         short_str = [nameParts{1} delim '...' ...
+            delim nameParts{end-1} delim nameParts{end}];
    end
 else
    short_str = name_str;

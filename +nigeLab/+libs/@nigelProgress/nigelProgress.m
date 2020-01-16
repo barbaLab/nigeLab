@@ -1,4 +1,4 @@
-classdef nigelProgress < handle
+classdef nigelProgress < handle & matlab.mixin.SetGet
 % NIGELPROGRESS    Create a bar allowing graphical tracking of
 %                  completion status via the bar progress.
 %
@@ -34,8 +34,9 @@ classdef nigelProgress < handle
    
    properties (Access = public, SetObservable = true)
       Color              % face color of the progress bar
+      IsComplete (1,1) logical = false    % If true, job is complete
+      IsRunning   (1,1) logical = false    % If true, job is running on remote
       Position  double   % Position of "container" but updates graphics
-      IsRemote  logical             % Flag indicating if bar is remote
       job
    end
 
@@ -65,11 +66,11 @@ classdef nigelProgress < handle
                          ?nigeLab.evt.barCleared,...
                          ?nigeLab.libs.DashBoard})
       BlockSelectionIndex  double   % Index of the [animal block]
-      IsComplete    =      false    % Flag indicating completion status
       Timer                timer    % Timer running "remote" monitor
    end
    
    properties (Access = public, Hidden = true)
+      IsRemote  (1,1) logical = false
       starttime
    end
    
@@ -252,15 +253,24 @@ classdef nigelProgress < handle
          stopBar(bar);
          evt = nigeLab.evt.barCleared(bar);
          notify(bar,'StateChanged',evt);
-         if bar.IsRemote
-            if ~isempty(bar.job)
-               if isvalid(bar.job)
+
+         if ~isempty(bar.job)
+            if isvalid(bar.job)
+               if bar.IsRunning
                   cancel(bar.job);
-                  delete(bar.job);
-                  bar.job = [];
+               else
+                  if ~isempty(bar.joblistener)
+                     if isvalid(bar.joblistener)
+                        delete(bar.joblistener);
+                        bar.joblistener(:) = [];
+                     end
+                  end
                end
+               delete(bar.job);
+               bar.job = [];
             end
          end
+
       end
       
       % Things to do on delete function
@@ -271,8 +281,9 @@ classdef nigelProgress < handle
          % If the job is valid to delete, then do so
          if ~isempty(bar.job)
             if isvalid(bar.job)
-               cancel(bar.job);
-               delete(bar.job);
+               if ~bar.IsRunning
+                  delete(bar.job);
+               end
             end
          end
          
@@ -295,6 +306,9 @@ classdef nigelProgress < handle
          % Delete Timer object
          if ~isempty(bar.Timer)
             if isvalid(bar.Timer)
+               if strcmp(bar.Timer.Running,'on')
+                  stop(bar.Timer);
+               end
                delete(bar.Timer)
             end
          end
@@ -382,26 +396,23 @@ classdef nigelProgress < handle
          %  bar  --  nigeLab.libs.nigelProgress "progress bar" object
          
          stopBar(bar); % Make sure it is stopped
-         
+         bar.IsRemote = false;
          % Should only do these things if .IsComplete flag is true
          if bar.IsComplete
             % Play the bell sound! Yay!
             bar.setState(100,bar.CompleteKey);
             nigeLab.sounds.play('bell',1.5);
-            if bar.IsRemote
+            if bar.IsRunning
                sel = bar.BlockSelectionIndex;
                b = bar.Tank{sel(1,1),sel(1,2)};
                b.reload(); % Reload the block so it is linked properly
                evt = nigeLab.evt.jobCompleted(bar);
                notify(bar.Monitor,'JobCompleted',evt);
-               bar.job = [];
             end
          else
             % I hate this sound! Boo! You should also hate it!
             nigeLab.sounds.play('alert',3);
             bar.setState(bar.Progress,'Interrupted');
-
-            bar.job = [];
             bar.Color = 'r';
          end
       end 
@@ -508,11 +519,22 @@ classdef nigelProgress < handle
          %
          %  bar.startBar(); Passes 'barStarted' evt via 'BarStarted' notify
          
-         bar.IsComplete = false; % May need to reset if already ran
          if strcmp(bar.Timer.Running,'off')
             start(bar.Timer);
          else
             return; % Was already running, don't do other stuff
+         end
+         bar.IsRunning = true; 
+         bar.IsComplete = false; % May need to reset if already ran
+         if bar.IsRemote
+            bar.joblistener = addlistener(bar.job,'ObjectBeingDestroyed',...
+               @(~,~)bar.handleExternalJobDeletion);
+         else
+            if ~isempty(bar.joblistener)
+               if isvalid(bar.joblistener)
+                  delete(bar.joblistener);
+               end
+            end
          end
          bar.setChild('progbar_rect','Curvature',[0 0]);
          bar.setChild('progbar_anchor',...
@@ -533,6 +555,7 @@ classdef nigelProgress < handle
          else
             return; % Was already off, don't do the other stuff
          end
+         bar.IsRunning = false;
 
          evt = nigeLab.evt.barStopped(bar);
          notify(bar,'StateChanged',evt);
@@ -575,21 +598,26 @@ classdef nigelProgress < handle
          end
          % Redraw the patch that colors in the progressbar
          bar.setState(pct,str);
-         % If the job is completed, then run the completion method
+         
+         % If on remote, wait for job to finish--it will do indicator
          if bar.IsRemote
             if strcmpi(str,bar.CompleteKey)
-               % If on remote, wait for job to finish--it will do indicator
+               % If the job is completed, then run the completion method
                bar.stopBar();
                if pct >= 100
                   bar.IsComplete = true;
+                  % If `indicateCompletion()` runs with `bar.IsComplete`
+                  % true, it does the "bell" ring; otherwise, it does the
+                  % "alert" noise
                else
-                  bar.IsComplete = false;
+                  % If bar reached "Complete" at some point
+                  bar.IsComplete = bar.IsComplete || false;
                end
             end
          else
             % Otherwise just wait until it hits 100% to indicate complete
             if pct >= 100
-               bar.IsComplete = true;
+               bar.IsComplete = true; % So the "bell" will sound
                bar.indicateCompletion();
                bar.stopBar();
             end
@@ -607,17 +635,16 @@ classdef nigelProgress < handle
          %                       job) and 'BarIndex' (to set the position
          %                       and visibility correctly) as well as
          %                       'Visible' (to update child graphic
-         %                       visibility correctly) and 'IsRemote'
+         %                       visibility correctly) and 'IsRunning'
          %                       properties.
          %
          %  lh = addPropertyListeners(bar);  Returns array of listeners
          
-         lh = addlistener(bar,'job','PostSet',@(~,~)bar.toggleIsRemote);
-         lh = [lh, addlistener(bar,'BarIndex','PostSet',...
-                          @(~,~)bar.setVisualQueuePosition)];
+         lh = addlistener(bar,'BarIndex','PostSet',...
+                        @(~,~)bar.setVisualQueuePosition);
          lh = [lh, addlistener(bar,'Visible','PostSet',...
                         @(~,~)bar.toggleVisible)];
-         lh = [lh, addlistener(bar,'IsRemote','PostSet',...
+         lh = [lh, addlistener(bar,'IsRunning','PostSet',...
                         @(~,~)bar.toggleColor)];
          lh = [lh, addlistener(bar,'Position','PostSet',...
                         @(~,~)bar.updatePosition)];
@@ -638,7 +665,7 @@ classdef nigelProgress < handle
          %  bar.handleExternalJobDeletion;  Listener callback that waits
          %                                  for ObjectBeingDestroyed event
          
-         bar.IsRemote = false;
+         bar.IsRunning = false;
          bar.IsComplete = false;
          bar.indicateCompletion();
       end
@@ -669,36 +696,16 @@ classdef nigelProgress < handle
       
       % LISTENER CALLBACK: Switches bar color depending on remote state
       function toggleColor(bar)
-         % TOGGLECOLOR  Switches bar color depending on value of IsRemote
+         % TOGGLECOLOR  Switches bar color depending on value of IsRunning
          %
-         %  addlistener(bar,'IsRemote','PostSet',@(~,~)bar.toggleColor());
+         %  addlistener(bar,'IsRunning','PostSet',@(~,~)bar.toggleColor());
          
-         if bar.IsRemote
+         if bar.IsRunning
             bar.Color = 'g';
          else
             bar.Color = 'b';
          end
          
-      end
-      
-      % LISTENER CALLBACK: Switches remote depending on value of job
-      function toggleIsRemote(bar)
-         % TOGGLEISREMOTE  Changes remote status depending on job
-         %
-         %  addlistener(bar,'job','PostSet',@(~,~)bar.toggleIsRemote);
-         
-         if isempty(bar.job)
-            bar.IsRemote = false;
-            if ~isempty(bar.joblistener)
-               if isvalid(bar.joblistener)
-                  delete(bar.joblistener);
-               end
-            end
-         else
-            bar.IsRemote = true;
-            bar.joblistener = addlistener(bar.job,'ObjectBeingDestroyed',...
-               @(~,~)bar.handleExternalJobDeletion);
-         end
       end
       
       % LISTENER CALLBACK: Toggle visibilty of all child objects

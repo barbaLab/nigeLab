@@ -19,7 +19,7 @@ end
 % Get all possible unique probe/channel number combinations for this Animal
 C = [];
 B = animalObj.Children(~isempty(animalObj.Children));
-B = B(animalObj.ChildMask);
+B = B([B.IsMasked]);
 for b = B
    if isempty(b)
       continue;

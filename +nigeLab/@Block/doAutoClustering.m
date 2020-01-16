@@ -43,6 +43,8 @@ end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = chan
+   curCh = curCh+1;
+   
    % load spikes and classes
    inspk = blockObj.getSpikeFeatures(iCh,unit);
    if isempty(inspk)
@@ -82,15 +84,14 @@ for iCh = chan
    saveClusters(blockObj,classes,iCh,temp);
    
    % report progress to the user
-   curCh = curCh+1;
-   pct = round((curCh/numel(chan)) * 100);
+   pct = round((curCh/numel(chan)) * 90);
    blockObj.updateStatus('Clusters',true,iCh);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
 end
 if blockObj.OnRemote
    str = 'Saving-Block';
-   blockObj.reportProgress(str,100,'toWindow',str);
+   blockObj.reportProgress(str,95,'toWindow',str);
 else
    blockObj.save;
    linkStr = blockObj.getLink('Clusters');
