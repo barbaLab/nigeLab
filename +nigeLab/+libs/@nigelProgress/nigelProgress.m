@@ -266,7 +266,9 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                      end
                   end
                end
-               delete(bar.job);
+               if ~strcmp(bar.job.State,'deleted')
+                  delete(bar.job);
+               end
                bar.job = [];
             end
          end
@@ -669,6 +671,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          bar.IsRunning = false;
          bar.IsComplete = false;
          bar.indicateCompletion();
+         bar.clearBar();
       end
       
       % LISTENER CALLBACK: Update "visual" position in queue from index

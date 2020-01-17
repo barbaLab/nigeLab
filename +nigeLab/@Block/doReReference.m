@@ -8,7 +8,19 @@ function flag = doReReference(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% CHECK FOR PROBLEMS
-flag = false; % Create flag for reporting successful execution
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 blockObj.checkActionIsValid();
 
 if ~genPaths(blockObj)

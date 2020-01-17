@@ -15,11 +15,6 @@ function flag = doAutoClustering(blockObj,chan,unit)
 %   flag       :     Returns true if clustering completed successfully.
 
 %%
-flag = false;
-[~,par] = blockObj.updateParams('AutoClustering');
-blockObj.checkActionIsValid();
-
-%% runs automatic clustering algorithms
 switch nargin
    case 1
       chan = blockObj.Mask;
@@ -30,6 +25,23 @@ switch nargin
       % Then unit is already defined
 end
 
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doAutoClustering(blockObj(i),chan,unit);
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
+[~,par] = blockObj.updateParams('AutoClustering');
+blockObj.checkActionIsValid();
+
+%% runs automatic clustering algorithms
 if strcmpi(unit,'all') % Returns false if unit is numeric
    unit = 0:par.NMaxClus;
 end

@@ -372,11 +372,14 @@ classdef Tank < nigeLab.nigelObj
 %       --> Deprecated (inherited from nigelObj)
 %       flag = updatePaths(tankObj,SaveLoc)    % Update PATHS to files
 %       --> Deprecated (inherited from `nigelObj`)
-
-      flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
-      flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
-      flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
-      flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
+%       flag = doRawExtraction(tankObj)  % Extract raw data from all Animals/Blocks
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doReReference(tankObj)    % Do CAR on all Animals/Blocks
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doLFPExtraction(tankObj)  % Do LFP extraction on all Animals/Blocks
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doSD(tankObj)             % Do spike detection on all Animals/Blocks
+%       --> Deprecated (inherited from `nigelObj`)
       blockList = list(tankObj)     % List Blocks in TANK    
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
       runFun(tankObj,f) % Run function f on all child blocks in tank

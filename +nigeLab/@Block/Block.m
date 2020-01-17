@@ -315,8 +315,8 @@ classdef Block < nigeLab.nigelObj
       end
    end
    
-   % SEALED,PUBLIC
-   methods (Sealed,Access=public)
+   % PUBLIC
+   methods (Access=public)
 % Start Deprecated % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 %       setProp(blockObj,varargin) % Set property for all blocks in array
 %       --> Deprecated (inherited from `nigelObj`)

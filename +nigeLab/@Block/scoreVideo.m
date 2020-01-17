@@ -1,12 +1,12 @@
 function fig = scoreVideo(blockObj)
-%% SCOREVIDEO  Locates successful grasps in behavioral video.
+%SCOREVIDEO  Locates successful grasps in behavioral video.
 %
 %  fig = blockObj.SCOREVIDEO;
 %
 %  Returns fig, a graphics object handle to the figure that contains the
 %     video panel, controller panel, and associated information panels.
 
-%% Check input
+%Check input
 blockObj.updateParams('Event');
 blockObj.updateParams('Video');
 
@@ -21,7 +21,7 @@ if any(~blockObj.Status.(scoringFieldName))
 end
 
 
-%% MAKE UI WINDOW AND DISPLAY CONTAINER
+%MAKE UI WINDOW AND DISPLAY CONTAINER
 fig=figure('Name','Behavior Scoring',...
            'NumberTitle','off',...
            'Color',nigeLab.defaults.nigelColors('background'),...
@@ -49,19 +49,19 @@ infoPanel = nigeLab.libs.nigelPanel(fig,...
    'Position',[0.765 0 0.235 1]);
 
         
-%% Create objects that track event-related and video-related info
+%Create objects that track event-related and video-related info
 behaviorInfoObj = nigeLab.libs.behaviorInfo(blockObj,infoPanel); % "Event"
 vidInfoObj = nigeLab.libs.vidInfo(blockObj,dispPanel); % "Video"
  
-%% BUILD GRAPHICAL ELEMENTS      
+%BUILD GRAPHICAL ELEMENTS      
 graphicsUpdateObj = nigeLab.libs.graphicsUpdater(blockObj,...
                      vidInfoObj,behaviorInfoObj);
                      
-% Assign figure interaction functions
+%Assign figure interaction functions
 set(fig,'WindowKeyPressFcn',{@hotKey,vidInfoObj,behaviorInfoObj});
 set(fig,'CloseRequestFcn',{@closeUI,behaviorInfoObj,vidInfoObj,graphicsUpdateObj});
 
-%% Print instructions to command window to help user
+%Print instructions to command window to help user
 nigeLab.utils.cprintf('Comments','\n-->\tPress '); 
 nigeLab.utils.cprintf('Keywords','''h''');
 nigeLab.utils.cprintf('Comments',' for list of scoring commands. <--\n'); 
@@ -70,7 +70,7 @@ nigeLab.utils.cprintf('Comments','\n-->\t(Or) press ');
 nigeLab.utils.cprintf('Keywords','''control + [key]''');
 nigeLab.utils.cprintf('Comments',' for specific help. <--\n');
 
-   %% Helper functions
+   %Helper functions
    % Closes the current user-interface (UI)
    function closeUI(src,~,b,v,g)
       % CLOSEUI  Prompts to see if user really wants to close window

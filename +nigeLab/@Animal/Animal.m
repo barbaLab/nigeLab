@@ -219,6 +219,10 @@ classdef Animal < nigeLab.nigelObj
             end
             return;
          end
+         if isempty(animalObj)
+            flag = false(1,numel(opField));
+            return;
+         end
          if numel(animalObj.Children)==0
             if isempty(opField)
                flag = false(1,numel(animalObj.Fields));
@@ -249,11 +253,16 @@ classdef Animal < nigeLab.nigelObj
 %       --> Deprecated (inherits `nigeLab.nigelObj/removeChild` from nigelObj)
 %       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
 %       --> Deprecated (inherited from `nigelObj`)
-      flag = doUnitFilter(animalObj)      % Apply Unit Bandpass filter to all raw data in Blocks of Animal
-      flag = doReReference(animalObj)     % Re-reference all filtered data in Blocks of Animal
-      flag = doRawExtraction(animalObj)   % Extract Raw Data for all Blocks in Animal
-      flag = doLFPExtraction(animalObj)   % Extract LFP for all Blocks in Animal
-      flag = doSD(animalObj)              % Extract spikes for all Blocks in Animal
+%       flag = doUnitFilter(animalObj)      % Apply Unit Bandpass filter to all raw data in Blocks of Animal
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doReReference(animalObj)     % Re-reference all filtered data in Blocks of Animal
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doRawExtraction(animalObj)   % Extract Raw Data for all Blocks in Animal
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doLFPExtraction(animalObj)   % Extract LFP for all Blocks in Animal
+%       --> Deprecated (inherited from `nigelObj`)
+%       flag = doSD(animalObj)              % Extract spikes for all Blocks in Animal
+%       --> Deprecated (inherited from `nigelObj`)
       table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
       parseProbes(animalObj) % Parse probes from child BLOCKS
       flag = splitMultiAnimals(animalObj,varargin) % Split recordings that have multiple animals to separate recs
@@ -265,7 +274,8 @@ classdef Animal < nigeLab.nigelObj
 %       --> Deprecated (inherited from `nigelObj`)
 %       flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
 %       --> Deprecated (inherited from `nigelObj`)
-      flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
+%       flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
+%       --> Deprecated (inherited from `nigelObj`)
       N = getNumBlocks(animalObj); % Gets total number of blocks 
       mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
    end

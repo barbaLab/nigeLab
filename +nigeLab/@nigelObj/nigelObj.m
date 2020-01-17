@@ -478,6 +478,12 @@ classdef nigelObj < handle & ...
                end
             end
          end
+         
+         if ~isempty(obj.GUI)
+            if isvalid(obj.GUI)
+               delete(obj.GUI);
+            end
+         end
       end
       
       % Overload to 'isempty'
@@ -2416,6 +2422,68 @@ classdef nigelObj < handle & ...
          end
          
       end
+      
+      % % % "DO" METHODS % % % % % % % % % % % % % % % %
+      % Does automated clustering of spikes based on waveform features
+      function flag = doAutoClustering(obj)
+         %DOAUTOCLUSTERING  Generate automatic spike clusters from features
+         %
+         %  flag = doAutoClustering(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doAutoClustering);
+      end
+      
+      % Decimate and lowpass filter slow LFP signals
+      function flag = doLFPExtraction(obj)
+         %DOLFPEXTRACTION  Decimates and lowpass filters slow LFP signals
+         %
+         %  flag = doLFPExtraction(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doLFPExtraction);
+      end
+      
+      % Convert raw data files to nigeLab format
+      function flag = doRawExtraction(obj)
+         %DORAWEXTRACTION  Convert raw data files to nigeLab format
+         %
+         %  flag = doRawExtraction(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doRawExtraction);
+      end
+      
+      % Extract filtered streams with common noise removed
+      function flag = doReReference(obj)
+         %DOREREFERENCE  Does "virtual common-mode" noise rejection
+         %
+         %  flag = doReReference(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doReReference);
+      end
+      
+      % Does spike-detection on bandpass-filtered and referenced signals
+      function flag = doSD(obj)
+         %DOSD  Do spike detection
+         %
+         %  flag = doSD(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doSD);
+      end
+      
+      % Apply spike unit bandpass (300 - 5000 Hz) filter
+      function flag = doUnitFilter(obj)
+         %DOSD  Apply spike unit bandpass (300 to 5000 Hz) filter
+         %
+         %  flag = doUnitFilter(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doUnitFilter);
+      end
+      % % % % % % % % % % END "DO" METHODS % % % % % % %
       
       % Returns nigelObj or key depending if keyStr is key or obj.
       function [a,idx] = findByKey(objArray,keyStr,keyType)
@@ -5619,6 +5687,55 @@ classdef nigelObj < handle & ...
             obj.displayScalarObject(displayStyle);
          else
             disp(obj);
+         end
+      end
+      
+      % Method to iterate "operation" on obj array and children
+      function flag = doMethod(obj,fcn_handle,varargin)
+         %DOMETHOD  Iterates fcn_handle on obj and obj children
+         %
+         %  flag = nigeLab.nigelObj.doMethod(obj,fcn_handle);
+         %
+         %  flag = nigeLab.nigelObj.doMethod(__,arg1,arg2,...);
+         %
+         %  e.g. 
+         %  flag = nigeLab.nigelObj.doMethod(obj,@doRawExtraction);
+         %
+         %  --> feval must return a scalar logical "flag"
+         %
+         %  Note that this is only valid for Tank and Animal objects
+         
+         flag = true;
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               flag = flag && feval(fcn_handle,obj(i),varargin{:});
+            end
+            return;
+         end
+         
+         if isempty(obj)
+            return;
+         end
+         
+         if ~isvalid(obj)
+            return;
+         end
+         
+         if ~ismember(obj.Type,{'Tank','Animal'})
+            error(['nigeLab:' mfilename ':BadClass'],...
+               'nigelObj.doMethod should only iterate on Tank and Animal');
+         end
+         
+         if numel(obj.Children) > 0
+            c = obj.Children;
+            mask = find([c.IsMasked]);
+            if isempty(mask)
+               flag = true;
+            else
+               flag = flag && feval(fcn_handle,c(mask),varargin{:});
+            end
+         else
+            flag = true;
          end
       end
       

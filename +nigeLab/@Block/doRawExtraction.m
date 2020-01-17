@@ -11,7 +11,19 @@ function flag = doRawExtraction(blockObj)
 
 %% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
-flag = false;
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 blockObj.checkActionIsValid();
 
 if ~genPaths(blockObj)
