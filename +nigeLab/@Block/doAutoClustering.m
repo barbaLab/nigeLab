@@ -1,5 +1,5 @@
-function flag = doAutoClustering(blockObj,chan,unit)
-% DOAUTOCLUSTERING  Cluster spikes based on extracted waveform features
+function flag = doAutoClustering(blockObj,chan,unit,useSort)
+%DOAUTOCLUSTERING  Cluster spikes based on extracted waveform features
 %
 % b = nigeLab.Block;
 % chan = 1;
@@ -14,13 +14,17 @@ function flag = doAutoClustering(blockObj,chan,unit)
 %  --------
 %   flag       :     Returns true if clustering completed successfully.
 
-%%
+
 switch nargin
    case 1
       chan = blockObj.Mask;
       unit = 'all';
+      useSort = false;
    case 2
       unit = 'all';
+      useSort = false;
+   case 3
+      useSort = false;
    otherwise
       % Then unit is already defined
 end
@@ -41,14 +45,14 @@ end
 [~,par] = blockObj.updateParams('AutoClustering');
 blockObj.checkActionIsValid();
 
-%% runs automatic clustering algorithms
+% runs automatic clustering algorithms
 if strcmpi(unit,'all') % Returns false if unit is numeric
    unit = 0:par.NMaxClus;
 end
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
       par.MethodName);
-   str = sprintf('AutoClustering (%s)',str);
+   str = sprintf('AutoClustering-(%s)',str);
 else
    str = sprintf('AutoClustering-(%s)',par.MethodName);
 end
@@ -57,8 +61,17 @@ curCh = 0;
 for iCh = chan
    curCh = curCh+1;
    
-   % load spikes and classes
-   inspk = blockObj.getSpikeFeatures(iCh,unit);
+   % load spikes and classes.
+   % NOTE: for now this is fine, since we will NEVER call this method from
+   % the @Sort interface (it uses nigeLab.libs.SpikeImage/Recluster()
+   % method to group "leftover" spikes using PCA on spike waveforms);
+   % however, if `.doAutoClustering` is used in combination with @Sort,
+   % the method should be changed to make use of `useSort`
+   if useSort
+      inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',unit});
+   else
+      inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',unit});
+   end
    if isempty(inspk)
       saveClusters(blockObj,[],iCh,[]);
       continue;
@@ -212,7 +225,7 @@ ts = getSpikeTimes(blockObj,iCh);
 n = numel(ts);
 data = [zeros(n,1) classes temperature*ones(n,1) ts zeros(n,1)];
 
-%% save the 'Clusters' DiskData file and potentially initialize `Sorted`
+% save the 'Clusters' DiskData file and potentially initialize `Sorted`
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
    fNameC,data,'access','w');
 

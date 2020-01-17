@@ -6,7 +6,6 @@ function eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,match
 %
 %  Should be called from blockObj.getEventData.
 
-%%
 F = fieldnames(blockObj.Channels(ch));
 iF = strncmpi(F,field,7);
 if sum(iF)==1

@@ -55,6 +55,14 @@ if isfield(qParams,'InitTimeSec')
    InitTimeSec = qParams.InitTimeSec;
 end
 
+%% Make sure the profiles are actually configured and available
+% if no cluster profiles are available return the local one
+ClusterList = intersect(ClusterList,parallel.clusterProfiles);
+if isempty(ClusterList)
+   myCluster = parcluster;
+   return
+end
+
 %% INFINITELY LOOP UNTIL A CLUSTER IS ASSIGNED
 if nargin < 1
    % Create dummy variable because it is referenced several times

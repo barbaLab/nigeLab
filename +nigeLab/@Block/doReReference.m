@@ -87,8 +87,7 @@ end
 
 %% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
 if ~blockObj.OnRemote
-   str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference',...
-      'common-average-noise');
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference','CAR');
    str = sprintf('Removing-%s',str);
 else
    str = 'Removing-CAR';

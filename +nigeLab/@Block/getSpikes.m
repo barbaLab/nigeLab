@@ -48,11 +48,13 @@ function spikes = getSpikes(blockObj,ch,clusterIndex,type)
 %                       corresponding to each identified spike wave peak
 %                       (or subset that matches class vector elements).
 %
+%  -- OR (if `type` is 'feat') --
+%
 %  features    :     Feature coefficients used for semi-automated
 %                       clustering and sorting. Only returned if 'feat' is
 %                       specified for type variable.
 
-%% ERROR CHECKING
+% ERROR CHECKING
 if nargin < 2
    error(['nigeLab:' mfilename ':MissingInputArguments'],...
       'Must at least specify ''ch'' input arg');
@@ -63,7 +65,7 @@ if ~ParseSingleChannelInput(blockObj,ch)
       'Invalid value of ''ch'' input:  %g',ch);
 end
 
-%% PARSE INPUTS
+% PARSE INPUTS
 if nargin < 4
    type = 'spikes';
 end
@@ -81,7 +83,7 @@ if (numel(blockObj) > 1)
    return;
 end
 
-%% RETRIEVE SPIKES OR FEATURES
+% RETRIEVE SPIKES OR FEATURES
 switch lower(type) % Could add expansion for things like 'pw' and 'pp' etc.
    case {'feat','spikefeat','features','spikefeatures'}
       % Variable is still called "spikes"
@@ -89,11 +91,14 @@ switch lower(type) % Could add expansion for things like 'pw' and 'pp' etc.
    otherwise % Default is 'spikes'
       spikes = getEventData(blockObj,'Spikes','snippet',ch);
 end
+if isempty(spikes)
+   return;
+end
 
-%% USE CLUSTERINDEX TO REDUCE SET
+% USE CLUSTERINDEX TO REDUCE SET
 switch class(clusterIndex)
    case 'cell' % isnan does not work on 'cell' inputs
-      %% If cell, specifies {'clusterType',[clusterIndicesToKeep]}
+      % If cell, specifies {'clusterType',[clusterIndicesToKeep]}
       if numel(clusterIndex) ~= 2
          error(['nigeLab:' mfilename ':badInputSyntax'],...
             ['If clusterIndex is a cell, it must have two elements:\n' ...
@@ -125,7 +130,7 @@ switch class(clusterIndex)
                'Unexpected "clustering" type: %s',clusterType);
       end
    otherwise
-      %% Otherwise, must be numeric (or NaN to skip)
+      % Otherwise, must be numeric (or NaN to skip)
       if isnan(clusterIndex)
          return; % Returns all spikes or features if this arg is unused
       end
