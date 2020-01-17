@@ -70,7 +70,8 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
    end
    
    properties (Access = public, Hidden = true)
-      IsRemote  (1,1) logical = false
+      IsParallel  (1,1) logical = false
+      IsRemote    (1,1) logical = false
       starttime
    end
    
@@ -399,6 +400,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          
          stopBar(bar); % Make sure it is stopped
          bar.IsRemote = false;
+         bar.IsParallel = false;
          % Should only do these things if .IsComplete flag is true
          if bar.IsComplete
             % Play the bell sound! Yay!
@@ -529,7 +531,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          end
          bar.IsRunning = true; 
          bar.IsComplete = false; % May need to reset if already ran
-         if bar.IsRemote
+         if bar.IsParallel
             bar.joblistener = addlistener(bar.job,'ObjectBeingDestroyed',...
                @(~,~)bar.handleExternalJobDeletion);
          else
@@ -562,7 +564,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
 
          evt = nigeLab.evt.barStopped(bar);
          notify(bar,'StateChanged',evt);
-         if bar.IsRemote
+         if bar.IsParallel
             % From remote, job.FinishedFcn is bar.indicateCompletion();
             % So, just need .IsComplete to accurately reflect state of bar
             switch lower(bar.job.State)
@@ -589,7 +591,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          %  --> This method should be periodically "pinged" by the TimerFcn
          %      so that the state of the remote job can be updated.
 
-         if ~bar.IsRemote
+         if ~bar.IsParallel
             str = bar.getChild('status','String');
             if strcmpi(str,bar.CompleteKey)
                pct = 100;
@@ -616,6 +618,22 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                   % If bar reached "Complete" at some point
                   bar.IsComplete = bar.IsComplete || false;
                end
+            end
+         elseif bar.IsParallel
+             if strcmp(bar.job.State,'finished')
+                 bar.stopBar();
+            
+               % If the job is completed, then run the completion method
+               
+               if pct >= 100 || strcmpi(str,bar.CompleteKey) || bar.IsComplete
+                  bar.IsComplete = true;
+                  % If `indicateCompletion()` runs with `bar.IsComplete`
+                  % true, it does the "bell" ring; otherwise, it does the
+                  % "alert" noise
+               else
+                   bar.IsComplete = false;
+               end
+               bar.indicateCompletion();
             end
          else
             % Otherwise just wait until it hits 100% to indicate complete

@@ -200,7 +200,8 @@ classdef remoteMonitor < handle
          % Increment counter of running jobs
          bar.Progress = 0;
          bar.Name = name;
-         bar.IsRemote = ~isempty(job);
+         bar.IsParallel = ~isempty(job);
+         bar.IsRemote = strcmp('parallel.cluster.MJS',class(job.Parent));
          bar.job = job;
          
          % Changing BarIndex toggles the visibility, queue position etc.

@@ -33,7 +33,8 @@ function [pct,tag,name] = jobTag2Pct(jobObject,delim)
 if nargin < 2
    delim = '||';
 end
-if isa(jobObject,'parallel.job.MJSCommunicatingJob')
+if isa(jobObject,'parallel.job.MJSCommunicatingJob')...
+        || isa(jobObject,'parallel.job.CJSCommunicatingJob')
    tagString = jobObject.Tag;
 elseif ischar(jobObject)
    tagString = jobObject;
