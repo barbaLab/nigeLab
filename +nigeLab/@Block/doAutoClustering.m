@@ -67,10 +67,18 @@ for iCh = chan
    % method to group "leftover" spikes using PCA on spike waveforms);
    % however, if `.doAutoClustering` is used in combination with @Sort,
    % the method should be changed to make use of `useSort`
-   if useSort
-      inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',unit});
+   if useSort 
+      if blockObj.getStatus('Sorted',iCh)
+         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',unit});
+      else
+         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',nan});
+      end
    else
-      inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',unit});
+      if blockObj.getStatus('Clusters',iCh)
+         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',unit});
+      else
+         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',nan});
+      end
    end
    if isempty(inspk)
       saveClusters(blockObj,[],iCh,[]);

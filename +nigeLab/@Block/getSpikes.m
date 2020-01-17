@@ -119,6 +119,9 @@ switch class(clusterIndex)
             '-->\t{''Sorted'',[clusterIndices]}, or\n',...
             '-->\t{''Clusters'',[clusterIndices]}']);
       end
+      if isnan(clusterIndex)
+         return;
+      end
       
       switch lower(clusterType)
          case {'s','sort','sorted','sorts','sorting'}

@@ -1,5 +1,5 @@
 classdef DiskData < handle
-   %% DISKDATA   Class to efficiently handle data without loading to RAM
+   %DISKDATA   Class to efficiently handle data without loading to RAM
    %
    %  D = DiskData(MatFile)
    %  D = DiskData(Datatype_,DataPath)
@@ -78,7 +78,7 @@ classdef DiskData < handle
    
    methods (Access = public)
       function obj = DiskData(varargin)
-         %% DISKDATA   Constructor
+         %DISKDATA   Constructor
          %
          %  D = DiskData(MatFile)
          %  D = DiskData(Datatype_,DataPath)
@@ -110,7 +110,7 @@ classdef DiskData < handle
          % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
          
          
-         %% PARSE INPUTS
+         %PARSE INPUTS
          tmp={'name','size','class','access'};
          nargin=numel(varargin);
          
@@ -152,7 +152,7 @@ classdef DiskData < handle
                access_ = 'r';
          end
          
-         %% PARSE VARARGIN
+         %PARSE VARARGIN
          % "Variable" part of varargin allows setting of "non-default"
          % input arguments.
          for iV = jj:2:numel(varargin)
@@ -160,10 +160,10 @@ classdef DiskData < handle
          end
          writable_ = strcmpi(access_,'w');
          
-         %% CREATE DIFFERENT TYPES OF DISKDATA FOR DIFFERENT FILE TYPES
+         %CREATE DIFFERENT TYPES OF DISKDATA FOR DIFFERENT FILE TYPES
          switch nargin
             case 1
-               %% Only 1 "default" input provided
+               %Only 1 "default" input provided
                % This case is specifically for dealing with MatFiles.
                if isa(varargin{1},'matlab.io.MatFile')
                   obj.diskfile_ = varargin{1};
@@ -192,7 +192,7 @@ classdef DiskData < handle
                   error('Data format not yet supported');
                end
             case 2
-               %% 2 "default" inputs provided: file type and file name
+               %2 "default" inputs provided: file type and file name
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
                if writable_
@@ -317,7 +317,7 @@ classdef DiskData < handle
                      error('Unknown data format');
                end
             case 3 
-               %% (All) 3 "default" inputs: data was included as well
+               %(All) 3 "default" inputs: data was included as well
                fType = varargin{1}; % First arg is the file type
                fName = varargin{2}; % Second arg is the file name
                % Third arg is the data; don't make a copy of that
@@ -328,7 +328,7 @@ classdef DiskData < handle
                end
                switch fType
                   case 'MatFile'
-                     %% MatFile  --  (Old-ish) for 'data' vector
+                     %MatFile  --  (Old-ish) for 'data' vector
                      eval(sprintf('%s=varargin{3};',name_));
                      % Depending on how the file was saved
                      if isstruct(varargin{3})
@@ -346,7 +346,7 @@ classdef DiskData < handle
                      info = whos(obj.diskfile_);
                      obj.bytes_ = info.bytes;
                   case 'Hybrid'
-                     %% Hybrid  --  For Matfile with H5 handling (streams)
+                     %Hybrid  --  For Matfile with H5 handling (streams)
                      % This initially creates a file with a variable,
                      % 'data', that is written to it.
                      data=zeros(1,1,class_); %#ok<PREALL>
@@ -414,7 +414,7 @@ classdef DiskData < handle
       end
       
       function varargout = subsref(obj,S)
-         %% SUBSREF  Overloaded function for referencing DiskData array
+         %SUBSREF  Overloaded function for referencing DiskData array
          Out = 'obj';
          readDat=true;
          
@@ -422,7 +422,7 @@ classdef DiskData < handle
             case 'Event'
                switch S(1).type
                   case '()'
-                     %% e.g. blockObj.Channels(k).Spikes(:)
+                     %e.g. blockObj.Channels(k).Spikes(:)
                      if any(strcmp(S(1).subs,':'))
                         indx = [1 inf];
                         
@@ -469,7 +469,7 @@ classdef DiskData < handle
                      return;
                      
                   case '.'
-                     %% e.g. blockObj.Channels(k).Spikes.value;
+                     %e.g. blockObj.Channels(k).Spikes.value;
                      s=methods(obj);
                      if any(strcmp(s,S(1).subs)) && ~strcmp('class',S(1).subs) % to enforce backwards compatibility where some spike structure saved in the past has a class field
                         Out = builtin('subsref',obj,S);
@@ -794,7 +794,7 @@ classdef DiskData < handle
       end
       
       function ind = end(obj,k,n)
-         %% END   Overloaded function for indexing end of DiskData array
+         %END   Overloaded function for indexing end of DiskData array
          szd = size(obj);
          if k < n
             ind = szd(k);
@@ -804,7 +804,7 @@ classdef DiskData < handle
       end
       
       function Out = minus(obj,b)
-         %% MINUS    Overloaded function for subtraction on DiskData array
+         %MINUS    Overloaded function for subtraction on DiskData array
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          if isa(b,'nigeLab.libs.DiskData')
@@ -817,12 +817,12 @@ classdef DiskData < handle
       end
       
       function Out = plus(obj,b)
-         %% PLUS    Overloaded function for addition on DiskData array
+         %PLUS    Overloaded function for addition on DiskData array
          Out = obj.minus(obj,-b);
       end
       
       function Out = times(obj,b)
-         %% TIMES  Overloaded function for multiplication on DiskData array
+         %TIMES  Overloaded function for multiplication on DiskData array
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          if isa(b,'nigeLab.libs.DiskData')
@@ -835,7 +835,7 @@ classdef DiskData < handle
       end
       
       function Out = mtimes(obj,b)
-         %% MTIMES  Overloaded function for matrix multiplication
+         %MTIMES  Overloaded function for matrix multiplication
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          if isa(b,'nigeLab.libs.DiskData')
@@ -848,7 +848,7 @@ classdef DiskData < handle
       end
       
       function dim = size(obj,n)
-         %% SIZE  Overloaded function for getting DiskData array dimensions
+         %SIZE  Overloaded function for getting DiskData array dimensions
          if nargin<2
             n=1:length(obj.size_);
          end
@@ -856,32 +856,32 @@ classdef DiskData < handle
       end
       
       function l=length(obj)
-         %% LENGTH  Overloaded function for getting DiskData array length
+         %LENGTH  Overloaded function for getting DiskData array length
          info = whos(obj.diskfile_);
          l=max(info.size);
       end
       
       function Out = double(obj)
-         %% DOUBLE Overloaded function for casting DiskData array to double
+         %DOUBLE Overloaded function for casting DiskData array to double
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          Out= double(a);
       end
       
       function Out = single(obj)
-         %% SINGLE Overloaded function for casting DiskData array to single
+         %SINGLE Overloaded function for casting DiskData array to single
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          Out= single(a);
       end
       
       function Out = getPath(obj)
-         %% GETPATH  Overloaded function for getting path to file
+         %GETPATH  Overloaded function for getting path to file
          Out=obj.diskfile_.Properties.Source;
       end
       
       function Out = append(obj,b,dim)
-         %% APPEND   Overloaded function for concatenating elements to DiskData array
+         %APPEND   Overloaded function for concatenating elements to DiskData array
          if ~obj.writable_
             error('Improper assignment. DiskData object constructed as read-only.');
          end
@@ -916,7 +916,7 @@ classdef DiskData < handle
       end
       
       function Out=disp(obj)
-         %% DISP  Overloaded function for printing DiskData elements to command window
+         %DISP  Overloaded function for printing DiskData elements to command window
          switch obj.type_
             case 'Hybrid'
                if nargout>0
@@ -952,19 +952,19 @@ classdef DiskData < handle
       end
       
       function x=abs(obj)
-         %% ABS   Overloaded function for getting absolute value of DiskData array
+         %ABS   Overloaded function for getting absolute value of DiskData array
          varname=[ '/' obj.name_];
          a = h5read(obj.getPath,varname,[1 1],[1 inf]);
          x = abs(a);
       end
       
       function b = isempty(obj)
-         %% ISEMPTY  Overloaded function for checking if DiskData array contains data
+         %ISEMPTY  Overloaded function for checking if DiskData array contains data
          b = all(size(obj)==0);
       end
       
       function obj = lockData(obj)
-         %% LOCKDATA    Method to set write access to read-only
+         %LOCKDATA    Method to set write access to read-only
          %
          % obj = lockData(obj); Sets write access to read-only
          
@@ -975,7 +975,7 @@ classdef DiskData < handle
       end
       
       function obj = unlockData(obj)
-         %% UNLOCKDATA    Method to allow write access
+         %UNLOCKDATA    Method to allow write access
          %
          % obj = unlockData(obj); Sets write access to read/write
          
@@ -985,29 +985,34 @@ classdef DiskData < handle
       end
       
       function info = getInfo(obj)
-         %% GETINFO  Get info about the diskfile
+         %GETINFO  Get info about the diskfile
          info = whos(obj.diskfile_);
       end
       
       function cl=class(obj)
-         %% CLASS  Overloaded function for getting DiskData array class
+         %CLASS  Overloaded function for getting DiskData array class
          % Note: I changed this to reflect the Matlab class naming
          %       convention that uses the '.' notation. -MM
          cl = sprintf('DiskData.%s', obj.class_);
       end
       
-      function checkSize(obj)
-         %% CHECKSIZE   Check the size of object if it is a weird value
+      function flag = checkSize(obj)
+         %CHECKSIZE   Check the size of object if it is a weird value
+         %
+         %  flag = obj.checkSize();
+         %  --> Ensures orientation of data on DISKFILE is consistent with
+         %      the value returned by obj.size
+         %  --> Returns TRUE if data on DISKFILE is NON-EMPTY
+         
          a = obj.diskfile_.(obj.name_);
          sz = size(a);
          for ii = 1:numel(obj.size_)
             if obj.size_(ii) ~= sz(ii)
-%                warning('Incorrect dimension (%d): %g --> %g (fixed)',...
-%                   ii,obj.size_(ii),sz(ii));
                obj.size_(ii) = sz(ii);
             end
          end
          obj.size_ = size(a);
+         flag = ~any(obj.size_ == 0);
       end
    end
    
