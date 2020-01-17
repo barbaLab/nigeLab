@@ -104,6 +104,8 @@ E(pm_ex) = [];
 %% GET TIME DIFFERENCES
 if numel(ts)>1
    dt = [diff(ts), round(median(diff(ts)))];
+elseif numel(ts)==1
+   dt = 0;
 else
    dt = [];
 end

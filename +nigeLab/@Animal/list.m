@@ -3,6 +3,11 @@ function L = list(animalObj,keyIdx)
 %
 %  L = animalObj.list();
 
+if isempty(animalObj)
+   L = table;
+   return;
+end
+
 if nargin < 2
    keyIdx = [];
 end

@@ -137,7 +137,6 @@ switch class(target)
          if isempty(bar)
             return;
          end
-         bar.IsRemote = true;
 
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)bar.indicateCompletion();

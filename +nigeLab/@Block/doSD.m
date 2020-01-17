@@ -11,7 +11,19 @@ function flag = doSD(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
-flag = false;
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 checkActionIsValid(blockObj);
 nigeLab.utils.checkForWorker('config');
 

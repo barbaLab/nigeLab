@@ -796,12 +796,12 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             'GridColor','none',...
             'XColor',obj.Color.onPanel,...
             'YColor',obj.Color.onPanel,...
+            'YDir','reverse',...
             'Box','off',...
             'FontName','DroidSans',...
             'FontSize',13,...
             'FontWeight','bold');
          recapAx.XAxis.TickLabelRotation = 75;
-         
          % axes cosmetic adjustment
          nigelPanelObj.nestObj(recapAx,'RecapAxes');
          drawnow;
@@ -950,6 +950,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          m = methods('nigeLab.Block');
          m = m(startsWith(m,'do'));
+         m = setdiff(m,'doMethod');
          for ii=1:numel(m)
             obj.DoMethod_MenuItem(ii) = uimenu(treeContextMenu,...
                'Label',m{ii},...
@@ -1002,15 +1003,24 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          end
          
          nField = numel(obj.Fields);
+         % This removes the X- and Y- borders (crazy to have to do that
+         % kind of workaround but oh well):
+         rectangle(obj.RecapAxes,...
+                  'Position',[0.95 0.95 nField+1.1 N+1.1],...
+                  'Clipping','off',...
+                  'EdgeColor','none',...
+                  'FaceColor',obj.Color.panel);
+         
          h = obj.getHighestLevelNigelObj();
          switch class(Status)
             case 'cell'
                % If it's a cell, this was a single block
                xlim(obj.RecapAxes,[1 nField+1]);
                ylim(obj.RecapAxes,[1 N+1]);
-               obj.RecapAxes.YColor = 'none';
                obj.RecapAxes.FontSize = 13;
                obj.RecapAxes.YAxis.FontSize = 16;
+               obj.RecapAxes.YAxis.TickLabel = {'1'};
+               obj.RecapAxes.YAxis.TickValues = (N+1)/2;
                for ii=1:nField
                   switch numel(Status{ii})
                      case 1
@@ -1089,9 +1099,10 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                [N,~] = size(Status);
                xlim(obj.RecapAxes,[1 nField+1]);
                ylim(obj.RecapAxes,[1 N+1]);
-               obj.RecapAxes.YColor = obj.Color.onPanel;
-               obj.RecapAxes.FontSize = max(5,16-N);
+               obj.RecapAxes.YAxis.FontSize = max(5,16-N);
                obj.RecapAxes.XAxis.FontSize = 13;
+               obj.RecapAxes.YAxis.TickLabel = cellstr( num2str((1:N)'));
+               obj.RecapAxes.YAxis.TickValues = 1.5:N+0.5;
                for jj=1:N
                   for ii=1:nField
                      if Status(jj,ii)
@@ -1138,10 +1149,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          end
          
          obj.RecapAxes.XAxis.TickLabel = obj.Fields;
-         obj.RecapAxes.YAxis.TickLabel = cellstr( num2str((1:N)'));
          obj.RecapAxes.XAxis.TickValues = 1.5:nField+0.5;
-         obj.RecapAxes.YAxis.TickValues = 1.5:N+0.5;
-         obj.RecapAxes.YDir = 'reverse';
       end
       
       % Refresh the "Stats" table when a stage is updated
@@ -1325,6 +1333,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             B = obj.Tank{SelectedItems};
          end
          tt = list(B);
+         if isempty(tt)
+            return;
+         end
          tCell = table2cell(tt);
          s = getStatus(B,obj.Fields);
          if numel(B) == 1
@@ -1371,6 +1382,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %
          %  nigelObj  :  Array of currently-selected nigelObj objects
 
+         if isempty(nigelObj)
+            return;
+         end
          pars = nigelObj(1).Pars;
          Fnames = fieldnames(pars);
          Pan = getChild(obj,'ParametersPanel');
@@ -1931,10 +1945,14 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                      for i = 1:numel(nigelObj)
                         b = nigelObj(i).Children;
                         Metas = [b.Meta];
-                        if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
-                           name = [name, {Metas.RecID}];
-                        else
+                        if isempty(Metas)
                            name = [name, {b.Name}];
+                        else
+                           if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
+                              name = [name, {Metas.RecID}];
+                           else
+                              name = [name, {b.Name}];
+                           end
                         end
                      end
                end

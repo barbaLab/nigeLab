@@ -294,8 +294,19 @@ classdef VideosFieldType < handle
          if numel(obj) > 1
             tf = true(size(obj));
             for i = 1:numel(obj)
-               tf(i) = obj(i).isempty;
+               tf(i) = isempty(obj(i));
             end
+            return;
+         end
+         tf = false;
+         
+         if builtin('isempty',obj)
+            tf = true;
+            return;
+         end
+         
+         if ~isvalid(obj)
+            tf = true;
             return;
          end
          
