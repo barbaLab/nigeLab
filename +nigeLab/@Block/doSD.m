@@ -42,8 +42,8 @@ blockObj.updateStatus('Artifact',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
 if ~blockObj.OnRemote
-   str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spikes');
-   str = sprintf('Detecting %s',str);
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spike');
+   str = sprintf('%s-Detection',str);
 else
    str = 'Spike-Detection';
 end

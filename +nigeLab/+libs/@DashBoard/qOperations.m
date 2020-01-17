@@ -138,8 +138,10 @@ switch class(target)
             return;
          end
 
+         if qPars.UseRemote
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)bar.indicateCompletion();
+         end
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else

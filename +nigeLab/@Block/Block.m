@@ -358,7 +358,7 @@ classdef Block < nigeLab.nigelObj
       flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
-      flag = doAutoClustering(blockObj,chan,unit) % Do automatic spike clustiring
+      flag = doAutoClustering(blockObj,chan,unit,useSort) % Do automatic spike clustiring
       
       % Methods for streams info
       stream = getStream(blockObj,streamName,source,scaleOpts); % Returns stream data corresponding to streamName
