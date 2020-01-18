@@ -59,7 +59,8 @@ classdef nigelObj < handle & ...
       FolderIdentifier  char                    % '.nigelBlock', '.nigelAnimal', or '.nigelTank'
       IDInfo      (1,1) struct                  % Struct parsed from ID file
       HasParsFile (1,1) logical=false           % Flag --> True if _Pars.mat exists
-      HasParsInit       struct                  % Flag struct --> .param is True if obj.updateParams('param') has been run
+      HasParsInit (1,1) struct                  % Flag struct --> .param is True if obj.updateParams('param') has been run
+      HasParsSaved(1,1) struct                  % Flag struct --> .Param is True if that field has been saved to pars file since load
       UseParallel       logical                 % Flag indicating parallel processing compatible
    end
 
@@ -734,7 +735,7 @@ classdef nigelObj < handle & ...
          end
          
          if ~isfield(p,'SupportedFormats')
-            obj.updateParams('Experiment',true);
+            obj.updateParams('Experiment','Direct');
             p = obj.getParams('Experiment');
          end
          
@@ -916,7 +917,7 @@ classdef nigelObj < handle & ...
          end
          if ~isfield(obj.Paths,'Name')
             if ~isfield(obj.Pars,obj.Type)
-               [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type,true);
+               [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type);
             end
             obj.Paths.Name = obj.parseNamingMetadata();
          end
@@ -1442,9 +1443,7 @@ classdef nigelObj < handle & ...
          end
          
          flag = false;
-         if isempty(obj.HasParsInit)
-            obj.updateParams(obj.Type);
-         elseif ~isfield(obj.HasParsInit,obj.Type)
+         if ~isfield(obj.HasParsInit,obj.Type)
             obj.updateParams(obj.Type);
          elseif ~obj.HasParsInit.(obj.Type)
             obj.updateParams(obj.Type);
@@ -1454,6 +1453,8 @@ classdef nigelObj < handle & ...
          obj.IsDashOpen = false;
          onRemote = obj.OnRemote;
          obj.OnRemote = false;
+         C = obj.Children;
+         obj.Children(:) = [];
          
          % Do all Dependent variable 'gets' prior to try in case that is
          % where an error occurs:
@@ -1470,7 +1471,7 @@ classdef nigelObj < handle & ...
             save(fname,'-struct','out');
             flag = true;
             nigeLab.utils.cprintf(fmt,...
-               '%s[%s]: %s saved successfully!\n',idt,type,name);
+               '%s[SAVE]: %s saved successfully!\n',idt,name);
          catch
             nigeLab.utils.cprintf('Errors*',...
                'Failed to save [%s]: %s\n',type,name);
@@ -1480,8 +1481,18 @@ classdef nigelObj < handle & ...
          end
          obj.OnRemote = onRemote;
          obj.IsDashOpen = isDashOpen;
+         obj.Children = C;
          flag = flag && obj.saveIDFile(); % .nigelBlock file saver
-
+         F = fieldnames(obj.HasParsInit);
+         for iF = 1:numel(F)
+            f = F{iF};
+            if isfield(obj.HasParsSaved,f)
+               if ~obj.HasParsSaved.(f)
+                  obj.saveParams(f)
+               end
+            end
+         end
+         
          % save multianimals if present
          if strcmp(obj.Type,'Block')
             if obj.MultiAnimals
@@ -1905,7 +1916,7 @@ classdef nigelObj < handle & ...
          
          obj.RemoteFlag = value;
          if ~isfield(obj.Pars,'Queue')
-            obj.updateParams('Queue',true);
+            obj.updateParams('Queue');
          end
          % Toggle "path root" based on remote flag value
          out = obj.Output;
@@ -2407,14 +2418,16 @@ classdef nigelObj < handle & ...
          obj.UseParallel = flag;
          
          if (nargout < 1) && (~obj.OnRemote)
-            nigeLab.utils.cprintf('Comments',...
-               '%s (%s) flagged for ',class(obj),obj.Name);
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            nigeLab.utils.cprintf('Comments*','\n-----%s',idt);
+            nigeLab.utils.cprintf(fmt(1:(end-1)),...
+               '[CHECK]: %s (%s) flagged for ',idt,obj.Name,type);
             if flag
-               nigeLab.utils.cprintf('*Strings','Parallel Processing\n');
+               nigeLab.utils.cprintf('Keywords*','Parallel');
             else
-               
-               nigeLab.utils.cprintf('*Strings','Serial Processing\n');
+               nigeLab.utils.cprintf('Keywords*','Serial');
             end
+            nigeLab.utils.cprintf(fmt(1:(end-1)),' Processing -----\n');
          end
          
          if ~isempty(obj.Children)
@@ -2582,9 +2595,9 @@ classdef nigelObj < handle & ...
          
          s = getStatus(obj,[]);
          status_struct = struct;
-         [~,~,allProps] = obj.listInitializedParams();
-         for i = 1:numel(allProps)
-            thisProp = allProps{i};
+         [~,~,s_all] = obj.listInitializedParams();
+         for i = 1:numel(s_all)
+            thisProp = s_all{i};
             if isfield(obj.HasParsInit,thisProp)
                if obj.HasParsInit.(thisProp)
                   pars_status_struct.(thisProp) = 'Initialized';
@@ -2692,12 +2705,10 @@ classdef nigelObj < handle & ...
                'nigeLab.obj/getFolderTree expects BLOCK input.');
          end
          
-         if isempty(obj.HasParsInit)
-            obj.updateParams('Block',true);
-         elseif ~isfield(obj.HasParsInit,'Block')
-            obj.updateParams('Block',true);
+         if ~isfield(obj.HasParsInit,'Block')
+            obj.updateParams('Block');
          elseif ~obj.HasParsInit.Block
-            obj.updateParams('Block',true);
+            obj.updateParams('Block');
          end
          F = fieldnames(obj.Pars.Block.PathExpr);
          del = obj.Pars.Block.Delimiter;
@@ -2710,9 +2721,9 @@ classdef nigelObj < handle & ...
                % added onto the front part of the _Spikes and related
                % folders
                if ~isfield(obj.HasParsInit,'SD')
-                  obj.updateParams('SD',true);
+                  obj.updateParams('SD');
                elseif ~obj.HasParsInit.SD
-                  obj.updateParams('SD',true);
+                  obj.updateParams('SD');
                end
                p.Folder = sprintf(strrep(p.Folder,'\','/'),...
                   obj.Pars.SD.ID.(F{iF}));
@@ -3202,12 +3213,14 @@ classdef nigelObj < handle & ...
             flag = false;
          end
          [fmt,idt,type] = obj.getDescriptiveFormatting();
+         nigeLab.utils.cprintf(fmt,'%s[LOADPARAMS]: ',idt);
+         fmt = fmt(1:(end-1));
          if nargin < 2
             if ~obj.HasParsFile
                if ~obj.checkParsFile()
                   nigeLab.utils.cprintf(fmt,...
-                     '%sNo [%s_Pars] file for %s (.User: %s)',...
-                     idt,type,obj.Name,obj.User);
+                     'No %sObj.Pars file for %s (.User: %s)\n',...
+                     lower(type),obj.Name,obj.User);
                   % Flag returns false
                   return;
                end
@@ -3215,8 +3228,8 @@ classdef nigelObj < handle & ...
          else
             if ~obj.checkParsFile(parsField)
                nigeLab.utils.cprintf(fmt,...
-                  '%sNo Pars.%s field saved in [%s_Pars] file for %s (.User: %s)',...
-                  idt,parsField,type,obj.Name,obj.User);
+                  'No Pars.%s field saved for %s (.User: %s)\n',...
+                  parsField,obj.Name,obj.User);
                % Flag returns false
                return;
             end
@@ -3226,11 +3239,12 @@ classdef nigelObj < handle & ...
          fname_params = obj.getParsFilename();
          try
             in = load(fname_params);
-            flag = true;
          catch
             nigeLab.utils.cprintf('Errors*',...
-               '%sFailed to load [%s_Pars] %s\n',idt,type,fname_params);
+               'Failed to load %sObj.Pars (file: %s)\n',...
+               lower(type),fname_params);
             % Flag returns false
+            flag = false;
             return;
          end
          if isempty(obj.Pars)
@@ -3239,18 +3253,27 @@ classdef nigelObj < handle & ...
          if nargin < 2
             obj.Pars = in.(obj.User);
             F = fieldnames(obj.Pars);
+            flag = false(size(s_all));
             for iF = 1:numel(F)
                f = F{iF};
-               if ismember(f,s_all)
+               idx = ismember(s_all,f);
+               if sum(idx)==1
                   obj.HasParsInit.(f) = true;
+                  obj.HasParsSaved.(f) = true;
+                  flag(idx) = true;
                end
             end
+            nigeLab.utils.cprintf(fmt,...
+                  '%sObj.Pars.(ALL) loaded for %s (.User: %s)\n',...
+                  lower(type),obj.Name,obj.User);
          else
             obj.Pars.(parsField) = in.(obj.User).(parsField);
             obj.HasParsInit.(parsField) = true;
+            obj.HasParsSaved.(parsField) = true;
             nigeLab.utils.cprintf(fmt,...
-                  '%sPars.%s loaded from [%s_Pars] file for %s (.User: %s)\n',...
-                  idt,parsField,type,obj.Name,obj.User);
+                  '%sObj.Pars.%s loaded for %s (.User: %s)\n',...
+                  lower(type),parsField,obj.Name,obj.User);
+            flag = true; % Only 1 field: it was loaded, so returns true
          end
       end
       
@@ -3363,7 +3386,7 @@ classdef nigelObj < handle & ...
       end
       
       % Method to save any parameters as a .mat file for a given User
-      function flag = saveParams(obj,userName,parsField)
+      function flag = saveParams(obj,userName,parsField,forceSave)
          %SAVEPARAMS  Method to save obj.Pars, given obj.User
          %
          %  obj.saveParams();  
@@ -3376,6 +3399,10 @@ classdef nigelObj < handle & ...
          %  obj.saveParams('user','Sort'); 
          %  --> Only saves 'Sort' parameters under the variable 'user' in 
          %      the _Pars.mat file
+         %
+         %  obj.saveParams(___,forceSave);
+         %  --> Optional flag that if set true forces all .Pars fields to
+         %        be saved in file regardless of their .HasParsSaved status
          %
          %  flag = obj.saveParams(__);
          %  --> Returns true if save was successful
@@ -3402,10 +3429,14 @@ classdef nigelObj < handle & ...
             parsField = 'all';
          end
          
+         if nargin < 4
+            forceSave = false;
+         end
+         
          if numel(obj) > 1
             flag = true;
             for i = 1:numel(obj)
-               flag = flag && obj(i).saveParams(userName,parsField);
+               flag = flag && obj(i).saveParams(userName,parsField,forceSave);
             end
             return;
          end
@@ -3418,30 +3449,52 @@ classdef nigelObj < handle & ...
             return;
          end
          
-         [~,~,s_all] = listInitializedParams(obj);
          [fmt,idt,type] = obj.getDescriptiveFormatting();
+         nigeLab.utils.cprintf(fmt,'%s[SAVEPARAMS]: ',idt);
+         fmt = fmt(1:(end-1));
+         if ~ismember(lower(parsField),{'all','reset'})
+            if ~isfield(obj.HasParsSaved,parsField)
+               obj.HasParsSaved.(parsField) = false;
+            elseif obj.HasParsSaved.(parsField) && ~forceSave
+               flag = true;
+               nigeLab.utils.cprintf(fmt,...
+                  '%s_Pars.mat is up-to-date for Pars.%s\n',...
+                  obj.Name,parsField);
+               return;
+            end
+         end
          
          if exist(fname_params,'file')==0
             out = struct;
             out.(userName) = obj.Pars;
             nigeLab.utils.cprintf(fmt,...
-               '%sCreating new [%s_Pars] file: %s\n',...
-               idt,type,fname_params);
+               'Creating new %sObj.Pars file: %s (User: %s)\n',...
+               lower(type),fname_params,userName);
          else
-            out = load(fname_params);
-            nigeLab.utils.cprintf(fmt(1:(end-1)),...
-               '%sMerging [%s_Pars] for : %s\n',idt,type,obj.Name);
+            out = load(fname_params,userName);
             switch parsField
                case 'all'
+                  [~,~,s_all] = listInitializedParams(obj);
+                  nigeLab.utils.cprintf(fmt,...
+                     'Merging %sObj.Pars into %s_Pars.mat (User: %s)\n',...
+                     lower(type),obj.Name,userName);
                   for i = 1:numel(s_all)
                      if isfield(obj.Pars,s_all{i})
                         out.(userName).(s_all{i})=obj.Pars.(s_all{i});
+                        obj.HasParsSaved.(s_all{i}) = true;
                      end
                   end
                case 'reset'
+                  nigeLab.utils.cprintf(fmt,...
+                     'Clearing %s_Pars.mat (User: %s)\n',...
+                     type,obj.Name,userName);
                   out.(userName)=struct;
                otherwise
+                  nigeLab.utils.cprintf(fmt,...
+                     'Overwriting Pars.%s in %s_Pars.mat (User: %s)\n',...
+                     type,obj.Name,userName);
                   out.(userName).(parsField)=obj.getParams(parsField);
+                  obj.HasParsSaved.(parsField) = true;
             end
          end
          save(fname_params,'-struct','out');
@@ -3706,7 +3759,7 @@ classdef nigelObj < handle & ...
       end
       
       % Update .Pars property
-      function [flag,p] = updateParams(obj,paramType,forceFromDefaults)
+      function [flag,p] = updateParams(obj,paramType,method,p)
          % UPDATEPARAMS   Update the parameters struct property for
          % paramType
          %
@@ -3742,9 +3795,49 @@ classdef nigelObj < handle & ...
          %                       * 'reset' -- wipe current parameters and
          %                                   reset using defaults
          %
-         %  forceFromDefaults : [default - false]; if set to true,
-         %                       automatically loads `paramType` from 
-         %                       `nigelab.defaults.(paramType)`
+         %  method  :            * Can be: 
+         %                          + 'Direct'
+         %                          --> Auto-loads from +defaults file
+         %
+         %                          + 'LoadOnly'
+         %                          --> Auto-loads from _Pars.mat ONLY (no
+         %                                comparisons made)
+         %
+         %                          + 'KeepPars'
+         %                          --> Tries to load from _Pars file
+         %                          --> If fields of +defaults are missing,
+         %                              uses values from +defaults to fill
+         %                              in missing fields.
+         %                          --> Checks for conflicts in
+         %                              "non-missing" fields (from loaded
+         %                              pars struct); if they are
+         %                              different, keeps values from _pars
+         %                              file.
+         %
+         %                          + 'KeepDefs'
+         %                          --> Tries to load from _Pars file
+         %                          --> If fields of +defaults are missing,
+         %                              uses values from +defaults to fill
+         %                              in missing fields.
+         %                          --> Checks for conflicts in
+         %                              "non-missing" fields (from loaded
+         %                              pars struct); if they are
+         %                              different, overwrites .Pars using
+         %                              values from +defaults file.
+         %
+         %                          + 'InitOnly' (default)
+         %                          --> Only checks for pars.HasParsInit; 
+         %                              if field is present and true, then
+         %                              no load occurs.
+         %
+         %                          + 'Inherit'
+         %                          --> Automatically inherit whatever
+         %                              value is contained in the struct p
+         %
+         %     p        :           Optional parameters passed directly to
+         %                          update. Should be given as a struct
+         %                          with fields corresponding to
+         %                          obj.Pars.(paramType)
          %
          %  --------
          %   OUTPUT
@@ -3752,232 +3845,285 @@ classdef nigelObj < handle & ...
          %    flag      :     Flag indicating if setting new path was
          %                    successful.
          
-         % PARSE INPUT
-         flag = false;
-         p = [];
-         if isempty(obj)
-            return;
+         % If no "pass-down" params struct, leave p as empty struct     
+         if nargin < 4
+            p = struct.empty;
          end
          
-         if isempty(obj.HasParsInit)
-            obj.HasParsInit = struct;
-         end
-         
-         [fmt,idt,type] = obj.getDescriptiveFormatting(); % For saves
+         % Default "method" behavior is check .HasParsInit.(paramType)
          if nargin < 3
-            forceFromDefaults = false;
-            directParsFlag = false;
-         elseif isstruct(forceFromDefaults)
-            p = forceFromDefaults; % Pars struct given directly
-            forceFromDefaults = false;
-            directParsFlag = true;
-         else
-            directParsFlag = false;
+            method = 'InitOnly';
          end
          
-         %
-         ConstructProps = {'Block','Shortcuts','Animal','Tank'};
-         [~,nonInitProps,allProps] = obj.listInitializedParams();
+         % If no arguments specified, then update all parameters
+         if nargin < 2
+            paramType = 'all';
+         end
          
-         if nargin < 2 % if not supplied then it is 'loadParams: all'
-            if obj.HasParsFile
-               flag = loadParams(obj);
-               if ~flag
-                  flag = obj.updateParams('all'); % Then set from +defaults
-               end
+         % Iterate if given array input
+         if numel(obj) > 1
+            flag = true;
+            for i = 1:numel(obj)
+               flag = flag && obj.updateParams(paramType,method,p);
+            end
+         else
+            flag = false;
+         end
+         
+         % Handle empty or invalid objects
+         if isempty(obj)
+            flag = true;
+            return;
+         elseif ~isvalid(obj)
+            flag = true;
+            return;
+         end         
+       
+         % If multiple paramType given as a cell, iterate on cell elements
+         if iscell(paramType)
+            % Changing this, the other way is less efficient
+            flag = true;
+            for i = 1:numel(paramType)
+               flag = flag && obj.updateParams(paramType{i},method,p);
             end
             return;
-         end
-         
-         if iscell(paramType) % Use recursion to run if cell array is given
-            N = numel(paramType);
-            if N==0
-               flag = true;
-               return;
-            end % ends recursion
-            paramType = paramType(:); % just in case it wasn't a vector for some reason;
-            flag = obj.updateParams(paramType{1}) &&...
-               obj.updateParams(paramType(2:N));
-            return;
+            % Otherwise, paramType must be a char array
          elseif ~ischar(paramType)
             error(['nigeLab:' mfilename ':BadInputClass'],...
-               ['nigeLab.%s/updateParams expects paramType ' ...
-               'to be cell or char'],class(obj));
-         end
+               ['[UPDATEPARAMS]: nigeLab.%s/updateParams expects ' ...
+               'paramType to be cell or char'],class(obj));
+         end % iscell(paramType)
 
+         % Handle the behavior for "special" non-paramType commands
+         [p_init,p_miss,p_all] = obj.listInitializedParams();
          switch lower(paramType)
-            case 'all'
-               paramType = allProps;
-               flag = obj.updateParams(paramType);
+            case 'all' %Update all parameters using "method" method
+               flag = obj.updateParams(p_all,method);
                return;
-            case 'init'
-                for i = 1:numel(nonInitProps)
-                  obj.HasParsInit.(nonInitProps{i}) = false;
+            case 'init' %Initialize "HasParsInit" struct
+               for i = 1:numel(p_all)
+                  obj.HasParsInit.(p_all{i}) = false;
+                  obj.HasParsSaved.(p_all{i}) = false;
                end
-               flag = obj.updateParams('all',true);
+               flag = obj.updateParams('all','Direct');
                return;
-            case 'check'
-               % Checked for "non-initialized" props
-               flag = isempty(nonInitProps); 
-               p = reshape(nonInitProps,1,numel(nonInitProps));
+            case 'check' %Checked for "non-initialized" props
+               flag = isempty(p_miss); 
+               p = reshape(p_miss,1,numel(p_miss));
                return;
-            case {'fullcheck','checkfull','full'}
-               % Double-check that they have the correct fields
-               initProps = setdiff(allProps,nonInitProps);
-               for i = 1:numel(initProps)
-                  if obj.HasParsInit.(initProps{i})
-                     p = nigeLab.defaults.(initProps{i});
-                     fcur = fieldnames(obj.Pars.(initProps{i}));
-                     fdef = fieldnames(p);
-                     fmiss = setdiff(fdef,fcur);
-                     if ~isempty(fmiss)
-                        obj.updateParams(initProps{i},true);
+            case {'fullcheck','checkfull','full'} %Double-check all fields
+               flag = true;
+               for i = 1:numel(p_all)
+                  if isfield(obj.HasParsInit,p_all{i})
+                     if obj.HasParsInit.(p_init{i})
+                        p = nigeLab.defaults.(p_init{i});
+                        fcur = fieldnames(obj.Pars.(p_init{i}));
+                        fdef = fieldnames(p); %fields in def. file params
+                        fmiss = setdiff(fdef,fcur);
+                        % If any params from defaults file are missing,
+                        % then update using those params.
+                        if ~isempty(fmiss)
+                           flag = flag && ...
+                              obj.updateParams(p_init{i},'KeepPars');
+                        end
                      end
+                  else
+                     flag = flag && obj.updateParams(p_all{i},'Direct');
                   end
                end
-               % Checked for "non-initialized" props
-               flag = isempty(nonInitProps); 
-               p = reshape(nonInitProps,1,numel(nonInitProps));
+               % Double-check for "non-initialized" props
+               if flag
+                  p = [];
+               else
+                  [~,p,~] = obj.listInitializedParams();
+               end
                return;
-
-            case 'reset'
+            case 'reset' %Remove existing .Pars and load from +defaults
                obj.Params.Pars = struct;
+               obj.HasParsInit = struct;
+               obj.HasParsSaved = struct;
+               % Reset saved params file and re-initialize from defaults
                flag = obj.saveParams(obj.User,'reset');
-               if ~isempty(obj.HasParsInit)
-                  f = fieldnames(obj.HasParsInit);
-                  for iF = 1:numel(f)
-                     obj.HasParsInit.(f{iF}) = false;
-                  end
-               end
-               flag = flag && obj.updateParams('all',true);
-%                if numel(obj.Children) > 0
-%                   for i = 1:numel(obj.Children)
-%                      flag = flag && obj.Children(i).updateParams('reset');
-%                   end
-%                end
+               flag = flag && obj.updateParams('init');
                return;
-
-            otherwise
-               % otherwise, check if not an appropriate member
-               idx = find(strcmpi(allProps,paramType),1,'first');
+            otherwise %Anything else might be actual "paramType" of `.Pars`
+               idx = find(strcmpi(p_all,paramType),1,'first');
                if isempty(idx)
-                  error(['nigeLab:' mfilename ':BadParamsField'],...
-                     'Bad obj.Pars field name (''%s'')\n',paramType);
-               else % even if it does, make sure it has correct syntax...
-                  paramType = allProps{idx};
+                  [fmt,idt] = obj.getDescriptiveFormatting(); % For cmd win
+                  nigeLab.utils.cprintf('Errors*',...
+                     '%s[UPDATEPARAMS]: ',idt);
+                  nigeLab.utils.cprintf(fmt,...
+                     'Bad .Pars fieldname (''%s'')\n',paramType);
+                  flag = false;
+                  return;
+               else % If there is a match, ensure correct capitalization
+                  field = p_all{idx};
                end
-         end
+         end % switch lower(paramType)
          
-         % LOAD CORRECT CORRESPONDING PARAMETERS
-         loadExisting = obj.HasParsFile && ...
-            obj.HasParsInit.(paramType) && ...
-            ~forceFromDefaults && ~directParsFlag;
-         if directParsFlag
-            % Then p was already given via `forceFromDefaults` arg
-         else
-            p = nigeLab.defaults.(paramType)(); % Load parameter defaults
-         end
-         if loadExisting
-            flag = loadParams(obj,paramType); % First, try to LOAD file
-            if flag % Then we loaded successfully
-               fcur = fieldnames(obj.Pars.(paramType));
-               fdef = fieldnames(p);
+         % Format initial part of command window output
+         [fmt,idt,type] = obj.getDescriptiveFormatting(); % For cmd window
+         nigeLab.utils.cprintf(fmt,'%s[UPDATEPARAMS]: ',idt);
+         fmt = fmt(1:(end-1)); % Rest is not bold
+         
+         % Handle behavior for known "good" (existing) paramType
+         doComparison = false; % By default, skip comparison
+         switch lower(method)
+            case {'keepdefs'}% Check both, keep +defaults over _Pars file
+               doComparison = true; 
+               p = nigeLab.defaults.(field)(); % Load parameter defaults
+            case {'inherit'} % "Inherit" from extra input 'p'
+               flag = true;
+               obj.HasParsInit.(field) = true;
+               if ~isfield(obj.Pars,field)
+                  obj.Pars.(field) = p;
+                  obj.HasParsSaved.(field) = false;
+               else
+                  obj.HasParsSaved.(field) = isequal(obj.Pars.(field),p);
+               end
+               
+               if obj.HasParsSaved.(field)
+                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                     '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
+                     lower(type),field,obj.Name);
+                  return;
+               end 
+               obj.Pars.(field) = p;
+               nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                  '%s Pars.%s inherited from Parent\n',...
+                  obj.Name,field);
+            case {'initonly','init'} % Load only if .HasParsInit is false
+               if isfield(obj.HasParsInit,field)
+                  obj.HasParsInit.(field) = ...
+                     obj.HasParsInit.(field) && ...
+                     isfield(obj.Pars,field);
+               else
+                  obj.HasParsInit.(field) = false;
+                  obj.HasParsSaved.(field) = false;
+               end
+               if obj.HasParsInit.(field)
+                  flag = true;
+                  obj.HasParsSaved.(field) = true;
+                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                     '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
+                     lower(type),field,obj.Name);
+               else
+                  nigeLab.utils.cprintf(fmt,...
+                     '%sObj.Pars.%s (%s_Pars.mat) must be initialized\n\t',...
+                     lower(type),field,obj.Name);
+                  flag = obj.updateParams(field,'Direct');
+               end
+               p = obj.Pars.(field);
+               return;
+            case {'keeppars'} % Keep params over +defaults
+               doComparison = true;
+               p = nigeLab.defaults.(field)(); % Load parameter defaults
+            case {'loadonly'} % Load direct from _Pars.mat
+               nigeLab.utils.cprintf(fmt,...
+                  'Loading %sObj.Pars.%s directly from %s_Pars.mat\n\t',...
+                  lower(type),field,obj.Name);
+               flag = loadParams(obj,field);
+               if flag
+                  p = obj.Pars.(field);
+                  obj.HasParsInit.(field) = true;
+                  obj.HasParsSaved.(field) = true;
+               else % By default p is struct.empty
+                  return;
+               end
+            case {'direct'}  % Load direct from +defaults
+               p = nigeLab.defaults.(field)(); % Load parameter defaults
+               flag = true;
+               obj.HasParsInit.(field) = true;
+               if isfield(obj.Pars,field)
+                  obj.HasParsSaved.(field) = false;
+               else
+                  obj.HasParsSaved.(field) = ~isequal(obj.Pars.(field),p);
+               end
+               obj.Pars.(field) = p;
+               nigeLab.utils.cprintf(fmt,...
+                  'Loaded directly from +defaults/%s.m file\n',...
+                  field);
+            otherwise % Otherwise, it is not recognized
+               nigeLab.utils.cprintf('Errors*',...
+                  'Unrecognized "method" behavior: %s\n',method);
+               flag = false;
+               return;
+         end % switch lower(method)
+         
+         % If necessary, try to load (and compare) _Pars.mat
+         if doComparison
+            if loadParams(obj,field) % If successful load:
+               if isequal(obj.Pars.(field),p)
+                  nigeLab.utils.cprintf([0.35 0.35 0.35],...
+                     '%sObj.%s (%s_Pars.mat) parameters up-to-date\n',...
+                     lower(type),field,obj.Name);
+                  return; % No need to update anything else
+               end
+               % Otherwise, figure out what fields are missing or inequal
+               fcur = fieldnames(obj.Pars.(field));
+               fdef = fieldnames(p); % Default fieldnames (from file)
                fmiss = setdiff(fdef,fcur);
                if ~isempty(fmiss)
-                  % Then our loaded params are missing parameters
+                  % Then our loaded params are missing parameter variables
                   for i = 1:numel(fmiss)
-                     obj.Params.Pars.(paramType).(fmiss{i}) = p.(fmiss{i}); % So add
+                     obj.Params.Pars.(field).(fmiss{i}) = p.(fmiss{i}); % So add
                   end
-                  if isempty(obj.HasParsInit)
-                     obj.HasParsInit = struct;
-                  end
-                  obj.HasParsInit.(paramType) = true;
+                  obj.HasParsInit.(field) = true;
                   nigeLab.utils.cprintf(fmt,...
-                     '%s%s.Pars.%s was missing these fields:\n',...
-                     idt,obj.Name,paramType);
+                     '%sObj.Pars.%s (%s_Pars.mat) was missing:\n',...
+                     lower(type),field,obj.Name);
                   for i = 1:numel(fmiss)
-                     nigeLab.utils.cprintf(fmt(1:end-1),...
+                     nigeLab.utils.cprintf('[0.25 0.25 0.25]*',...
                         '\t%s<strong>%s</strong>\n',idt,fmiss{i});
                   end
+                  nigeLab.utils.cprintf(fmt,'\n%s[UPDATEPARAMS]: ',idt);
                   nigeLab.utils.cprintf(fmt,...
-                     '\n%sLoaded other parameters successfully\n\n',idt);
-                  nigeLab.utils.cprintf(fmt,...
-                     '\n%sSaving UPDATED %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                     idt,paramType,upper(type),obj.Name,obj.User);
-                  flag = obj.saveParams(obj.User,paramType);
-                  updateChildrenFlag = true;
-               else
-                  nigeLab.utils.cprintf(fmt(1:end-1),...
-                     '%s%s parameters [%s] up-to-date\n',...
-                     idt,paramType,type);
-                  updateChildrenFlag = false;
+                     ['Saving UPDATED %sObj.%s ' ...
+                     '(Name: ''%s'' || User: ''%s'')\n'],...
+                     lower(type),field,obj.Name,obj.User);
+                  obj.HasParsSaved.(field) = false;
+                  flag = obj.saveParams(obj.User,field);
+                  p = obj.Params.Pars.(field);
+                  
+               else % Otherwise, have all vars, but values are different
+                  switch lower(method)
+                     case 'keepdefs' % Keep values from defaults file
+                        flag = true;
+                        obj.Params.Pars.(field) = p;
+                        obj.HasParsSaved.(field) = false;
+                        obj.HasParsInit.(field) = true;
+                     case 'keeppars' % Keep values from pars file
+                        flag = true;
+                        p = obj.Params.Pars.(field); % For Children
+                        obj.HasParsSaved.(field) = true;
+                        obj.HasParsInit.(field) = true;
+                     otherwise
+                        error(['nigeLab:' mfilename ':BadCase'],...
+                           'Unexpected case: (%s); check code.\n',method);
+                  end
                end
             else % Otherwise, couldn't load params from User file
-               updateChildrenFlag = true;
-               obj.Params.Pars.(paramType) = p;
+               nigeLab.utils.cprintf('Errors*',...
+                  '%sObj.Pars.%s (%s_Pars.mat) failed to load.\n',...
+                  lower(type),field,obj.Name);
+               obj.Params.Pars.(field) = p;
                nigeLab.utils.cprintf(fmt,...
-                  '\n%sCould not load saved parameters.\n',idt);
-               nigeLab.utils.cprintf(fmt,...
-                  '%sSaving NEW %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                  idt,paramType,upper(type),obj.Name,obj.User);
-               if isempty(obj.HasParsInit)
-                  obj.HasParsInit = struct;
-               end
-               obj.HasParsInit.(paramType) = true;
-               flag = obj.saveParams(obj.User,paramType);
-            end
-         else            
-            % Parameters were loaded directly from defaults
-            if directParsFlag
-               updateChildrenFlag = isequal(p,obj.Params.Pars.(paramType));
-               if updateChildrenFlag
-                  obj.Params.Pars.(paramType) = p;
-                  if isempty(obj.HasParsInit)
-                     obj.HasParsInit = struct;
-                  end
-                  obj.HasParsInit.(paramType) = true;
-                  if ~isempty(obj.User)
-                     nigeLab.utils.cprintf(fmt,...
-                        '\n%sSaving PARENT %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                        idt,paramType,upper(type),obj.Name,obj.User);
-                     flag = obj.saveParams(obj.User,paramType);
-                  else
-                     flag = true;
-                  end
-               else
-                  nigeLab.utils.cprintf(fmt,...
-                        '\n%s%s params for %s are CURRENT\n',...
-                        idt,paramType,upper(type));
-                  obj.HasParsInit.(paramType) = true;
-                  flag = true;
-               end
-            else
-               updateChildrenFlag = true;
-               obj.Params.Pars.(paramType) = p;
-               if isempty(obj.HasParsInit)
-                  obj.HasParsInit = struct;
-               end
-               obj.HasParsInit.(paramType) = true;
-               if ~isempty(obj.User) && ~isempty(obj.SaveLoc)
-                  nigeLab.utils.cprintf(fmt,...
-                     '\n%sSaving DEFAULT %s params for %s (Name: ''%s'' || User: ''%s'')\n',...
-                     idt,paramType,upper(type),obj.Name,obj.User);
-                  flag = obj.saveParams(obj.User,paramType);
-               else
-                  flag = true;
-               end
+                  '\t%s(Loaded from +defaults/%s.m)\n',idt,field);
+               obj.HasParsInit.(field) = true;
+               obj.HasParsSaved.(field) = false;
+               flag = true;
             end
          end
          
-         if updateChildrenFlag
-            p = obj.Pars.(paramType);
-            for i = 1:numel(obj.Children)
+         % Pass parameters to children
+         for i = 1:numel(obj.Children)
+            if ~isempty(obj.Children(i))
                if isvalid(obj.Children(i))
-                  flag = flag && obj.Children(i).updateParams(paramType,p);
+                  flag = flag && obj.Children(i).updateParams(...
+                     field,'Inherit',obj.Pars.(field));
                end
             end
-         end
-         
+         end         
       end
       
    end
@@ -4398,7 +4544,7 @@ classdef nigelObj < handle & ...
                   else
                      if ~obj.HasParsInit.(parsField)
                         obj.HasParsInit.(parsField) = ...
-                           obj.updateParams(parsField,true);
+                           obj.updateParams(parsField,'Direct');
                      end
                   end
                end
@@ -5309,10 +5455,7 @@ classdef nigelObj < handle & ...
          else
             warning('Could not write FolderIdentifier (%s)',obj.IDFile);
             flag = false;
-         end
-         
-         flag = flag && obj.saveParams();
-         
+         end         
       end
       
       % Search for Children "_Obj.mat" files in SaveLoc path

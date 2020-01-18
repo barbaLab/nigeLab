@@ -209,7 +209,7 @@ classdef Tank < nigeLab.nigelObj
             tmp = tankObj.list;
             Status = tmp.Status;
          elseif isempty(operation)
-            operation = tankObj.Pars.Block.Fields;
+            operation = tankObj.Fields;
             Status = getStatus(tankObj,operation);
             return;
          else
@@ -219,12 +219,16 @@ classdef Tank < nigeLab.nigelObj
             end
             % Check status from each animal
             Status = false(max(numel(tankObj.Children),1),numel(operation));
-            for aa =1:numel(tankObj.Children)
-               tmp =  tankObj.Children(aa).getStatus(operation);
+            for iAnimal = 1:numel(tankObj.Children)
+               A = tankObj.Children(iAnimal);
+               tmp =  A.getStatus(operation);
                if numel(operation)==1
                   tmp=all(tmp,2); 
+               else
+                  B = A.Children;
+                  tmp = tmp | ~[B.IsMasked]';
                end
-               Status(aa,:) = all(tmp,1);
+               Status(iAnimal,:) = all(tmp,1) | ~A.IsMasked;
             end
          end
       end

@@ -223,14 +223,15 @@ classdef Animal < nigeLab.nigelObj
             flag = false(1,numel(opField));
             return;
          end
-         if numel(animalObj.Children)==0
+         B = animalObj.Children;
+         if numel(B)==0
             if isempty(opField)
                flag = false(1,numel(animalObj.Fields));
             else
                flag = false(1,numel(opField));
             end
          else
-            flag = getStatus(animalObj.Children,opField);
+            flag = getStatus(B,opField);
          end
       end
    end

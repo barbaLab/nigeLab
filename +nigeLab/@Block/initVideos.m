@@ -5,7 +5,7 @@ function flag = initVideos(blockObj)
 
 %% Get parameters associated with video
 flag = false; % Initialize to false
-[~,pars] = blockObj.updateParams('Video',true);
+[~,pars] = blockObj.updateParams('Video');
 if ~pars.HasVideo
    flag = true;
    return;
