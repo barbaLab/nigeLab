@@ -8,7 +8,12 @@ function parseProbes(animalObj)
 %  size has increased or if the number of non-empty Child Blocks is equal
 %  to the mask size.
 
-animalObj.updateParams('Animal');
+if ~isfield(animalObj.HasParsInit,'Animal')
+   animalObj.updateParams('Animal');
+elseif ~animalObj.HasParsInit.Animal
+   animalObj.updateParams('Animal');
+end
+
 if isempty(animalObj.Children)
    nigeLab.utils.cprintf('Comments',...
       'No child blocks of Animal: %s -- skipped probe parsing\n',...

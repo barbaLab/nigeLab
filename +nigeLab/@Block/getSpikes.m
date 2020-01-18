@@ -125,8 +125,10 @@ switch class(clusterIndex)
       
       switch lower(clusterType)
          case {'s','sort','sorted','sorts','sorting'}
+            clusterType = 'Sorted';
             c = blockObj.getSort(ch);
-         case {'clusters','clu','clust','cluster','clus','c','cl'}
+         case {'clusters','clu','clust','cluster','clustered','clus','c','cl'}
+            clusterType = 'Clustered';
             c = blockObj.getClus(ch);
          otherwise
             error(['nigeLab:' mfilename ':UnexpectedString'],...
@@ -140,8 +142,10 @@ switch class(clusterIndex)
       
       if isnumeric(clusterIndex)
          if getStatus(blockObj,'Sorted',ch)
+            clusterType = 'Sorted';
             c = blockObj.getSort(ch);
          elseif getStatus(blockObj,'Clusters',ch)
+            clusterType = 'Clustered';
             c = blockObj.getClus(ch);
          else
             return; % do nothing
@@ -152,7 +156,13 @@ switch class(clusterIndex)
             class(clusterIndex));
       end
 end
-
+if numel(c) ~= size(spikes,1)
+   error(['nigeLab:' mfilename ':DimensionMismatch'],...
+      ['[GETSPIKES]::[%s] There are %g %s group assignment elements ' ...
+       'for %g spikes on Channel P%g-%s.\n'],...
+      blockObj.Name,numel(c),clusterType,size(spikes,1),...
+      blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+end
 % Return the reduced subset of spikes
 spikes = spikes(ismember(c,clusterIndex),:);
 
