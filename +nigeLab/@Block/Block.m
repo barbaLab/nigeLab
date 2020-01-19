@@ -98,7 +98,7 @@ classdef Block < nigeLab.nigelObj
       Samples     double   % Total number of samples in original record
       Scoring     struct   % Metadata about any scoring done
       Status      struct   % Completion status for each element of BLOCK/FIELDS
-      Time        char     % Points to Time File
+      Time                 % nigeLab.libs.DiskData
    end
    
    % RESTRICTED:nigelObj
