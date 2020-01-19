@@ -59,10 +59,14 @@ switch class(target)
       % local - Serialized
       % local - Distributed
       % remote - Distributed
-      
-      if ~target.checkParsInit({'Queue','Notifications'})
-         [~,qPars] = target.updateParams('Queue');
-         [~,nPars] = target.updateParams('Notifications');
+      [fmt,idt,type] = target.getDescriptiveFormatting();
+      if ~target.checkParsInit({'Queue','Notifications','doActions'})
+         nigeLab.utils.cprintf('Errors*',...
+            '%s[QOPERATIONS]: ',idt);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            'Failed to initialize parameters for %s (%s)\n',...
+            target.Name,type);
+         return;
       else
          qPars = target.Pars.Queue;
          nPars = target.Pars.Notifications;
@@ -73,6 +77,7 @@ switch class(target)
          %% Configure remote or local cluster for correct parallel computation
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
                                 '(Parallel)');
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
          fprintf(1,'Initializing %s job: %s - %s\n',...
             lineLink,opLink,target.Name);
          if qPars.UseRemote
@@ -146,20 +151,19 @@ switch class(target)
             createTask(job,operation,0,{target});
          else
             % Will always run on _Block
-            fprintf(1,'\n->\tTarget: %s\n',target.File);
+            nigeLab.utils.cprintf(fmt,'\n\t%s[QOPERATIONS]: ',idt);
+            fprintf(1,'Target: %s\n',target.File);
             createTask(job,@qWrapper,0,{target.File});
          end
          submit(job);
-         if ~isempty(qPars.RemoteRepoPath)
-%             delete(c); % Delete configW.m (from Tempdir)
-%             delete(w); % Delete qWrapper.m (from pwd)
-         end
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
          fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
          
       else
          %% otherwise run single operation serially
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
                                 '(Non-Parallel)');
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
          fprintf(1,'%s Job running: %s - %s\n',...
             lineLink,opLink,target.Name);
          % (target is scalar nigeLab.Block)
@@ -205,7 +209,7 @@ switch class(target)
       
    otherwise
       error(['nigeLab:' mfilename ':badInputType2'],...
-         'Invalid target class: %s',class(target));
+         '[QOPERATIONS]: Invalid target class: %s',class(target));
 end
 drawnow;
 

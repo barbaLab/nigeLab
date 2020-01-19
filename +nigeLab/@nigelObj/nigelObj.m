@@ -771,7 +771,9 @@ classdef nigelObj < handle & ...
          end
          
          if ~isempty(obj.GUIContainer)
-            value = obj.GUIContainer;
+            if isvalid(obj.GUIContainer)
+               value = obj.GUIContainer;
+            end
          end
       end
       
@@ -1049,7 +1051,7 @@ classdef nigelObj < handle & ...
             return;
          end
          % Otherwise, update and save for later
-         obj.updateParams(obj.Type,true);
+         obj.updateParams(obj.Type);
          value = obj.getParams(obj.Type,'SaveLocDefault');
          if ~ischar(value)
             obj.Out.Default = 'P:\Rat\Intan';
@@ -1488,7 +1490,7 @@ classdef nigelObj < handle & ...
             f = F{iF};
             if isfield(obj.HasParsSaved,f)
                if ~obj.HasParsSaved.(f)
-                  obj.saveParams(f)
+                  flag = flag && obj.saveParams(obj.User,f);
                end
             end
          end
@@ -1631,8 +1633,19 @@ classdef nigelObj < handle & ...
             end
             obj.IsDashOpen = false;   % Set flag to false
          else
-            obj.GUIContainer = value; % Store association to handle object
-            obj.IsDashOpen = true;    % Set flag to true
+            if obj.IsDashOpen
+               obj.IsDashOpen = isvalid(value);
+               if ~obj.IsDashOpen
+                  value = [];
+               end
+               % Store association to handle object
+               obj.GUIContainer = value; 
+            else % Otherwise it is already open; no need to assign anything
+               if isvalid(value)
+                  figure(obj.GUI.nigelGUI);
+               end
+               return;
+            end
          end
          
          setChildProp(obj,'GUI',value);
@@ -3458,8 +3471,8 @@ classdef nigelObj < handle & ...
             elseif obj.HasParsSaved.(parsField) && ~forceSave
                flag = true;
                nigeLab.utils.cprintf(fmt,...
-                  '%s_Pars.mat is up-to-date for Pars.%s\n',...
-                  obj.Name,parsField);
+                  '%s is up-to-date for Pars.%s\n',...
+                  fname_params,parsField);
                return;
             end
          end
@@ -3476,8 +3489,8 @@ classdef nigelObj < handle & ...
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
                   nigeLab.utils.cprintf(fmt,...
-                     'Merging %sObj.Pars into %s_Pars.mat (User: %s)\n',...
-                     lower(type),obj.Name,userName);
+                     'Merging %sObj.Pars into %s (User: %s)\n',...
+                     lower(type),fname_params,userName);
                   for i = 1:numel(s_all)
                      if isfield(obj.Pars,s_all{i})
                         out.(userName).(s_all{i})=obj.Pars.(s_all{i});
@@ -3486,13 +3499,13 @@ classdef nigelObj < handle & ...
                   end
                case 'reset'
                   nigeLab.utils.cprintf(fmt,...
-                     'Clearing %s_Pars.mat (User: %s)\n',...
-                     type,obj.Name,userName);
+                     'Clearing %s (User: %s)\n',...
+                     type,fname_params,userName);
                   out.(userName)=struct;
                otherwise
                   nigeLab.utils.cprintf(fmt,...
-                     'Overwriting Pars.%s in %s_Pars.mat (User: %s)\n',...
-                     type,obj.Name,userName);
+                     'Overwriting Pars.%s in %s (User: %s)\n',...
+                     type,fname_params,userName);
                   out.(userName).(parsField)=obj.getParams(parsField);
                   obj.HasParsSaved.(parsField) = true;
             end
@@ -4200,7 +4213,7 @@ classdef nigelObj < handle & ...
          if nargin < 3
             evt = nigeLab.evt.dashChanged('Requested');
          end
-         doRequest = strcmpi(evt.Type,'Requested') && ~obj.IsDashOpen;
+         doRequest = strcmpi(evt.Type,'Requested');
          if ~doRequest
             return;
          end
@@ -4214,7 +4227,19 @@ classdef nigelObj < handle & ...
             case 'Tank'
                % Note that nigeLab.libs.DashBoard constructor is only
                % available from tankObj method nigeLab.nigelObj/nigelDash.
-               obj.GUI = nigeLab.libs.DashBoard(obj);
+               if ~obj.IsDashOpen
+                  obj.GUI = nigeLab.libs.DashBoard(obj);
+               else
+                  if isvalid(obj.GUI)
+                     if isprop(obj.GUI,'nigelGUI')
+                        figure(obj.GUI.nigelGUI);
+                     else
+                        obj.GUI = nigeLab.libs.DashBoard(obj);
+                     end
+                  else
+                     obj.GUI = nigeLab.libs.DashBoard(obj);
+                  end
+               end
                % --> This is INTENTIONAL, so that the object corresponding
                %     to the figure is always "cleaned up" from the base
                %     workspace upon DashBoard destruction.
@@ -4511,29 +4536,68 @@ classdef nigelObj < handle & ...
       end
       
       % Check params to make sure they're initialized
-      function flag = checkParsInit(obj,parsField)
+      function parsAllReady = checkParsInit(obj,parsField)
          %CHECKPARSINIT  Check parameters to make sure they are initialized
          %                 and if not, then do so.
          %
-         %  flag = obj.checkParsInit(); Check all parameters
-         %  flag = obj.checkParsInit(parsField);  Just parsField
+         %  parsAllReady = obj.checkParsInit(); Check all parameters
+         %  --> Equivalent to parsField = [];
+         %  parsAllReady = obj.checkParsInit(parsField);  Just parsField
          %
-         %  flag  --  Return true if completed successfully
+         %  parsAllReady  --  Return true if parameters are ready to use
+         %  --> If object is empty, this will return true as well
          
-         flag = false;
+         if nargin < 2
+            parsField = [];
+         end
+         
+         if numel(obj) > 1
+            parsAllReady = true;
+            for i = 1:numel(obj)
+               parsAllReady = parsAllReady && ...
+                  checkParsInit(obj,parsField);
+            end
+            return;
+         end
+         
+         if isempty(obj) % Skip it if it is empty, but don't fail check
+            parsAllReady = true;
+            return;
+         end
+         
          if isempty(obj.HasParsInit)
-            obj.updateParams('init');
+            parsAllReady = obj.updateParams('init');
          else
-            parsAllReady=obj.updateParams('check');
+            parsAllReady = obj.updateParams('check');
             if ~parsAllReady % If some weren't initialized
-               if nargin < 2
+               if isempty(parsField)
                   F = fieldnames(obj.HasParsInit).';
                else
                   parsField = reshape(parsField,1,numel(parsField));
                   F = intersect(parsField,fieldnames(obj.HasParsInit));
                   f_miss = setdiff(parsField,fieldnames(obj.HasParsInit));
-                  for f = f_miss
-                     obj.updateParams(f_miss,true);
+                  parsAllReady = true;
+                  for i = 1:numel(f_miss)
+                     parsAllReady = parsAllReady && ...
+                        obj.updateParams(f_miss{i},'Direct');
+                  end
+                  F = intersect(parsField,fieldnames(obj.HasParsInit));
+                  if ~parsAllReady
+                     f_miss = setdiff(parsField,F);
+                     [fmt,idt,type] = obj.getDescriptiveFormatting();
+                     nigeLab.utils.cprintf(fmt,...
+                        ['%s[CHECKPARSINIT]: %s (%s) ' ...
+                         'failed to initialize these parameters-\n'],...
+                         idt,obj.Name,type);
+                     for i = 1:numel(f_miss)
+                        nigeLab.utils.cprintf('[0.40 0.40 0.40]*',...
+                           '\t%s%s\n',idt,f_miss{i});
+                     end
+                     return;
+                  else
+                     % Make sure it is saved in case this is during check
+                     % prior to sending to remote workers
+                     save(obj);
                   end
                end
                for f = F
@@ -4550,7 +4614,6 @@ classdef nigelObj < handle & ...
                end
             end
          end
-         flag = true;
       end
       
       % Overload for matlab.mixin.CustomDisplay.displayNonscalarObject

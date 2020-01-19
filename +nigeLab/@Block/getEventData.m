@@ -82,7 +82,7 @@ elseif isempty(field)
 end
 
 if nargin < 3 % prop was not provided
-   prop = 'value';
+   prop = 'value'; % Equivalent to "cluster" for clusters/sorted data
 else
    prop = lower(prop);
 end
@@ -110,8 +110,6 @@ end
 if nargin < 6 % matchValue was not provided
    matchValue = nan;
 end
-
-
 
 % ITERATE ON MULTIPLE CHANNELS
 if isnumeric(ch)

@@ -41,7 +41,7 @@ end
       %                     format.
       
       try
-         nonEmpty = blockObj.Channels(ch).(type).checkSize();
+         nonEmpty = checkSize(blockObj.Channels(ch).(type));
          if nonEmpty
             out = blockObj.Channels(ch).(type).(field);
          else

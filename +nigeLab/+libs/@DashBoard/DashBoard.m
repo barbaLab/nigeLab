@@ -49,6 +49,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       nigelButtons         (1,1) struct = struct('Tree',[],'TitleBar',[])   % Each field is an array of nigelButtons
       RecapAxes                              % "Recap" circles container
       RecapTable                             % "Recap" table
+      Status                                 % Logical status matrix represented by RecapAxes rectangles
       splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI   % interface to split multiple animals
       
       
@@ -994,6 +995,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          cla(obj.RecapAxes);
          
+         if nargin < 2
+            error(['nigeLab:' mfilename ':TooFewInputs'],...
+               '[PLOTRECAPCIRCLE]: Must provide `Status` input array');            
+         end
+         
          if nargin < 3
             N = 1;
          end
@@ -1014,6 +1020,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          h = obj.getHighestLevelNigelObj();
          switch class(Status)
             case 'cell'
+               obj.Status = Status;
                % If it's a cell, this was a single block
                xlim(obj.RecapAxes,[1 nField+1]);
                ylim(obj.RecapAxes,[1 N+1]);
@@ -1094,6 +1101,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end % ii
                
             case 'logical'
+               obj.Status = Status;
                % Then "channels" are condensed (multi-block, animal, or
                % tank selection)
                [N,~] = size(Status);
@@ -1170,9 +1178,20 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          idx = evt.BlockSelectionIndex;
          obj.Tank.Children(idx(1)).Children(idx(2)).reload;
          obj.Tank.Children(idx(1)).Children(idx(2)).IsDashOpen = true;
-         selEvt = struct('Nodes',obj.Tree.SelectedNodes,...
-            'AddedNodes',obj.Tree.SelectedNodes);
-         obj.treeSelectionFcn(obj.Tree, selEvt)
+         allAnimalNodes = get(obj.Tree.Root,'Children');
+         if iscell(allAnimalNodes)
+            allAnimalNodes = horzcat(allAnimalNodes{:});
+         end
+         allBlockNodes = get(allAnimalNodes,'Children');
+         if iscell(allBlockNodes)
+            allBlockNodes = horzcat(allBlockNodes{:});
+         end
+         block2update = findobj(allBlockNodes,'UserData',idx);
+         selEvt = struct(...
+            'Nodes',cat(1,obj.Tree.SelectedNodes,block2update),...
+            'AddedNodes',block2update);
+         obj.treeSelectionFcn([],selEvt);
+         
       end
       
       % "Reload" the tank (likely multi-animal-related)
@@ -1240,7 +1259,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          tt = obj.Tank.list;
          tCell = table2cell(tt);
-         Status = obj.Tank.getStatus(obj.Fields);
+         status = obj.Tank.getStatus(obj.Fields);
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1258,7 +1277,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
          a = [obj.Tank.Children];
-         plotRecapCircle(obj,Status,1,[a.IsMasked]);
+         plotRecapCircle(obj,status,numel(a),[a.IsMasked]);
       end
       
       % Set the "ANIMAL" table -- the display showing processing status
@@ -1280,11 +1299,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          end
          f = A(1).Children(1).Fields;
          tCell = [];
-         Status = [];
+         status = [];
          for ii=1:numel(A)
             tt = A(ii).list;
             tCell = [tCell; table2cell(tt)];
-            Status = [Status; A(ii).getStatus(obj.Fields)];
+            status = [status; A(ii).getStatus(obj.Fields)];
          end
          nonStatusCols = ~strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,nonStatusCols);
@@ -1310,7 +1329,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             b = [A.Children];
             mask = [b.IsMasked];
          end
-         plotRecapCircle(obj,Status,N,mask);
+         plotRecapCircle(obj,status,N,mask);
       end
       
       % Set the "BLOCK" table -- the display showing processing status
@@ -1339,13 +1358,13 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          tCell = table2cell(tt);
          s = getStatus(B,obj.Fields);
          if numel(B) == 1
-            Status = cell(size(s));
+            status = cell(size(s));
             iCh = B.getFieldTypeIndex('Channels');
-            for i = 1:numel(Status)
+            for i = 1:numel(status)
                if iCh(i)
-                  Status{i} = B.getStatus(obj.Fields{i});
+                  status{i} = B.getStatus(obj.Fields{i});
                else
-                  Status{i} = s(i);
+                  status{i} = s(i);
                end
             end
             nCh = B.NumChannels;
@@ -1356,7 +1375,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                mask = false(size(vec));
             end
          else
-            Status = s;
+            status = s;
             nCh = 1;
             mask = [B.IsMasked];
          end
@@ -1370,7 +1389,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         plotRecapCircle(obj,Status,nCh,mask);
+         plotRecapCircle(obj,status,nCh,mask);
          
       end
       
@@ -1438,7 +1457,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       end
       
       % Function for interfacing with the tree based on current selection
-      function treeSelectionFcn(obj,Tree,Nodes)
+      function treeSelectionFcn(obj,Tree,nodeEvent)
          % TREESELECTIONFCN  Interfaces with the Tree based on the current
          %                   selection. Used as SELECTIONCHANGEDFCN for
          %                   uiw.widget.Tree 'SelectionChanged' event
@@ -1448,18 +1467,24 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %
          %  obj  --  nigeLab.libs.DashBoard class object
          %  Tree  --  "Source" object
-         %  Nodes  --  "EventData" that has field .AddedNodes, which can be
-         %             used in combination with .UserData to figure out
-         %             which Animal and Block combinations were selected.
+         %  nodeEvent  --  "EventData" that has field .AddedNodes, which 
+         %                 can be used in combination with .UserData to 
+         %                 figure out which Animal and Block combinations 
+         %                 were selected.
+         %
+         %     --> nodeEvent.Nodes      :  Currently-selected nodes
+         %     --> nodeEvent.AddedNodes :  New nodes
          
+         if isempty(Tree)
+            Tree = obj.Tree;
+         end
          
-         NumNewNodes = numel(Nodes.AddedNodes);
+         NumNewNodes = numel(nodeEvent.AddedNodes);
          % Get UserData indexing all OLD nodes (from previous selection)
-         OldNodeType = unique(...
-            cellfun(@(x) numel(x), ...
-            {Nodes.Nodes(1:(end-NumNewNodes)).UserData}));
+         OldNodeType = min( cellfun(@(x) numel(x), ...
+            {nodeEvent.Nodes(1:(end-NumNewNodes)).UserData}));
          % Get UserData indexing ALL nodes
-         AllNodeType =  cellfun(@(x) numel(x), {Nodes.Nodes.UserData});
+         AllNodeType =  cellfun(@(x) numel(x), {nodeEvent.Nodes.UserData});
          
          % Prevent bad concatenation things
          NodesToRemove = not(AllNodeType==OldNodeType);
@@ -1468,9 +1493,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          SelectedItems = cat(1,Tree.SelectedNodes.UserData);
          obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
          [blockObj,animalObj] = obj.getSelectedItems('obj');
-         
-         
-         switch  unique(cellfun(@(x) numel(x), {Tree.SelectedNodes.UserData}))
+
+         switch  size(SelectedItems,2) % After cat they will have same #
             case 0  % tank
                setTankTable(obj);
                setParamsTable(obj,obj.Tank);

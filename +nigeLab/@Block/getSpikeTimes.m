@@ -1,5 +1,5 @@
 function ts = getSpikeTimes(blockObj,ch,clusterIndex)
-%% GETSPIKETIMES  Retrieve list of spike times (seconds)
+%GETSPIKETIMES  Retrieve list of spike times (seconds)
 %
 %  ts = GETSPIKETIMES(blockObj,ch);
 %  ts = GETSPIKETIMES(blockObj,ch,class);
@@ -31,10 +31,8 @@ function ts = getSpikeTimes(blockObj,ch,clusterIndex)
 %     ts       :     Vector of spike times (sec)
 %                    -> If ch is a vector, returns a cell array of
 %                       corresponding spike sample times.
-%
-% By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% PARSE INPUT
+% PARSE INPUT
 if nargin < 2
    ch = 1:blockObj(1).NumChannels;
 end
@@ -43,13 +41,20 @@ if nargin < 3
    clusterIndex = nan;
 end
 
-%% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
+% ITERATE ON MULTIPLE CHANNELS
 if (numel(ch) > 1)
    ts = cell(size(ch));
    if numel(clusterIndex)==1
       clusterIndex = repmat(clusterIndex,1,numel(ch));
    elseif numel(clusterIndex) ~= numel(ch)
-      error('Clusters (%d) must match number of channels (%d).');
+      [fmt,idt,~] = blockObj.getDescriptiveFormatting();
+      nigeLab.utils.cprintf('Errors*',...
+         '%s[GETSPIKETIMES]::%s ',idt,blockObj.Name);
+      nigeLab.utils.cprintf(fmt(1:(end-1)),...
+         'Clusters (%d) must match number of channels (%d).',...
+         numel(clusterIndex),numel(ch));
+      ts = [];
+      return;
    end
    for ii = 1:numel(ch)
       ts{ii} = getSpikeTimes(blockObj,ch(ii),clusterIndex(ii)); 
@@ -57,7 +62,7 @@ if (numel(ch) > 1)
    return;
 end
 
-%% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
+% ITERATE ON MULTIPLE BLOCKS
 if numel(blockObj) > 1
    ts = [];
    for ii = 1:numel(blockObj)
@@ -66,10 +71,17 @@ if numel(blockObj) > 1
    return;
 end
 
-%% GET SPIKE PEAK SAMPLES AND CONVERT TO TIMES
-if isnan(clusterIndex(1))
+% GET SPIKE PEAK SAMPLES AND CONVERT TO TIMES
+if isempty(clusterIndex)
+   ts = getEventData(blockObj,'Spikes','ts',ch);
+elseif isnan(clusterIndex)
+   ts = getEventData(blockObj,'Spikes','ts',ch);
+elseif strcmpi(clusterIndex,'all')
    ts = getEventData(blockObj,'Spikes','ts',ch);
 else
    ts = getEventData(blockObj,'Spikes','ts',ch,'tag',clusterIndex);
+end
+if isempty(ts)
+   ts = zeros(0,1);
 end
 end

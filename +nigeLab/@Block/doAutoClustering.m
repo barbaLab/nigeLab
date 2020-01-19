@@ -2,12 +2,17 @@ function flag = doAutoClustering(blockObj,chan,unit,useSort)
 %DOAUTOCLUSTERING  Cluster spikes based on extracted waveform features
 %
 % b = nigeLab.Block;
+% To specify a single channel:
 % chan = 1;
 % b.doAutoClustering(chan);
 %
-% To recluster a single unit already sorted in the past:
+% To recluster a single unit already CLUSTERED in the past:
 % unit = 1;
 % b.doAutoClustering(chan,unit);
+%
+% To recluster a single unit already SORTED in the past:
+% unit = 1;
+% b.doAutoClustering(chan,unit,true);
 %
 %  --------
 %   OUTPUT
@@ -44,10 +49,15 @@ else
 end
 [~,par] = blockObj.updateParams('AutoClustering');
 blockObj.checkActionIsValid();
-
+SuppressText = ~blockObj.Verbose; 
 % runs automatic clustering algorithms
-if strcmpi(unit,'all') % Returns false if unit is numeric
+if isempty(unit)
    unit = 0:par.NMaxClus;
+elseif strcmpi(unit,'all') % Returns false if unit is numeric
+   unit = 0:par.NMaxClus;
+elseif ischar(unit)
+   error(['nigeLab:' mfilename ':BadString'],...
+      'Unexpected "unit" value: %s (should be ''all'' or numeric)\n',unit);
 end
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
@@ -80,12 +90,11 @@ for iCh = chan
          inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',nan});
       end
    end
+   classes =  blockObj.getClus(iCh,SuppressText);
    if isempty(inspk)
-      saveClusters(blockObj,[],iCh,[]);
+      saveClusters(blockObj,classes,iCh,nan);
       continue;
    end
-   SuppressText = true;
-   classes =  blockObj.getClus(iCh,SuppressText);
    
    % if unit is porvided, match sikes and classes with the unit
    SubsetIndx = ismember(classes,unit);

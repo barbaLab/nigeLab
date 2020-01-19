@@ -418,6 +418,22 @@ classdef DiskData < handle
          Out = 'obj';
          readDat=true;
          
+         if isempty(obj)
+            warning('Invalid reference: DiskData object is empty.');
+            varargout = cell(1,nargout);
+            return;
+         elseif ~isvalid(obj)
+            warning('Invalid reference: DiskData object is invalid.');
+            varargout = cell(1,nargout);
+            return;
+         end
+         
+         if exist(obj.diskfile_.Properties.Source,'file')==0
+            warning('No such file: %s\n',obj.diskfile_.Properties.Source);
+            varargout = cell(1,nargout);
+            return;
+         end
+         
          switch obj.type_
             case 'Event'
                switch S(1).type
@@ -621,6 +637,15 @@ classdef DiskData < handle
       
       function obj = subsasgn(obj,S,b)
          % SUBSASGN    Overloaded function for DiskData array assignment
+         
+         if isempty(obj)
+            warning('Assignment canceled: DiskData object is empty.');
+            return;
+         elseif ~isvalid(obj)
+            warning('Assignment canceled: DiskData object is invalid.');
+            return;
+         end
+         
          if ~obj.writable_
             warning('Improper assignment.');
             nigeLab.utils.cprintf('Keywords','For reference:\n'); ...
@@ -629,9 +654,9 @@ classdef DiskData < handle
             lck_str = nigeLab.utils.getNigeLink(...
                'nigeLab.libs.DiskData','lockData','lockData');
             fprintf(1,'-->\t%s\n-->\t%s\n',ulck_str,lck_str); 
-            error('DiskData object constructed as read-only.');
+            error(['nigeLab:' mfilename ':BadDiskFile'],...
+               'DiskData object constructed as read-only.');
          end
-         
          tmp = obj.diskfile_.(obj.name_);
          for ii=1:numel(S)
             switch S(ii).type
@@ -917,6 +942,23 @@ classdef DiskData < handle
       
       function Out=disp(obj)
          %DISP  Overloaded function for printing DiskData elements to command window
+         
+         if isempty(obj)
+            warning('Invalid reference: DiskData object is empty.');
+            Out = [];
+            return;
+         elseif ~isvalid(obj)
+            warning('Invalid reference: DiskData object is invalid.');
+            Out = [];
+            return;
+         end
+         
+         if exist(obj.diskfile_.Properties.Source,'file')==0
+            warning('No such file: %s\n',obj.diskfile_.Properties.Source);
+            Out = [];
+            return;
+         end
+         
          switch obj.type_
             case 'Hybrid'
                if nargout>0
@@ -1003,8 +1045,16 @@ classdef DiskData < handle
          %  --> Ensures orientation of data on DISKFILE is consistent with
          %      the value returned by obj.size
          %  --> Returns TRUE if data on DISKFILE is NON-EMPTY
+         %
+         %  Note: If DISKFILE <strong>does not exist</strong>, then
+         %        checkSize returns false.
          
+         if exist(obj.diskfile_.Properties.Source,'file')==0
+            flag = false;
+            return;
+         end
          a = obj.diskfile_.(obj.name_);
+         
          sz = size(a);
          for ii = 1:numel(obj.size_)
             if obj.size_(ii) ~= sz(ii)
