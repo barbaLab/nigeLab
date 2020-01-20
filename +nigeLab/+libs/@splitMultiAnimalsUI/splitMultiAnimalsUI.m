@@ -18,7 +18,7 @@ classdef splitMultiAnimalsUI < handle
       DashObj                    nigeLab.libs.DashBoard
       AcceptBtn                  matlab.ui.control.UIControl % pushbutton
       ApplyToAllBtn              matlab.ui.control.UIControl % pushbutton
-      Tree                       uiw.widget.Tree
+      Tree                       % uiw.widget.Tree
       panel                      matlab.ui.container.Panel
       btnPanel                   matlab.ui.container.Panel
       

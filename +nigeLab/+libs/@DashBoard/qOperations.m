@@ -76,9 +76,9 @@ switch class(target)
       if obj.Tank.UseParallel
          %% Configure remote or local cluster for correct parallel computation
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
-                                '(Parallel)');
+                                'Parallel');
          nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
-         fprintf(1,'Initializing %s job: %s - %s\n',...
+         fprintf(1,'Initializing (%s) job: %s - %s\n',...
             lineLink,opLink,target.Name);
          if qPars.UseRemote
             if isfield(qPars,'Cluster')
@@ -151,20 +151,20 @@ switch class(target)
             createTask(job,operation,0,{target});
          else
             % Will always run on _Block
-            nigeLab.utils.cprintf(fmt,'\n\t%s[QOPERATIONS]: ',idt);
+            nigeLab.utils.cprintf(fmt,'\t%s[QOPERATIONS]: ',idt);
             fprintf(1,'Target: %s\n',target.File);
             createTask(job,@qWrapper,0,{target.File});
          end
          submit(job);
          nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
-         fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
+         fprintf(1,'(%s) Job running: %s - %s\n',lineLink,opLink,target.Name);
          
       else
          %% otherwise run single operation serially
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
-                                '(Non-Parallel)');
+                                'Non-Parallel');
          nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
-         fprintf(1,'%s Job running: %s - %s\n',...
+         fprintf(1,'%s Job running: (%s) - %s\n',...
             lineLink,opLink,target.Name);
          % (target is scalar nigeLab.Block)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...

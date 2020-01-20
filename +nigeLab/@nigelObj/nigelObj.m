@@ -114,7 +114,7 @@ classdef nigelObj < handle & ...
    end
    
    % DEPENDENT,TRANSIENT,PUBLIC (GUI)
-   properties (Dependent,Transient,Access=public)
+   properties (Dependent,Hidden,Transient,Access=public)
       GUI         nigeLab.libs.DashBoard   % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
       SortGUI     nigeLab.Sort   % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
    end
@@ -128,13 +128,13 @@ classdef nigelObj < handle & ...
    properties (Hidden,AbortSet,SetObservable,Access=public)
       InBlindMode(1,1)logical = false  % True if "blind mode" is activated
       IsEmpty    (1,1)logical = false  % True if no data in this (e.g. Empty() method used)
-      IsDashOpen (1,1)logical = false  % Is nigeLab.libs.DashBoard GUI open?
       IsMasked   (1,1)logical = true   % true --> obj is "enabled"
       Verbose    (1,1)logical = true   % Display debug output?
    end
    
-   % HIDDEN,ABORTSET,PROTECTED (Flags)
-   properties (Hidden,AbortSet,Access=protected)
+   % HIDDEN,TRANSIENT,ABORTSET,PUBLIC (Flags)
+   properties (Hidden,Transient,AbortSet,Access=public)
+      IsDashOpen (1,1)logical         % Is nigeLab.libs.DashBoard GUI open?
       RemoteFlag (1,1)logical = false % "Container" for .OnRemote prop
    end
    
