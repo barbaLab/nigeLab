@@ -74,7 +74,7 @@ classdef nigelObj < handle & ...
    % DEPENDENT,PUBLIC
    properties (Dependent,Access=public)
       File        char        % Full file of _Block.mat, _Animal.mat, or _Tank.mat file
-      GUI                     % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
+      GUI         nigeLab.libs.DashBoard   % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
       Input       char        % Path to input file or folder
       Name        char        % Name of the obj (char array)
       OnRemote   (1,1)logical % Is this object running a job on remote worker?
@@ -82,7 +82,7 @@ classdef nigelObj < handle & ...
       Pars   (1,1)struct      % Parameters struct
       Paths  (1,1)struct      % Detailed paths specifications
       ShortFile   char        % Shortened filename
-      SortGUI                 % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
+      SortGUI     nigeLab.Sort   % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
       Type        char        %'Block', 'Animal' or 'Tank'
    end
    
@@ -138,10 +138,10 @@ classdef nigelObj < handle & ...
    properties (Hidden,Transient,Access=public)
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
-      GUIContainer                              % Container for handle to GUI (nigeLab.libs.DashBoard)
+      GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
-      SortGUIContainer                          % Container for handle to Spike Sorting GUI (nigeLab.Sort)
+      SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
    end
    
    % HIDDEN,PUBLIC (Index)
@@ -2953,7 +2953,7 @@ classdef nigelObj < handle & ...
          end
          
          if ~isfield(obj.Pars,parsField)
-            varargout{1} = [];
+            varargout{1} = struct.empty;
             return;
          end
          s = obj.Pars.(parsField);
@@ -3461,6 +3461,9 @@ classdef nigelObj < handle & ...
             flag = true;
             return;
          end
+         [pname,fname,ext] = fileparts(fname_params);
+         pname = nigeLab.utils.shortenedPath(strrep(pname,'\','/'));
+         fname = nigeLab.utils.shortenedName([fname ext]);
          
          [fmt,idt,type] = obj.getDescriptiveFormatting();
          nigeLab.utils.cprintf(fmt,'%s[SAVEPARAMS]: ',idt);
@@ -3481,16 +3484,20 @@ classdef nigelObj < handle & ...
             out = struct;
             out.(userName) = obj.Pars;
             nigeLab.utils.cprintf(fmt,...
-               'Creating new %sObj.Pars file: %s (User: %s)\n',...
-               lower(type),fname_params,userName);
+               'Creating new %sObj.Pars file: %s/%s (User: %s)\n',...
+               lower(type),pname,fname,userName);
+            f = fieldnames(obj.Pars);
+            for i = 1:numel(f)
+               obj.HasParsSaved.(f{i}) = true;
+            end
          else
             out = load(fname_params,userName);
             switch parsField
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
                   nigeLab.utils.cprintf(fmt,...
-                     'Merging %sObj.Pars into %s (User: %s)\n',...
-                     lower(type),fname_params,userName);
+                     'Merging %sObj.Pars into %s/%s (User: %s)\n',...
+                     lower(type),pname,fname,userName);
                   for i = 1:numel(s_all)
                      if isfield(obj.Pars,s_all{i})
                         out.(userName).(s_all{i})=obj.Pars.(s_all{i});
@@ -3499,13 +3506,13 @@ classdef nigelObj < handle & ...
                   end
                case 'reset'
                   nigeLab.utils.cprintf(fmt,...
-                     'Clearing %s (User: %s)\n',...
-                     type,fname_params,userName);
+                     'Clearing %s/%s (User: %s)\n',...
+                     type,pname,fname,userName);
                   out.(userName)=struct;
                otherwise
                   nigeLab.utils.cprintf(fmt,...
-                     'Overwriting Pars.%s in %s (User: %s)\n',...
-                     type,fname_params,userName);
+                     'Overwriting Pars.%s in %s/%s (User: %s)\n',...
+                     type,pname,fname,userName);
                   out.(userName).(parsField)=obj.getParams(parsField);
                   obj.HasParsSaved.(parsField) = true;
             end
@@ -3768,6 +3775,13 @@ classdef nigelObj < handle & ...
          %  Sort(obj);
          %  --> Sets obj.SortGUI to nigeLab.Sort class object
          
+         % Make sure that parameters have been set
+         if ~isfield(obj.HasParsInit,'Sort')
+            obj.updateParams('Sort','Direct');
+         elseif ~obj.HasParsInit.Sort
+            obj.updateParams('Sort','KeepPars');
+         end
+         % Update the `SortGUI` property
          set(obj,'SortGUI',nigeLab.Sort(obj));
       end
       
@@ -4021,10 +4035,10 @@ classdef nigelObj < handle & ...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                else
-                  flag = obj.updateParams(field,'Direct');
                   nigeLab.utils.cprintf(fmt,...
-                     '%sObj.Pars.%s (%s_Pars.mat) must be initialized\n\t',...
-                     lower(type),field,obj.Name);
+                     '%sObj.Pars.%s must be initialized\n\t',...
+                     lower(type),field);
+                  flag = obj.updateParams(field,'Direct');
                end
                p = obj.Pars.(field);
                return;

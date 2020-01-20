@@ -68,23 +68,43 @@ classdef Sort < handle
          %  sortObj = nigeLab.Sort;
          %  sortObj = nigeLab.Sort(nigelObj);                       
          
-         % Initialize parameters
-         if ~initParams(sortObj)
-            error(['nigeLab:' mfilename ':BadInit'],...
-                  'Could not set parameters for sortObj.');
-         end
-         
          % Initialize input data
          if nargin > 0
+            if isnumeric(nigelObj) % Initialize
+               dims = nigelObj;
+               sortObj = repmat(sortObj,dims);
+               return;
+            end
+            
+            % Initialize parameters
+            if ~initParams(sortObj,nigelObj)
+               error(['nigeLab:' mfilename ':BadInit'],...
+                     'Could not set parameters for sortObj.');
+            end
+            
             if ~initData(sortObj,nigelObj)
                error(['nigeLab:' mfilename ':BadInit'],...
                   'sortObj array not created successfully.');
             end
-         else
-            if ~initData(sortObj)
-               error(['nigeLab:' mfilename ':BadInit'],...
-                  'sortObj array not created successfully.');
-            end
+%          else       % Note: it is no longer possible to call `Sort`
+%                     %       constructor from Command Window directly; has
+%                     %       to be called via a `nigelObj` method
+%                     %       2020-01-20 -MM
+%
+%             % Initialize parameters
+%             if ~initParams(sortObj)
+%                error(['nigeLab:' mfilename ':BadInit'],...
+%                      'Could not set parameters for sortObj.');
+%             end
+%             % And then initialize data
+%             if ~initData(sortObj)
+%                error(['nigeLab:' mfilename ':BadInit'],...
+%                   'sortObj array not created successfully.');
+%             end
+         else % Therefore, if it is given without inputs, it is for init
+            sortObj = nigeLab.Sort([0,0]); % Empty
+            close(gcf);
+            return;
          end
          
          % Initialize graphical interface
@@ -98,7 +118,7 @@ classdef Sort < handle
       end
    end
       
-   % NO ATTRIBUTES (contructor & overloaded methods)
+   % NO ATTRIBUTES (overloaded methods)
    methods      
       % Overloaded `delete` method
       function delete(sortObj)
@@ -188,7 +208,7 @@ classdef Sort < handle
    
    % PROTECTED
    methods (Access=protected)      
-      flag = initParams(sortObj); % Initialize general parameters
+      flag = initParams(sortObj,nigelObj); % Initialize general parameters
       flag = initData(sortObj,nigelObj); % Initialize data structures
       flag = initUI(sortObj); % Initializes spike scoring UI parameters
       

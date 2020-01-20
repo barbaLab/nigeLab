@@ -104,14 +104,19 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          % Check input
          if nargin < 1
-            % Allow selection of TANK if not assigned directly
-            tankObj = nigeLab.Tank();
+            obj = nigeLab.libs.DashBoard([0,0]); % Empty DashBoard
+            close(gcf); % If a figure is opened
+            return; % Should always be called from tankObj anyways
+         elseif isnumeric(tankObj)
+            dims = tankObj;
+            obj = repmat(obj,dims);
+            return;
          end
          
          % Add current path and initialize properties
          addpath(pwd); % (In case path is changed while GUI is open)
          obj.Tank = tankObj;
-         obj.initRefProps();
+         obj.Color = nigeLab.libs.DashBoard.initColors();
          
          % Build figure and all container panels 
          obj.nigelGUI = obj.buildGUI();
@@ -221,41 +226,103 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       % % % GET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT] Return .Fields property
       function value = get.Fields(obj)
+         if isempty(obj.Tank)
+            value = {};
+            return;
+         end
          value = obj.Tank.Fields;
       end
       
       % [DEPENDENT] Return .FieldType property
       function value = get.FieldType(obj)
+         if isempty(obj.Tank)
+            value = {};
+            return;
+         end
          value = obj.Tank.FieldType;
       end
       
       % [DEPENDENT] Return .ParametersPanel property
       function value = get.ParametersPanel(obj)
+         value = [];
+         if isempty(obj.Children)
+            return;
+         elseif numel(obj.Children) < 4
+            return;
+         elseif ~iscell(obj.Children)
+            return;
+         elseif ~isvalid(obj.Children{4})
+            return;
+         end  
          value = obj.Children{4};
       end
       
       % [DEPENDENT] Return .QueuePanel property
       function value = get.QueuePanel(obj)
+         value = [];
+         if isempty(obj.Children)
+            return;
+         elseif numel(obj.Children) < 3
+            return;
+         elseif ~iscell(obj.Children)
+            return;
+         elseif ~isvalid(obj.Children{3})
+            return;
+         end  
          value = obj.Children{3};
       end
       
       % [DEPENDENT] Return .StatsPanel property
       function value = get.StatsPanel(obj)
+         value = [];
+         if isempty(obj.Children)
+            return;
+         elseif numel(obj.Children) < 2
+            return;
+         elseif ~iscell(obj.Children)
+            return;
+         elseif ~isvalid(obj.Children{2})
+            return;
+         end  
          value = obj.Children{2};
       end
       
       % [DEPENDENT] Return .TreePanel property
       function value = get.TreePanel(obj)
+         value = [];
+         if isempty(obj.Children)
+            return;
+         elseif numel(obj.Children) < 1
+            return;
+         elseif ~iscell(obj.Children)
+            return;
+         elseif ~isvalid(obj.Children{1})
+            return;
+         end  
          value = obj.Children{1};
       end
       
       % [DEPENDENT] Return .QueuePanel property
       function value = get.TitleBar(obj)
+         value = [];
+         if isempty(obj.Children)
+            return;
+         elseif numel(obj.Children) < 5
+            return;
+         elseif ~iscell(obj.Children)
+            return;
+         elseif ~isvalid(obj.Children{5})
+            return;
+         end   
          value = obj.Children{5};
       end
       
       % [DEPENDENT] Return .Visible property
       function value = get.Visible(obj)
+         if isempty(obj.nigelGUI)
+            value = 'invalid';
+            return;
+         end
          if isvalid(obj.nigelGUI)
             value = obj.nigelGUI.Visible;
          else
@@ -329,8 +396,10 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       
       % [DEPENDENT] Set .Visible property
       function set.Visible(obj,value)
-         if isvalid(obj.nigelGUI)
-            obj.nigelGUI.Visible = value;
+         if ~isempty(obj.nigelGUI)
+            if isvalid(obj.nigelGUI)
+               obj.nigelGUI.Visible = value;
+            end
          end
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
@@ -655,7 +724,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       end
       
       % Returns figure handle, with layout mediated by core nigelPanels
-      function fig = buildGUI(obj,fig)
+      function fig = buildGUI(obj)
          % LOADPANELS  Method to create all custom uipanels (nigelPanels)
          %             that populate most of the GUI interface.
          %
@@ -669,17 +738,16 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  obj.Children{3} <--> 'QueuePanel'
          %  obj.Children{4} <--> 'ParametersPanel'
          
-         % Check input
-         if nargin < 2
-            fig = figure('Name','nigelDash Interface',...
-               'Units','Normalized',...
-               'Position',[0.1 0.1 0.8 0.8],...
-               'Color',obj.Color.fig,...
-               'ToolBar','none',...
-               'MenuBar','none',...
-               'NumberTitle','off',...
-               'DeleteFcn',@(~,~)obj.delete);
-         end
+
+         fig = figure('Name','nigelDash Interface',...
+            'Units','Normalized',...
+            'Position',[0.1 0.1 0.8 0.8],...
+            'Color',obj.Color.fig,...
+            'ToolBar','none',...
+            'MenuBar','none',...
+            'NumberTitle','off',...
+            'DeleteFcn',@(~,~)obj.delete);
+
          
          % Create "Tree" panel (nodes are: Tank > Animal > Block)
          str    = {'TreePanel'};
@@ -918,21 +986,6 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             delete(lh);
          end
          obj.Listener(:) = [];
-      end
-      
-      % Initialize reference property values
-      function initRefProps(obj)
-         % INITREFPROPS  Initialize property values for referencing later
-         %
-         %  obj.initRefProps(tankObj);  Takes references from parameters of
-         %                                tankObj, which should be
-         %                                identical for all Blocks and
-         %                                Animals that are under
-         %                                consideration by DashBoard.
-         
-         obj.Color = nigeLab.libs.DashBoard.initColors();
-         obj.Fields = obj.Tank.Pars.Block.Fields;
-         obj.FieldType = obj.Tank.Pars.Block.FieldType;
       end
       
       % Initialize UI context menu for tree click interactions

@@ -1,25 +1,39 @@
-function flag = initParams(sortObj)
-%% INITPARAMS  Initialize parameters structure for Spike Sorting UI.
+function flag = initParams(sortObj,nigelObj)
+%INITPARAMS  Initialize parameters structure for Spike Sorting UI.
 %
 %  flag = INITPARAMS(sortObj);
-%
-% By: Max Murphy  v3.0    01/07/2019 Port to object-oriented architecture.
-%                 v2.0    10/03/2017 Added ability to handle multiple input
-%                                    probes with redundant channel labels.
-%                 v1.0    08/18/2017 Original version (R2017a)
+%  --> Load `Sort` defaults from nigeLab.defaults.Sort();
+%  
+%  flag = INITPARAMS(sortObj,nigelObj);
+%  --> Load `Sort` parameters from nigelObj directly
 
-%% MODIFY SORT CLASS OBJECT PROPERTIES HERE
+% MODIFY SORT CLASS OBJECT PROPERTIES HERE
 flag = false;
 
-pars = nigeLab.defaults.Sort();
+if nargin < 2
+   pars = nigeLab.defaults.Sort();
+   flag = true;
+else
+   pars = cell(size(nigelObj)); % In case it is array
+   [pars{:}] = getParams(nigelObj,'Sort');
+   pars(cellfun(@isempty,pars)) = [];
+   if isempty(pars)
+      warning(['[INITPARAMS]: Array of %g %g objects does not ' ...
+         'have `Sort` parameters initialized yet.\n'],...
+         numel(nigelObj),class(nigelObj));
+      return;
+   elseif isequal(pars{:})
+      flag = true;
+   else
+      warning(['[INITPARAMS]: Array of %g %g objects does not ' ...
+         'contain identical `Sort` parameters for each object.\n'],...
+         numel(nigelObj),class(nigelObj));
+      return;
+   end
+end
 
-%% COULD ADD PARSING FOR PROPERTY VALIDITY HERE?
-% To look into for future...
-%
-%  e.g. Check that "SDMAX" is numeric, and greater than "SDMIN" etc...
-
-%% UPDATE PARS PROPERTY
+% UPDATE PARS PROPERTY
 sortObj.pars = pars;
-flag = true;
+
 
 end
