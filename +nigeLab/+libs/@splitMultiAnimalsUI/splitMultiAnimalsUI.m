@@ -10,11 +10,11 @@ classdef splitMultiAnimalsUI < handle
    end
    
    properties (Access = private,SetObservable,AbortSet)
-      animalObj                  nigeLab.Animal
+      animalObj                  % nigeLab.Animal
    end
    
    properties (Access = private)
-      blockObj                   nigeLab.Block
+      blockObj                   % nigeLab.Block
       DashObj                    nigeLab.libs.DashBoard
       AcceptBtn                  matlab.ui.control.UIControl % pushbutton
       ApplyToAllBtn              matlab.ui.control.UIControl % pushbutton

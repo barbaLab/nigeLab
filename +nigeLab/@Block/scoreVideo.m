@@ -19,8 +19,6 @@ blockObj.checkCompatibility({scoringFieldName,'Video'});
 if any(~blockObj.Status.(scoringFieldName))
    error('Not all %s files have been created yet.',scoringFieldName);
 end
-
-
 %MAKE UI WINDOW AND DISPLAY CONTAINER
 fig=figure('Name','Behavior Scoring',...
            'NumberTitle','off',...

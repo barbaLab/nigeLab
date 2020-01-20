@@ -104,12 +104,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          % Check input
          if nargin < 1
-            obj = nigeLab.libs.DashBoard([0,0]); % Empty DashBoard
-            close(gcf); % If a figure is opened
+            obj = nigeLab.libs.DashBoard.empty(); % Empty DashBoard
             return; % Should always be called from tankObj anyways
          elseif isnumeric(tankObj)
             dims = tankObj;
+            if numel(dims) == 1
+               dims = [dims,0];
+            end
             obj = repmat(obj,dims);
+            close(gcf); % If a figure is opened
             return;
          end
          
@@ -218,7 +221,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          % Finally, notify the TANK that GUI is closed (if it exists)
          if ~isempty(obj.Tank)
             if isvalid(obj.Tank)
-               obj.Tank.GUI = [];
+               set(obj.Tank,'GUI',nigeLab.libs.DashBoard.empty);
             end
          end
       end     
@@ -2162,6 +2165,14 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    
    % STATIC,PUBLIC
    methods (Static,Access=public)
+      function obj = empty()
+         %EMPTY  Returns empty object
+         %
+         %  obj = nigeLab.libs.DashBoard.empty();
+         
+         obj = nigeLab.libs.DashBoard([0 0]);
+      end
+      
       % Translates "SelectedItems" (nodes UserData) to "selection index"
       function sel = selectedItems2Index(items)
          % SELECTEDITEMS2INDEX  Returns the "indexing" for SelectedItems

@@ -72,7 +72,11 @@ classdef Sort < handle
          if nargin > 0
             if isnumeric(nigelObj) % Initialize
                dims = nigelObj;
+               if numel(dims) == 1
+                  dims = [dims,0];
+               end
                sortObj = repmat(sortObj,dims);
+               close(gcf);
                return;
             end
             
@@ -102,8 +106,7 @@ classdef Sort < handle
 %                   'sortObj array not created successfully.');
 %             end
          else % Therefore, if it is given without inputs, it is for init
-            sortObj = nigeLab.Sort([0,0]); % Empty
-            close(gcf);
+            sortObj = nigeLab.Sort.empty(); % Empty
             return;
          end
          
@@ -135,7 +138,7 @@ classdef Sort < handle
          
          % Remove association from input
          if ~isempty(sortObj.Input)
-            set(sortObj.Input,'SortGUI',[]);
+            set(sortObj.Input,'SortGUI',nigeLab.Sort.empty());
          end
       end
       
@@ -221,5 +224,16 @@ classdef Sort < handle
       
       channelName = parseChannelName(sortObj); % Get all channel names
    end
+   
+   % STATIC, PUBLIC
+   methods (Static,Access=public)
+      function obj = empty()
+         %EMPTY  Returns empty `nigeLab.Sort` object handle
+         %
+         %  obj = nigeLab.Sort.empty();
+         
+         obj = nigeLab.Sort([0 0]);
+      end
+   end   
    % % % % % % % % % % END METHODS% % %
 end

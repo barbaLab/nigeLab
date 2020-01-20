@@ -56,7 +56,6 @@ classdef nigelObj < handle & ...
    properties (GetAccess=public,SetAccess=protected)
       Fields            cell = nigeLab.nigelObj.Default('Fields')     % Specific things to record
       FieldType         cell = nigeLab.nigelObj.Default('FieldType')  % "Types" corresponding to Fields elements
-      FolderIdentifier  char                    % '.nigelBlock', '.nigelAnimal', or '.nigelTank'
       IDInfo      (1,1) struct                  % Struct parsed from ID file
       HasParsFile (1,1) logical=false           % Flag --> True if _Pars.mat exists
       HasParsInit (1,1) struct                  % Flag struct --> .param is True if obj.updateParams('param') has been run
@@ -73,17 +72,16 @@ classdef nigelObj < handle & ...
    
    % DEPENDENT,PUBLIC
    properties (Dependent,Access=public)
-      File        char        % Full file of _Block.mat, _Animal.mat, or _Tank.mat file
-      GUI         nigeLab.libs.DashBoard   % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
-      Input       char        % Path to input file or folder
-      Name        char        % Name of the obj (char array)
-      OnRemote   (1,1)logical % Is this object running a job on remote worker?
-      Output      char        % Path to output folder (same as .Paths.SaveLoc)
-      Pars   (1,1)struct      % Parameters struct
-      Paths  (1,1)struct      % Detailed paths specifications
-      ShortFile   char        % Shortened filename
-      SortGUI     nigeLab.Sort   % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
-      Type        char        %'Block', 'Animal' or 'Tank'
+      File              char           % Full file of _Block.mat, _Animal.mat, or _Tank.mat file
+      FolderIdentifier  char           % '.nigelBlock', '.nigelAnimal', or '.nigelTank'
+      Input             char           % Path to input file or folder
+      Name              char           % Name of the obj (char array)
+      OnRemote    (1,1) logical        % Is this object running a job on remote worker?
+      Output            char           % Path to output folder (same as .Paths.SaveLoc)
+      Pars        (1,1) struct         % Parameters struct
+      Paths       (1,1) struct         % Detailed paths specifications
+      ShortFile         char           % Shortened filename
+      Type              char           %'Block', 'Animal' or 'Tank'
    end
    
    % DEPENDENT,PUBLIC/PROTECTED
@@ -113,6 +111,12 @@ classdef nigelObj < handle & ...
       InPrompt    char        % To print for input path prompts
       OutDef      char        % Default output location
       OutPrompt   char        % To print for output path prompts
+   end
+   
+   % DEPENDENT,TRANSIENT,PUBLIC (GUI)
+   properties (Dependent,Transient,Access=public)
+      GUI         nigeLab.libs.DashBoard   % Handle to nigeLab.libs.DashBoard GUI (nigelObj.nigelDash method)
+      SortGUI     nigeLab.Sort   % Handle to nigeLab.Sort GUI (nigelObj.Sort method)
    end
    
    % DEPENDENT,TRANSIENT,SETOBSERVABLE,PUBLIC (Children Objects)
@@ -357,10 +361,6 @@ classdef nigelObj < handle & ...
                set(obj,varargin{iV},varargin{iV+1});
             end
          end
-         
-         % Set these after parsing <'Name',value> so they cannot be
-         % overwritten manually by accident, or set to different values. 
-         obj.FolderIdentifier = sprintf('.nigel%s',obj.Type);
          
          % Check for input passed via subclass constructor
          if isstruct(inPath) % Then this came from loadobj
@@ -693,6 +693,21 @@ classdef nigelObj < handle & ...
                   '\t%s(Could not get .SaveLoc path)\n',idt);
             end
          end
+      end
+      
+      % [DEPENDENT] Get method for .FolderIdentifier (.nigelFile)
+      function value = get.FolderIdentifier(obj)
+         %GET.FOLDERIDENTIFIER  Returns .nigel[Type] char array
+         %
+         %  value = get(obj,'FolderIdentifier');
+         %  --> value is either '.nigelBlock', '.nigelAnimal', or
+         %                      '.nigelTank'
+         
+         if isempty(obj.Type)
+            value = '.nigelFile';
+            return;
+         end
+         value = sprintf('.nigel%s',obj.Type);
       end
       
       % [DEPENDENT] Get method for .FileExt (recording file type)
@@ -1599,7 +1614,37 @@ classdef nigelObj < handle & ...
          if ~ischar(value)
             return;
          end
-         [obj.Output,~,obj.FolderIdentifier]=fileparts(value);
+         [path,f,e]=fileparts(value);
+         fparts = strsplit(f,'_');
+         
+         if ismember(fparts{end},{'Block','Animal','Tank'})
+            obj.Type = fparts{end};
+            obj.Output = path;
+         else
+            p = nigeLab.utils.shortenedPath(path);
+            nigeLab.utils.cprintf('Errors*',...
+               '[SET.FILE]: Bad File name (%s/%s)\n',p,[f e]);
+            return;
+         end
+         
+      end
+      
+      % [DEPENDENT] Set method for .FolderIdentifier (.nigelFile)
+      function set.FolderIdentifier(obj,value)
+         %SET.FOLDERIDENTIFIER  Sets .nigelFile char array
+         %
+         %  set(obj,'FolderIdentifier','.nigelTank');
+         %  --> Set folder identifier for 'Tank' type nigelObj
+         
+         if isempty(value)
+            return;
+         elseif ~ischar(value)
+            return;
+         end
+         value = strrep(value,'.nigel','');
+         if ismember(value,{'Block','Animal','Tank'})
+            set(obj,'Type',value);
+         end
       end
       
       % [DEPENDENT] Set method for .FileExt (recording binary)
@@ -1629,14 +1674,14 @@ classdef nigelObj < handle & ...
          
          if isempty(value)
             if ~isempty(obj.GUIContainer)
-               obj.GUIContainer(:) = []; % Remove handle association
+               obj.GUIContainer = nigeLab.libs.DashBoard.empty();
             end
             obj.IsDashOpen = false;   % Set flag to false
          else
             if obj.IsDashOpen
                obj.IsDashOpen = isvalid(value);
                if ~obj.IsDashOpen
-                  value = [];
+                  value = nigeLab.libs.DashBoard.empty();
                end
                % Store association to handle object
                obj.GUIContainer = value; 
@@ -2142,7 +2187,7 @@ classdef nigelObj < handle & ...
 
          for i = 1:numel(obj)
             if isempty(value)
-               obj(i).SortGUIContainer(:) = []; % Remove handle association
+               obj(i).SortGUIContainer = nigeLab.Sort.empty(); % Remove handle association
                if obj(i).IsDashOpen             % Make sure Dash is un-hidden
                   visible = obj(i).GUI.Visible;
                   if strcmpi(visible,'off')
@@ -2188,7 +2233,7 @@ classdef nigelObj < handle & ...
          
          if ~ischar(value)
             error(['nigeLab:' mfilename ':BadClass'],...
-               'nigelObj.Type must be char');
+               '[SET.TYPE]: nigelObj.Type must be char');
          end
          
          if ~ismember(value,{'Block','Animal','Tank'})
@@ -2197,7 +2242,7 @@ classdef nigelObj < handle & ...
                value = strrep(class(obj),'nigeLab.','');
                if ~ismember(value,{'Block','Animal','Tank','nigelObj'})
                   error(['nigeLab:' mfilename ':BadType'],...
-                     ['Unexpected Type: %s\n' ...
+                     ['[SET.TYPE]: Unexpected Type: %s\n' ...
                      '\t-->\tMust be: ''Block,'' ''Animal,'' or ''Tank'''],...
                      value);
                end
