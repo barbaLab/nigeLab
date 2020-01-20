@@ -4021,10 +4021,10 @@ classdef nigelObj < handle & ...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                else
+                   flag = obj.updateParams(field,'Direct');
                   nigeLab.utils.cprintf(fmt,...
                      '%sObj.Pars.%s (%s_Pars.mat) must be initialized\n\t',...
                      lower(type),field,obj.Name);
-                  flag = obj.updateParams(field,'Direct');
                end
                p = obj.Pars.(field);
                return;
@@ -4047,7 +4047,7 @@ classdef nigelObj < handle & ...
                p = nigeLab.defaults.(field)(); % Load parameter defaults
                flag = true;
                obj.HasParsInit.(field) = true;
-               if isfield(obj.Pars,field)
+               if ~isfield(obj.Pars,field)
                   obj.HasParsSaved.(field) = false;
                else
                   obj.HasParsSaved.(field) = ~isequal(obj.Pars.(field),p);
