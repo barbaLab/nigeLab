@@ -70,14 +70,12 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-% pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % FB?
-pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % KUMC
+pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % KUMC
 
 %% Common NamingConvention values
 % pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecTime'}; % FB stuff
-pars.NamingConvention={'AnimalID','Year','Month','Day','SessionID'}; % MM stuff
-% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj
+pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecTime'}; % MM Audio stuff
+% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
