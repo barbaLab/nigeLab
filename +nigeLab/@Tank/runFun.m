@@ -9,7 +9,9 @@ function runFun(tankObj,f)
 clc;
 fprintf(1,' \n');
 nigeLab.utils.cprintf('*Blue','%s: ',tankObj.Name);
-if ismethod(tankObj.Children(1).Children(1),f)
+mc = ?nigeLab.Block;
+m = {mc.MethodList.Name};
+if ismember(f,m)
    nigeLab.utils.cprintf('*Magenta','%s method\n',f);
 else
    nigeLab.utils.cprintf([0.3 0.3 0.3],'%s is not a ',f);

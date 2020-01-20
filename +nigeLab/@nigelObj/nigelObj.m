@@ -3908,7 +3908,7 @@ classdef nigelObj < handle & ...
          end % iscell(paramType)
 
          % Handle the behavior for "special" non-paramType commands
-         [p_init,p_miss,p_all] = obj.listInitializedParams();
+         [~,p_miss,p_all] = obj.listInitializedParams();
          switch lower(paramType)
             case 'all' %Update all parameters using "method" method
                flag = obj.updateParams(p_all,method);
@@ -3928,16 +3928,16 @@ classdef nigelObj < handle & ...
                flag = true;
                for i = 1:numel(p_all)
                   if isfield(obj.HasParsInit,p_all{i})
-                     if obj.HasParsInit.(p_init{i})
-                        p = nigeLab.defaults.(p_init{i});
-                        fcur = fieldnames(obj.Pars.(p_init{i}));
+                     if obj.HasParsInit.(p_all{i})
+                        p = nigeLab.defaults.(p_all{i});
+                        fcur = fieldnames(obj.Pars.(p_all{i}));
                         fdef = fieldnames(p); %fields in def. file params
                         fmiss = setdiff(fdef,fcur);
                         % If any params from defaults file are missing,
                         % then update using those params.
                         if ~isempty(fmiss)
                            flag = flag && ...
-                              obj.updateParams(p_init{i},'KeepPars');
+                              obj.updateParams(p_all{i},'KeepPars');
                         end
                      end
                   else
@@ -4021,7 +4021,7 @@ classdef nigelObj < handle & ...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                else
-                   flag = obj.updateParams(field,'Direct');
+                  flag = obj.updateParams(field,'Direct');
                   nigeLab.utils.cprintf(fmt,...
                      '%sObj.Pars.%s (%s_Pars.mat) must be initialized\n\t',...
                      lower(type),field,obj.Name);
@@ -5031,7 +5031,7 @@ classdef nigelObj < handle & ...
          %  s = obj.listInitializedParams();
          
          curPars = fieldnames(obj.HasParsInit);
-         s_init = [];
+         s_init = {};
          for i = 1:numel(curPars)
             if obj.HasParsInit.(curPars{i})
                s_init = [s_init, curPars{i}];
