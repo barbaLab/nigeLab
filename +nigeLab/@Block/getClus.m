@@ -53,10 +53,19 @@ end
 % CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
 if getStatus(blockObj,'Clusters',ch)
    clusterIndex = blockObj.Channels(ch).Clusters.value;
+   ts = getSpikeTimes(blockObj,ch);
+   n = numel(ts);
    if isempty(clusterIndex) % If the file does not exist
-      ts = getSpikeTimes(blockObj,ch);
-      n = numel(ts);
       clusterIndex = zeros(n,1); % Assignment for output
+      return;
+   elseif numel(clusterIndex)~=n
+      warning(['[GETCLUS]::[%s] Mismatch between number of Cluster '...
+         'assignments (%g) and number of spikes (%g) for ' ...
+         '%s::P%g-%s\n\t->\tAssigning all spikes to cluster zero.\n'],...
+         blockObj.Name,numel(clusterIndex),n,...
+         blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+      clusterIndex = zeros(n,1);
+      return;
    end
 else % If it doesn't exist
    if getStatus(blockObj,'Spikes',ch) % but spikes do
@@ -82,8 +91,10 @@ else % If it doesn't exist
                blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
          end
       end
+      return;
    else
       clusterIndex = zeros(0,1);
+      return;
    end
 end
 

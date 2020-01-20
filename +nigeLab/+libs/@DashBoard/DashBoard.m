@@ -996,12 +996,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          cla(obj.RecapAxes);
          
          if nargin < 2
-            error(['nigeLab:' mfilename ':TooFewInputs'],...
-               '[PLOTRECAPCIRCLE]: Must provide `Status` input array');            
+            Status = obj.Status;       
          end
          
          if nargin < 3
-            N = 1;
+            if iscell(Status)
+               N = numel(Status{1});
+            else
+               N = size(Status,1);
+            end
          end
          
          if nargin < 4
@@ -1176,21 +1179,47 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %           nigeLab.evt.jobCompleted custom event
          
          idx = evt.BlockSelectionIndex;
-         obj.Tank.Children(idx(1)).Children(idx(2)).reload;
-         obj.Tank.Children(idx(1)).Children(idx(2)).IsDashOpen = true;
-         allAnimalNodes = get(obj.Tree.Root,'Children');
-         if iscell(allAnimalNodes)
-            allAnimalNodes = horzcat(allAnimalNodes{:});
+         b = obj.Tank.Children(idx(1)).Children(idx(2));
+         reload(b);
+         b.IsDashOpen = true;
+         
+         h = obj.getHighestLevelNigelObj();
+         switch h.Type
+            case 'Tank'
+               [~,a] = getSelectedItems('obj');
+               a_all = obj.Tank.Children;
+               idx = ismember(a_all,a);
+               status = getStatus(obj.Tank,[]);
+               obj.Status = status(idx,:);
+            case 'Animal'
+               b_all = getSelectedItems('obj');
+               idx = find(b==b_all,1,'first');
+               obj.Status(idx,:) = getStatus(b,[]);
+            case 'Block' % Make sure current block is in selection
+               allAnimalNodes = get(obj.Tree.Root,'Children');
+               if iscell(allAnimalNodes)
+                  allAnimalNodes = horzcat(allAnimalNodes{:});
+               end
+               allBlockNodes = get(allAnimalNodes,'Children');
+               if iscell(allBlockNodes)
+                  allBlockNodes = horzcat(allBlockNodes{:});
+               end
+               block2update = findobj(allBlockNodes,'UserData',idx);
+               selEvt = struct(...
+                  'Nodes',cat(1,obj.Tree.SelectedNodes,block2update),...
+                  'AddedNodes',block2update);
+               obj.treeSelectionFcn([],selEvt);
+               if numel(obj.Tree.SelectedNodes)==1
+                  obj.Status = cell(1,numel(b.Fields));
+                  for i = 1:numel(b.Fields)
+                     obj.Status{i} = getStatus(b,b.Fields{i});
+                  end
+               else
+                  idx = find(obj.Tree.SelectedNodes==block2update,1,'first');
+                  obj.Status(idx,:) = getStatus(b,[]);
+               end
          end
-         allBlockNodes = get(allAnimalNodes,'Children');
-         if iscell(allBlockNodes)
-            allBlockNodes = horzcat(allBlockNodes{:});
-         end
-         block2update = findobj(allBlockNodes,'UserData',idx);
-         selEvt = struct(...
-            'Nodes',cat(1,obj.Tree.SelectedNodes,block2update),...
-            'AddedNodes',block2update);
-         obj.treeSelectionFcn([],selEvt);
+         obj.plotRecapCircle();
          
       end
       
