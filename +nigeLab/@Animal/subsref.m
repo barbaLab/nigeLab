@@ -211,9 +211,21 @@ switch S(1).type
                     elseif IsSemiColon(subs{2})
                         s = substruct('()',subs(2));
                         s = repmat(s,numel(an),1);
-                    elseif  iscell(subs{2}) 
-                         checkCellInputCoherence(subs{2},2);
-                        if all( cellfun( @(x) isnumeric(x),subs{2}) )
+                    elseif  iscell(subs{2})
+                        if all( cellfun( @(x) IsRightKeyFormat(animalObj,x),subs{2}) )
+                            if numel(an) == numel(subs{2})
+                                % check if the indexes in subs{1} have the same
+                                % dimensions as the ones in subs{2}
+                                s =  substruct('.','findByKey','()',subs{2}(1));
+                                for ii=2:numel(subs{2})
+                                    s(ii,:) =  substruct('.','findByKey','()',subs{2}(ii));
+                                end
+                            else
+                                error(['nigeLab:' mfilename ':VerticalDimensionsMismatch'],...
+                                    'Dimensions of arrays being concatenated are not consistent.');
+                            end
+                        elseif all( cellfun( @(x) isnumeric(x),subs{2}) )
+                            checkCellInputCoherence(subs{2},2);
                             % if is a cell array of numerical indexes.
                             % E.g. animalObj{[1,2],{1,[1 3]}} which should return
                             % [animalObj(1).Children(1),animalObj(1).Children([1,3])]
@@ -231,18 +243,8 @@ switch S(1).type
                                 error(['nigeLab:' mfilename ':VerticalDimensionsMismatch'],...
                                     'Dimensions of arrays being concatenated are not consistent.');
                             end
-                        elseif all( cellfun( @(x) IsRightKeyFormat(animalObj,x),subs{2}) )
-                            if numel(an) == numel(subs{2})
-                                % check if the indexes in subs{1} have the same
-                                % dimensions as the ones in subs{2} 
-                                s =  substruct('.','findByKey','()',subs{2}(1));
-                                for ii=2:numel(subs{2})
-                                    s(ii,:) =  substruct('.','findByKey','()',subs{2}(ii));
-                                end
-                            else
-                                error(['nigeLab:' mfilename ':VerticalDimensionsMismatch'],...
-                                    'Dimensions of arrays being concatenated are not consistent.');
-                            end
+                        else
+                            checkCellInputCoherence(subs{2},2);
                         end
                         
                     elseif isnumeric(subs{2})

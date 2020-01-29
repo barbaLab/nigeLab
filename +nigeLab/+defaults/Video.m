@@ -78,8 +78,8 @@ function varargout = Video(varargin)
 % videos, not for things like "beam-break" etc. that are in the separate
 % FieldType of Streams.
 pars = struct;
-pars.HasVideo = true;
-pars.HasVidStreams = true;
+pars.HasVideo = false;
+pars.HasVidStreams = false;
 
 % % % -- For Video Scoring -- % % %
 
