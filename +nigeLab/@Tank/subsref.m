@@ -58,22 +58,54 @@ switch S(1).type
             '''.'' or ''()'' references.']);
       end
       switch numel(subs)
-         % If only 1 subscript, then it indexes Animals
          case 1
-            % Unless it is a matrix reference
-            if size(subs{1},2) > 1
-               s = substruct('{}',subs);
-            else
-               % If "return all" make sure it is in row vector format
-               if ischar(subs{1})
-                  if strcmp(subs{1},':')
+             % If only 1 subscript, then it indexes Animals
+             if isnumeric(subs{1})
+                 % if is numeric the indexing is direct, no need to parse
+                 % anything here. Eg tankObj{1} or tankObj{[1,2]}
+                 s = substruct('()',subs);
+             elseif ischar(subs{1})
+                 % it's either ':', which means return all animals, or it
+                 % indexes animals using the 16 digit key value directly,
+                 % which should return only one animal.
+                 % eg tankObj{:} or tankObj{'xxxxxxxxxxxxxxxx'}                 
+                 if strcmp(subs{1},':')
                      subs = [1, subs];
-                  end
-               end
-               s = substruct('()',subs);
-            end
+                 else
+                     s = substruct('.','findByKey','()',subs);
+                 end
+             elseif  iscell(subs{1})
+                 % cell case only happens for key indexing. This should
+                 % return one or more than one animal
+                 % eg tankObj{{'xxxxxxxxxxxxxxxx'}} or 
+                 % tankObj{{'xxxxxxxxxxxxxxxx','yyyyyyyyyyyyyyyy'}}
+                 s = substruct('.','findByKey','()',subs);
+             end
             out = subsref(tankObj.Children,s);
          case 2
+             if isscalar(tankObj.Children)
+                 % let's do some error handing. This is handled here becuse
+                 % from the animal the case where the sbsref comes from
+                 % tank or from the user is undistiguishable
+                 if IsRightKeyFormat(tankObj.Children,subs{1})
+                     if isempty(tankObj.Children.findByKey(subs{1}))
+                         out = nigeLab.Block.Empty;
+                         varargout{1} = out;
+                         return;
+                     else
+                         subs(1) = [];
+                     end
+                 elseif IsSemiColon(subs{1})
+                     subs(1) = [];
+                 elseif isnumeric(subs{1})
+                     if subs{1} > 1
+                         error(['nigeLab:' mfilename ':indexExceed'],...
+                             'Index (%d) exceeds the number of Animals elements (%d).',subs{1},1);
+                     else
+                         subs(1) = [];
+                     end
+                 end
+             end
             s = substruct('{}',subs);
             out = subsref(tankObj.Children,s);
             
@@ -82,12 +114,7 @@ switch S(1).type
                'Too many subscript indexing args (%g) given.',...
                numel(subs));
       end
-      if numel(S) > 1
-         methodIndex = tankObj.findMethodSubsIndices(S);
-      else
-         varargout{1} = out;
-      end
-      
+      varargout{1} = out;
       return;
       
       % If not {} index, use normal behavior
@@ -155,4 +182,21 @@ switch S(1).type
          nigeLab.utils.mtb(ans);
       end
 end
+end
+
+function value = IsRightKeyFormat(obj,subs)
+%% ISRIGHTKEYFORMAT returns right if subs is a key or a cell array of keys
+key = obj(1).Key.Public;
+KeyLength = numel(key);
+
+
+value = (ischar(subs) && numel(subs) == KeyLength) ||...
+    (iscell(subs) && ...
+    all( cellfun( @(x) ischar(x) && numel(x) == KeyLength,subs) ));
+
+
+end
+
+function value = IsSemiColon(subs)
+value = ischar(subs) && strcmp(subs,':');
 end

@@ -102,7 +102,9 @@ classdef Tank < nigeLab.nigelObj
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize TANK object.');
          end
+         tankObj.Key = nigeLab.nigelObj.InitKey;
       end
+      
    end
    
    % HIDDEN,PUBLIC
@@ -226,7 +228,9 @@ classdef Tank < nigeLab.nigelObj
                   tmp=all(tmp,2); 
                else
                   B = A.Children;
-                  tmp = tmp | ~[B.IsMasked]';
+                  if ~isempty(B)
+                      tmp = tmp | ~[B.IsMasked]';
+                  end
                end
                Status(iAnimal,:) = all(tmp,1) | ~A.IsMasked;
             end

@@ -167,6 +167,7 @@ classdef Block < nigeLab.nigelObj
             error(['nigeLab:' mfilename ':BadInit'],...
                'Block object construction unsuccessful.');
          end
+         blockObj.Key = nigeLab.nigelObj.InitKey;
       end
 
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.

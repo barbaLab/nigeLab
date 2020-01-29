@@ -93,6 +93,7 @@ classdef Animal < nigeLab.nigelObj
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize ANIMAL object.');
          end
+         animalObj.Key = nigeLab.nigelObj.InitKey;
       end
       
       % Modify behavior of 'end' keyword in indexing expressions

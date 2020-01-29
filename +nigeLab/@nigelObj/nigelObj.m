@@ -514,6 +514,23 @@ classdef nigelObj < handle & ...
          end
       end
       
+      function n = numArgumentsFromSubscript(tankObj,s,indexingContext)
+          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
+          %
+          %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
+          %
+          %  s  --  struct from SUBSTRUCT method for indexing
+          %  indexingContext  --  matlab.mixin.util.IndexingContext Context
+          %                       in which the result applies.
+          
+          switch s(1).type
+              case '{}'
+                  n = 1;
+              otherwise
+                  n = builtin('numArgumentsFromSubscript',tankObj,s,indexingContext);
+          end
+      end
+      
       % % % GET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT] Get method for .AnimalLoc (backwards compatibility)
       function value = get.AnimalLoc(obj)

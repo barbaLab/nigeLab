@@ -15,7 +15,7 @@ mkdir('demo_experiment')
 %% create a tank object 
 % you will be asked to select the source (myTank) and destination (you can 
 % choose every folder, we suggest to use myTank_anamysis) 
-tankobj = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'demo_experiment')); 
+tankObj = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'demo_experiment')); 
 
 % this will create a tank object with all the linked metadata and will save
 % it in the destination folder. check the folder tree that was created. If
@@ -23,19 +23,19 @@ tankobj = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'demo_experiment'));
 % on github.
 
 %% extract raw data and save it in the corresponding folder
-tankobj.doRawExtraction;
+tankObj.doRawExtraction;
 
 %% Perform multi-unit bandpass filter for spike detection for all Animals and Blocks within Tank.
-tankobj.doUnitFilter
+tankObj.doUnitFilter
 
 %% Perform common-average re-reference for all Animals and Blocks within Tank.
-tankobj.doReReference
+tankObj.doReReference
 
 %% Perform spike detection and feature extraction (wavelet decomposition)
 %% on all Animals and all Blocks within the Tank
-tankobj.doSD
+tankObj.doSD
 
 %% downsample raw data to LFP
-tankobj.doLFPExtraction;
+tankObj.doLFPExtraction;
 
 %% 
