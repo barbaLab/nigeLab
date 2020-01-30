@@ -1,8 +1,11 @@
 function flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)
-% DOEVENTHEADEREXTRACTION  Creates "header" for scored behavioral events
+%DOEVENTHEADEREXTRACTION  Creates "header" for scored behavioral events
 %
 %  flag = blockObj.doEventHeaderExtraction; --> Standard
 %  flag = blockObj.doEventHeaderExtraction(behaviorData); --> Convert old
+%  flag = blockObj.doEventHeaderExtraction(VarType); 
+%  --> This is the same as passing behaviorData, as behaviorData is only
+%        used to determine varType for Event DiskData type.
 %
 %  Returns true if header extraction proceeded correctly.
 %  Generates a "header" file that is a nigeLab.libs.DiskData 'Event' type
@@ -14,21 +17,25 @@ function flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)
 %  If behaviorData is provided, then it is used to assign 'VarType'. This
 %  second input can also just be given as 'VarType' directly.
 
-%%
 flag = false;
 blockObj.checkActionIsValid();
 blockObj.updateParams('Video');
 f = blockObj.Pars.Video.ScoringEventFieldName;
 
+[fmt,idt] = blockObj.getDescriptiveFormatting();
 if isempty(f)
-   warning(1,'Must specify defaults.Video.ScoringEventFieldName to extract Header.');
+   nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+   nigeLab.utils.cprintf(fmt,...
+      'Must specify defaults.Video.ScoringEventFieldName (%s)\n',...
+      blockObj.Name);
    return;
 else
-   fname = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(f).dir,...
-         sprintf(blockObj.BlockPars.(f).File, 'Header')));
+   fname = sprintf(blockObj.Paths.(f).file,'Header');
    if exist(fname,'file')~=0
       flag = true;
-      fprintf(1,'Header already exists for %s.\n',blockObj.Name);
+      nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+      nigeLab.utils.cprintf(fmt,'Header exists (%s)\n',blockObj.Name);
+      out = nigeLab.libs.DiskData('Event',fname);
       return;
    end
 end
@@ -36,7 +43,8 @@ end
 % Get number of videos to match up with
 N = sum(blockObj.Status.Video);
 if N < 1
-   warning('No videos associated with %s',blockObj.Name);
+   nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+   nigeLab.utils.cprintf(fmt,'No videos (%s)\n',blockObj.Name);
    N = 1;
 end
 
@@ -64,8 +72,10 @@ end
 
 data = nigeLab.utils.initEventData(N,sum(iMetadata),2);
 data(:,4) = vidOffset;
-data(:,5:end) = VarType;
-out = nigeLab.libs.DiskData('Event',fname,data);
+data(:,5:end) = ones(N,1) * VarType;
+hIdx = getEventsIndex(blockObj,f,'Header');
+blockObj.Events.(f)(hIdx).data = ...
+   nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
 
 flag = true;
 

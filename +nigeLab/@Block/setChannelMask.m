@@ -21,7 +21,7 @@ function flag = setChannelMask(blockObj,includedChannelIndices)
 %     (e.g. blockObj.Channels(blockObj.Mask).(fieldOfInterest) ... would
 %           return only the "good" channels for that recording).
 
-%% PARSE INPUT
+% PARSE INPUT
 if nargin < 2
    includedChannelIndices = nan;
 end

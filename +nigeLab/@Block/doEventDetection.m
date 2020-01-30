@@ -9,15 +9,17 @@ function flag = doEventDetection(blockObj,behaviorData,vidOffset)
 %  Generates a list of timestamps for putative "Trial" behavioral events.
 %  This is used if blockObj.Pars.Video.ScoringEventFieldName is not empty.
 
-%%
 flag = false;
 blockObj.checkActionIsValid();
 blockObj.updateParams('Video');
 blockObj.updateParams('Event');
 
+[fmt,idt] = blockObj.getDescriptiveFormatting();
 f = blockObj.Pars.Video.ScoringEventFieldName;
 if isempty(f)
-   warning(1,'No scoring to be done for %s.\n',blockObj.Name);
+   nigeLab.utils.cprintf(fmt,'%s[DOEVENTDETECTION]: ',idt);
+   nigeLab.utils.cprintf(fmt(1:(end-1)),'No scoring to be done for %s\n',...
+      blockObj.Name);
    extractHeader = false;
 else
    extractHeader = ~blockObj.Status.(f);
@@ -34,11 +36,18 @@ if nargin < 2
 end
 
 if extractHeader
-   blockObj.doEventHeaderExtraction(behaviorData,vidOffset);
+   if ~blockObj.doEventHeaderExtraction(behaviorData,vidOffset)
+      nigeLab.utils.cprintf('Errors*','\t\t->\t[DOEVENTDETECTION]: ');
+      nigeLab.utils.cprintf('[0.5 0.5 0.5]*',...
+         'Failed to initialize Header (%s)\n',blockObj.Name);
+      return;
+   end
 end
 
+% So they are not such long variable names:
 ePars = blockObj.Pars.Event;
 vPars = blockObj.Pars.Video;
+
 switch nargin
    case 1 % Actually does the extraction
       % Always extract 'Trial' first
@@ -60,37 +69,49 @@ switch nargin
             
          % Save 'Trial' times
          iEventTimes = vPars.VarType <= 1;
-         fname = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(f).dir,...
-            sprintf(blockObj.BlockPars.(f).File, 'Trial')));
+         fname = sprintf(blockObj.Paths.(f).file, 'Trial');
          data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
          data(:,4) = ts;
-         out = nigeLab.libs.DiskData('Event',fname,data);
+         eIdx = getEventsIndex(blockObj,f,'Trial');
+         blockObj.Events.(f)(eIdx).data = ...
+            nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
+         blockObj.Events.(f)(eIdx).signal.Samples = nEvent;
          
          % Check for the rest of "iEventTimes" files
          v = vPars.VarsToScore(iEventTimes);
          for iV = 1:numel(v)
-            fname = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(f).dir,...
-               sprintf(blockObj.BlockPars.(f).File, v{iV})));
+            fname = sprintf(blockObj.Paths.(f).file, v{iV});
+            eIdx = getEventsIndex(blockObj,f,v{iV});
             if exist(fname,'file')==0 % Only overwrite if nothing there
                data = nigeLab.utils.initEventData(nEvent,0,1);
-               out = nigeLab.libs.DiskData('Event',fname,data);
+               blockObj.Events.(f)(eIdx).data = ...
+                  nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
+               
+            else
+               blockObj.Events.(f)(eIdx).data = ...
+                  nigeLab.libs.DiskData('Event',fname); % Make link
             end
+            blockObj.Events.(f)(eIdx).signal.Samples = nEvent;
          end
       end
       % Find 'EventType' == 'auto' and create corresponding disk file
       % that is a list of times based on the 'Type' of transition
       for iE = 1:numel(ePars.Name)
-         if ~strcmpi(ePars.EventType(ePars.Fields{iE}),'auto')
+         f = ePars.Fields{iE};
+         if ~strcmpi(ePars.EventType.(f),'auto')
             continue; % Don't do this for 'manual' fields
          end         
-         ft = blockObj.getFieldType(ePars.Fields{iE});
+         ft = ePars.EventSource{iE};
          switch ft
-            case 'Videos'
-               stream = getStream(blockObj.Videos,ePars.Name,vPars.VideoEventCamera);
             case 'Streams'
-               stream = blockObj.getStream(ePars.Name);
+               stream = blockObj.getStream(ePars.Name{iE});
             otherwise
-               error('Should be either ''Videos'' or ''Streams'', (not %s)',ft);
+               dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
+               nigeLab.utils.cprintf('Errors*','%s[DOEVENTDETECTION]: ');
+               nigeLab.utils.cprintf(fmt,...
+                  'Parsing for %s (%s fieldType) not yet implemented (sorry -MM)\n',...
+                  ePars.Name{iE},upper(ft));
+               stream = [];
          end
          if isempty(stream)
             continue;
@@ -99,13 +120,16 @@ switch nargin
                detPars.Threshold,...
                ePars.EventDetectionType{iE},...
                detPars.Debounce);
+         nEvent = numel(ts);
             
-         fname = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(ft).dir,...
-            sprintf(blockObj.BlockPars.(ft).File, ePars.Name)));
+         fname = sprintf(blockObj.Paths.(f).file, ePars.Name{iE});
          
          data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
          data(:,4) = ts;
-         out = nigeLab.libs.DiskData('Event',fname,data);
+         eIdx = getEventsIndex(blockObj,f,ePars.Name{iE});
+         blockObj.Events.(f)(eIdx).data = ...
+            nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
+         blockObj.Events.(f)(eIdx).signal.Samples = nEvent;
       end      
       
    case {2,3} % Assign from behaviorData table
@@ -117,8 +141,7 @@ switch nargin
       % separate file for each of them. This will include the 'Trial'
       % event, effectively doing the 'Trial' extraction.
       for iV = 1:numel(v)
-         fname = nigeLab.utils.getUNCPath(fullfile(blockObj.Paths.(f).dir,...
-            sprintf(blockObj.BlockPars.(f).File, v{iV})));
+         fname = sprintf(blockObj.Paths.(f).file, v{iV});
          switch v{iV}
             case 'Trial'
                data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
@@ -127,7 +150,9 @@ switch nargin
                data = nigeLab.utils.initEventData(nEvent,0,1);
          end
          data(:,4) = behaviorData.(v{iV});
-         out = nigeLab.libs.DiskData('Event',fname,data);
+         eIdx = getEventsIndex(blockObj,blockObj.ScoringField,v{iV});
+         blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
+            nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
       end      
    otherwise
       error('Invalid number of input arguments (%g)',nargin);

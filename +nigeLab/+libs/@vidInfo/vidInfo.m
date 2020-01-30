@@ -16,27 +16,24 @@ classdef vidInfo < handle
 %                    creates a figure and fills it if there is no
 %                    current figure).
 
-%% Properties
-   properties (SetAccess = immutable, GetAccess = public)
+   % % % PROPERTIES % % % % % % % % % %
+   % TRANSIENT,PUBLIC/IMMUTABLE
+   properties (Transient,GetAccess=public,SetAccess=immutable)
       Block    % nigeLab.Block class object handle
       Panel    % nigeLab.libs.nigelPanel container for display graphics
    end
 
-   properties(SetAccess = public, GetAccess = public)
+   % PUBLIC
+   properties(Access=public)
+      cur    (1,1) double = 1     % Index of current video in use (from array)
+      frame  (1,1) double = 0     % Frame currently viewed
+      playTimer    timer          % Video playback timer
       
-      vidPanel        % Container for video
-      
-      cur = 1           % Index of current video in use (from array)
-      frame = 0;        % Frame currently viewed
-      playTimer         % Video playback timer
-      
-      offset = 0  % Video offset from neural data (seconds)
-      vid_F       % Struct from 'dir' of videos associated with object
-      
-      f     % field name for scoring events ('ScoredEvents' by default)
+      offset (1,1) double = 0     % Video offset from neural data (seconds)
    end
    
-   properties(SetAccess = private, GetAccess = private)
+   % PROTECTED
+   properties(Access=protected)
       FPS               % Frames per second
       maxFrame          % Total number of frames in video
       TimerPeriod       % Time between video play timer refresh requests
@@ -51,24 +48,29 @@ classdef vidInfo < handle
       VidImAx % Graphics object: Axes with video image frames shown on it
       VidIm % Graphics object: Handle to image frame image object
       
-      tNeu = 0              % Current neural data time
-      tVid = 0              % Current video time
+      tNeu (1,1) double = 0              % Current neural data time
+      tVid (1,1) double = 0              % Current video time
    end
    
-   properties(SetAccess = immutable, GetAccess = private)
-      verbose = false; % For debugging
+   % HIDDEN,PROTECTED
+   properties(Transient,Hidden,Access=protected)
+      verbose (1,1) logical = false; % For debugging
    end
-   
-%% Events
-   events
+   % % % % % % % % % % END PROPERTIES %
+
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
       frameChanged  % Emitted AFTER any frame changes
       timesChanged  % Emitted AFTER any video/neural times are updated
       vidChanged    % Emitted AFTER video is changed
       offsetChanged % Emitted AFTER offset is changed
    end
+   % % % % % % % % % % END EVENTS % % %
    
-%% Methods
-   methods (Access = public)
+   % % % METHODS% % % % % % % % % % % %
+   % RESTRICTED:{nigeLab.Block,nigeLab.nigelObj}
+   methods (Access={?nigeLab.Block,?nigeLab.nigelObj})
       % Create the video information object
       function obj = vidInfo(blockObj,nigelPanelObj)
          % VIDINFO  Constructor for nigeLab.libs.vidInfo object
@@ -88,7 +90,20 @@ classdef vidInfo < handle
          %                    creates a figure and fills it if there is no
          %                    current figure).
 
-         % Assign key properties in constructor
+         % Allow empty constructor etc.
+         if nargin < 1
+            obj = nigeLab.libs.vidInfo.empty();
+            return;
+         elseif isnumeric(blockObj)
+            dims = blockObj;
+            if numel(dims) < 2 
+               dims = [zeros(1,2-numel(dims)),dims];
+            end
+            obj = repmat(obj,dims);
+            return;
+         end
+         
+         % Require that first argument is `nigeLab.Block`
          if ~isa(blockObj,'nigeLab.Block')
             error('First input argument must be class nigeLab.Block');
          end
@@ -103,8 +118,6 @@ classdef vidInfo < handle
          end
          obj.Panel = nigelPanelObj;
          
-         obj.f = obj.Block.Pars.Video.ScoringEventFieldName;
-         
          % Initialize current video time
          obj.setVidTime(); % no input: default to tVid == 0
          
@@ -116,6 +129,10 @@ classdef vidInfo < handle
          obj.buildVidSelectionList;
       end
        
+   end
+   
+   % NO ATTRIBUTES (overloaded methods)
+   methods
       % Clean up TIMERS (no VIDEOREADER associated with VIDINFO)
       function delete(obj)
          % DELETE  Ensure TIMER is deleted on vidInfo object destruction
@@ -126,21 +143,10 @@ classdef vidInfo < handle
             end
          end
       end
-      
-      % Play or pause the video
-      function playPauseVid(obj)
-         % PLAYPAUSEVID  Toggle between stopping and starting the "play
-         %               video" timer.
-         
-         %toggle between stoping and starting the "play video" timer
-         if strcmp(get(obj.playTimer,'Running'), 'off')
-            set(obj.playTimer, 'Period', obj.TimerPeriod);
-            start(obj.playTimer);
-         else
-            stop(obj.playTimer);
-         end
-      end
-      
+   end
+   
+   % PUBLIC
+   methods (Access = public)
       % Function that runs while video is playing from timer object
       function advanceFrame(obj,n) 
          % ADVANCEFRAME Increment the current frame by n frames
@@ -157,24 +163,18 @@ classdef vidInfo < handle
          obj.setFrame(newFrame);
       end
       
-      % Function to go backwards some frames
-      function retreatFrame(obj,n)
-         % RETREATFRAME  Go backwards n frames
+      % Callback function for 'axesClick' notification from graphics
+      function axesClickCB(obj,src,~)
+         % AXESCLICKCB  Callback that listens for 'axesClick'
          %
-         %  obj.retreatFrame;     Rewind frame index by 1 frame
-         %  obj.retreatFrame(n);  Rewind frame index by n frames
+         %  addlistener(graphicsUpdaterObj,...
+         %       'axesClick',@obj.axesClickCB);
+         %
+         %  src  -- graphicsUpdaterObj
          
-         if nargin < 2
-            n = 1;
-         end
-         
-         newFrame = obj.frame - n;
-         obj.setFrame(newFrame);
+         obj.setFrameFromTime(src.timeAtClickedPoint);
       end
-   end
-   
-   % "GET" methods
-   methods (Access = public)
+      
       % Return graphics objects struct associated with video object
       function graphics = getGraphics(obj)
          % GETGRAPHICS  Returns graphics struct with fields as graphics
@@ -238,30 +238,46 @@ classdef vidInfo < handle
                error('Invalid value of t_type: %s',t_type);
          end
       end
-   end
-   
-   % "REFERENCE" methods to data in obj.Block.Events
-   methods (Access = public)
-      % Quick reference to putative Trial times
-      function ts = Trial(obj,trialIdx)
-         % TRIAL  Returns column vector of putative trial times (seconds)
-         %
-         %  ts = obj.Trial; Returns all values of Trial
-         %  ts = obj.Trial(trialIdx); Returns indexed values of Trial
+      
+      % Callback function for 'offsetChanged' notification from graphics
+      function offsetChangedCB(obj,src,~)
+         % OFFSETCHANGEDCB  Callback that listens for 'offsetChanged'
+         %                  notification from nigeLab.libs.graphicsUpdater
+         %                  object. When it hears this event, it updates
+         %                  the offset between video and neural time.
          
-
-         ts = getEventData(obj.Block,obj.f,'ts','Trial');
-         if nargin > 1
-            ts = ts(trialIdx);
-         end
-
+         obj.setOffset(src.offset);
       end
       
+      % Play or pause the video
+      function playPauseVid(obj)
+         % PLAYPAUSEVID  Toggle between stopping and starting the "play
+         %               video" timer.
+         
+         %toggle between stoping and starting the "play video" timer
+         if strcmp(get(obj.playTimer,'Running'), 'off')
+            set(obj.playTimer, 'Period', obj.TimerPeriod);
+            start(obj.playTimer);
+         else
+            stop(obj.playTimer);
+         end
+      end
       
-   end
-
-   % "SET" methods
-   methods (Access = public)
+      % Function to go backwards some frames
+      function retreatFrame(obj,n)
+         % RETREATFRAME  Go backwards n frames
+         %
+         %  obj.retreatFrame;     Rewind frame index by 1 frame
+         %  obj.retreatFrame(n);  Rewind frame index by n frames
+         
+         if nargin < 2
+            n = 1;
+         end
+         
+         newFrame = obj.frame - n;
+         obj.setFrame(newFrame);
+      end
+      
       % Set the current video index for the listener object
       function setCurrentVideo(obj,src,~)
          % SETCURRENTVIDEO  Set the current video index based on the Value
@@ -295,7 +311,6 @@ classdef vidInfo < handle
             fprintf(1,'-->\tvidChanged event issued: %s\n',s);
          end 
          notify(obj,'vidChanged');
-
       end
       
       % Set the current video frame
@@ -417,8 +432,8 @@ classdef vidInfo < handle
          %
          %  obj.setVideoInfo(); 
 
-         obj.FPS = obj.Block.Videos(obj.cur).v.FS;
-         obj.maxFrame = obj.Block.Videos(obj.cur).v.NFrames;
+         obj.FPS = obj.Block.Videos(obj.cur).v.fs;
+         obj.maxFrame = obj.Block.Videos(obj.cur).NumFrames;
 
          obj.TimerPeriod = 2*round(1000/obj.FPS)/1000;
          if ~isempty(obj.playTimer)
@@ -464,33 +479,6 @@ classdef vidInfo < handle
          obj.tVid = newVidTime;
          % Update offset property
          obj.offset(max(obj.cur,1)) = obj.tNeu - obj.tVid;
-         
-      end
-      
-   end
-   
-   % "CALLBACK" methods assigned as event listeners
-   methods (Access = public)
-      % Callback function for 'axesClick' notification from graphics
-      function axesClickCB(obj,src,~)
-         % AXESCLICKCB  Callback that listens for 'axesClick'
-         %
-         %  addlistener(graphicsUpdaterObj,...
-         %       'axesClick',@obj.axesClickCB);
-         %
-         %  src  -- graphicsUpdaterObj
-         
-         obj.setFrameFromTime(src.timeAtClickedPoint);
-      end
-      
-      % Callback function for 'offsetChanged' notification from graphics
-      function offsetChangedCB(obj,src,~)
-         % OFFSETCHANGEDCB  Callback that listens for 'offsetChanged'
-         %                  notification from nigeLab.libs.graphicsUpdater
-         %                  object. When it hears this event, it updates
-         %                  the offset between video and neural time.
-         
-         obj.setOffset(src.offset);
       end
       
       % Callback function for 'trialChanged' notification from graphics
@@ -527,8 +515,25 @@ classdef vidInfo < handle
       end
    end
    
-   % "BUILD" methods to be referenced within this class only
-   methods (Access = private)
+   % SEALED,PUBLIC
+   methods (Sealed,Access=public)
+      % Quick reference to putative Trial times
+      function ts = Trial(obj,trialIdx)
+         % TRIAL  Returns column vector of putative trial times (seconds)
+         %
+         %  ts = obj.Trial; Returns all values of Trial
+         %  ts = obj.Trial(trialIdx); Returns indexed values of Trial
+         
+
+         ts = getEventData(obj.Block,obj.Block.ScoringField,'ts','Trial');
+         if nargin > 1
+            ts = ts(trialIdx);
+         end
+      end
+   end
+   
+   % PROTECTED (initializers)
+   methods (Access=protected)
       % Build "Heads Up Display" (HUD)
       function buildHeadsUpDisplay(obj,label)
          % BUILDHEADSUPDISPLAY  Builds the "Heads-Up-Display" (HUD) that
@@ -643,8 +648,8 @@ classdef vidInfo < handle
       
    end
    
-   % Methods from older naming convention (to be deprecated)
-   methods (Access = public, Hidden = true)
+   % HIDDEN,PUBLIC
+   methods (Hidden,Access=public)
       % Get "neural time" from corresponding video timestamp
       function neuTime = toNeuTime(obj,vid_t)
          % TONEUTIME  Returns the converted neural time based on video time
@@ -665,8 +670,8 @@ classdef vidInfo < handle
 
    end
    
-   % "UPDATE" methods to be referenced within this class only
-   methods (Access = private)
+   % PROTECTED
+   methods (Access=protected)
       % Update the video and neural times
       function updateTime(obj)
          % UPDATETIME  Update the video and neural times to reflect new
@@ -690,4 +695,30 @@ classdef vidInfo < handle
       end
    end
    
+   % STATIC,PUBLIC
+   methods (Static,Access=public)
+      % Create "Empty" object or object array
+      function obj = empty(n)
+         %EMPTY  Return empty nigeLab.libs.behaviorInfo object or array
+         %
+         %  obj = nigeLab.libs.behaviorInfo.empty();
+         %  --> Return scalar (0 x 0) object
+         %
+         %  obj = nigeLab.libs.behaviorInfo.empty(n);
+         %  --> Specify number of empty objects
+         
+         if nargin < 1
+            dims = [0, 0];
+         else
+            if ~isscalar(n)
+               error(['nigeLab:' mfilename ':invalidEmptyDims'],...
+                  'Input to nigeLab.libs.behaviorInfo.empty should be scalar.');
+            end
+            dims = [0, n];
+         end
+         
+         obj = nigeLab.libs.behaviorInfo(dims);
+      end
+   end
+   % % % % % % % % % % END METHODS% % %
 end

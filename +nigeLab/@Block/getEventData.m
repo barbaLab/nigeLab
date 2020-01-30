@@ -161,7 +161,7 @@ switch fieldType
    case 'Channels' % Returns Events parsed from Channels
       eventData = blockObj.getChannelsEventData(field,prop,ch,...
          matchProp,matchValue);
-   case 'Streams' % Returns Events parsed from Streams (go in .Events)
+   case {'Streams','Events'} % Returns Events parsed from Streams (go in .Events)
       eventName = ch;
       eventData = blockObj.getStreamsEventData(field,prop,eventName,...
          matchProp,matchValue);

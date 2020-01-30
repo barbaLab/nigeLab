@@ -129,7 +129,7 @@ function clusterIndex = getCIFromExistingFile(blockObj,ch)
 
 ftype = getFileType(blockObj,'Sorted');
 info = getInfo(blockObj.Channels(ch).Sorted);
-names = {info.name};
+names = {info.Name};
 tagIdx = find(strcmpi(names,'tag'),1,'first');
 
 if isempty(tagIdx) % Everything is fine, return it the normal way

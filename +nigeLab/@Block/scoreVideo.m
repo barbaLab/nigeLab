@@ -11,14 +11,18 @@ blockObj.updateParams('Event');
 blockObj.updateParams('Video');
 
 if ~blockObj.Pars.Video.HasVideo
-   error('Check defaults.Video; as configured, no videos associated.');
+   fig = [];
+   [fmt,idt,type] = blockObj.getDescriptiveFormatting();
+   dbstack();
+   nigeLab.utils.cprintf('Errors*','%s[SCOREVIDEO]: ',idt);
+   nigeLab.utils.cprintf(fmt(1:(end-1)),...
+      '%s %s parameters indicate that it has no video(s)\n',...
+      type,blockObj.Name);
+   return;
 end
 
-scoringFieldName = blockObj.Pars.Video.ScoringEventFieldName; % for short
-blockObj.checkCompatibility({scoringFieldName,'Video'});
-if any(~blockObj.Status.(scoringFieldName))
-   error('Not all %s files have been created yet.',scoringFieldName);
-end
+blockObj.checkCompatibility({blockObj.ScoringField,'Video'});
+
 %MAKE UI WINDOW AND DISPLAY CONTAINER
 fig=figure('Name','Behavior Scoring',...
            'NumberTitle','off',...
@@ -45,7 +49,6 @@ infoPanel = nigeLab.libs.nigelPanel(fig,...
    'String','Info',...
    'TitleFontSize',22,...
    'Position',[0.765 0 0.235 1]);
-
         
 %Create objects that track event-related and video-related info
 behaviorInfoObj = nigeLab.libs.behaviorInfo(blockObj,infoPanel); % "Event"

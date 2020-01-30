@@ -19,7 +19,8 @@ function stream = getStream(blockObj,streamName,source,scaleOpts)
 %                                               to). 
 
 if nargin < 2
-   error('Must supply at least two arguments.');
+   error(['nigeLab:' mfilename ':TooFewInputs'],...
+      '\t\t->\t[BLOCK/GETSTREAM]: Must supply at least two arguments.');
 end
 
 if ~iscell(streamName)

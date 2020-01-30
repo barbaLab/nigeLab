@@ -80,6 +80,7 @@ function varargout = Video(varargin)
 pars = struct;
 pars.HasVideo = true;
 pars.HasVidStreams = true;
+pars.UseVideoPromptOnEmpty = false;
 
 % % % -- For Video Scoring -- % % %
 
@@ -160,8 +161,8 @@ pars.VidStreamSource = '';  % If pars.CameraSourceVar is non-empty
 % to toggle it.
 
 pars.VidFilePath    = { ... % "Includes" for where videos might be. Stops after first non-empty path.
-   'K:\Rat\Video\BilateralReach\Murphy'; 
-   'K:\Rat\Video\BilateralReach\RC';
+...   'K:\Rat\Video\BilateralReach\Murphy'; 
+...   'K:\Rat\Video\BilateralReach\RC';
    'K:\Rat\Video\Audio Discrimination Task\post-surg'
    };
 
@@ -172,12 +173,14 @@ pars.ValidVidExtensions = {'*_Right-A_0.MP4','Right Camera Videos Only';...
                            '*_0.MP4','First Video Only';...
                            '*.MP4;*.mp4;*.avi','Video Files (*.mp4,*.avi)';...
                            '*.*','All Files (*.*)'};  
-pars.SelectionUITitle = 'No Videos Found - Select VIDEO associated with BLOCK';
-
 pars.FileExt = '.MP4';
-% For DynamicVars expressions, see 'Metadata parsing' below
-pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$SessionID','$View','$MovieID'}; % KUMC: "Murphy"
-% pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','&MovieID'}; % KUMC: "RC"
+% For DynamicVars expressions, see 'Metadata parsing' below; main
+% difference here is that ALL variables (if there are enough tokens) are
+% included as metadata variables; '$' vs '~' only denotes whether to use
+% that particular variable in figuring out other videos belonging to a
+% given recording.
+pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$SessionID','~View','~MovieID'}; % KUMC: "Murphy"
+% pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','~MovieID'}; % KUMC: "RC"
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 
 % Information about video scoring
@@ -197,14 +200,10 @@ pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
 pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
 
 %% Less-likely to change these parameters
-% Paths information
-pars.File = [];
-
 % Metadata parsing
 pars.Delimiter = '_'; % Break filename "variables" by this
 pars.IncludeChar = '$'; % Include data from these variables
 pars.ExcludeChar = '~'; % Exclude data from these variables
-pars.Meta = [];
 
 pars.ValueShortcutFcn = @nigeLab.workflow.defaultVideoScoringShortcutFcn;
 pars.VideoScoringStringsFcn = @nigeLab.workflow.defaultVideoScoringStrings;
@@ -219,17 +218,35 @@ pars.HasVidStreams = ...
    (~isempty(pars.VidStreamName));
 
 if pars.HasVidStreams
+   dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
+   if ismember('Key',dyVar)
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         '[DEFAULTS/VIDEO]: Invalid use of reserved meta variable (''Key'')');
+   end
+   
+   % Check that the CameraSourceVar and MovieIndexVar were added to `pars`
+   if ~isfield(pars,'CameraSourceVar')
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         ['CameraSourceVar parameter field is missing\n' ...
+         '->\t(can be left as [] if unwanted)']);
+   end
+   if ~isfield(pars,'MovieIndexVar')
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         ['MovieIndexVar parameter field is missing\n' ...
+         '->\t(can be left as [] if unwanted)']);
+   end
+   
    n = numel(pars.VidStreamName);
    if ~isempty(pars.CameraSourceVar)
       pars.VidStreamField = cell(n,1);
       pars.VidStreamFieldType = cell(n,1);
       
       % Check that the CameraSourceVar is good
-      dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
       idx = ismember(dyVar,pars.CameraSourceVar);
       if sum(idx) ~= 1
-         error('CameraSourceVar (%s) is not a member of pars.DynamicVars (%s)',...
-            pars.CameraSourceVar,dyVar);
+         error(['nigeLab:' mfilename ':BadConfig'],...
+            'CameraSourceVar (%s) is not a member of pars.DynamicVars',...
+            pars.CameraSourceVar);
       end
       
       % For each Cell corresponding to a different subset of markings,

@@ -79,6 +79,11 @@ classdef Block < nigeLab.nigelObj
       CurrentJob                % parallel.job.MJSCommunicatingJob
    end
    
+   % HIDDEN,TRANSIENT,DEPENDENT,PUBLIC
+   properties (Hidden,Transient,Dependent,Access=public)
+      ScoringField   char  % blockObj.Pars.Video.ScoringEventFieldName
+   end
+   
    % PUBLIC
    properties (Access=public)
       Channels struct                        % Struct array of neurophysiological stream data
@@ -88,17 +93,17 @@ classdef Block < nigeLab.nigelObj
    end
    
    % RESTRICTED:nigelObj/PUBLIC
-   properties (GetAccess = public,SetAccess = ?nigeLab.nigelObj)
-      FileType    cell=nigeLab.nigelObj.Default('FileType','Block')  % Indicates DiskData file type for each Field
-      Mask {logical,double}% Vector of indices of included elements of Channels
-      Notes       struct   % Notes from text file
-      Probes      struct  % Probe configurations associated with saved recording
-      RMS         table   % RMS noise table for different waveforms
-      SampleRate  double   % Recording sample rate
-      Samples     double   % Total number of samples in original record
-      Scoring     struct   % Metadata about any scoring done
-      Status      struct   % Completion status for each element of BLOCK/FIELDS
-      Time                 % nigeLab.libs.DiskData
+   properties (GetAccess = public,SetAccess=?nigeLab.nigelObj)
+      FileType       cell  =  nigeLab.nigelObj.Default('FileType','Block')  % Indicates DiskData file type for each Field
+      Mask           {logical,double}        % Vector of indices of included elements of Channels
+      Notes          struct                  % Notes from text file
+      Probes         struct                  % Probe configurations associated with saved recording
+      RMS            table                   % RMS noise table for different waveforms
+      SampleRate     double                  % Recording sample rate
+      Samples        double                  % Total number of samples in original record
+      Scoring (1,1)  struct                  % Metadata about any scoring done
+      Status  (1,1)  struct                  % Completion status for each element of BLOCK/FIELDS
+      Time           nigeLab.libs.DiskData   % DiskFile reference to neural time record
    end
    
    % RESTRICTED:nigelObj
@@ -168,7 +173,31 @@ classdef Block < nigeLab.nigelObj
                'Block object construction unsuccessful.');
          end
       end
-
+      
+      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      % [DEPENDENT] Returns .ScoringField property
+      function value = get.ScoringField(blockObj)
+         %GET.SCORINGFIELD  Returns .ScoringField 
+         %
+         %  value = get(blockObj,'ScoringField');
+         %  --> Returns blockObj.Pars.Video.ScoringEventFieldName, or empty
+         %      char '' if that parameter has not yet been initialized.
+         
+         value = '';
+         if isempty(blockObj)
+            return;
+         elseif ~isvalid(blockObj)
+            return;
+         elseif ~isfield(blockObj.Pars,'Video')
+            return;
+         elseif ~isfield(blockObj.Pars.Video,'ScoringEventFieldName')
+            return;
+         else
+            value = blockObj.Pars.Video.ScoringEventFieldName;
+         end
+      end
+      % % % % % % % % % % END GET.PROPERTY METHODS % % %
+      
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
       function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
@@ -198,7 +227,20 @@ classdef Block < nigeLab.nigelObj
             n = builtin('numArgumentsFromSubscript',...
                blockObj,s,indexingContext);
          end
-      end     
+      end
+      
+      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
+      % [DEPENDENT]  Assigns .ScoringField property (cannot)
+      function set.ScoringField(~,~)
+         % Does nothing
+         nigeLab.sounds.play('pop',2.7);
+         dbstack();
+         nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
+         nigeLab.utils.cprintf('Errors',...
+            'Failed attempt to set DEPENDENT property: ScoringField\n');
+         fprintf(1,'\n');
+      end
+      % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
    
    % PROTECTED
@@ -311,8 +353,14 @@ classdef Block < nigeLab.nigelObj
          end
          % Get `FileExt` if it was parsed
          blockObj.FileExt = meta.FileExt;
-
+         blockObj.Meta = nigeLab.nigelObj.MergeStructs(blockObj.Meta,meta);
       end
+   end
+   
+   % RESTRICTED:nigeLab.libs.VideosFieldType
+   methods (Access=?nigeLab.libs.VideosFieldType)
+      index = parseVidFileName(blockObj,fName)  % Add to Block.Meta.Video table and return corresponding index
+      s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
    end
    
    % PUBLIC
@@ -332,6 +380,12 @@ classdef Block < nigeLab.nigelObj
 %       --> Deprecated (inherited from `nigelObj`)
 %       flag = linkToData(blockObj,suppressWarning) % Link to existing data
 %       --> Deprecated (inherited from `nigelObj`) 
+%       fileType = getFileType(blockObj,field) % Get file type corresponding to field
+%       --> Deprecated (inherited from `nigelObj`) 
+%       [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
+%       --> Deprecated (inherited from `nigelObj`) 
+%       [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
+%       --> Deprecated (inherited from `nigelObj`) 
 % % % % % % % % % % % % % % % % % % % % % % % % % % End Deprecated % % % %
 
       % "Property" methods:
@@ -347,7 +401,7 @@ classdef Block < nigeLab.nigelObj
       info = getScoringMetadata(blockObj,fieldName,hashID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
-      checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
+      flag = checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
       flag = doEventDetection(blockObj,behaviorData,vidOffset) % Detect "Trials" for candidate behavioral Events
       flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)  % Create "Header" for behavioral Events
@@ -355,7 +409,7 @@ classdef Block < nigeLab.nigelObj
       flag = doReReference(blockObj)    % Do virtual common-average re-reference
       flag = doSD(blockObj)             % Do spike detection for extracellular field
       flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
-      flag = doVidInfoExtraction(blockObj,vidFileName) % Get video information
+      flag = doVidInfoExtraction(blockObj,vidFileName,forceParamsUpdate) % Get video information
       flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
       flag = doVidSyncExtraction(blockObj) % Get sync info from video
       flag = doAutoClustering(blockObj,chan,unit,useSort) % Do automatic spike clustiring
@@ -396,7 +450,6 @@ classdef Block < nigeLab.nigelObj
       
       % Methods for associating/displaying info about blocks:
       L = list(blockObj,keyIdx) % List of current associated files for field or fields
-      flag = updateVidInfo(blockObj) % Update video info
       flag = linkField(blockObj,fieldIndex)     % Link field to data
       flag = linkChannelsField(blockObj,field,fType)  % Link Channels field data
       flag = linkEventsField(blockObj,field)    % Link Events field data
@@ -412,9 +465,6 @@ classdef Block < nigeLab.nigelObj
       header = parseHeader(blockObj,fid)  % Parse header depending on structure
       
       % Methods for parsing Fields info:
-      fileType = getFileType(blockObj,field) % Get file type corresponding to field
-      [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
-      [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
       [fieldIdx,n] = getStreamsFieldIndex(blockObj,field,type) % Get index into Streams for a given Field
       notifyStatus(blockObj,field,status,channel) % Triggers event notification to blockObj
       opOut = updateStatus(blockObj,operation,value,channel) % Indicate completion of phase
@@ -450,7 +500,7 @@ classdef Block < nigeLab.nigelObj
       flag = initChannels(blockObj,header);   % Initialize Channels property
       flag = initEvents(blockObj);     % Initialize Events property
       flag = initStreams(blockObj,header);    % Initialize Streams property
-      flag = initVideos(blockObj);     % Initialize Videos property
+      flag = initVideos(blockObj,forceNewParams);     % Initialize Videos property
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
@@ -460,6 +510,7 @@ classdef Block < nigeLab.nigelObj
    methods (Hidden,Access=private)
       eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp,matchValue)
       eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,matchValue)
+      flag = updateVidInfo(blockObj,forceExtraction) % Update video info
    end
    
    % STATIC,PUBLIC
@@ -488,6 +539,11 @@ classdef Block < nigeLab.nigelObj
    methods (Static,Sealed,Access=public)
       field = getOperationField(operation); % Get field associated with operation
       blockObj = loadRemote(targetBlockFile); % Load block on remote worker
+   end
+   
+   % SEALED,HIDDEN,PUBLIC
+   methods (Sealed,Hidden,Access=public)
+      varargout = testbench(blockObj,varargin); % Testbench with access to protected methods
    end
    % % % % % % % % % % END METHODS% % %
 end

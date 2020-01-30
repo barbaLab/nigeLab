@@ -25,7 +25,8 @@ pars.Local.SaveRoot = 'P:/';
 pars.Remote.RecRoot = 'P:/Recorded_Data'; 
 pars.Remote.SaveRoot = 'P:/Processed_Data';
 
-pars.ClusterList = {'CPLMJS'; 'CPLMJS2'; 'CPLMJS3'};
+% pars.ClusterList = {'CPLMJS';'CPLMJS2';'CPLMJS3'};
+pars.ClusterList = {'CPLMJS';'CPLMJS2'};
 pars.NWorkerMinMax = [1,1]; % Min & Max # workers to assign to a job
 pars.WaitTimeSec = 1; % Time to wait between checking for new cluster
 pars.InitTimeSec = 5; % Time to wait when initializing cluster

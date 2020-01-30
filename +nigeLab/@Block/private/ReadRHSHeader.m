@@ -58,7 +58,10 @@ raw_channels = nigeLab.utils.initChannelStruct('Channels',1);
 analogIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
 digIO_channels = nigeLab.utils.initChannelStruct('Streams',0);
 
-spike_triggers=nigeLab.utils.initSpikeTriggerStruct('RHS',1);
+spikes_triggers=nigeLab.utils.initSpikeTriggerStruct('RHS',1);
+stim_triggers = nigeLab.utils.initSpikeTriggerStruct('FSM',0);
+dig_in_triggers = nigeLab.utils.initSpikeTriggerStruct('RHS',0);
+dig_out_triggers = nigeLab.utils.initSpikeTriggerStruct('RHS',0);
 
 magic_number = fread(FID, 1, 'uint32');
 if magic_number ~= hex2dec('d69127ac')
@@ -75,7 +78,6 @@ if verbose
       data_file_main_version_number, data_file_secondary_version_number);
    fprintf(1, '\n');
 end
-
 
 num_samples_per_data_block = 128;
 
@@ -163,7 +165,6 @@ dig_out_index = [];
 % Read signal summary from data file header.
 
 number_of_signal_groups = fread(FID, 1, 'int16');
-
 for signal_group = 1:number_of_signal_groups
    signal_group_name = nigeLab.utils.fread_QString(FID);
    signal_group_prefix = nigeLab.utils.fread_QString(FID);
@@ -192,12 +193,22 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).chip_channel = fread(FID, 1, 'int16');
          fread(FID, 1, 'int16');  % ignore command_stream
          new_channel(1).board_stream = fread(FID, 1, 'int16');
-         new_trigger_channel(1).voltage_trigger_mode = fread(FID, 1, 'int16');
-         new_trigger_channel(1).voltage_threshold = fread(FID, 1, 'int16');
-         new_trigger_channel(1).digital_trigger_channel = fread(FID, 1, 'int16');
-         new_trigger_channel(1).digital_edge_polarity = fread(FID, 1, 'int16');
-         new_channel(1).electrode_impedance_magnitude = fread(FID, 1, 'single');
-         new_channel(1).electrode_impedance_phase = fread(FID, 1, 'single');
+         if signal_type == 4 % DAC (MM: 2020-01-29 // ONLY VALID FOR FSM VERSION OF RHS @ CPL)
+            new_dac_channel = nigeLab.utils.initSpikeTriggerStruct('FSM',1);
+            new_dac_channel(1).fsm_enable = fread(fid, 1, 'int16');
+            new_dac_channel(1).voltage_threshold = fread(fid, 1, 'int16');
+            new_dac_channel(1).amp_trigger_channel = fread(fid, 1, 'int16');
+            new_dac_channel(1).trigger_window_type = fread(fid, 1, 'int16'); % 0 include 1 exclude (from memory; not 100% sure)
+            new_dac_channel(1).window_start_sample = fread(fid, 1, 'single');
+            new_dac_channel(1).window_stop_sample = fread(fid, 1, 'single');
+         else
+            new_trigger_channel(1).voltage_trigger_mode = fread(fid, 1, 'int16');
+            new_trigger_channel(1).voltage_threshold = fread(fid, 1, 'int16');
+            new_trigger_channel(1).digital_trigger_channel = fread(fid, 1, 'int16');
+            new_trigger_channel(1).digital_edge_polarity = fread(fid, 1, 'int16');
+            new_channel(1).electrode_impedance_magnitude = fread(fid, 1, 'single');
+            new_channel(1).electrode_impedance_phase = fread(fid, 1, 'single');
+         end
          [new_channel(1).chNum,new_channel(1).chStr] = ...
             nigeLab.utils.getChannelNum(new_channel(1).custom_channel_name);
          
@@ -205,9 +216,14 @@ for signal_group = 1:number_of_signal_groups
             switch (signal_type)
                case 0
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('Raw');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Data',[],'Raw','Channels','RHS',...
+                     new_channel.custom_channel_name,'Channels');
                   raw_channels(raw_index) = new_channel;
-                  spike_triggers(raw_index) = new_trigger_channel;
+                  new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                     'Data',[],'Spikes','Events','RHS',...
+                     new_channel.custom_channel_name,'Channels');
+                  spikes_triggers(raw_index) = new_trigger_channel;
                   raw_index = raw_index + 1;
                case 1
                   % aux inputs; not used in RHS2000 system
@@ -215,31 +231,68 @@ for signal_group = 1:number_of_signal_groups
                   % supply voltage; not used in RHS2000 system
                case 3
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('Adc');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Adc',[],'AnalogIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   adc_index = [adc_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
                case 4
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('Dac');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Adc',[],'AnalogIO','Streams','RHS',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
+                  if new_dac_channel(1).trigger_window_type == 0
+                     new_dac_channel(1).signal = nigeLab.utils.signal(...
+                        'FSM',[],'Stim','Events','RHS',...
+                        new_channel.custom_channel_name,'Include');
+                  else
+                     new_dac_channel(1).signal = nigeLab.utils.signal(...
+                        'FSM',[],'Stim','Events','RHS',...
+                        new_channel.custom_channel_name,'Exclude');
+                  end
+                  stim_triggers = [stim_triggers, new_dac_channel];  %#ok<AGROW>
                   dac_index = [dac_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
                case 5
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('DigIn');
-                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'DigIn',[],'DigIO','Streams','RHS',...
+                     new_channel.custom_channel_name,'Standard');
+                  new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);                  
                   digIO_channels(digIO_index) = new_channel;
+                  if new_channel.native_order >= 12 && new_channel.native_order <= 14
+                     new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigIn',[],'DigIO','Events','RHS',...
+                        new_channel.custom_channel_name,'FSM');
+                  else
+                     new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigIn',[],'DigIO','Events','RHS',...
+                        new_channel.custom_channel_name,'IO');
+                  end
                   dig_in_index = [dig_in_index, digIO_index]; %#ok<AGROW>
                   digIO_index = digIO_index + 1;
                case 6
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('DigOut');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'DigOut',[],'DigIO','Streams','RHS',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
+                  if new_channel.native_order >= 12 && new_channel.native_order <= 14
+                     new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigOut',[],'DigIO','Events','RHS',...
+                        new_channel.custom_channel_name,'FSM');
+                  else
+                     new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigOut',[],'DigIO','Events','RHS',...
+                        new_channel.custom_channel_name,'IO');
+                  end
                   digIO_channels(digIO_index) = new_channel;
                   dig_out_index = [dig_out_index, digIO_index]; %#ok<AGROW>
+                  dig_out_triggers = [dig_out_triggers, new_trigger_channel];  %#ok<AGROW>
                   digIO_index = digIO_index + 1;
                otherwise
                   error('Unknown channel type');

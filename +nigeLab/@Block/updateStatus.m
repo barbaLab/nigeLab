@@ -1,5 +1,5 @@
 function opOut = updateStatus(blockObj,operation,value,channel)
-%% UPDATESTATUS  Updates Status property of nigeLab.Block class object
+%UPDATESTATUS  Updates Status property of nigeLab.Block class object
 %
 %  opOut = UPDATESTATUS(blockObj);
 %  opOut = UPDATESTATUS(blockObj,operation);
@@ -32,7 +32,7 @@ function opOut = updateStatus(blockObj,operation,value,channel)
 %                       file, which can be adjusted as a template by the
 %                       user.
 
-%% PARSE INPUT FOR MULTIPLE COMMANDS
+% PARSE INPUT FOR MULTIPLE COMMANDS
 if nargin > 2
    if iscell(operation) && iscell(value)
       if numel(operation)~=numel(value)
@@ -50,7 +50,6 @@ if nargin > 2
    end
 end
 
-%%
 allOps = blockObj.Fields;
 
 switch nargin

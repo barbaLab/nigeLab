@@ -136,7 +136,7 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    pars.Delimiter 'Stream.mat'];
 TAG.Videos = ... % Videos: behavioral videos
    [pars.Delimiter '%s', ...
-    pars.Delimiter '%g.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
+    pars.Delimiter '%s.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
 
 Fields =  { ...
    'Raw';            % 1  - hard-coded for extraction

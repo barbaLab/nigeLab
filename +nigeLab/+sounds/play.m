@@ -10,18 +10,25 @@ function play(soundName,speedFactor)
 %  (double) waveform, as well as 'fs' variable, which is the (double
 %  scalar) sampling frequency.
 
+p = mfilename('fullpath');
+pname = fileparts(p);
+
 if nargin < 1
    soundName = 'alert';
+elseif ismember(lower(soundName),{'help','options','opts','sounds'})
+   F = dir(fullfile(pname,'*.mat'));
+   soundList = {F.name};
+   soundList = cellfun(@(c)c(1:(end-4)),soundList,'UniformOutput',false);
+   disp(soundList);
+   return;
 end
 
 if nargin < 2
    speedFactor = 1;
 end
 
-% Parse path to sound file
+% Parse path to sound file (must be in ~/+nigeLab/+sounds/ folder)
 [~,fname,~] = fileparts(soundName);
-p = mfilename('fullpath');
-pname = fileparts(p);
 soundName = fullfile(pname,[fname '.mat']);
 
 if ~exist(soundName,'file')
