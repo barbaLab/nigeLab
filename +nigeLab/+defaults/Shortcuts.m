@@ -18,13 +18,29 @@ if strcmpi(out_mode,'cell')
                                                     };
 else
    pars = struct;
-   pars.raw = 'Channels(%d).Raw.data';
-   pars.filt = 'Channels(%d).Filt.data';
-   pars.car = 'Channels(%d).CAR.data';
-   pars.lfp = 'Channels(%d).LFP.data';
-   pars.spk = 'Channels(%d).Spikes';
-   pars.srt = 'Channels(%d).Sorted';
-   pars.clst = 'Channels(%d).Clusters';
+   pars.raw.subfields = {'Channels', 'Raw'};
+   pars.raw.indexable = [true      , true];
+   
+   pars.filt.subfields = {'Channels', 'Filt'};
+   pars.filt.indexable = [true      , true];
+   
+   pars.car.subfields = {'Channels', 'CAR'};
+   pars.car.indexable = [true     , true];
+   
+   pars.lfp.subfields = {'Channels', 'LFP'};
+   pars.lfp.indexable = [true     , true];
+   
+   pars.spk.subfields = {'Channels', 'Spikes'};
+   pars.spk.indexable = [true      , true];
+   
+   pars.srt.subfields = {'Channels', 'Sorted'};
+   pars.srt.indexable = [true      , true];
+   
+   pars.clst.subfields = {'Channels', 'Clusters'};
+   pars.clst.indexable = [true      , true];
+   
+   pars.digIO.subsfield = {'Streams', 'DigIO', 'data'};
+   pars.digIO.indexable = [false    , true   , true];
 end
 
 end

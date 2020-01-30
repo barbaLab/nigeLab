@@ -514,7 +514,7 @@ classdef nigelObj < handle & ...
          end
       end
       
-      function n = numArgumentsFromSubscript(tankObj,s,indexingContext)
+      function n = numArgumentsFromSubscript(nigelObj,s,indexingContext)
           % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
           %
           %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
@@ -525,9 +525,29 @@ classdef nigelObj < handle & ...
           
           switch s(1).type
               case '{}'
-                  n = 1;
+                  switch class(nigelObj)
+                      case {'nigeLab.Tank','nigeLab.Animal'}
+                          n = 1;
+                      case 'nigeLab.Block'
+                          n = numel(nigelObj);
+                      otherwise
+                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                  end
+              case '.'
+                  switch class(nigelObj)
+                      case 'nigeLab.Block'
+                          Ffields = nigelObj(1).Pars.Block.Fields;
+                          idx = strcmpi(Ffields,s(1).subs);
+                          if any(idx)
+                              n = numel(nigelObj);
+                          else
+                              n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                          end
+                      otherwise
+                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                  end
               otherwise
-                  n = builtin('numArgumentsFromSubscript',tankObj,s,indexingContext);
+                  n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
           end
       end
       

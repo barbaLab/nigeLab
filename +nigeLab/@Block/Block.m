@@ -170,8 +170,19 @@ classdef Block < nigeLab.nigelObj
          blockObj.Key = nigeLab.nigelObj.InitKey;
       end
 
+      function ind = end(obj,k,n)
+          if n>2
+              % called by {}
+              warning(['nigeLab:' mfilename 'unsupportedOperator'],...
+                  '""end"" operator not supported in this context.\nThis may lead to unexpexted behavior.');
+              ind = builtin('end',obj,k,n);
+          else
+              ind = builtin('end',obj,k,n);
+          end
+      end
+      
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
-      function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
+      function n = numArgumentsFromSubscriptUNUSED(blockObj,s,indexingContext)
          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          %
          %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
