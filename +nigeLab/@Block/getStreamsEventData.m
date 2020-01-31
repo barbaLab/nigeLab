@@ -6,7 +6,7 @@ function eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp
 %
 %  Should be called from blockObj.getEventData.
 
-%%
+
 propName = lower(prop);
 switch propName % Define some things to make it easier to avoid typo etc
    case {'times','timestamps','t'}
@@ -29,21 +29,15 @@ eventData = [];
 if isfield(blockObj.Events,field)
    if numel(blockObj.Events.(field)) >= idx
       if isfield(blockObj.Events.(field)(idx),'data')
-         if isa(blockObj.Events.(field)(idx).data,'nigeLab.libs.DiskData')
-            if size(blockObj.Events.(field)(idx).data,2)>=5 % Then it exists and has been initialized correctly
-               tmp = blockObj.Events.(field)(idx).data;
-               eventData = tmp.(propName);
-            else
-               warning(['DiskData for Events.%s(%g) exists, but is ' ...
-                  'not initialized correctly (too small -- ' ...
-                  'only %g columns).'],field,idx,...
-                  size(blockObj.Events.(field)(idx).data,2));
-               return;
-            end
+         % Do not need to check if it is .DiskData due to validator
+         if size(blockObj.Events.(field)(idx).data,2)>=5 % Then it exists and has been initialized correctly
+            tmp = blockObj.Events.(field)(idx).data;
+            eventData = tmp.(propName);
          else
-            warning(['Events.%s(%g) exists, but is not a DiskData ' ...
-               '(current class is %g).'],field,idx,...
-               class(blockObj.Events.(field)(idx).data));
+            warning(['DiskData for Events.%s(%g) exists, but is ' ...
+               'not initialized correctly (too small -- ' ...
+               'only %g columns).'],field,idx,...
+               size(blockObj.Events.(field)(idx).data,2));
             return;
          end
       else

@@ -68,8 +68,10 @@ end
       char_out = strsplit(char_in,delim);
       for iS = 1:numel(char_out)
          char_out{iS}(1) = upper(char_out{iS}(1));
-         if strcmp(char_out{iS}((end-1):end),'io')
-            char_out{iS}((end-1):end) = 'IO';
+         if numel(char_out{iS}) > 1
+            if strcmp(char_out{iS}((end-1):end),'io')
+               char_out{iS}((end-1):end) = 'IO';
+            end
          end
       end
       char_out = strjoin(char_out,'');

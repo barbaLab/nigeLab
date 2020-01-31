@@ -1715,17 +1715,27 @@ classdef nigelObj < handle & ...
             end
             obj.IsDashOpen = false;   % Set flag to false
          else
-            if obj.IsDashOpen
-               obj.IsDashOpen = isvalid(value);
-               if ~obj.IsDashOpen
+            if obj.IsDashOpen % It is already open; no need to assign
+               if isvalid(value)
+                  if isprop(value,'nigelGUI')
+                     figure(value.nigelGUI); % Make sure figure is focused
+                  else
+                     [fmt,idt,type] = obj.getDescriptiveFormatting();
+                     nigeLab.utils.cprintf(fmt,'%s[NIGELOBJ/SET.GUI]: ',...
+                        idt);
+                     nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                        'Invalid GUI assignment (%s %s)\n',type,obj.Name);
+                  end
+               end
+            else % Otherwise it is not open
+               flag = isvalid(value);
+               if ~flag
                   value = nigeLab.libs.DashBoard.empty();
                end
                % Store association to handle object
                obj.GUIContainer = value; 
-            else % Otherwise it is already open; no need to assign anything
-               if isvalid(value)
-                  figure(obj.GUI.nigelGUI);
-               end
+               % Set .IsDashOpen AFTER setting obj.GUIContainer
+               obj.IsDashOpen = flag;
                return;
             end
          end
@@ -1880,7 +1890,7 @@ classdef nigelObj < handle & ...
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
-         [obj.Name,obj.Meta] = obj.parseNamingMetadata();
+         obj.parseNamingMetadata();
       end
       
       % [FLAG] Set method for .IsDashOpen (flag true if GUI is open)
@@ -2415,7 +2425,7 @@ classdef nigelObj < handle & ...
          %
          %  See Also:
          %  NIGELAB.BLOCK/CHECKACTIONISVALID,
-         %  NIGELAB.BLOCK/CHECKPARALLELCOMPATIBILITY
+         %  NIGELAB.NIGELOBJ/CHECKPARALLELCOMPATIBILITY
          
          % Could add parsing here to allow requiredFields to be a 'config' class or
          % something like that, or whatever, that allows it to load in a set of
@@ -2457,8 +2467,6 @@ classdef nigelObj < handle & ...
                requiredFields{idx(i)});
          end
          error('Missing required Fields. Check nigeLab.defaults.Block');
-         
-         
       end
       
       % Check compatibility for Remote/Parallel execution
@@ -2516,7 +2524,7 @@ classdef nigelObj < handle & ...
             [fmt,idt,type] = obj.getDescriptiveFormatting();
             nigeLab.utils.cprintf('Comments*','\n-----%s',idt);
             nigeLab.utils.cprintf(fmt(1:(end-1)),...
-               '[CHECK]: %s (%s) flagged for ',idt,obj.Name,type);
+               '[CHECKPARALLEL]: %s (%s) flagged for ',obj.Name,type);
             if flag
                nigeLab.utils.cprintf('Keywords*','Parallel');
             else
@@ -2590,6 +2598,16 @@ classdef nigelObj < handle & ...
          %  --> Full method implemented at `nigeLab.Block` level
          
          flag = nigeLab.nigelObj.doMethod(obj,@doUnitFilter);
+      end
+      
+      % Extract video metadata if videos are present
+      function flag = doVidInfoExtraction(obj)
+         %DOVIDINFOEXTRACTION  Extract video metadata if videos present
+         %
+         %  flag = doVidInfoExtraction(obj);
+         %  --> Full method implemented at `nigeLab.Block` level
+         
+         flag = nigeLab.nigelObj.doMethod(obj,@doVidInfoExtraction);
       end
       % % % % % % % % % % END "DO" METHODS % % % % % % %
       
@@ -2777,6 +2795,224 @@ classdef nigelObj < handle & ...
          end
       end
       
+      % Returns info cell array with struct arrays for each field requested
+      function info = getFieldInfo(obj,field)
+         %GETFIELDINFO  Returns info cell array about requested fields
+         %
+         %  info = obj.getFieldInfo(); 
+         %  --> Returns cell array with same number elements as .Fields;
+         %      each cell contains struct array of info
+         %     --> info : .Label  -- Summary; .Print   -- Longer
+         %
+         %  info = obj.getFieldInfo('fieldName');
+         % --> Returns struct array for 'fieldName'
+         
+         thisObj = nigeLab.nigelObj.getValidObj(obj,1);
+         if isempty(thisObj)
+            info = {};
+            return;
+         end
+         if nargin < 2
+            field = obj.Fields;
+         end
+         if iscell(field)
+            info = cell(1,numel(field));
+            for i = 1:numel(field)
+               info{i} = getFieldInfo(obj,field{i});
+            end
+            return;
+         end
+         S = getStatus(obj,field);
+         N = numel(S);
+         info = struct(...
+            'Label',cell(1,N),...
+            'Print',cell(1,N),...
+            'status',cell(1,N),...
+            'mask',cell(1,N));
+         for i = 1:N
+            info(i).Label = '';
+            info(i).Status = S(i);
+         end
+         [~,idt] = obj.getDescriptiveFormatting();
+         if numel(obj)==1
+            for i = 1:N
+               info(i).mask = true;
+            end
+            switch thisObj.Type
+               case 'Block'
+                  switch obj.getFieldType(field)
+                     case 'Channels'
+                        for i = 1:N
+                           info(i).mask = ismember(i,obj.Mask);
+                           info(i).Print = sprintf('%s[%s]::(%s): P%g%s\n',...
+                              idt,obj.Name,field,obj.Channels(i).probe,...
+                              obj.Channels(i).chStr);
+                        end
+                     case 'Streams'
+                        for i = 1:N
+                           info(i).Label = obj.Streams.(field)(i).name;
+                           info(i).Print = sprintf('%s[%s]::(%s): P%g%s\n',...
+                              idt,obj.Name,field,obj.Channels(i).probe,...
+                              obj.Channels(i).chStr);
+                        end
+                     otherwise
+                        for i = 1:N
+                           if info(i).status
+                              str = 'Complete';
+                           else
+                              str = 'Incomplete';
+                           end
+                           info(i).Print = sprintf('%s[%s]::(%s): %s\n',...
+                                 idt,obj.Name,field,str);
+                           if strcmp(field,'Video') && ...
+                                 isfield(obj.Meta,'Video')
+                              if isfield(obj.Meta.Video,'View') && ...
+                                    isfield(obj.Meta.Video,'MovieID')
+                                 info(i).Label = sprintf(...
+                                    '%s-%s',obj.Meta.Video.View{i},...
+                                    obj.Meta.Video.MovieID{i});
+                              end
+                           end
+                        end
+                  end    
+               case {'Animal','Tank'}
+                  c = [obj.Children];
+                  for i = 1:N
+                     info(i).mask = c(i).IsMasked;
+                  end
+                  
+            end
+         else % Array -> only Block or Animal
+            for i = 1:N
+               info(i).mask = obj(i).IsMasked;
+            end
+         end
+         
+      end
+      
+      % Returns fieldtype corresponding to a particular field
+      function [fieldType,n] = getFieldType(obj,field)
+         %GETFIELDTYPE       Return field type corresponding to a field
+         %
+         %  fieldType = obj.getFieldType(field);
+         %  [fieldType,n] = obj.getFieldType(field);
+         %
+         %  --------
+         %   INPUTS
+         %  --------
+         %    obj          :     nigeLab.nigelObj class object.
+         %
+         %    field        :     Char array corresponding element of Fields 
+         %                       property in nigelObj
+         %
+         %  --------
+         %   OUTPUT
+         %  --------
+         %  fieldType      :     Field type corresponding to "field"
+         %                    --> {'Channels';'Streams';'Events';'Videos'}      
+         %
+         %     n           :     Total number of fields of that type
+         
+         % Simple code but for readability
+         thisObj = nigeLab.nigelObj.getValidObj(obj,1);
+         
+         if isempty(thisObj)
+            nigeLab.utils.cprintf('Errors*',...
+               '\t->\t[GETFIELDTYPE]: No valid nigelObj\n');
+            fieldType = '';
+            n = 0;
+            return;
+         end
+         
+         idx = strcmpi(thisObj.Fields,field);
+         if sum(idx) == 0
+            error(['nigeLab:' mfilename ':BadField'],...
+               '[GETFIELDTYPE]: No matching field type: %s',field);
+         end
+         fieldType = thisObj.FieldType{idx};
+         if nargout > 1
+            idx = ismember(thisObj.FieldType,fieldType);
+            n = sum(idx);
+         end
+      end
+      
+      % Returns indices to all fields of a given type
+      function [fieldIdx,n] = getFieldTypeIndex(obj,fieldType)
+         %GETFIELDTYPEINDEX    Returns indices to all fields of "fieldType"
+         %
+         %  fieldIdx = getFieldTypeIndex(obj,fieldType)
+         %  [fieldIdx,n] = getFieldTypeIndex(obj,fieldType)
+         %
+         %  --------
+         %   INPUTS
+         %  --------
+         %  obj         :     nigeLab.nigelObj class object
+         %
+         %  fieldType   :     Member of 
+         %          --> {'Channels','Streams','Events','Meta','Videos'}
+         %
+         %  --------
+         %   OUTPUT
+         %  --------
+         %  fieldIdx     :     Indexing array for all fields of 'fieldType'
+         %
+         %     n         :     Total number of fields of type 'fieldType'
+
+         % Check input
+         thisObj = nigeLab.nigelObj.getValidObj(obj,1);
+         
+         if isempty(thisObj)
+            nigeLab.utils.cprintf('Errors*',...
+               '\t->\t[GETFIELDTYPEINDEX]: No valid nigelObj\n');
+            fieldIdx = [];
+            n = 0;
+            return;
+         end
+
+         fieldIdx = ismember(thisObj.FieldType,fieldType);
+         if nargout > 1
+            n = sum(fieldIdx);
+         end
+      end
+      
+      % Returns fileType corresponding to a particular field
+      function fileType = getFileType(obj,field)
+         %GETFILETYPE       Return file type corresponding to that field
+         %
+         %  fileType = nigelObj.getFileType(field);
+         %
+         %  --------
+         %   INPUTS
+         %  --------
+         %     obj         :     nigeLab.nigelObj class object.
+         %
+         %    field        :     String corresponding element of Fields 
+         %                       property in nigelObj
+         %
+         %  --------
+         %   OUTPUT
+         %  --------
+         %   fileType         :     File type {'Hybrid';'MatFile';'Event'}
+         %                          corresponding to files associated with 
+         %                          that field.
+         
+         thisObj = nigeLab.nigelObj.getValidObj(obj,1);
+         if isempty(thisObj)
+            nigeLab.utils.cprintf('Errors*',...
+               '\t->\t[GETFILETYPE]: No valid nigelObj\n');
+            fileType = '';
+            return;
+         end
+         
+         %Simple code but for readability
+         idx = strcmpi(thisObj.Fields,field);
+         if sum(idx) == 0
+            error(['nigeLab:' mfilename ':BadField'],...
+               '[GETFILETYPE]: No matching field type: %s',field);
+         end
+         fileType = thisObj.FileType{idx};
+      end
+      
       % Returns `paths` struct from folder tree heirarchy
       function paths = getFolderTree(obj,paths)
          %GETFOLDERTREE  Returns paths struct that parses folder names
@@ -2960,16 +3196,23 @@ classdef nigelObj < handle & ...
             return;
          end
          
-         if nargin < 2
-            pathString = strrep(obj.Output,'\','/');
-         elseif isempty(field)
-            pathString = strrep(obj.Output,'\','/');
-         else
-            if ~isfield(obj.Paths,field)
-               error(['nigeLab:' mfilename ':UnexpectedString'],...
-                  '%s is not a field of obj.Paths',field);
+         pathString = strrep(obj.Output,'\','/');
+         if (nargin > 1) && strcmp(obj.Type,'Block')
+            switch field
+               case 'Video'
+                  if isfield(obj.Paths,'V')
+                     if isfield(obj.Paths.V,'Root') && ...
+                        isfield(obj.Paths.V,'Folder')
+                        pathString = fullfile(obj.Paths.V.Root,...
+                           obj.Paths.V.Folder);
+                        pathString = strrep(pathString,'\','/');
+                     end
+                  end
+               otherwise
+                  if isfield(obj.Paths,field)
+                     pathString = strrep(obj.Paths.(field).dir,'\','/');
+                  end
             end
-            pathString = strrep(obj.Paths.(field).dir,'\','/');
          end
          
          if nargin < 3
@@ -3594,8 +3837,8 @@ classdef nigelObj < handle & ...
                   out.(userName)=struct;
                otherwise
                   nigeLab.utils.cprintf(fmt,...
-                     'Overwriting Pars.%s in %s/%s (User: %s)\n',...
-                     type,pname,fname,userName);
+                     'Overwriting Pars.%s in %s%s (User: %s)\n',...
+                     parsField,pname,fname,userName);
                   out.(userName).(parsField)=obj.getParams(parsField);
                   obj.HasParsSaved.(parsField) = true;
             end
@@ -4967,7 +5210,7 @@ classdef nigelObj < handle & ...
          %      immediately pull up "nigelDash" GUI
          %
          %  s = obj.getFooter('simple'); 
-         %  --> Returns footer string for link to "expand" view
+         %  --> Returns footer string for link to "condensed" view
 
          if nargin < 2
             displayType = 'detailed';
@@ -4976,14 +5219,10 @@ classdef nigelObj < handle & ...
          if isempty(obj)
             s = '';
             return;
-         end
-         
-         if ~isvalid(obj)
+         elseif ~isvalid(obj)
             s = '';
             return;
          end
-         
-         
          guiLinkStr = ...
             [sprintf('\t-->\t'), ...
             '<a href="matlab: addpath(nigeLab.utils.getNigelPath()); ' ...
@@ -5165,6 +5404,107 @@ classdef nigelObj < handle & ...
          fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
                sprintf(obj.ParamsExpr,obj.Name));
          fname = strrep(fname,'\','/');
+      end
+      
+      % Overload for matlab.mixin.CustomDisplay.getPropertyGroups
+      function groups = getPropertyGroups(obj,displayType)
+         %GETPROPERTYGROUPS  Overload for returning properties to display
+         %
+         %  Overload of matlab.mixin.CustomDisplay.getPropertyGroups to
+         %  change default output in Command Window for a scalar nigelObj
+         
+         if nargin < 2
+            displayType = 'default';
+         end
+         
+         switch lower(displayType)
+            case {'default','nonscalar'}
+               groups = getPropertyGroups@matlab.mixin.CustomDisplay(obj);
+            case 'scalar'
+               status_out = obj.getDescriptiveStatus();
+               pars_out = obj.getDescriptivePars();
+               switch obj.Type
+                  case 'Block'                     
+                     data_out = struct(...
+                        'Name',obj.Name,...
+                        'Duration',obj.Duration,...
+                        'NumChannels',obj.NumChannels,...
+                        'NumProbes',obj.NumProbes,...
+                        'SampleRate',obj.SampleRate,...
+                        'RecSystem',obj.RecSystem.Name,...
+                        'User',obj.User);                       
+                     
+                     groups = [...
+                        matlab.mixin.util.PropertyGroup(data_out,...
+                           '<strong>Data</strong>')...
+                        matlab.mixin.util.PropertyGroup(obj.Meta,...
+                           '<strong>Meta</strong>')...
+                        matlab.mixin.util.PropertyGroup(pars_out,...
+                           '<strong>Parameters</strong>')...
+                        matlab.mixin.util.PropertyGroup(status_out,...
+                           '<strong>Status</strong>')...
+                           ];
+                  case 'Animal'               
+                     data_out = struct;
+                     for i = 1:numel(obj.Children)
+                        name = strrep(obj.Children(i).Name,'-','_');
+                        name = strrep(name,' ','_');
+                        if ~regexpi(name,'[a-z]')
+                           name = ['Block_' name];
+                        end
+                        str_view = ...
+                           ['<a href="matlab: ' ...
+                           'nigeLab.sounds.play(''pop'',1.5);' ...
+                           'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
+                           sprintf(['Children(%g).Children(%g),'...
+                            '''simple'');"'], obj.Index,i) '>View</a>'];
+                        
+                        data_out.(name) = str_view;
+                     end
+                     groups = [...
+                        matlab.mixin.util.PropertyGroup(data_out,...
+                           '<strong>Data</strong>')...
+                        matlab.mixin.util.PropertyGroup(obj.Meta,...
+                           '<strong>Meta</strong>')...
+                        matlab.mixin.util.PropertyGroup(pars_out,...
+                           '<strong>Parameters</strong>')...
+                        matlab.mixin.util.PropertyGroup(status_out,...
+                           '<strong>Status</strong>')
+                        ];
+                  case 'Tank'
+                     data_out = struct;
+                     for i = 1:numel(obj.Children)
+                        name = strrep(obj.Children(i).Name,'-','_');
+                        name = strrep(name,' ','_');
+                        if ~regexpi(name,'[a-z]')
+                           name = ['Animal_' name];
+                        end
+                        str_view = ...
+                           ['<a href="matlab: ' ...
+                           'nigeLab.sounds.play(''pop'',1.5);' ...
+                           'nigeLab.nigelObj.DisplayCurrent(tankObj.' ...
+                           sprintf('Children(%g),''simple'');"',i) ...
+                           '>View</a>'];
+                        data_out.(name) = str_view;
+                     end
+                     groups = [...
+                        matlab.mixin.util.PropertyGroup(data_out,...
+                           '<strong>Data</strong>')...
+                        matlab.mixin.util.PropertyGroup(obj.Meta,...
+                           '<strong>Meta</strong>')...
+                        matlab.mixin.util.PropertyGroup(pars_out,...
+                           '<strong>Parameters</strong>')...
+                        matlab.mixin.util.PropertyGroup(status_out,...
+                           '<strong>Status</strong>')
+                        ];
+                  otherwise
+                     groups = getPropertyGroups@matlab.mixin.CustomDisplay(obj);
+               end
+               
+            otherwise
+               error(['nigeLab:' mfilename ':BadType'],...
+                  'Unexpected case: %s',displayType);
+         end
       end
       
       % Return list of initialized parameters
@@ -5490,7 +5830,6 @@ classdef nigelObj < handle & ...
          
          % Make assignments
          obj.Name = name;
-         obj.Meta = meta; 
          obj.Pars.(obj.Type).Parsing = pars;
       end
       
@@ -5991,12 +6330,11 @@ classdef nigelObj < handle & ...
          
          switch b.Type
             case 'Block'
-               % So we are allowing Block Object to be saved as a property
-               % in this case?
-               if b.MultiAnimals > 0
-                  for bl=b.MultiAnimalsLinkedBlocks
-                     bl.reload();
-                  end
+               % Be sure to re-assign transient .Block property to Videos
+               if ~isempty(b.Videos)
+                  b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
+               else
+                  b.Videos = nigeLab.libs.VideosFieldType.empty();
                end
             case {'Animal','Tank'}
                b.PropListener(1).Enabled = false;
@@ -6110,6 +6448,43 @@ classdef nigelObj < handle & ...
          obj = nigeLab.nigelObj(n);
       end
       
+      % Returns valid/non-empty object from array
+      function thisObj = getValidObj(objArray,n)
+         %GETVALIDOBJ  Returns valid/non-empty object(s) from array
+         %
+         %  thisObj = nigeLab.nigelObj.getValidObj(objArray);
+         %  --> Returns first non-empty & valid object
+         %     --> Will return an empty double if no such object exists
+         %
+         %  thisObj = nigeLab.nigelObj.getValidObj(objArray,n);
+         %  --> Returns first n valid elements from array
+         %     --> Will return an empty double if no such object exists
+         
+         if nargin < 2
+            n = 1;
+         else 
+            n = min(n,numel(objArray));
+         end
+         
+         thisObj = [];
+         i = 0;
+         while (i < numel(objArray)) && (numel(thisObj) < n)
+            i = i + 1;
+            if ~isempty(objArray(i))
+               if isvalid(objArray(i))
+                  thisObj = [thisObj,objArray(i)];
+               end
+            end
+         end
+         if numel(thisObj) < n
+            thisObj = [];
+            nigeLab.utils.cprintf('Errors*',...
+               ['\t->\t[GETVALIDOBJ]: Could not find (%g) valid ' ...
+               'nigelObj in (%g object) array\n'],...
+               n,numel(objArray));
+         end
+      end
+      
       % Plays "Alert Ping" nPing times, with nSec between pings
       function PlayAlertPing(nPing,nSec,fmax,fmin,fdir)
          %PLAYALERTPING  Alert user nPing times, with nSec between pings
@@ -6180,7 +6555,7 @@ classdef nigelObj < handle & ...
       end
       
       % Merge structs while retaining old struct fields
-      function newStruct = MergeStructs(oldStruct,newStruct)
+      function newStruct_out = MergeStructs(oldStruct,newStruct_in)
          %MERGESTRUCTS  Merges `newStruct` with `oldStruct` while keeping
          %              unique fields of `oldStruct` but replacing
          %              redundant fields with values of `newStruct`
@@ -6192,15 +6567,15 @@ classdef nigelObj < handle & ...
          %  >> fieldnames(newStruct) % Returns 'b','c'
          %  >> fieldnames(newStruct_Merged) % Returns 'a','b','c'
          
-         missingFields = setdiff(fieldnames(oldStruct),...
-                                 fieldnames(newStruct));
-
-         if ~isempty(missingFields)
-            for i = 1:numel(missingFields)
-               newStruct.(missingFields{i}) = oldStruct.(missingFields{i});
-            end
+         fOld = fieldnames(oldStruct);
+         fNew = fieldnames(newStruct_in);
+         missingFields = setdiff(fOld,fNew);
+         commonFields = intersect(fNew,fOld);
+                  
+         newStruct_out = newStruct_in; % Make copy
+         for i = 1:numel(missingFields)
+            newStruct_out.(missingFields{i}) = oldStruct.(missingFields{i});
          end
-         
       end
       
       % Parse (important) '.Type' property on load

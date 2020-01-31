@@ -41,7 +41,7 @@ classdef Animal < nigeLab.nigelObj
    end
    
    % HIDDEN,TRANSIENT,PUBLIC/RESTRICTED:nigelObj
-   properties (Hidden,Transient,GetAccess = public,SetAccess=?nigeLab.nigelObj)
+   properties (Hidden,Transient,GetAccess=public,SetAccess=?nigeLab.nigelObj)
       MultiAnimalsLinkedAnimals  nigeLab.Animal % Array of "linked" animals
    end
    
@@ -188,6 +188,7 @@ classdef Animal < nigeLab.nigelObj
                meta.AnimalType = 'Rat?';
          end
          
+         animalObj.Meta=nigeLab.nigelObj.MergeStructs(animalObj.Meta,meta);
       end
    end
    
@@ -216,7 +217,7 @@ classdef Animal < nigeLab.nigelObj
          if numel(animalObj) > 1
             flag = [];
             for i = 1:numel(animalObj)
-               flag = [flag; getStatus(animalObj(i).Children,opField)]; %#ok<*AGROW>
+               flag = [flag; getStatus(animalObj(i))]; %#ok<*AGROW>
             end
             return;
          end

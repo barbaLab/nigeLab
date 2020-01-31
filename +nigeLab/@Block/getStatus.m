@@ -62,13 +62,8 @@ if ~isscalar(blockObj)
             end
             return;
          end
-         fieldType = '';
-         for i = 1:numel(blockObj)
-            if isvalid(blockObj(i))
-               fieldType = blockObj(i).getFieldType(field);
-               break;
-            end
-         end
+         thisObj = nigeLab.nigelObj.getValidObj(blockObj,1);
+         fieldType = getFieldType(thisObj,field);
          if isempty(fieldType)
             status = false(1,numel(field));
             return;
@@ -93,30 +88,46 @@ if ~isscalar(blockObj)
                      end
                   end
                else
-                  % Use 'i' from search for fieldType above to get NumChan
-                  if strcmpi(fieldType,'Channels')
-                     N = blockObj(i).NumChannels;
-                  else
-                     N = numel(blockObj(i).Streams.(field));
-                  end
-                  status = false(numel(blockObj),N);
+                  status = true(numel(blockObj),1);
                   for k = 1:numel(blockObj)
                      if isvalid(blockObj(k))
-                        status(k,:) = blockObj(k).getStatus(field);
+                        status(k) = all(blockObj(k).getStatus(field));
                      end
                   end
                end               
             case 'Meta' % 'Time'
+               status = false(numel(blockObj),1);
                if strcmpi(field,'Time') % Special case
-                  status = false(numel(blockObj),1);
                   for k = 1:numel(blockObj)
                      if isvalid(blockObj(k))
-                        status(k) = exist(blockObj(k).Time,'file')~=0;
+                        status(k) = ~isempty(blockObj(k).Time);
                      end
                   end
                else
                   nigeLab.utils.cprintf('Errors*',...
                      '\t\t->\t[GETSTATUS]: Not configured for .Probes yet\n');
+               end
+            otherwise
+               if ~iscell(field)
+                  status = false(numel(blockObj),1);
+                  for k = 1:numel(blockObj)
+                     if isvalid(blockObj(k))
+                        if isfield(blockObj(k).Status,field)
+                           status(k) = all(blockObj(k).Status.(field));
+                        end
+                     end
+                  end
+               else
+                  status = false(numel(blockObj),numel(field));
+                  for k = 1:numel(blockObj)
+                     if isvalid(blockObj(k))
+                        for i = 1:numel(field)
+                           if isfield(blockObj(k).Status,field{i})
+                              status(k) = all(blockObj(k).Status.(field{i}));
+                           end
+                        end
+                     end
+                  end
                end
          end
       case 3
@@ -161,43 +172,6 @@ switch nargin
       end
       
       status = parseStatus(blockObj,field);
-      if iscell(field)
-         if numel(field)==1
-            field = field{:};
-         else
-            return;
-         end
-      end
-      if isfield(blockObj.Pars,'Video') && strcmp(field,'Video')
-         if ~isempty(blockObj.Pars.Video.ScoringEventFieldname)
-            switch field
-               case blockObj.Pars.Video.ScoringEventFieldname
-                  if ~isstruct(blockObj.Scoring)
-                     blockObj.Scoring = struct;
-                  end
-                  if ~isfield(blockObj.Scoring,'Status')
-                     blockObj.Scoring.Status = struct;
-                  end
-                  if ~isfield(blockObj.Scoring.Status,'Video')
-                     blockObj.Scoring.Status.Video = [];
-                  end
-                  if ~isfield(blockObj.Scoring,'Video')
-                     status = false; 
-                     return;
-                  end
-                  
-                  if isempty(blockObj.Scoring.Video)
-                     status = false;
-                     return;
-                  end
-                  
-                  status = strcmpi(blockObj.Scoring.Video.Status{...
-                     size(blockObj.Scoring.Video,1)},'Complete');
-               otherwise
-                  % do nothing
-            end % switch field
-         end % ~isempty(blockObj.Pars.Video.ScoringEventFieldname
-      end % isfield 'Video' and field is 'Video'
       
    case 3 % If channel is given (3 inputs, including blockObj)
       status = parseStatus(blockObj,field);
@@ -237,7 +211,8 @@ end
          % If only one stage, return all channel status
          if numel(stage) == 1 
             status = blockObj.Status.(stage{:});
-            if maskExists
+            channelStage = strcmp(blockObj.getFieldType(stage{:}),'Channels');
+            if maskExists && channelStage
                vec = 1:numel(status);
                % Masked channels are automatically true
                status(setdiff(vec,blockObj.Mask)) = true;

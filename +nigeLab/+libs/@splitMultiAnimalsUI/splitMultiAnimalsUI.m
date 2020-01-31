@@ -10,12 +10,12 @@ classdef splitMultiAnimalsUI < handle
    end
    
    properties (Access = private,SetObservable,AbortSet)
-      animalObj                  % nigeLab.Animal
+      animalObj                  % nigeLab.Animal object
    end
    
    properties (Access = private)
-      blockObj                   % nigeLab.Block
-      DashObj                    nigeLab.libs.DashBoard
+      blockObj                   % nigeLab.Block object or array
+      DashObj                    % nigeLab.libs.DashBoard object
       AcceptBtn                  matlab.ui.control.UIControl % pushbutton
       ApplyToAllBtn              matlab.ui.control.UIControl % pushbutton
       Tree                       % uiw.widget.Tree
@@ -43,6 +43,19 @@ classdef splitMultiAnimalsUI < handle
          % DashObj has special restricted properties: 
          %  --> A_split  :: Animals to split
          %  --> B_split  :: Blocks to split
+         if nargin < 1
+            obj = nigeLab.libs.splitMultiAnimalsUI.empty([0,0]);
+            return;
+         elseif isnumeric(DashObj)
+            n = DashObj;
+            if numel(n) < 2
+               n = [zeros(1,2-numel(n)),n];
+            else
+               n = [0, max(n)];
+            end
+            obj = repmat(obj,n);
+            return;
+         end
          
          obj.DashObj = DashObj;
          
@@ -464,6 +477,23 @@ classdef splitMultiAnimalsUI < handle
       
    end % methods private
    
-   
+   methods (Static,Access=public)
+      % Create empty nigeLab.libs.splitMultiAnimalsUI object
+      function obj = empty(n)
+         %EMPTY  Create empty nigeLab.libs.splitMultiAnimalsUI object
+         %
+         %  obj = nigeLab.libs.splitMultiAnimalsUI.empty();
+         %  --> Empty scalar
+         %  obj = nigeLab.libs.splitMultiAnimalsUI.empty(n);
+         %  --> Empty array with n elements
+         
+         if nargin < 1
+            n = [0,0];
+         else
+            n = [0,max(n)];
+         end
+         obj = nigeLab.libs.splitMultiAnimalsUI(n);         
+      end
+   end
 end
 

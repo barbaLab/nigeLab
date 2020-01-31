@@ -42,7 +42,9 @@ switch RecType
          'raw_channels';
          'analogIO_channels';
          'digIO_channels';
-         'spike_triggers';
+         'spikes_triggers';
+         'dig_in_triggers';
+         'dig_out_triggers';
          'num_raw_channels';
          'num_DC_channels';
          'num_stim_channels';
@@ -86,7 +88,10 @@ switch RecType
          'raw_channels';
          'analogIO_channels';
          'digIO_channels';
-         'spike_triggers';
+         'spikes_triggers';
+         'stim_triggers';
+         'dig_in_triggers';
+         'dig_out_triggers';
          'stim_step_size';
          'num_raw_channels';
          'num_DC_channels';

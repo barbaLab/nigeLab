@@ -10,24 +10,31 @@ classdef behaviorInfo < handle
 %  --> Specifies a container (such as uipanel) to put the
 %        associated graphics objects into.
    
-   %% Properties
-   properties (SetAccess = immutable, GetAccess = public)
-      Block  % Pointer to block object handle
-      Panel  % Pointer to nigelPanel container
+   % % % PROPERTIES % % % % % % % % % %
+   % TRANSIENT,PUBLIC/IMMUTABLE
+   properties (Transient,GetAccess=public,SetAccess=immutable)
+      Block                            % Pointer to block object handle
+      Panel                            % Pointer to nigelPanel container
    end
    
-   properties(Access = public)
+   % TRANSIENT,HIDDEN,PUBLIC (flags)
+   properties (Transient,Hidden,Access=public)
+      verbose (1,1) logical  = false  % Set true to print debug output
+   end
+   
+   % PUBLIC
+   properties(Access=public)
       varVal            % 1 x k vector of scalar values for a single trial
       varType           % 1 x k vector of scalar indicators of varVal type
       varName           % 1 x k label vector
       
-      idx = 1;          % Current variable being updated
-      cur = 1;          % Index of current trial for alignment
+      idx     (1,1) double    = 1   % Current variable being updated
+      cur     (1,1) double    = 1   % Index of current trial for alignment
    end
    
-   properties(SetAccess = private, GetAccess = public)
+   % PUBLIC/PROTECTED
+   properties(GetAccess=public,SetAccess=protected)
       parent  % Figure handle of parent
-      
       misc    % Struct for 'ad hoc' properties as fields
               % --> with default 'ValueShortcutFcn' property function
               %     handle, this struct gains the field 'PastPelletsValue'
@@ -38,15 +45,12 @@ classdef behaviorInfo < handle
               %     Similar fields could be added from 'ad hoc' functions
               %     that need to store temporary variables with the
               %     behaviorInfo object.
-      
-      
       N       % Total number of trials
-      
       offset = 0; % Default to 0 offset
-      
    end
    
-   properties(SetAccess = private, GetAccess = private)
+   % PROTECTED
+   properties(Access=protected)
       hashID           % hash string to track progress in metadata table
       fieldName        % Name corresponding to "manual" scored events
       outcomeName      % Name corresponding to "Outcome" for scoring
@@ -73,13 +77,11 @@ classdef behaviorInfo < handle
       
       loopFlag = false     % Flag indicating that all trials are looped
    end
+   % % % % % % % % % % END PROPERTIES %
    
-   properties(SetAccess = immutable, GetAccess = public)
-      verbose = false; % Set true to output fprintf debug to command window
-   end
-   
-   %% Events
-   events % These correspond to different scoring events
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
       scoredValueChanged      % When a value is modified during scoring
       trialChanged            % Switch to a new trial
       saveFile    % When file is saved
@@ -87,9 +89,11 @@ classdef behaviorInfo < handle
       countIsZero % No pellets are on platform, or pellet not present
       nSuccessChanged         % # successful trials changed
    end
+   % % % % % % % % % % END EVENTS % % %
    
-   %% Methods
-   methods (Access = public)
+   % % % METHODS% % % % % % % % % % % %
+   % RESTRICTED:{nigeLab.Block,nigeLab.nigelObj} (constructor)
+   methods (Access={?nigeLab.Block,?nigeLab.nigelObj})
       % Construct the behaviorInfo object
       function obj = behaviorInfo(blockObj,nigelPanelObj)
          % BEHAVIORINFO  Class for behavior data tracking in manual scoring
@@ -103,9 +107,23 @@ classdef behaviorInfo < handle
          %  --> Specifies a nigelPanel to put the behaviorInfo-associated
          %        graphics into.
          
-         % Key properties to set are Block and Panel in constructor
+         % Allow empty constructor etc.
+         if nargin < 1
+            obj = nigeLab.libs.behaviorInfo.empty();
+            return;
+         elseif isnumeric(blockObj)
+            dims = blockObj;
+            if numel(dims) < 2 
+               dims = [zeros(1,2-numel(dims)),dims];
+            end
+            obj = repmat(obj,dims);
+            return;
+         end
+         
+         % Otherwise, require that first input is nigeLab.Block
          if ~isa(blockObj,'nigeLab.Block')
-            error('First input argument must be class nigeLab.Block');
+            error(['nigeLab:' mfilename ':BadClass'],...
+               'First input argument must be class nigeLab.Block');
          end
          obj.Block = blockObj;
          
@@ -134,7 +152,21 @@ classdef behaviorInfo < handle
          obj.buildProgressTracker;
          
       end
+   end
+   
+   % NO ATTRIBUTES (overloaded methods)
+   methods 
+      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
       
+      % % % % % % % % % % END GET.PROPERTY METHODS % % %
+      
+      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
+      
+      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+   end
+   
+   % PUBLIC
+   methods (Access=public)
       % Add or remove the grasp time for this trial
       function [varState,out] = addRemoveValue(obj,val)
          % ADDREMOVEVALUE Toggles a value between what is given by 'val'
@@ -171,70 +203,6 @@ classdef behaviorInfo < handle
          varState = obj.ForceToZeroFcn;
       end
       
-      % Remove this trial (if it is an invalid trial)
-      function removeTrial(obj)
-         % REMOVETRIAL  Remove a trial entry
-         %
-         %  removeTrial(obj); Removes current trial from the array
-         
-         % Remove entry from list
-         setEventData(obj.Block,obj.fieldName,'Trial','mask',0,obj.cur);
-         obj.trialPop.String(obj.cur) = [];
-         obj.ScoringTracker_im.CData(:,obj.cur,:) = [];
-         
-         obj.N = obj.N - 1;
-         if obj.N > 0
-            obj.cur = min(obj.cur,obj.N); % Make sure you don't go over
-            obj.setTrial(nan,obj.cur,true);
-         else
-            close(gcf);
-            warning('No valid trials to score for this video!');
-         end
-      end
-      
-      % Save blockObj with scoring
-      function saveScoring(obj)
-         % SAVESCORING  Save behaviorInfo.Block object with scoring data
-         %
-         %  obj.saveScoring;  Save the Block object. Even without saving
-         %                    the Block object, the Events files should be
-         %                    updated when a change is made. This part
-         %                    basically updates the Scoring metadata and 
-         
-         info = getScoringMetadata(obj.Block,'Video',obj.hashID);
-         info.Toc(1) = info.Toc(1) + toc(info.Tic(1));
-         info.Tic(1) = tic;
-         info.Status{1} = obj.checkProgress;
-         obj.setScoringMetadata(info);
-         save(obj.Block);
-         if obj.verbose
-            s = nigeLab.utils.getNigeLink(...
-               'nigeLab.libs.behaviorInfo',...
-               'saveScoring');
-            fprintf(1,'-->\tsaveFile event issued: %s\n',s);
-         end 
-         notify(obj,'saveFile');
-         
-      end
-      
-      % Increment the idx property by 1 and return false if out of range
-      function flag = stepIdx(obj)
-         % STEPIDX  Increment behaviorInfo.idx by 1 and return false if out
-         %  of range
-         %
-         % flag = stepIdx(obj); Start over since finished stepping through
-         %                       each variable in the array.
-         
-         obj.idx = obj.idx + 1;
-         flag = obj.idx <= numel(obj.varType);
-         if ~flag
-            obj.idx = 1;
-         end
-      end
-   end
-   
-   % "GET" methods
-   methods (Access = public)
       % Returns data for current trial AND updates obj.varVal
       function data = getCurrentTrialData(obj)
          % GETCURRENTTRIALDATA  Return data array for current trial and
@@ -314,10 +282,53 @@ classdef behaviorInfo < handle
          
          idx = find(ismember(obj.varName,varName));
       end
-   end
-   
-   % "SET" methods
-   methods (Access = public)
+      
+      % Remove this trial (if it is an invalid trial)
+      function removeTrial(obj)
+         % REMOVETRIAL  Remove a trial entry
+         %
+         %  removeTrial(obj); Removes current trial from the array
+         
+         % Remove entry from list
+         setEventData(obj.Block,obj.fieldName,'Trial','mask',0,obj.cur);
+         obj.trialPop.String(obj.cur) = [];
+         obj.ScoringTracker_im.CData(:,obj.cur,:) = [];
+         
+         obj.N = obj.N - 1;
+         if obj.N > 0
+            obj.cur = min(obj.cur,obj.N); % Make sure you don't go over
+            obj.setTrial(nan,obj.cur,true);
+         else
+            close(gcf);
+            warning('No valid trials to score for this video!');
+         end
+      end
+      
+      % Save blockObj with scoring
+      function saveScoring(obj)
+         % SAVESCORING  Save behaviorInfo.Block object with scoring data
+         %
+         %  obj.saveScoring;  Save the Block object. Even without saving
+         %                    the Block object, the Events files should be
+         %                    updated when a change is made. This part
+         %                    basically updates the Scoring metadata and 
+         
+         info = getScoringMetadata(obj.Block,'Video',obj.hashID);
+         info.Toc(1) = info.Toc(1) + toc(info.Tic(1));
+         info.Tic(1) = tic;
+         info.Status{1} = obj.checkProgress;
+         obj.setScoringMetadata(info);
+         save(obj.Block);
+         if obj.verbose
+            s = nigeLab.utils.getNigeLink(...
+               'nigeLab.libs.behaviorInfo',...
+               'saveScoring');
+            fprintf(1,'-->\tsaveFile event issued: %s\n',s);
+         end 
+         notify(obj,'saveFile');
+         
+      end
+      
       % Save the trial timestamp data from the current trial
       function setCurrentTrialData(obj)
          % SETCURRENTTRIALDATA  Save array for current trial
@@ -494,14 +505,26 @@ classdef behaviorInfo < handle
          else
             % Don't do this for timestamp data, that's a bad idea.
          end
-         
-         
       end
       
+      % Increment the idx property by 1 and return false if out of range
+      function flag = stepIdx(obj)
+         % STEPIDX  Increment behaviorInfo.idx by 1 and return false if out
+         %  of range
+         %
+         % flag = stepIdx(obj); Start over since finished stepping through
+         %                       each variable in the array.
+         
+         obj.idx = obj.idx + 1;
+         flag = obj.idx <= numel(obj.varType);
+         if ~flag
+            obj.idx = 1;
+         end
+      end
    end
    
-   % "CALLBACK" graphics methods (specific)
-   methods (Access = public)
+   % HIDDEN,PUBLIC
+   methods (Hidden,Access=public)
       % Request to close scoring UI
       function closeScoringRequest(obj,forceClose)
          % CLOSESCORINGREQUEST  Issued when requesting to close scoring UI
@@ -532,11 +555,10 @@ classdef behaviorInfo < handle
             end
          end
       end
-      
    end
    
-   % "REFERENCE" methods for quick indexing from "Header" and "Trial" data
-   methods (Access = public)
+   % SEALED,PUBLIC
+   methods (Sealed,Access=public)
       % Quick reference to all varType == 1 members (timestamp scoring)
       function ts = EventTimes(obj,trialIdx,getsetmode)
          % EVENTTIMES  Scoring that contains timestamp data
@@ -688,10 +710,8 @@ classdef behaviorInfo < handle
       end
    end
    
-   % Private methods for building graphics objects and other small helper
-   % functions that shouldn't be called from outside of methods of this
-   % class.
-   methods (Access = private)
+   % PROTECTED
+   methods (Access=protected)
       % Construct the scoring progress tracker graphics objects
       function buildProgressTracker(obj)
          % BUILDPROGRESSTRACKER  Builds socring progress tracker graphics
@@ -882,4 +902,30 @@ classdef behaviorInfo < handle
       end
    end
    
+   % STATIC,PUBLIC
+   methods (Static,Access=public)
+      % Create "Empty" object or object array
+      function obj = empty(n)
+         %EMPTY  Return empty nigeLab.libs.behaviorInfo object or array
+         %
+         %  obj = nigeLab.libs.behaviorInfo.empty();
+         %  --> Return scalar (0 x 0) object
+         %
+         %  obj = nigeLab.libs.behaviorInfo.empty(n);
+         %  --> Specify number of empty objects
+         
+         if nargin < 1
+            dims = [0, 0];
+         else
+            if ~isscalar(n)
+               error(['nigeLab:' mfilename ':invalidEmptyDims'],...
+                  'Input to nigeLab.libs.behaviorInfo.empty should be scalar.');
+            end
+            dims = [0, n];
+         end
+         
+         obj = nigeLab.libs.behaviorInfo(dims);
+      end
+   end
+   % % % % % % % % % % END METHODS% % %
 end

@@ -26,7 +26,7 @@ function ts = binaryStream2ts(stream,fs,threshold,transition_type,debounce)
 %  If stream is given as a matrix, then rows are treated as individual
 %  streams. For each row of stream, a cell array of ts is returned.
 
-%% Handle inputs
+% Handle inputs
 defPars = nigeLab.defaults.Event('TrialDetectionInfo');
 if nargin < 5
    debounce = [];
@@ -57,8 +57,7 @@ if size(stream,1) > 1
    end
    return;
 end
-
-%% 
+ 
 x = stream > threshold;
 x = reshape(x,1,numel(stream)); % Make sure it's a row vector
 

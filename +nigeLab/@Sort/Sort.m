@@ -76,7 +76,6 @@ classdef Sort < handle
                   dims = [dims,0];
                end
                sortObj = repmat(sortObj,dims);
-               close(gcf);
                return;
             end
             

@@ -163,7 +163,19 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          end
          
          if nargin < 1
-            container = gca;
+            b = nigeLab.libs.nigelButton.empty();
+            return;
+         else
+            if isnumeric(container)
+               n = container;
+               if numel(n) < 2
+                  n = [zeros(1,2-numel(n)),n];
+               else
+                  n = [0, max(n)];
+               end
+               b = repmat(b,n);
+               return;
+            end
          end
          
          % Set immutable properties in constructor
@@ -596,6 +608,26 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          b.Label.String = b.String;         
       end
       
+   end
+   
+   % STATIC,PUBLIC
+   methods (Static,Access=public)
+      function b = empty(n)
+         %EMPTY  Create empty nigeLab.libs.nigelButton object
+         %
+         %  obj = nigeLab.libs.nigelButton.empty();
+         %  --> Empty scalar
+         %
+         %  obj = nigeLab.libs.nigelButton.empty(n);
+         %  --> Empty array with n elements
+         
+         if nargin < 1
+            n = [0,0];
+         else
+            n = [0,max(n)];
+         end
+         b = nigeLab.libs.nigelButton(n);         
+      end
    end
    
    % STATIC,PROTECTED

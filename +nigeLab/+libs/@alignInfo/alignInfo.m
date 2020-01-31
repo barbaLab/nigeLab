@@ -6,14 +6,16 @@ classdef alignInfo < handle
 %  obj = nigeLab.libs.alignInfo(blockObj);
 %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
 
-%% Properties 
-   properties(SetAccess = immutable, GetAccess = public)
+   % % % PROPERTIES % % % % % % % % % %
+   % TRANSIENT,PUBLIC/IMMUTABLE
+   properties(Transient,GetAccess=public,SetAccess=immutable)
       Block       % nigeLab.Block object handle
       Panel       % nigeLab.libs.nigelPanel object
       Figure      % Handle to figure containing streams plots
    end
 
-   properties(SetAccess = private, GetAccess = public)
+   % PUBLIC/PROTECTED
+   properties(GetAccess=public,SetAccess=protected)
       ax          % Axes to plot streams on
       
       tVid        % Current video time
@@ -30,7 +32,8 @@ classdef alignInfo < handle
       curAxLim    % Axes limits for current axes
    end
    
-   properties(SetAccess = private, GetAccess = private)
+   % PROTECTED
+   properties(Access=protected)
       FS = 125;                  % Resampled rate for correlation
       VID_FS = 30000/1001;       % Frame-rate of video
       currentVid = 1;            % If there is a list of videos
@@ -42,17 +45,21 @@ classdef alignInfo < handle
       xStart = -10;              % (seconds) - lowest x-point to plot
       zoomFlag = false;          % Is the time-series axis zoomed in?      
    end
-   
-%% Events
-   events % These correspond to different scoring events
+   % % % % % % % % % % END PROPERTIES %
+
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
       offsetChanged  % Alignment has been dragged/moved in some way
       saveFile       % Output file has been saved
       axesClick      % Skip to current clicked point in axes (in video)
       zoomChanged    % Axes zoom has been altered
    end
+   % % % % % % % % % % END EVENTS % % %
    
-%% Methods
-   methods (Access = public)
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (overloaded methods, constructor)
+   methods 
       % Construct alignInfo object that tracks offset between vid and neu
       function obj = alignInfo(blockObj,nigelPanelObj)
          % ALIGNINFO  Constructor for handle object that keeps track of
@@ -62,6 +69,20 @@ classdef alignInfo < handle
          %  obj = nigeLab.libs.alignInfo(blockObj);
          %  obj = nigeLab.libs.alignInfo(blockObj,nigelPanelObj);
          
+         % Allow empty constructor etc.
+         if nargin < 1
+            obj = nigeLab.libs.alignInfo.empty();
+            return;
+         elseif isnumeric(blockObj)
+            dims = blockObj;
+            if numel(dims) < 2 
+               dims = [zeros(1,2-numel(dims)),dims];
+            end
+            obj = repmat(obj,dims);
+            return;
+         end
+         
+         % Require that first argument is Block
          if ~isa(blockObj,'nigeLab.Block')
             error('First input argument must be of class nigeLab.Block');
          end
@@ -96,7 +117,10 @@ classdef alignInfo < handle
          obj.buildStreamsGraphics;
          obj.initOffset();
       end
-      
+   end
+   
+   % PUBLIC
+   methods (Access=public)
       % Create graphics objects associated with this class
       function graphics = getGraphics(obj)
          % GETGRAPHICS  Return a struct where fieldnames match graphics
@@ -203,8 +227,8 @@ classdef alignInfo < handle
       
    end
    
-   % "CALLBACK" methods (for event listeners)
-   methods (Access = public)      
+   % HIDDEN,PUBLIC (callbacks)
+   methods (Hidden,Access=public)      
       % Callback for when time changes on graphicsUpdater object
       function timesChangedCB(obj,src,~)
          % TIMESCHANGEDCB  Callback that is requested whenever there is a
@@ -220,7 +244,8 @@ classdef alignInfo < handle
       end
    end
    
-   methods (Access = private)
+   % PROTECTED
+   methods (Access=protected)
       % Make all the graphics for tracking relative position of neural
       % (beam/press) and video (paw probability) time series
       function buildStreamsGraphics(obj)
@@ -552,5 +577,31 @@ classdef alignInfo < handle
       end
       
    end
-
+   
+   % STATIC,PUBLIC
+   methods (Static,Access=public)
+      % Create "Empty" object or object array
+      function obj = empty(n)
+         %EMPTY  Return empty nigeLab.libs.alignInfo object or array
+         %
+         %  obj = nigeLab.libs.alignInfo.empty();
+         %  --> Return scalar (0 x 0) object
+         %
+         %  obj = nigeLab.libs.alignInfo.empty(n);
+         %  --> Specify number of empty objects
+         
+         if nargin < 1
+            dims = [0, 0];
+         else
+            if ~isscalar(n)
+               error(['nigeLab:' mfilename ':invalidEmptyDims'],...
+                  'Input to nigeLab.libs.alignInfo.empty should be scalar.');
+            end
+            dims = [0, n];
+         end
+         
+         obj = nigeLab.libs.alignInfo(dims);
+      end
+   end
+   % % % % % % % % % % END METHODS% % %
 end

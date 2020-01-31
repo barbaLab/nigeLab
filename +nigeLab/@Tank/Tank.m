@@ -184,6 +184,7 @@ classdef Tank < nigeLab.nigelObj
          % % % % Parse additional parameters for TANK % % % % 
          % Currently no fixed TANK naming convention.       %
          % % % % % % % % % % % % % % % % % % % % % % % % %  % 
+         tankObj.Meta = nigeLab.nigelObj.MergeStructs(tankObj.Meta,meta);
       end
    end
    
@@ -390,7 +391,7 @@ classdef Tank < nigeLab.nigelObj
 %       --> Deprecated (inherited from `nigelObj`)
       blockList = list(tankObj)     % List Blocks in TANK    
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
-      runFun(tankObj,f) % Run function f on all child blocks in tank
+      runFun(tankObj,f,varargin) % Run function f on all child blocks in tank
    end
    % % % % % % % % % % END METHODS% % %
 end

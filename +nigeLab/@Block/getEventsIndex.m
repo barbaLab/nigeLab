@@ -1,5 +1,5 @@
 function idx = getEventsIndex(blockObj,field,eventName)
-%% GETEVENTSINDEX  Returns index to correct element of Events.(field)
+% GETEVENTSINDEX  Returns index to correct element of Events.(field)
 %
 %  idx = blockObj.getEventsIndex(field,eventName);
 %
@@ -13,7 +13,7 @@ function idx = getEventsIndex(blockObj,field,eventName)
 %  eventName      :     Name of event type to return 
 %                       (blockObj.Events.(field)(idx).name == eventName)
 
-%% Check input
+% Check input
 if numel(blockObj) > 1
    idx = nan(size(blockObj));
    for i = 1:numel(blockObj)
@@ -24,7 +24,6 @@ end
 
 blockObj.checkCompatibility({field});
 
-%%
 name = {blockObj.Events.(field).name}.';
 idx = find(ismember(name,eventName),1,'first');
 if isempty(idx)

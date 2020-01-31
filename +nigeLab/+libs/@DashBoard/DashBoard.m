@@ -16,7 +16,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       StatsPanel              % current Status & brief description; .Children{2}
       TreePanel               % nodes are: Tank > Animal > Block; .Children{1}
       TitleBar                % Title Bar with "Home" and "Visualization Tools" buttons; .Children{5}
-      Visible  char = 'on';   % (Default: 'on') Can be 'off' for figure visibility
+      Visible                 % (Default: 'on') Can be 'off' for figure visibility
    end
    
    % DEPENDENT,HIDDEN,PROTECTED
@@ -48,9 +48,12 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    properties(Access=protected)
       nigelButtons         (1,1) struct = struct('Tree',[],'TitleBar',[])   % Each field is an array of nigelButtons
       RecapAxes                              % "Recap" circles container
+      RecapBackground                        % Background "cover" that screens axes lines
+      RecapBubble                            % Indicators of "completed" status on RecapAxes
       RecapTable                             % "Recap" table
+      Mask                                   % "Mask" indexing vector
       Status                                 % Logical status matrix represented by RecapAxes rectangles
-      splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI   % interface to split multiple animals
+      splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI      % interface to split multiple animals
       
       
       Tree_ContextMenu     matlab.ui.container.ContextMenu       % UI context menu for launching "do" actions
@@ -109,10 +112,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          elseif isnumeric(tankObj)
             dims = tankObj;
             if numel(dims) == 1
-               dims = [dims,0];
+               dims = [0,dims];
             end
             obj = repmat(obj,dims);
-            close(gcf); % If a figure is opened
             return;
          end
          
@@ -137,7 +139,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.buildButtons(pTree);
          
          % Create recap Table and container for "recap circles"
-         [obj.RecapTable,obj.RecapAxes] = obj.buildRecapObjects();
+         obj.buildRecapObjects(tankObj.Fields);
          
          % Build title bar that has "buttons" for visual methods etc.
          obj.buildTitleBar();
@@ -161,9 +163,6 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          % Add "rollover" interaction mediator for nigelButtons
          obj.RollOver = nigeLab.utils.Mouse.rollover(obj.nigelGUI);
-         
-         % Notify tankObj that the GUI is open
-         obj.Tank.IsDashOpen = true;
       end
    end
    
@@ -817,32 +816,22 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       end
       
       % Construct recap table for recording
-      function [recapTable,recapAx] = buildRecapObjects(obj,nigelPanelObj,hOff,vOff)
+      function buildRecapObjects(obj,Fields)
          % BUILDRECAPOBJECTS  Construct "recap table" for displaying basic
          %                    info about the recording, and "recap axes"
-         %                    for containing the result of PLOTRECAPCIRCLES
+         %                    for containing PLOTRECAPBUBBLES
          %
-         %  recapTable = obj.buildRecapTable(); Return recaptable uiw
-         %  recapTable = obj.buildRecapTable(hOff,vOff);
-         %  Set horizontal and vertical offset respectively (distance from
-         %     left side of panel to left side of table, or from bottom to
-         %     bottom, in normalized units).
+         %  obj.buildRecapTable(nFields);
+         %  --> nFields: number of fields (# columns in table)
          
-         if nargin < 4
-            vOff = .025;
-         end
-         
-         if nargin < 3
-            hOff = .025;
-         end
-         
-         if nargin < 2
-            nigelPanelObj = obj.getChild('StatsPanel');
-         end
-         
+
+         vOff = .025;
+         hOff = .025;
+         nigelPanelObj = obj.getChild('StatsPanel');
+         nField = numel(Fields);         
          ppos = nigelPanelObj.InnerPosition;
          tab_pos = ppos .* [1 1 1 .5] + [hOff vOff+.7 -hOff*2 -vOff*10];
-         recapTable = uiw.widget.Table(...
+         obj.RecapTable = uiw.widget.Table(...
             'Parent',nigelPanelObj.Panel,...
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
@@ -850,32 +839,48 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             'Position',tab_pos,...
             'BackgroundColor',obj.Color.panel,...
             'FontName','Droid Sans');
-         nigelPanelObj.nestObj(recapTable);
-         RecapTableMJScrollPane = recapTable.JControl.getParent.getParent;
+         nigelPanelObj.nestObj(obj.RecapTable);
+         RecapTableMJScrollPane = obj.RecapTable.JControl.getParent.getParent;
          RecapTableMJScrollPane.setBorder(...
             javax.swing.BorderFactory.createEmptyBorder);
          
          ax_pos = ppos .* [1 1 1 .5] + [hOff vOff -hOff*2 -vOff*4];
-         recapAx = axes(nigelPanelObj.Panel,...
+         obj.RecapAxes = axes(nigelPanelObj.Panel,...
             'Units','normalized', ...
             'Position', ax_pos,...
             'Tag','RecapAxes',...
             'Color','none',...
             'TickLength',[0 0],...
-            'XTickLabels',[],...
             'XAxisLocation','top',...
+            'XLimMode','manual',...
+            'XLim',[1 nField+1],...
             'LineWidth',0.005,...
             'GridColor','none',...
             'XColor',obj.Color.onPanel,...
             'YColor',obj.Color.onPanel,...
+            'NextPlot','add',...
             'YDir','reverse',...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
             'Box','off',...
+            'Clipping','off',...
             'FontName','DroidSans',...
             'FontSize',13,...
             'FontWeight','bold');
-         recapAx.XAxis.TickLabelRotation = 75;
-         % axes cosmetic adjustment
-         nigelPanelObj.nestObj(recapAx,'RecapAxes');
+         % axes cosmetic adjustment:
+         obj.RecapAxes.XAxis.TickLabelRotation = 75;
+         obj.RecapAxes.XAxis.TickLabel = Fields;
+         obj.RecapAxes.XAxis.TickValues = 1.5:(nField+0.5);
+         % This removes the X- and Y- borders (crazy to have to do that
+         % kind of workaround but oh well):
+         obj.RecapBackground =  ...
+            rectangle(obj.RecapAxes,...
+               'Position',[0.95 -0.05 (nField+0.60) 1.1],...
+               'Clipping','off',...
+               'EdgeColor','none',...
+               'FaceColor',obj.Color.panel);
+            
+         nigelPanelObj.nestObj(obj.RecapAxes,'RecapAxes');
          drawnow;
       end
       
@@ -1028,131 +1033,114 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       end
       
       % Adds "recap circles" (rounded rectangles) to "Status" panel child
-      function plotRecapCircle(obj,Status,N,mask)
-         % PLOTRECAPCIRCLE  Plot overview of operations performed within the
+      function plotRecapBubbles(obj)
+         % PLOTRECAPBUBBLES  Plot overview of operations performed within the
          %                  "Stats" panel.
          %
-         %   obj.plotRecapCircle(Status);
-         %
          %   obj --  nigeLab.libs.DashBoard object
-         %   SelectedItems -- indexing matrix from tree/node structure where
-         %                    first column is animal index and second is
-         %                    block index.
-         %      --> If only a single "row" of SelectedItems (e.g. one block)
-         %          is given, then the behavior of the table changes such
-         %          that it shows individual channel statuses for that
-         %          block. Otherwise it looks at the "aggregate" stage
-         %          processing status based on combination of all channels'
-         %          progress on that stage and the channel mask (Block.Mask)
-         %
-         %  N   -- # Animals or # Channels (if single block)
-         %
-         %  mask  -- "masked" status 
          
-         cla(obj.RecapAxes);
-         
-         if nargin < 2
-            Status = obj.Status;       
-         end
-         
-         if nargin < 3
-            if iscell(Status)
-               N = numel(Status{1});
-            else
-               N = size(Status,1);
+         if ~isempty(obj.RecapBubble)
+            if isvalid(obj.RecapBubble)
+               delete(obj.RecapBubble);
+               obj.RecapBubble(:) = [];
             end
          end
-         
-         if nargin < 4
-            mask = true(1,N);
-         end
-         
+         S = obj.Status;
          nField = numel(obj.Fields);
-         % This removes the X- and Y- borders (crazy to have to do that
-         % kind of workaround but oh well):
-         rectangle(obj.RecapAxes,...
-                  'Position',[0.95 0.95 nField+1.1 N+1.1],...
-                  'Clipping','off',...
-                  'EdgeColor','none',...
-                  'FaceColor',obj.Color.panel);
+         mask = obj.Mask;
          
          h = obj.getHighestLevelNigelObj();
-         switch class(Status)
+         switch class(S)
             case 'cell'
-               obj.Status = Status;
+               
                % If it's a cell, this was a single block
-               xlim(obj.RecapAxes,[1 nField+1]);
-               ylim(obj.RecapAxes,[1 N+1]);
-               obj.RecapAxes.FontSize = 13;
                obj.RecapAxes.YAxis.FontSize = 16;
                obj.RecapAxes.YAxis.TickLabel = {'1'};
-               obj.RecapAxes.YAxis.TickValues = (N+1)/2;
+               obj.RecapAxes.YAxis.TickValues = 0.5; % In the middle
                for ii=1:nField
-                  switch numel(Status{ii})
-                     case 1
-                        if Status{ii}
+                  switch numel(S{ii})
+                     case 1 % Case: single large block represents this Field
+                        if S{ii}
                            if any(mask)
                               % Complete/Enabled
                               % (mask is all set to false if enable=false)
-                              rectangle(obj.RecapAxes,'Position',[ii 1 .97 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 .97 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.enabled_selection,...
                                  'LineWidth',1.5,...
-                                 'EdgeColor',[.2 .2 .2]);
+                                 'EdgeColor',[.2 .2 .2])];
                            else
                               % Complete/Not Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 .97 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 .97 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.enabled_selection*0.5,...
                                  'LineWidth',1.5,...
-                                 'EdgeColor',[.2 .2 .2]);
+                                 'EdgeColor',[.2 .2 .2])];
                            end
                         else
                            if mask
                               % Incomplete/Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 1 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 1 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.button,...
-                                 'EdgeColor','none');
+                                 'EdgeColor','none')];
                            else
                               % Incomplete/Not Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 1 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 1 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.button*0.5,...
-                                 'EdgeColor','none');
+                                 'EdgeColor','none')];
                            end
                         end
-                     otherwise
-                        for jj = 1:numel(Status{ii})
-                           if Status{ii}(jj)
+                     otherwise % Case: multiple smaller blocks represent progress
+                        for jj = 1:numel(S{ii}) % jj is height (channel)
+                           hh = 0.97/numel(S{ii}); % portion of height
+                           ht = 1/numel(S{ii}); % total height
+                           y = (jj-1)*ht;
+                           ft = getFieldType(obj.Tank,obj.Fields{ii});
+                           if strcmpi(ft,'Channels')
+                              mask = obj.Mask;
+                           else
+                              % "always good" if non-Channels
+                              mask = true(1,numel(S{ii})); 
+                           end
+                           if S{ii}(jj)
                               if mask(jj)
                                  % Complete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.enabled_selection,...
                                     'LineWidth',1.5,...
-                                    'EdgeColor',[.2 .2 .2]);
+                                    'EdgeColor',[.2 .2 .2])];
                               else
                                  % Complete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.enabled_selection*0.5,...
                                     'LineWidth',1.5,...
-                                    'EdgeColor',[.2 .2 .2]);
+                                    'EdgeColor',[.2 .2 .2])];
                               end
                            else
                               if mask(jj)
                                  % Incomplete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.button,...
-                                    'EdgeColor','none');
+                                    'EdgeColor','none')];
                               else
                                  % Incomplete/Not Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.button*0.5,...
-                                    'EdgeColor','none');
+                                    'EdgeColor','none')];
                               end
                            end % if
                         end % jj
@@ -1160,63 +1148,67 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end % ii
                
             case 'logical'
-               obj.Status = Status;
                % Then "channels" are condensed (multi-block, animal, or
                % tank selection)
-               [N,~] = size(Status);
-               xlim(obj.RecapAxes,[1 nField+1]);
-               ylim(obj.RecapAxes,[1 N+1]);
+               N = size(S,1);
                obj.RecapAxes.YAxis.FontSize = max(5,16-N);
-               obj.RecapAxes.XAxis.FontSize = 13;
-               obj.RecapAxes.YAxis.TickLabel = cellstr( num2str((1:N)'));
-               obj.RecapAxes.YAxis.TickValues = 1.5:N+0.5;
-               for jj=1:N
-                  for ii=1:nField
-                     if Status(jj,ii)
+               obj.RecapAxes.YAxis.TickLabel = ...
+                  cellstr( num2str((1:N)'));
+               hOff = (0.985/N)/2; % Average "mid-height"
+               obj.RecapAxes.YAxis.TickValues = linspace(hOff,1-hOff,N);
+               
+               hh = 0.97/N; % Fraction of height
+               ht = 1/N; % Total height
+               for jj=1:N % jj is height (N is total number of rows always)
+                  y = (jj-1)*ht;
+                  for ii=1:nField % ii is horizontal (field)
+                     
+                     if S(jj,ii)
                         if mask(jj)
+                           
                            % Complete/Enable
-                           rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
-                              'Curvature',[0.3 0.6],...
-                              'FaceColor',obj.Color.enabled_selection,...
-                              'LineWidth',1.5,...
-                              'EdgeColor',[.2 .2 .2]);
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
+                                 'Curvature',[0.3 0.6],...
+                                 'FaceColor',obj.Color.enabled_selection,...
+                                 'LineWidth',1.5,...
+                                 'EdgeColor',[.2 .2 .2])];
                         else
                            % Complete/Not Enable
-                           rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
-                              'Curvature',[0.3 0.6],...
-                              'FaceColor',obj.Color.enabled_selection*0.5,...
-                              'LineWidth',1.5,...
-                              'EdgeColor',[.2 .2 .2]);
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
+                                 'Curvature',[0.3 0.6],...
+                                 'FaceColor',obj.Color.enabled_selection*0.5,...
+                                 'LineWidth',1.5,...
+                                 'EdgeColor',[.2 .2 .2])];
                         end
                      else
                         if mask(jj)
                            % Incomplete/Enabled
-                           rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                              rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                               'Curvature',[0.3 0.6],...
                               'FaceColor',obj.Color.button,...
-                              'EdgeColor','none');
+                              'EdgeColor','none')];
                         else
                            % Incomplete/Not Enabled
-                           rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                              rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                               'Curvature',[0.3 0.6],...
                               'FaceColor',obj.Color.button*0.5,...
-                              'EdgeColor','none');
+                              'EdgeColor','none')];
                         end
                      end % if
                   end % ii
                end % jj
             case 'double'
-               Status = logical(Status);
-               N = size(Status,1);
-               obj.plotRecapCircle(Status,N,mask);
+               obj.Status = logical(S);
+               obj.plotRecapBubbles();
                return;
             otherwise
                error(['nigeLab:' mfilename ':badInputType2'],...
-                  'Unexpected Status class: %s',class(Status));
+                  'Unexpected obj.Status class: %s',class(S));
          end
-         
-         obj.RecapAxes.XAxis.TickLabel = obj.Fields;
-         obj.RecapAxes.XAxis.TickValues = 1.5:nField+0.5;
       end
       
       % Refresh the "Stats" table when a stage is updated
@@ -1237,20 +1229,22 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          idx = evt.BlockSelectionIndex;
          b = obj.Tank.Children(idx(1)).Children(idx(2));
          reload(b);
-         b.IsDashOpen = true;
+         b.GUI = obj; % Store association to GUI
          
          h = obj.getHighestLevelNigelObj();
          switch h.Type
             case 'Tank'
                [~,a] = getSelectedItems('obj');
-               a_all = obj.Tank.Children;
+               a_all = h.Children;
                idx = ismember(a_all,a);
-               status = getStatus(obj.Tank,[]);
+               status = getStatus(h,[]);
                obj.Status = status(idx,:);
+               obj.Mask = nigeLab.libs.DashBoard.animal2info(h);
             case 'Animal'
                b_all = getSelectedItems('obj');
                idx = find(b==b_all,1,'first');
                obj.Status(idx,:) = getStatus(b,[]);
+               obj.Mask = nigeLab.libs.DashBoard.animal2info(h);
             case 'Block' % Make sure current block is in selection
                allAnimalNodes = get(obj.Tree.Root,'Children');
                if iscell(allAnimalNodes)
@@ -1274,8 +1268,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   idx = find(obj.Tree.SelectedNodes==block2update,1,'first');
                   obj.Status(idx,:) = getStatus(b,[]);
                end
+               obj.Mask = nigeLab.libs.DashBoard.block2info(b);
          end
-         obj.plotRecapCircle();
+         obj.plotRecapBubbles();
          
       end
       
@@ -1344,7 +1339,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          tt = obj.Tank.list;
          tCell = table2cell(tt);
-         status = obj.Tank.getStatus(obj.Fields);
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.tank2info(obj.Tank);
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1361,8 +1356,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         a = [obj.Tank.Children];
-         plotRecapCircle(obj,status,numel(a),[a.IsMasked]);
+         
+         plotRecapBubbles(obj);
       end
       
       % Set the "ANIMAL" table -- the display showing processing status
@@ -1384,12 +1379,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          end
          f = A(1).Children(1).Fields;
          tCell = [];
-         status = [];
          for ii=1:numel(A)
             tt = A(ii).list;
             tCell = [tCell; table2cell(tt)];
-            status = [status; A(ii).getStatus(obj.Fields)];
          end
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.animal2info(A);
          nonStatusCols = ~strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,nonStatusCols);
          header = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1403,18 +1397,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormatData = header(:,2);
          w.Data = tCell;
          N = numel(A);
-         if N > 1
-            tmp_mask = [A.IsMasked];
-            mask = [];
-            for i = 1:numel(A)
-               b = A(i).Children;
-               mask = [mask, [b.IsMasked] & repmat(tmp_mask(i),1,numel(b))];
-            end
-         else
-            b = [A.Children];
-            mask = [b.IsMasked];
-         end
-         plotRecapCircle(obj,status,N,mask);
+         plotRecapBubbles(obj);
       end
       
       % Set the "BLOCK" table -- the display showing processing status
@@ -1441,29 +1424,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             return;
          end
          tCell = table2cell(tt);
-         s = getStatus(B,obj.Fields);
-         if numel(B) == 1
-            status = cell(size(s));
-            iCh = B.getFieldTypeIndex('Channels');
-            for i = 1:numel(status)
-               if iCh(i)
-                  status{i} = B.getStatus(obj.Fields{i});
-               else
-                  status{i} = s(i);
-               end
-            end
-            nCh = B.NumChannels;
-            vec = 1:nCh;
-            if B.IsMasked
-               mask = ismember(vec,B.Mask);
-            else
-               mask = false(size(vec));
-            end
-         else
-            status = s;
-            nCh = 1;
-            mask = [B.IsMasked];
-         end
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.block2info(B);
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1474,7 +1435,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         plotRecapCircle(obj,status,nCh,mask);
+         plotRecapBubbles(obj);
          
       end
       
@@ -2165,6 +2126,67 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    
    % STATIC,PUBLIC
    methods (Static,Access=public)
+      % Convert animal object or array into corresonding mask & status
+      function [mask,status] = animal2info(A)
+         %ANIMAL2INFO  Convert animal object array to mask & status
+         %
+         %  [mask,status] = nigeLab.libs.DashBoard.animal2info(A)
+         
+         status = [];
+         for ii = 1:numel(A)
+            status = [status; A(ii).getStatus(A(ii).Fields)];
+         end
+         if numel(A) > 1
+            tmp_mask = [A.IsMasked];
+            mask = [];
+            for i = 1:numel(A)
+               b = A(i).Children;
+               mask = [mask, [b.IsMasked] & repmat(tmp_mask(i),1,numel(b))];
+            end
+         else
+            b = [A.Children];
+            mask = [b.IsMasked];
+         end
+      end
+      
+      % Convert block object or array into corresponding mask & status
+      function [mask,status] = block2info(B)
+         %BLOCK2INFO  Convert block object array to corresponding mask vec
+         %
+         %  mask = nigeLab.libs.DashBoard.block2mask(B);
+         %
+         %  B: nigeLab.Block scalar object or array
+         
+         if numel(B) == 1
+            status = cell(1,numel(B.Fields));
+            for i = 1:numel(status)
+               status{i} = B.getStatus(B.Fields{i});
+            end
+            nCh = B.NumChannels;
+            vec = 1:nCh;
+            if B.IsMasked
+               mask = ismember(vec,B.Mask);
+            else
+               mask = false(size(vec));
+            end
+         else
+            status = getStatus(B,[]);
+            nCh = 1;
+            mask = [B.IsMasked];
+         end
+      end
+      
+      % Convert tank object to corresponding mask & status
+      function [mask,status] = tank2info(T)
+         %TANK2INFO  Convert tank object array to mask & status
+         %
+         %  [mask,status] = nigeLab.libs.DashBoard.tank2info(tankObj);
+         
+         status = T.getStatus(T.Fields);
+         a = [T.Children];
+         mask = [a.IsMasked];
+      end
+      
       function obj = empty()
          %EMPTY  Returns empty object
          %
