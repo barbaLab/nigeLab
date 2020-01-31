@@ -47,11 +47,10 @@ if isempty(tankObj.Children)
    return;
 end
 
-subs = S(1).subs;
-
 switch S(1).type
-   case '{}'
-      %% Shortcut: tankObj{:} --> All Animals / tankObj{:,:} --> All Blocks
+   case '{}' % Shortcut: tankObj{:} --> All Animals / tankObj{:,:} --> All Blocks
+      % Only use the first indexing argument pair (e.g. {} or () or . only)
+      subs = S(1).subs;
       if numel(S) > 1
          error(['nigeLab:' mfilename ':badSubscriptReference'],...
             ['Shortcut indexing using {} does not support subsequent ' ...
@@ -59,53 +58,53 @@ switch S(1).type
       end
       switch numel(subs)
          case 1
-             % If only 1 subscript, then it indexes Animals
-             if isnumeric(subs{1})
-                 % if is numeric the indexing is direct, no need to parse
-                 % anything here. Eg tankObj{1} or tankObj{[1,2]}
-                 s = substruct('()',subs);
-             elseif ischar(subs{1})
-                 % it's either ':', which means return all animals, or it
-                 % indexes animals using the 16 digit key value directly,
-                 % which should return only one animal.
-                 % eg tankObj{:} or tankObj{'xxxxxxxxxxxxxxxx'}                 
-                 if strcmp(subs{1},':')
-                     subs = [1, subs];
-                 else
-                     s = substruct('.','findByKey','()',subs);
-                 end
-             elseif  iscell(subs{1})
-                 % cell case only happens for key indexing. This should
-                 % return one or more than one animal
-                 % eg tankObj{{'xxxxxxxxxxxxxxxx'}} or 
-                 % tankObj{{'xxxxxxxxxxxxxxxx','yyyyyyyyyyyyyyyy'}}
-                 s = substruct('.','findByKey','()',subs);
-             end
+            % If only 1 subscript, then it indexes Animals
+            if isnumeric(subs{1})
+               % if is numeric the indexing is direct, no need to parse
+               % anything here. Eg tankObj{1} or tankObj{[1,2]}
+               s = substruct('()',subs);
+            elseif ischar(subs{1})
+               % it's either ':', which means return all animals, or it
+               % indexes animals using the 16 digit key value directly,
+               % which should return only one animal.
+               % eg tankObj{:} or tankObj{'xxxxxxxxxxxxxxxx'}
+               if strcmp(subs{1},':')
+                  subs = [1, subs];
+               else
+                  s = substruct('.','findByKey','()',subs);
+               end
+            elseif  iscell(subs{1})
+               % cell case only happens for key indexing. This should
+               % return one or more than one animal
+               % eg tankObj{{'xxxxxxxxxxxxxxxx'}} or
+               % tankObj{{'xxxxxxxxxxxxxxxx','yyyyyyyyyyyyyyyy'}}
+               s = substruct('.','findByKey','()',subs);
+            end
             out = subsref(tankObj.Children,s);
          case 2
-             if isscalar(tankObj.Children)
-                 % let's do some error handing. This is handled here becuse
-                 % from the animal the case where the sbsref comes from
-                 % tank or from the user is undistiguishable
-                 if IsRightKeyFormat(tankObj.Children,subs{1})
-                     if isempty(tankObj.Children.findByKey(subs{1}))
-                         out = nigeLab.Block.Empty;
-                         varargout{1} = out;
-                         return;
-                     else
-                         subs(1) = [];
-                     end
-                 elseif IsSemiColon(subs{1})
+            if isscalar(tankObj.Children)
+               % let's do some error handing. This is handled here becuse
+               % from the animal the case where the sbsref comes from
+               % tank or from the user is undistiguishable
+               if IsRightKeyFormat(tankObj.Children,subs{1})
+                  if isempty(tankObj.Children.findByKey(subs{1}))
+                     out = nigeLab.Block.Empty;
+                     varargout{1} = out;
+                     return;
+                  else
                      subs(1) = [];
-                 elseif isnumeric(subs{1})
-                     if subs{1} > 1
-                         error(['nigeLab:' mfilename ':indexExceed'],...
-                             'Index (%d) exceeds the number of Animals elements (%d).',subs{1},1);
-                     else
-                         subs(1) = [];
-                     end
-                 end
-             end
+                  end
+               elseif IsSemiColon(subs{1})
+                  subs(1) = [];
+               elseif isnumeric(subs{1})
+                  if subs{1} > 1
+                     error(['nigeLab:' mfilename ':indexExceed'],...
+                        'Index (%d) exceeds the number of Animals elements (%d).',subs{1},1);
+                  else
+                     subs(1) = [];
+                  end
+               end
+            end
             s = substruct('{}',subs);
             out = subsref(tankObj.Children,s);
             
@@ -127,7 +126,7 @@ switch S(1).type
             tankObj.findMethodSubsIndices(S);
          obj = tankObj;
          while ~isempty(methodSubs)
-            if methodOutputs(1) > 0 
+            if methodOutputs(1) > 0
                if numel(S) > methodSubs(1)
                   switch S(methodSubs(1)+1).type
                      case '()' % Then arguments were given
@@ -169,7 +168,7 @@ switch S(1).type
                      return;
                   else
                      ans = tmp %#ok<NOPRT,*NOANS>
-                     nigeLab.utils.mtb(ans); 
+                     nigeLab.utils.mtb(ans);
                      return;
                   end
                end
@@ -184,19 +183,11 @@ switch S(1).type
 end
 end
 
-function value = IsRightKeyFormat(obj,subs)
-%% ISRIGHTKEYFORMAT returns right if subs is a key or a cell array of keys
-key = obj(1).Key.Public;
-KeyLength = numel(key);
-
-
-value = (ischar(subs) && numel(subs) == KeyLength) ||...
-    (iscell(subs) && ...
-    all( cellfun( @(x) ischar(x) && numel(x) == KeyLength,subs) ));
-
-
-end
-
+% Check that input is a semi-colon
 function value = IsSemiColon(subs)
+%ISSEMICOLON  Returns true if subs is a `char` with value ':'
+%
+%  value = IsSemiColon(subs);
+
 value = ischar(subs) && strcmp(subs,':');
 end

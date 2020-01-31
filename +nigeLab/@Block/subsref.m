@@ -28,48 +28,48 @@ function varargout = subsref(blockObj,S)
 % Shrt: cell array of shortcuts
 Shrt = nigeLab.defaults.Shortcuts();
 switch S(1).type
-    case '.'
-        %% Handle '.' subscripted references
-        % . means Block was referenced as __.Block.[method or property]
-        % . also could reference something like __.Block.Raw as a shortcut.
-        % All Channels fields are adressable this way.
-        %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
-        Ffields = blockObj(1).Pars.Block.Fields;
-        idx = strcmpi(Ffields,S(1).subs);
-        % Shortcut case:
-        if any(idx)
-            % In this case, we need to deal with multiple block objects
-            % slightly differently.
-            if numel(blockObj) > 1
-                varargout = arrayfun(@(x) subsref(x,S),blockObj,...
-                    'UniformOutput',false);
-                return;
-            end
-            
-            if numel(S)<2
-                S(2).type = '()';
-                S(2).subs = {':'};
-            end
-            
-            if numel(S(2).subs) > 1
-                Chans = blockObj.Channels(S(2).subs{1});
-                S(2).subs(1) = [];
-            else
-                Chans = blockObj.Channels;
-            end
-            out = arrayfun(@(x) subsref(x.(Ffields{idx}),S(2)),Chans,'UniformOutput',false);
-            varargout{1} = cat(1,out{:});
+   case '.' % Handle '.' subscripted references
+      % . means Block was referenced as __.Block.[method or property]
+      % . also could reference something like __.Block.Raw as a shortcut.
+      % All Channels fields are adressable this way.
+      %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
+      fixed_fields = blockObj(1).Pars.Block.Fields;
+      idx = strcmpi(fixed_fields,S(1).subs);
+      % Shortcut case:
+      if any(idx)
+         % In this case, we need to deal with multiple block objects
+         % slightly differently.
+         if numel(blockObj) > 1
+            varargout = arrayfun(@(x) subsref(x,S),blockObj,...
+               'UniformOutput',false);
             return;
-            
- 
-        else
-            % Standard case:
-            [varargout{1:nargout}] = builtin('subsref',blockObj,S);
-            return;
-        end
-        
-    case '()'
-      %% Handle '()' subscripted references
+         end
+         
+         if numel(S)<2
+            S(2).type = '()';
+            S(2).subs = {':'};
+         end
+         
+         if numel(S(2).subs) > 1
+            Chans = blockObj.Channels(S(2).subs{1});
+            S(2).subs(1) = [];
+         else
+            Chans = blockObj.Channels;
+         end
+         out = arrayfun(@(x) subsref(x.(fixed_fields{idx}),S(2)),...
+            Chans,...
+            'UniformOutput',false);
+         varargout{1} = cat(1,out{:});
+         return;
+         
+         
+      else
+         % Standard case:
+         [varargout{1:nargout}] = builtin('subsref',blockObj,S);
+         return;
+      end
+      
+   case '()' % Handle '()' subscripted references
       % () Means Blocks was referenced as __.Block() ... so it should be
       % used for dealing with Block arrays
       % Should always be dealt with in standard way:
@@ -77,14 +77,14 @@ switch S(1).type
       [varargout{1:nargout}] = builtin('subsref',blockObj,S);
       return;
       
-   case '{}'
-      %% Handle '{}' subscripted (shortcut) references
+   case '{}' % Handle '{}' subscripted (shortcut) references
       % Move "shortcut" referencing onto {} indexing, since it isn't
       % being used anyways. Simplifies everything.
       % Should only use one level of subscripting
       if numel(S) > 1
-         error(['nigeLab:' mfilename ':badSubscript'],...
-            'Use of {} shortcuts does not support additional indexing.');
+         error(['nigeLab:' mfilename ':BadSubsCount'],...
+            ['[BLOCK/SUBSREF]: Use of {} shortcuts does not ' ...
+            'support additional indexing.']);
       end
       
       % Should only reference a single block at a time, since if the first
@@ -97,127 +97,141 @@ switch S(1).type
          return;
       end
       
-      %%% Input 1 defines which shortut we're going to use. It needs t obe
+      %%% Input 1 defines which shortcut we're going to use. It needs to be
       %%% either a char that matches the fieldname in the shortcuts struct
       %%% or an index
-       subs = S(1).subs;
+      subs = S(1).subs;
       if ischar(subs{1})
-          shrtName = subs{1};
-          shrtStruct = Shrt.(shrtName);
+         shrtName = subs{1};
+         shrtStruct = Shrt.(shrtName);
       elseif isnumeric(subs{1}) && isscalar(subs{1})
-          ff = fieldnames(Shrt);
-          shrtStruct = Shrt.(ff{subs{1}});
+         ff = fieldnames(Shrt);
+         shrtStruct = Shrt.(ff{subs{1}});
       else
-          error(['nigeLab:' mfilename ':badSubscriptIndex'],...
-              'Invalid first input.');
+         error(['nigeLab:' mfilename ':BadSubsType'],...
+            '[BLOCK/SUBSREF]: Invalid first input.');
       end
       
       %%% Now we know which shortcut we're using. We need to define the
       %%% number of inputs needed and construct the subsref struct
       
-      NInputNeeded = sum(shrtStruct.indexable); % this gives us the number 
-                                                % of indexble component in 
-                                                % the shortcut ie the 
-                                                % number of inputs needed
-     if NInputNeeded > 2 
-         error(['nigeLab:' mfilename ':unsupported'],...
-                  ['Unsupported shortcut. Nigelab is supporting only shortcuts up to a depth of two levels.\n',...
-                  'I.e. with at most two indexable subfields.'],...
-                  numel(subs),shrtName);
-     end
+      NInputNeeded = sum(shrtStruct.indexable); 
+      % this gives us the number of "indexable" component in the shortcut
+      % (i.e. the number of inputs needed)
+      if NInputNeeded > 2
+         error(['nigeLab:' mfilename ':BadConfig'],...
+            ['[BLOCK/SUBSREF]: Unsupported shortcut.\n' ...
+            'nigeLab supports shortcuts up to a depth of two levels.\n',...
+            '\t->\t(i.e. with at most two indexing sub-fields)'],...
+            numel(subs),shrtName);
+      end
       
       subs = S(1).subs(2:end);
       if numel(subs) < NInputNeeded
-          error(['nigeLab:' mfilename ':notEnoughSubscripts'],...
-                  'Not enough subscripts (%g) used for the selcted shortcut (%s).',numel(subs),shrtName);
+         error(['nigeLab:' mfilename ':TooFewInputs'],...
+            ['[BLOCK/SUBSREF]: Not enough subscripts (%g) used for ' ...
+            'the selected shortcut (%s).'],numel(subs),shrtName);
       elseif numel(subs) > NInputNeeded
-          error(['nigeLab:' mfilename ':tooManySubscripts'],...
-                  'Too many subscripts (%g) used for the selcted shortcut (%s).',numel(subs),shrtName);
+         error(['nigeLab:' mfilename ':TooManyInputs'],...
+            ['[BLOCK/SUBSREF]: Too many subscripts (%g) used for ' ...
+            'the selected shortcut (%s).'],numel(subs),shrtName);
       end
       
       % Let's gather the objects targeted by the shortcut
-      substractInArgs = {};
+      substructInArgs = {};
       for ii = 1:numel(shrtStruct.subfields)
-          substractInArgs = [substractInArgs, {'.'} ,shrtStruct.subfields(ii)];
-          if shrtStruct.indexable(ii)
-              substractInArgs = [substractInArgs, {'()' subs(1)}];
-              break;
-          else
-              ... Do nothig, go on with the loop
-          end
+         substructInArgs = [substructInArgs, {'.'} ,shrtStruct.subfields(ii)]; %#ok<AGROW>
+         if shrtStruct.indexable(ii)
+            substructInArgs = [substructInArgs, {'()' subs(1)}]; %#ok<AGROW>
+            break;
+         else
+            ... Do nothing, go on with the loop
+         end
       end
       
-      TargetObj = subsref(blockObj,substruct(substractInArgs{:}));
+      TargetObj = subsref(blockObj,substruct(substructInArgs{:}));
       
-      subs = subs(end);     % we imposed only 2 levels of depth, this means subs has to be only one after this
-      if iscell(subs{1}),subs = subs{end};end
+      % we imposed only 2 levels of depth:
+      % --> this means subs has to be only one cell after this
+      subs = subs(end);     
+      if iscell(subs{1})
+         subs = subs{end};
+      end
       shrtStruct.subfields(1:ii) = [];
       shrtStruct.indexable(1:ii) = [];
       
-      
       % Let's create the subsref structs
-      % Again we need to gahter the substruct info from the shortcut
-      
-      substractInArgs = {};
+      % Again we need to gather the substruct info from the shortcut
+      substructInArgs = {};
       for ii = 1:numel(shrtStruct.subfields)
-          substractInArgs = [substractInArgs, {'.'} ,shrtStruct.subfields(ii)];
-          if shrtStruct.indexable(ii)
-              substractInArgs = [substractInArgs, {'()'}];
-              break;
-          else
-              ... Do nothig, go on with the loop
-          end
+         substructInArgs = [substructInArgs, {'.'} ,shrtStruct.subfields(ii)]; %#ok<AGROW>
+         if shrtStruct.indexable(ii)
+            substructInArgs = [substructInArgs, {'()'}]; %#ok<AGROW>
+            break;
+         else
+            ... Do nothing, go on with the loop
+         end
       end
       
-%        but this time we add the indexes after the () in a different way
+      % This time we add the indices after the () in a different way
       for jj = 1:numel(subs)
-          if ~checkInputArgsCoherence(numel(TargetObj),subs{jj})
-              % check that dimensions are coherent between inputs
-              error(['nigeLab:' mfilename ':badSubscriptReference'],...
-                   'Dimensions of arrays being concatenated are not consistent.');
-          end
-          
-          switch checkSamplesInput(subs{jj})
-              % habldes cell, not cell nonsense with substruct
-              case {'numeric','semicolon'}                 
-                   s(jj,:) = substruct(substractInArgs{:},subs(jj));
-              case 'cell'
-                  s(jj,:) = substruct(substractInArgs{:},subs{jj});
-              otherwise
-                  error(['nigeLab:' mfilename 'badSubscript'],...
-                       'Bad subscript number 3. %ss are not supported.',class(subs))
-          end
+         if ~checkInputArgsCoherence(numel(TargetObj),subs{jj})
+            % check that dimensions are coherent between inputs
+            error(['nigeLab:' mfilename ':BadSize'],...
+               ['[BLOCK/SUBSREF]: Dimensions of arrays being ' ...
+               'concatenated are not consistent.']);
+         end
+         
+         switch checkSamplesInput(subs{jj})
+            case {'numeric','semicolon'}
+               s(jj,:) = substruct(substructInArgs{:},subs(jj)); %#ok<AGROW>
+            case 'cell'
+               s(jj,:) = substruct(substructInArgs{:},subs{jj}); %#ok<AGROW>
+            otherwise
+               error(['nigeLab:' mfilename 'BadClass'],...
+                  ['[BLOCK/SUBSREF]: Bad subscript number 3.\n' ...
+                  '%ss are not supported.'],class(subs))
+         end
          
       end
       index = ones(1,length(TargetObj)).*(1:size(s,1));
       varargout = {arrayfun(@(x,idx) subsref(x,s(idx,:)),TargetObj,index,'UniformOutput',false)};
-
-
-   otherwise
-      %% Otherwise this is not a valid subsref 'type' reference
-      error(['nigeLab:' mfilename ':badSubscript'],...
-         'Not a valid indexing subscript type: %s',S(1).type);
-end
-   
+      
+   otherwise % Otherwise this is not a valid subsref 'type' reference
+      error(['nigeLab:' mfilename ':BadType'],...
+         '[BLOCK/SUBSREF]: Not a valid indexing subscript type: %s',...
+         S(1).type);
 end
 
+end
 
+% Return type as char ('numeric'; 'cell'; 'semicolon'; 'end'; 'invalid')
 function value = checkSamplesInput(subs)
-% CHECKSAMPLESINPUT helper function to check inputs
-    if (isnumeric(subs) && isvector(subs))
-        value = 'numeric';
-    elseif iscell(subs) && all(cellfun(@(x) strcmp(checkSamplesInput(x),'numeric'), subs))
-        value = 'cell';
-    elseif ischar(subs) && strcmp(subs, ':')
-        value = 'semicolon';
-    elseif ischar(subs) && strcmp(subs,'end')
-        value = 'end';
-    else
-        value = 'invalid';
-    end
+%CHECKSAMPLESINPUT  Helper function to check inputs
+%
+%  value = checkSamplesInput(subs);
+%
+%  subs : Subscript reference input argument
+%
+%  Returns the `type` of `subs` according to its class and other "special"
+%  characteristics depending on its type.
+
+if (isnumeric(subs) && isvector(subs))
+   value = 'numeric';
+elseif iscell(subs) && all(cellfun(@(x) strcmp(checkSamplesInput(x),'numeric'), subs))
+   value = 'cell';
+elseif ischar(subs) && strcmp(subs, ':')
+   value = 'semicolon';
+elseif ischar(subs) && strcmp(subs,'end')
+   value = 'end';
+else
+   value = 'invalid';
+end
 
 end
 
+% Checks that input subscript arguments "work" together
 function value = checkInputArgsCoherence(prevElNum,args)
+%CHECKINPUTARGSCOHERENCE  Ensure that subscript args "work" together
 value = isnumeric(args) || (iscell(args) && (numel(args) == prevElNum));
 end

@@ -2,40 +2,116 @@
 clear
 clc
 
-% Change the current folder to the folder of this m-file.
-if(~isdeployed)
-  cd(fileparts(which(mfilename)));
+% Check current path and if "inside" the package, move to top-level
+nigelPath = pwd;
+if contains(nigelPath,'+nigeLab')
+   disp('Matlab `Current Folder` is inside +nigeLab. Moving out.');
+   nigelPath = nigelPath(1:(regexp(nigelPath,'+nigeLab')-1));
+   cd(nigelPath);
+end
+L = import; % Make sure it is not imported from previous `import` call
+if ~ismember('nigeLab.*',L)
+   import nigeLab.*;
+   L = import; % Double-check if it was imported successfully
+   if ~ismember('nigeLab.*',L)  % Throw error if still cannot find it
+      error(['nigeLab:' mfilename ':BadPath'],...
+         ['Please ensure +nigeLab is on search path\n' ...
+         '\t->\t(Current Folder: %s)\n'],pwd);
+   else % Otherwise we successfully imported it; move to top-level folder
+      nigelPath = nigeLab.utils.getNigelPath();
+      cd(nigelPath);
+   end
+end
+demoPath = fullfile(nigelPath,'+nigeLab','setup','demo');
+
+% Get input data path
+inputPath = fullfile(demoPath,'myTank');
+% unzip data if needed
+if ~exist(inputPath,'dir')
+   unzip(fullfile(inputPath,'myTank.zip'));
 end
 
-% unzip data
-if ~exist('myTank','dir'), unzip('myTank.zip');end
-% create destination folder for analysis
-mkdir('demo_experiment')
+% Get output location and make folder if needed
+outputPath = fullfile(demoPath,'demo_experiment');
+if ~exist(outputPath,'dir')
+   mkdir(outputPath);
+end
 
 %% create a tank object 
 % you will be asked to select the source (myTank) and destination (you can 
-% choose every folder, we suggest to use myTank_anamysis) 
-tankObj = nigeLab.Tank(fullfile(pwd,'myTank'),fullfile(pwd,'demo_experiment')); 
+% choose every folder, we suggest to use `'demo_experiment'`) 
+tankObj = nigeLab.Tank(inputPath,outputPath); 
 
 % this will create a tank object with all the linked metadata and will save
 % it in the destination folder. check the folder tree that was created. If
-% anything looks wrong, please refer to Initialize_Data_Structure wiki page
-% on github.
+% anything looks wrong, please refer to documentation at the wiki page:
+%
+%  https://github.com/m053m716/ePhys_packages/wiki/Startup_Init
+
+% prompt user to proceed with extraction
+str = nigeLab.utils.uidropdownbox(...
+   'Run Extraction?','Proceed with `doRawExtraction`?',{'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
 
 %% extract raw data and save it in the corresponding folder
+% --> (on all Animals and Blocks within Tank)
 tankObj.doRawExtraction;
 
-%% Perform multi-unit bandpass filter for spike detection for all Animals and Blocks within Tank.
+% prompt user to proceed with filtering
+str = nigeLab.utils.uidropdownbox(...
+   'Run Spike Filter?','Proceed with `doUnitFilter`?',{'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
+
+%% Perform multi-unit bandpass filter for spike detection 
+% --> (on all Animals and Blocks within Tank)
 tankObj.doUnitFilter
 
-%% Perform common-average re-reference for all Animals and Blocks within Tank.
+% prompt user to proceed with re-reference
+str = nigeLab.utils.uidropdownbox(...
+   'Run Virtual Re-Reference?','Proceed with `doReReference`?',...
+   {'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
+
+%% Perform common-average re-reference
+% --> (on all Animals and Blocks within Tank)
 tankObj.doReReference
 
+% prompt user to proceed with linking to disk files
+str = nigeLab.utils.uidropdownbox(...
+   'Link Data?','Proceed with `linkToData`?',{'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
+
+%% Link the Tank/Animal/Block to disk files
+linkToData(tankObj);
+
+% prompt user to proceed with spike detection
+str = nigeLab.utils.uidropdownbox(...
+   'Detect Spikes?','Proceed with `doSD`?',{'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
+
 %% Perform spike detection and feature extraction (wavelet decomposition)
-%% on all Animals and all Blocks within the Tank
-tankObj.doSD
+% --> (on only the first Animal (for example))
+doSD(tankObj{1});
+
+% prompt user to proceed with LFP extraction
+str = nigeLab.utils.uidropdownbox(...
+   'Do LFP Decimation?','Proceed with `doLFPExtraction`?',...
+   {'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
 
 %% downsample raw data to LFP
+% --> (on only the third Block of the second Animal)
 tankObj.doLFPExtraction;
-
-%% 
+nigeLab.sounds.play('bell',1.5);
