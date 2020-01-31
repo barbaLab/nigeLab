@@ -1978,12 +1978,12 @@ classdef DiskData < handle & ...
          % Now, create h5 dataset with (correct) desired property list
          if strcmp(obj.type_,'MatFile') % MatFile ~ not extendable
             h5create(fName, varname_, obj.maxdims_h5,...
-               'DataType',obj.class_,'FillValue',0);
+               'DataType',obj.class_,'FillValue',zeros(1,1,obj.class_));
 
          else % Event, Hybrid
             h5create(fName, varname_, obj.maxdims_h5,...
                'ChunkSize',obj.chunks_h5,'DataType',obj.class_,...
-               'Deflate',obj.compress_,'FillValue',0);
+               'Deflate',obj.compress_,'FillValue',zeros(1,1,obj.class_));
          end
          % Denote that the file is empty (initialized only)
          obj.Empty = ones(1,1,'int8');

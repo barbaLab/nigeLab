@@ -16,7 +16,7 @@ if numel(blockObj) > 1
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doRawExtraction(blockObj(i));
          end
       end
    end
