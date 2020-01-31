@@ -49,7 +49,7 @@ end
 
 if ~blockObj.Pars.Video.HasVideo
    flag = true;
-   nigelab.utils.cprintf(fmt,'%s[BLOCK/INITVIDEOS]: ');
+   nigeLab.utils.cprintf(fmt,'%s[BLOCK/INITVIDEOS]: ');
    nigeLab.utils.cprintf(fmt(1:(end-1)),...
       'Skipped video initialization (%s)\n',blockObj.Name);
    return;
