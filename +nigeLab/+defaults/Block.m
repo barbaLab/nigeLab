@@ -70,14 +70,12 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-% pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % FB?
-pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % KUMC
+pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$RecID' '$RecDate' '$RecTime'}; % KUMC
 
 %% Common NamingConvention values
 % pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecTime'}; % FB stuff
-pars.NamingConvention={'AnimalID','Year','Month','Day','SessionID'}; % MM stuff
-% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj
+pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecDate','RecTime'}; % MM Audio stuff
+% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
@@ -93,14 +91,14 @@ pars.SpecialMeta.AnimalID.cat = '-'; % Concatenater (if used) for names
 % pars.SpecialMeta.SpecialVars = {}; % Default case
 
 % (All must be included in DynamicVarExp):
-pars.SpecialMeta.RecID.vars = {'Month','Day','SessionID'}; % KUMC "RC"  
+pars.SpecialMeta.RecID.vars = {}; % KUMC "RC"  
 % pars.SpecialMeta.RecID.vars = {'Year','Month','Day'}; % KUMC "RC"  
-pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'}; % KUMC "standard"
+pars.SpecialMeta.AnimalID.vars = {}; % KUMC "standard"
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
 pars.Concatenater = '_'; % concatenater for variables INCLUDED in BLOCK name
-pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+pars.VarExprDelimiter = {'_'}; % Delimiter for parsing "special" vars
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 

@@ -12,7 +12,7 @@ pars = struct;
 % Only specify this field if you want to force use of a single cluster
 % pars.Cluster = 'CPLMJS'; 
 pars.UseParallel = true; % set to false to switch to serial processing mode
-pars.UseRemote = true;
+pars.UseRemote = false;
 % pars.UseParallel = false;
 % pars.UseRemote = false;
 
@@ -32,7 +32,7 @@ pars.InitTimeSec = 5; % Time to wait when initializing cluster
 
 % pars.RemoteRepoPath = '';
 pars.RemoteRepoPath = ...
-   {'//kumc.edu/data/research/SOM RSCH/NUDOLAB/Scripts_Circuits/Communal_Code/nigeLab/'};
+   {'C:\Users\fbarban\Documents\MATLAB\ePhys_packages'};
 
 %% Parse output
 if nargin < 1
@@ -47,6 +47,7 @@ else
       end
    end
 end
+
 
 
 end

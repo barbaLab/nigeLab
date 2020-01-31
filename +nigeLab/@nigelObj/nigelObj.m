@@ -514,6 +514,43 @@ classdef nigelObj < handle & ...
          end
       end
       
+      function n = numArgumentsFromSubscript(nigelObj,s,indexingContext)
+          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
+          %
+          %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
+          %
+          %  s  --  struct from SUBSTRUCT method for indexing
+          %  indexingContext  --  matlab.mixin.util.IndexingContext Context
+          %                       in which the result applies.
+          
+          switch s(1).type
+              case '{}'
+                  switch class(nigelObj)
+                      case {'nigeLab.Tank','nigeLab.Animal'}
+                          n = 1;
+                      case 'nigeLab.Block'
+                          n = numel(nigelObj);
+                      otherwise
+                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                  end
+              case '.'
+                  switch class(nigelObj)
+                      case 'nigeLab.Block'
+                          Ffields = nigelObj(1).Pars.Block.Fields;
+                          idx = strcmpi(Ffields,s(1).subs);
+                          if any(idx)
+                              n = numel(nigelObj);
+                          else
+                              n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                          end
+                      otherwise
+                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                  end
+              otherwise
+                  n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+          end
+      end
+      
       % % % GET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT] Get method for .AnimalLoc (backwards compatibility)
       function value = get.AnimalLoc(obj)
@@ -2580,7 +2617,8 @@ classdef nigelObj < handle & ...
 
          if nargin < 2
             error(['nigeLab:' mfilename ':tooFewInputs'],...
-               'Need to provide animal array and hash key at least.');
+               '[FINDBYKEY]: Need to provide %s array and `.Key` at least.',...
+               objArray(1).Type);
          else
             if isa(keyStr,'nigeLab.nigelObj') || ...
                isa(keyStr,'nigeLab.Tank') || ...
@@ -4080,6 +4118,7 @@ classdef nigelObj < handle & ...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                else
+                   flag = obj.updateParams(field,'Direct');
                   nigeLab.utils.cprintf(fmt,...
                      '%sObj.Pars.%s must be initialized\n\t',...
                      lower(type),field);
@@ -4202,6 +4241,48 @@ classdef nigelObj < handle & ...
    
    % HIDDEN,PUBLIC
    methods (Hidden,Access=public)
+      % Check that `Key` is correctly formatted for shortcut indexing
+      function value = IsRightKeyFormat(obj,subs)
+         %ISRIGHTKEYFORMAT  True if `subs` is key or cell array of keys
+         %
+         %  value = IsRightKeyFormat(obj,subs);
+         %
+         %  obj   : nigeLab.nigelObj object or subclass
+         %     --> If given as an array, uses getKey(obj(1),'Public') 
+         %        (does not check key length against rest of object array)
+         %  subs  : (cell array) input subscript args for shortcut indexing
+         %
+         %  value : (logical scalar) -- `true` if this is a valid key
+         %
+         %  Note: `value` is returned as `false` if:
+         %     --> `obj` is empty, returns false
+         %     --> `subs` is empty
+         %     --> there is only one input argument
+
+         value = false;
+         if isempty(obj)
+            return;
+         end
+
+         if nargin < 2
+            return;
+         elseif isempty(subs)
+            return;
+         end
+
+         % Only returns Key of first element in array to check against
+         key = getKey(obj(1),'Public');
+         % Compares number of characters in Key
+         KeyLength = numel(key);
+         if ischar(subs) % If == # characters it is a Key
+            value = numel(subs) == KeyLength;
+         elseif iscell(subs) % If all cells have == # characters, then Key
+            value = all( cellfun( @(x) ischar(x) && numel(x) == KeyLength,subs) );
+         else % It is not a `.Key` format index
+            value = false; 
+         end
+      end
+      
       % Set some useful path variables to file locations
       function flag = genPaths(obj,SaveLoc)
          %GENPATHS    Set some useful path variables to file locations
@@ -4308,7 +4389,6 @@ classdef nigelObj < handle & ...
          end
             
       end
-      
    end
    
    % PROTECTED
@@ -4387,11 +4467,11 @@ classdef nigelObj < handle & ...
             case 'Animal'
                obj.PropListener = [obj.PropListener, ...
                   addlistener(obj,'Children','PostSet',...
-                     @(~,~)obj.checkBlocksForClones())];
+                     @obj.checkBlocksForClones)];
             case 'Tank'
                obj.PropListener = [obj.PropListener,...
                   addlistener(obj,'Children','PostSet',...
-                     @(~,~)obj.checkAnimalsForClones)];
+                     @obj.checkAnimalsForClones)];
                
          end
       end
@@ -4447,7 +4527,7 @@ classdef nigelObj < handle & ...
       % Event listener callback to make sure that duplicate Animals are not
       % added and if they are duplicated, that upon removal there are not
       % "lost" Child Blocks.
-      function checkAnimalsForClones(obj)
+      function checkAnimalsForClones(obj,~,~)
          % CHECKANIMALSFORCLONES  Event listener callback invoked when a
          %                        new Animal is added to obj.Children.
          %
@@ -4522,7 +4602,7 @@ classdef nigelObj < handle & ...
       
       % Ensure that there are not redundant Blocks in obj.Children
       % based on the .Name property of each member Block object
-      function checkBlocksForClones(obj)
+      function checkBlocksForClones(obj,~,~)
          % CHECKBLOCKSFORCLONES  Creates an nBlock x nBlock logical matrix
          %                       comparing each Block in obj.Children
          %                       to the Name of every other such Block.
@@ -4768,8 +4848,12 @@ classdef nigelObj < handle & ...
                   case 'Animal'               
                      data_out = struct;
                      for i = 1:numel(obj.Children)
+                        % Get rid of any "weird" characters
                         name = strrep(obj.Children(i).Name,'-','_');
                         name = strrep(name,' ','_');
+                        name = strrep(name,'+','_');
+                        name = strrep(name,'&','_');
+                        name = strrep(name,'|','_');
                         if ~regexpi(name,'[a-z]')
                            name = ['Block_' name];
                         end

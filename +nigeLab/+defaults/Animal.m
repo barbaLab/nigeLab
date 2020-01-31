@@ -22,18 +22,18 @@ pars.UnifyChildMask = true;  % Set false to allow different recordings to includ
 
 %% Name parsing: see '~/+defaults/Block.m' for detailed documentation
 % This works the same way, but applies to Animal name
-pars.DynamicVarExp={'$SurgYear','$SurgNumber'};
-pars.NamingConvention={'SurgYear','SurgNumber'};
+pars.DynamicVarExp={'$AnimalID'};
+pars.NamingConvention={'AnimalID'};
 
 pars.SpecialMeta = struct;
-pars.SpecialMeta.SpecialVars = {'AnimalID'};
+pars.SpecialMeta.SpecialVars = {};
 pars.SpecialMeta.AnimalID.cat = '-'; % Concatenater (if used) for names
 pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'}; % KUMC "standard"
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 
 pars.Delimiter   = '-'; % delimiter for variables in ANIMAL name
 pars.Concatenater = '-'; % concatenater for variables INCLUDED in ANIMAL name
-pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+pars.VarExprDelimiter = {'_'}; % Delimiter for parsing "special" vars
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
