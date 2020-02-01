@@ -280,7 +280,7 @@ classdef Animal < nigeLab.nigelObj
 %       flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
 %       --> Deprecated (inherited from `nigelObj`)
       N = getNumBlocks(animalObj); % Gets total number of blocks 
-      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
+      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together  % -- Is it deprecated? (MM to FB 2020-Feb-01)
    end
     
    % PRIVATE 
