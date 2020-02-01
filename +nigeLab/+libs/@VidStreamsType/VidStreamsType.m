@@ -382,36 +382,42 @@ classdef VidStreamsType < handle ...
       
       % % % SET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT] Assigns .Block property (cannot)
-      function set.Block(~,~)
+      function set.Block(obj,~)
          %SET.BLOCK  Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Block\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Block\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT] Assigns .Key property (cannot)
-      function set.Key(~,~)
+      function set.Key(obj,~)
          %SET.KEY  Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Key\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Key\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Name property (cannot)
-      function set.Name(~,~)
+      function set.Name(obj,~)
          %SET.NAME  Does not do anything
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Name\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Name\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Parent property
@@ -429,91 +435,107 @@ classdef VidStreamsType < handle ...
       end
       
       % [DEPENDENT] Assigns .Type property (cannot)
-      function set.Type(~,~)
+      function set.Type(obj,~)
          %SET.TYPE  Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Type\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Type\n');
+            fprintf(1,'\n');
+         end
       end
 
       % [DEPENDENT]  Assigns .fname property (cannot)
-      function set.fname(~,~)
-         %SET.FS  Does not do anything
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: fname\n');
-         fprintf(1,'\n');
+      function set.fname(obj,~)
+         %SET.FNAME  Does not do anything
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: fname\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .fs property (cannot)
-      function set.fs(~,~)
+      function set.fs(obj,~)
          %SET.FS  Does not do anything
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: fs\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: fs\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .pIndex property (cannot)
-      function set.pIndex(~,~)
+      function set.pIndex(obj,~)
          %SET.PINDEX   Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: pIndex\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: pIndex\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .pSource property (cannot)
-      function set.pSource(~,~)
+      function set.pSource(obj,~)
          %SET.PSOURCE  Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: pSource\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: pSource\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .tNeu property
-      function set.tNeu(~,~)
+      function set.tNeu(obj,~)
          %SET.T  Assigns .t property
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: tNeu\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: tNeu\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .tVid property
-      function set.tVid(~,~)
+      function set.tVid(obj,~)
          %SET.T  Assigns .t property
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: tVid\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: tVid\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .vidname property (cannot)
-      function set.vidname(~,~)
+      function set.vidname(obj,~)
          %SET.VIDEONAME  Does not do anything
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: vidname\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDSTREAMSTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: vidname\n');
+            fprintf(1,'\n');
+         end
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end

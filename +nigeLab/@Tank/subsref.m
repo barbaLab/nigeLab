@@ -69,7 +69,8 @@ switch S(1).type
                % which should return only one animal.
                % eg tankObj{:} or tankObj{'xxxxxxxxxxxxxxxx'}
                if strcmp(subs{1},':')
-                  subs = [1, subs];
+                  varargout = {tankObj.Children};
+                  return;
                else
                   s = substruct('.','findByKey','()',subs);
                end
@@ -94,8 +95,8 @@ switch S(1).type
                   else
                      subs(1) = [];
                   end
-               elseif IsSemiColon(subs{1})
-                  subs(1) = [];
+               elseif IsColon(subs{1})
+%                   subs(1) = [];
                elseif isnumeric(subs{1})
                   if subs{1} > 1
                      error(['nigeLab:' mfilename ':indexExceed'],...
@@ -183,11 +184,11 @@ switch S(1).type
 end
 end
 
-% Check that input is a semi-colon
-function value = IsSemiColon(subs)
+% Check that input is a colon
+function value = IsColon(subs)
 %ISSEMICOLON  Returns true if subs is a `char` with value ':'
 %
-%  value = IsSemiColon(subs);
+%  value = IsColon(subs);
 
 value = ischar(subs) && strcmp(subs,':');
 end

@@ -1,5 +1,5 @@
 function flag = doReReference(blockObj)
-%% DOREREFERENCE  Perform common-average re-referencing (CAR)
+%DOREREFERENCE  Perform common-average re-referencing (CAR)
 %
 %  b = nigeLab.Block();
 %  doExtraction(b);
@@ -7,13 +7,13 @@ function flag = doReReference(blockObj)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% CHECK FOR PROBLEMS
+% CHECK FOR PROBLEMS
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doReReference(blockObj(i));
          end
       end
    end
@@ -28,8 +28,7 @@ if ~genPaths(blockObj)
    return;
 end
 
-%% GET METADATA FOR THIS REFERENCING
-fType = blockObj.FileType{strcmpi(blockObj.Fields,'CAR')};
+% GET METADATA FOR THIS REFERENCING
 probe = unique([blockObj.Channels.probe]);
 nSamples = length(blockObj.Channels(1).Filt);
 nProbes = numel(probe);
@@ -50,7 +49,7 @@ if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
    doSuppression = true;
 end
 
-%% COMPUTE THE MEAN FOR EACH PROBE
+% COMPUTE THE MEAN FOR EACH PROBE
 blockObj.reportProgress('Computing-CAR',0,'toWindow');
 curCh = 0;
 nCh = numel(blockObj.Mask);
@@ -72,7 +71,7 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Computing-CAR',PCT,'toEvent','Computing-CAR');
 end
 
-%% SAVE EACH PROBE REFERENCE TO THE DISK
+% SAVE EACH PROBE REFERENCE TO THE DISK
 refMeanFile = cell(numel(probe),1);
 for iProbe = 1:nProbes
    PCT = 20 + round(10 * iProbe/nProbes);
@@ -82,10 +81,10 @@ for iProbe = 1:nProbes
       strrep(blockObj.Paths.CAR.file,'\','/'),...
       num2str(probe(iProbe)),'REF'));
    refMeanFile{iProbe} = nigeLab.libs.DiskData(...
-      fType,refName,refMean(iProbe,:),'access','w');
+      'MatFile',refName,refMean(iProbe,:),'access','w','overwrite',true);
 end
 
-%% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
+% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference','CAR');
    str = sprintf('Removing-%s',str);
@@ -107,10 +106,9 @@ for iCh = blockObj.Mask
    
    % Save CAR data
    blockObj.Channels(iCh).CAR = nigeLab.libs.DiskData(...
-      fType,fName,data,'access','w');
-   blockObj.Channels(iCh).CAR = lockData(blockObj.Channels(iCh).CAR);
-   blockObj.Channels(iCh).refMean = lockData(...
-      refMeanFile{blockObj.Channels(iCh).probe});
+      'MatFile',fName,data,'access','w','overwrite',true);
+   lockData(blockObj.Channels(iCh).CAR);
+   blockObj.Channels(iCh).refMean = refMeanFile{blockObj.Channels(iCh).probe};
    
    % Update user
    

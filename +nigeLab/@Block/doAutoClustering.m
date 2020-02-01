@@ -18,8 +18,6 @@ function flag = doAutoClustering(blockObj,chan,unit,useSort)
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if clustering completed successfully.
-
-
 switch nargin
    case 1
       chan = blockObj.Mask;
@@ -79,18 +77,18 @@ for iCh = chan
    % the method should be changed to make use of `useSort`
    if useSort 
       if blockObj.getStatus('Sorted',iCh)
-         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',unit});
+         inspk = getSpikeFeatures(blockObj,iCh,{'Sorted',unit});
       else
-         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',nan});
+         inspk = getSpikeFeatures(blockObj,iCh,{'Sorted',nan});
       end
    else
       if blockObj.getStatus('Clusters',iCh)
-         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',unit});
+         inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',unit});
       else
-         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',nan});
+         inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
       end
    end
-   classes =  blockObj.getClus(iCh,SuppressText);
+   classes =  getClus(blockObj,iCh,SuppressText);
    if isempty(inspk)
       saveClusters(blockObj,classes,iCh,nan);
       continue;
@@ -227,11 +225,11 @@ end
 if isempty(classes)
    data = zeros(0,5);
    blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
-      fNameC,data,'access','w');
+      fNameC,data,'access','w','overwrite',true);
    % only intitialize a `Sorted` file if there is no existing file
    if exist(fNameS,'file')==0
       blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData('Event',...
-       fNameS,data,'access','w');
+       fNameS,data,'access','w','overwrite',true);
    end
    return;
 end
@@ -244,12 +242,12 @@ data = [zeros(n,1) classes temperature*ones(n,1) ts zeros(n,1)];
 
 % save the 'Clusters' DiskData file and potentially initialize `Sorted`
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
-   fNameC,data,'access','w');
+   fNameC,data,'access','w','overwrite',true);
 
 % only intitialize a `Sorted` file if there is no existing file
 if exist(fNameS,'file')==0
    blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData('Event',...
-    fNameS,data,'access','w');
+    fNameS,data,'access','w','overwrite',true);
 end
 
 

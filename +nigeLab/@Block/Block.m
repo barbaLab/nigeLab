@@ -81,7 +81,10 @@ classdef Block < nigeLab.nigelObj
    
    % HIDDEN,TRANSIENT,DEPENDENT,PUBLIC
    properties (Hidden,Transient,Dependent,Access=public)
-      ScoringField   char  % blockObj.Pars.Video.ScoringEventFieldName
+      ChannelID      double   % [NumChannels x 2] array of channel and probe numbers
+      NumChannels    double   % Total number of channels 
+      NumProbes      double   % Total number of Probes
+      ScoringField   char     % blockObj.Pars.Video.ScoringEventFieldName
    end
    
    % PUBLIC
@@ -176,6 +179,67 @@ classdef Block < nigeLab.nigelObj
       end
       
       % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      % [DEPENDENT] Returns .ChannelID property
+      function value = get.ChannelID(blockObj)
+         %GET.CHANNELID  Returns .ChannelID property
+         %
+         %  value = get(blockObj,'ChannelID');
+         %  --> Returns [NumChannels x 2] array of [probe, channel]
+         %      numeric ID (e.g. 1 2 corresponds to probe 1 channel 2)
+         
+         value = zeros(0,2);
+         if isempty(blockObj.Channels)
+            return;
+         end
+         
+         % Get Probe index of each recording channel
+         probeNum = [blockObj.Channels.probe].';
+         if numel(probeNum) < blockObj.NumChannels
+            % Parse and check that parsing worked
+            if ~blockObj.parseProbeNumbers  
+               return;
+            else
+               probeNum = [blockObj.Channels.probe].';
+            end
+         end
+         
+         % Get index of each channel within a probe
+         channelNum = [blockObj.Channels.chNum].'; % Parsed with .probe
+         
+         % Combine into output matrix
+         value = [probeNum, channelNum];
+      end
+      
+      % [DEPENDENT] Returns .NumChannels property
+      function value = get.NumChannels(blockObj)
+         %GET.NUMCHANNELS  Returns total number of Channels
+         %
+         %  value = get(blockObj,'NumChannels');
+         %  --> Returns number of elements in .Channels array
+         
+         value = numel(blockObj.Channels);
+      end
+      
+      % [DEPENDENT] Returns .NumProbes property
+      function value = get.NumProbes(blockObj)
+         %GET.NUMPROBES  Returns total number of Probes
+         %
+         %  value = get(blockObj,'NumProbes');
+         %  --> Returns number of probes
+         
+         value = 0;
+         switch blockObj.RecType
+            case {'Intan','TDT','nigelBlock'}
+               C = blockObj.ChannelID;
+               value = numel(unique(C(:,1)));
+            case 'Matfile'
+               value = blockObj.MatFileWorkflow.Pars.NumProbes;
+            otherwise
+               error(['nigeLab:' mfilename ':UnsupportedRecType'],...
+                  '''%s'' is not a supported RecType.',blockObj.RecType);
+         end
+      end
+      
       % [DEPENDENT] Returns .ScoringField property
       function value = get.ScoringField(blockObj)
          %GET.SCORINGFIELD  Returns .ScoringField 
@@ -198,8 +262,8 @@ classdef Block < nigeLab.nigelObj
          end
       end
       % % % % % % % % % % END GET.PROPERTY METHODS % % %
-      
 
+      % Overloaded method to get 'end' indexing
       function ind = end(obj,k,n)
           if n>2
               % called by {}
@@ -243,15 +307,56 @@ classdef Block < nigeLab.nigelObj
       end
       
       % % % SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT]  Assigns .ScoringField property (cannot)
-      function set.ScoringField(~,~)
+      % [DEPENDENT]  Assigns .ChannelID property (cannot)
+      function set.ChannelID(obj,~)
          % Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: ScoringField\n');
-         fprintf(1,'\n');
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: ChannelID\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Assigns .NumChannels property (cannot)
+      function set.NumChannels(obj,~)
+         % Does nothing
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: NumChannels\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Assigns .NumProbes property (cannot)
+      function set.NumProbes(obj,~)
+         % Does nothing
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: NumProbes\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Assigns .ScoringField property (cannot)
+      function set.ScoringField(obj,~)
+         % Does nothing
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[BLOCK.SET]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: ScoringField\n');
+            fprintf(1,'\n');
+         end
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
@@ -351,9 +456,13 @@ classdef Block < nigeLab.nigelObj
                meta.RecDate = [YY MM DD];
             else
                meta.RecDate = 'YYMMDD';
-               nigeLab.utils.cprintf('UnterminatedStrings',...
-                  'Unable to parse date from %s name (%s).\n',...
-                  upper(obj.Type),fName);
+               if obj.Verbose
+                  [fmt,idt] = getDescriptiveFormatting(blockObj);
+                  nigeLab.utils.cprintf('Errors*','%s[BLOCK/PARSE]: ',idt);
+                  nigeLab.utils.cprintf(fmt,...
+                     'Unable to parse date from %s name (%s).\n',...
+                     upper(obj.Type),fName);
+               end
             end
          end
          % Also needs `RecTime` for DashBoard
@@ -400,11 +509,6 @@ classdef Block < nigeLab.nigelObj
 %       [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
 %       --> Deprecated (inherited from `nigelObj`) 
 % % % % % % % % % % % % % % % % % % % % % % % % % % End Deprecated % % % %
-
-      % "Property" methods:
-      N = NumChannels(blockObj); % Returns number of recording channels (electrode sites) used in Block
-      N = NumProbes(blockObj);   % Returns number of electrode arrays (probes) used in Block
-      C = ChannelID(blockObj);   % Returns [NumChannels x 2] array of [.Channels.probe, .Channels.chNum]
 
       % Scoring videos:
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points

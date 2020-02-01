@@ -160,13 +160,14 @@ for f = fields_to_extract
          if strcmp(curDataField,'Stim')
             nCh.Standard.Stim = 1; % 'Event' field acts as flag
             stimCurr = header.StimParameters.stim_step_size;
-            if isfield(header,'StimTriggers')
-               info = header.StimTriggers;
-               info.StimParameters = header.StimParameters;
-               group = info(1).signal.Group;
-               trigCh = unique([info.amp_trigger_channel]);
+            info = struct('StimParameters',header.StimParameters,...
+               'StimTriggers',header.StimTriggers);
+            if ~isempty(info.StimTriggers)
+               trigCh = unique([info.StimTriggers.amp_trigger_channel]);
+               if ~any([info.StimTriggers.voltage_threshold]) % then it's not FSM version
+                  trigCh = nan;
+               end
             else
-               info = struct('StimParameters',header.StimParameters);
                trigCh = nan;
             end
          else
@@ -315,14 +316,16 @@ if nCh.Standard.Stim > 0 % Then there is 'Stim' data on all channels
    [buffer.Standard.Stim,end_] = getBufferIndex(buffer.Standard.Stim,end_,...
       nCh.Standard.Stim,nPerBlock,nChunks);
    fName = sprintf(paths.Stim.file,'Stim');  
+   nColStimEventFile = 10 + numel(trigCh); 
+   tmp = zeros(1,nColStimEventFile,'single');
    diskPars = struct(...
       'format','Event',...
       'name',fName,...
       'size',[inf, 10 + numel(trigCh)],...
       'access','w',...
-      'class',class_,...
+      'class','single',...
       'verbose',blockObj.Verbose && ~blockObj.OnRemote);
-   Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars); 
+   Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars,tmp); 
 
 end
 
@@ -432,10 +435,10 @@ for iChunk=1:nChunkMax
    
    t=typecast(dataBuffer(time_buffer_index(1:dataPointsToRead)),'int32');
    t = reshape(t,1,numel(t)); % ensure correct orientation
-   curStartT = Files.Time.Index;
+   curStartT = get(Files.Time,'Index');
    tSampleIndices = curStartT : (curStartT+numel(t)-1);
    Files.Time(tSampleIndices) = t;
-   Files.Time.Index = curStartT + numel(t);
+   set(Files.Time,'Index',curStartT + numel(t));
    num_gaps = num_gaps + sum(diff(t) ~= 1);
    
    % Write data to file
@@ -459,11 +462,11 @@ for iChunk=1:nChunkMax
    
    % Write stim to file
    for iCh = 1:nCh.Standard.Stim
-      field_ = stimFields{ii};
-      chMask = buffer.Standard.Stim(1:dataPointsToRead) == iCh;
+      field_ = 'Stim';
+      chMask = buffer.Standard.(field_)(1:dataPointsToRead) == iCh;
       inData = single(dataBuffer(chMask)); 
       outData = single(scaleStimData(inData,stimCurr,blockObj.SampleRate,iCh,trigCh));
-      Files.Standard.Stim.append(outData);
+      append(Files.Standard.Stim,outData);
    end
    
    % Write digIO to file (slightly different handling): Since `digIO` gets
@@ -598,10 +601,10 @@ flag = true;
          x = single(dataBuffer(mask)); 
          y = single(scaleFun(x,iich));
          % Get indexing for assignment
-         iStart = fileArray{iich}.Index;
+         iStart = get(fileArray{iich},'Index');
          sampleIndices = iStart:(iStart+numel(y)-1);
          fileArray{iich}(1,sampleIndices) = y; % Make assignment
-         fileArray{iich}.Index = iStart + numel(y); % update indexing
+         set(fileArray{iich},'Index',iStart + numel(y)); % update indexing
          
          % Report progress to user
          PCT = round(iich /nChan * MAXPCT);
@@ -642,10 +645,10 @@ flag = true;
          mask = uint16(2^(order(iich)) * ones(size(data)));
          x = int8(bitand(data, mask) > 0);
          % Get indexing for assignment
-         iStart = fileArray{iich}.Index;
+         iStart = get(fileArray{iich},'Index');
          sampleIndices = iStart:(iStart+numel(x)-1);
          fileArray{iich}(1,sampleIndices) = x; % Make assignment
-         fileArray{iich}.Index = iStart+numel(x); % Update indexing
+         set(fileArray{iich},'Index',iStart+numel(x)); % Update indexing
          
          % Report progress to user
          PCT = round(iich/N * MAXPCT);

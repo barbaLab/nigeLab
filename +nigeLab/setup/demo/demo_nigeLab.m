@@ -58,6 +58,7 @@ end
 %% extract raw data and save it in the corresponding folder
 % --> (on all Animals and Blocks within Tank)
 tankObj.doRawExtraction;
+linkToData(tankObj);
 
 % prompt user to proceed with filtering
 str = nigeLab.utils.uidropdownbox(...
@@ -69,6 +70,7 @@ end
 %% Perform multi-unit bandpass filter for spike detection 
 % --> (on all Animals and Blocks within Tank)
 tankObj.doUnitFilter
+linkToData(tankObj);
 
 % prompt user to proceed with re-reference
 str = nigeLab.utils.uidropdownbox(...
@@ -79,20 +81,12 @@ if strcmp(str,'No')
 end
 
 %% Perform common-average re-reference
-% --> (on all Animals and Blocks within Tank)
-tankObj.doReReference
-
-% prompt user to proceed with linking to disk files
-str = nigeLab.utils.uidropdownbox(...
-   'Link Data?','Proceed with `linkToData`?',{'Yes','No'},false);
-if strcmp(str,'No')
-   return;
-end
-
-%% Link the Tank/Animal/Block to disk files
+% --> (on only the first Animal (for example))
+animalObj = tankObj{1};
+doReReference(animalObj);
 linkToData(tankObj);
 
-% prompt user to proceed with spike detection
+% Prompt user to proceed with spike detection
 str = nigeLab.utils.uidropdownbox(...
    'Detect Spikes?','Proceed with `doSD`?',{'Yes','No'},false);
 if strcmp(str,'No')
@@ -100,10 +94,25 @@ if strcmp(str,'No')
 end
 
 %% Perform spike detection and feature extraction (wavelet decomposition)
-% --> (on only the first Animal (for example))
-doSD(tankObj{1});
+% --> (on only the third Block of the second Animal)
+blockObj = tankObj{2,3};
+doSD(blockObj);
+linkToData(blockObj);
 
-% prompt user to proceed with LFP extraction
+% Prompt user to proceed with LFP extraction
+str = nigeLab.utils.uidropdownbox(...
+   'Do Auto-Clustering?','Proceed with `doAutoClustering`?',...
+   {'Yes','No'},false);
+if strcmp(str,'No')
+   return;
+end
+
+%% Perform auto-clustering on detected spikes
+% --> (on only the third Block of the second Animal)
+doAutoClustering(blockObj);
+linkToData(blockObj);
+
+% Prompt user to proceed with LFP extraction
 str = nigeLab.utils.uidropdownbox(...
    'Do LFP Decimation?','Proceed with `doLFPExtraction`?',...
    {'Yes','No'},false);
@@ -111,7 +120,9 @@ if strcmp(str,'No')
    return;
 end
 
-%% downsample raw data to LFP
-% --> (on only the third Block of the second Animal)
-tankObj.doLFPExtraction;
+%% Down-sample raw data to LFP
+% --> (on only the first Block of the first Animal and 2nd/3rd Blocks of 2nd Animal)
+blockObj = tankObj{[1,2],{1,[2,3]}};
+doLFPExtraction(blockObj);
+linkToData(blockObj);
 nigeLab.sounds.play('bell',1.5);

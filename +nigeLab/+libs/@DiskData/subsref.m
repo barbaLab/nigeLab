@@ -5,31 +5,8 @@ function data = subsref(obj,S)
 
 % Do some checks to ensure data accessed is valid
 data = [];
-if isempty(obj)
-   if ~checkSize(obj)
-      dbstack();
-      nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
-      nigeLab.utils.cprintf('Errors','Object is '); 
-      nigeLab.utils.cprintf('Keywords*','empty\n');
-      return;
-   end
-elseif ~isvalid(obj)
-   if ~checkSize(obj)
-      dbstack();
-      nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
-      nigeLab.utils.cprintf('Errors','Object is '); 
-      nigeLab.utils.cprintf('Keywords*','invalid\n');
-      return;
-   end
-end
-if exist(obj.diskfile_,'file')==0
-   dbstack();
-   nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
-   nigeLab.utils.cprintf('Errors','No such file--');
-   nigeLab.utils.cprintf('Keywords*','%s\n',obj.diskfile_);
-   return;
-end
-
+% First: see if this is a reference to access a property of '.'-indexed
+% method instead of a reference to the diskfile_
 if strcmp(S(1).type,'.')
    mc = ?nigeLab.libs.DiskData;
    m = mc.MethodList;
@@ -62,6 +39,32 @@ if strcmp(S(1).type,'.')
       end
       return;
    end
+end
+
+% Now check if the object itself is empty
+if isempty(obj)
+   if ~checkSize(obj)
+      dbstack();
+      nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
+      nigeLab.utils.cprintf('Errors','Object is '); 
+      nigeLab.utils.cprintf('Keywords*','empty\n');
+      return;
+   end
+elseif ~isvalid(obj)
+   if ~checkSize(obj)
+      dbstack();
+      nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
+      nigeLab.utils.cprintf('Errors','Object is '); 
+      nigeLab.utils.cprintf('Keywords*','invalid\n');
+      return;
+   end
+end
+if exist(obj.diskfile_,'file')==0
+   dbstack();
+   nigeLab.utils.cprintf('Errors*','\t\t->\t[DISKDATA]: '); 
+   nigeLab.utils.cprintf('Errors','No such file--');
+   nigeLab.utils.cprintf('Keywords*','%s\n',obj.diskfile_);
+   return;
 end
 
 % Referencing depends on .type_ of file

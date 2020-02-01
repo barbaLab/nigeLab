@@ -16,7 +16,7 @@ if numel(blockObj) > 1
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doRawExtraction(blockObj(i));
          end
       end
    end
@@ -66,7 +66,7 @@ switch blockObj.RecType
       %  
       %  * All formats listed on open-ephys "data formats"
         
-      warning('%s is not a supported (case-sensitive).',...
+      warning('%s is not a supported data format (case-sensitive)',...
          blockObj.RecType);
       return;
 end

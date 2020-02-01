@@ -24,17 +24,21 @@ f = blockObj.Pars.Video.ScoringEventFieldName;
 
 [fmt,idt] = blockObj.getDescriptiveFormatting();
 if isempty(f)
-   nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
-   nigeLab.utils.cprintf(fmt,...
-      'Must specify defaults.Video.ScoringEventFieldName (%s)\n',...
-      blockObj.Name);
+   if blockObj.Verbose
+      nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+      nigeLab.utils.cprintf(fmt,...
+         'Must specify defaults.Video.ScoringEventFieldName (%s)\n',...
+         blockObj.Name);
+   end
    return;
 else
    fname = sprintf(blockObj.Paths.(f).file,'Header');
    if exist(fname,'file')~=0
       flag = true;
-      nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
-      nigeLab.utils.cprintf(fmt,'Header exists (%s)\n',blockObj.Name);
+      if blockObj.Verbose
+         nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+         nigeLab.utils.cprintf(fmt,'Header exists (%s)\n',blockObj.Name);
+      end
       out = nigeLab.libs.DiskData('Event',fname);
       return;
    end
@@ -43,8 +47,10 @@ end
 % Get number of videos to match up with
 N = sum(blockObj.Status.Video);
 if N < 1
-   nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
-   nigeLab.utils.cprintf(fmt,'No videos (%s)\n',blockObj.Name);
+   if blockObj.Verbose
+      nigeLab.utils.cprintf('Errors*','%s[DOEVENTHEADEREXTRACTION]: ',idt);
+      nigeLab.utils.cprintf(fmt,'No videos (%s)\n',blockObj.Name);
+   end
    N = 1;
 end
 

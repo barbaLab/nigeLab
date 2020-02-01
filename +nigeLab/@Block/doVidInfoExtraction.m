@@ -71,12 +71,14 @@ end
 [fmt,idt,type] = blockObj.getDescriptiveFormatting();
 
 if ~isfield(blockObj.Paths,'V') % Then initVideos was old/incorrect
-   nigeLab.utils.cprintf('Errors*','%s[DOVIDINFOEXTRACTION]: ',idt);
-   nigeLab.utils.cprintf(fmt,'%s.Videos initialized incorrectly (%s)\n',...
-      type,blockObj.Name);
-   nigeLab.utils.cprintf('[0.55 0.55 0.55]','\t%s(Re-running ',idt);
-   nigeLab.utils.cprintf('Keywords*','`nigeLab.Block/initVideos`');
-   nigeLab.utils.cprintf('[0.55 0.55 0.55]',')\n');
+   if blockObj.Verbose
+      nigeLab.utils.cprintf('Errors*','%s[DOVIDINFOEXTRACTION]: ',idt);
+      nigeLab.utils.cprintf(fmt,'%s.Videos initialized incorrectly (%s)\n',...
+         type,blockObj.Name);
+      nigeLab.utils.cprintf('[0.55 0.55 0.55]','\t%s(Re-running ',idt);
+      nigeLab.utils.cprintf('Keywords*','`nigeLab.Block/initVideos`');
+      nigeLab.utils.cprintf('[0.55 0.55 0.55]',')\n');
+   end
    % Force overwrite of video parameters in this case (in case old
    % parameters had been used):
    flag = initVideos(blockObj,true);
@@ -165,10 +167,12 @@ blockObj.Paths.V.Match = parseVidFileExpr(blockObj);
 F = dir(fullfile(pName,blockObj.Paths.V.Match));
 % Give output of what is being done
 nVid = numel(F);
-nigeLab.utils.cprintf(fmt,'%s[DOVIDINFOEXTRACTION]: ',idt);
-nigeLab.utils.cprintf(fmt(1:(end-1)),...
-   'Extracting info for %g videos (%s: %s)\n',...
-   nVid,type,blockObj.Name);
+if blockObj.Verbose
+   nigeLab.utils.cprintf(fmt,'%s[DOVIDINFOEXTRACTION]: ',idt);
+   nigeLab.utils.cprintf(fmt(1:(end-1)),...
+      'Extracting info for %g videos (%s: %s)\n',...
+      nVid,type,blockObj.Name);
+end
 
 % Start timing and invoke the constructor for
 % `nigeLab.libs.VideosFieldType` via call to `updateVidInfo(blockObj)`
@@ -176,20 +180,26 @@ s = tic;
 flag = updateVidInfo(blockObj);
 if flag
    if isempty(blockObj.Videos)
-      nigeLab.utils.cprintf(fmt(1:(end-1)),...
-         '\t%sSuccessful [No videos]\n',idt);
+      if blockObj.Verbose
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            '\t%sSuccessful [No videos]\n',idt);
+      end
       blockObj.updateStatus('Video',false);
    else
-      nigeLab.utils.cprintf(fmt(1:(end-1)),...
-         '\t%sSuccessful [%g videos: %g seconds]\n',...
-         idt,nVid,round(toc(s)));
+      if blockObj.Verbose
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            '\t%sSuccessful [%g videos: %g seconds]\n',...
+            idt,nVid,round(toc(s)));
+      end
       vec = 1:nVid;
       blockObj.updateStatus('Video',true(1,nVid));
    end
 else
-   nigeLab.utils.cprintf(fmt(1:(end-1)),...
-         '\t%sUnsuccessful [%g videos: %g seconds]\n',...
-         idt,nVid,round(toc(s)));
+   if blockObj.Verbose
+      nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            '\t%sUnsuccessful [%g videos: %g seconds]\n',...
+            idt,nVid,round(toc(s)));
+   end
    blockObj.updateStatus('Video',false);
 end
 end

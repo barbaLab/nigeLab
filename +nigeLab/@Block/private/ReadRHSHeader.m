@@ -195,19 +195,19 @@ for signal_group = 1:number_of_signal_groups
          new_channel(1).board_stream = fread(FID, 1, 'int16');
          if signal_type == 4 % DAC (MM: 2020-01-29 // ONLY VALID FOR FSM VERSION OF RHS @ CPL)
             new_dac_channel = nigeLab.utils.initSpikeTriggerStruct('FSM',1);
-            new_dac_channel(1).fsm_enable = fread(fid, 1, 'int16');
-            new_dac_channel(1).voltage_threshold = fread(fid, 1, 'int16');
-            new_dac_channel(1).amp_trigger_channel = fread(fid, 1, 'int16');
-            new_dac_channel(1).trigger_window_type = fread(fid, 1, 'int16'); % 0 include 1 exclude (from memory; not 100% sure)
-            new_dac_channel(1).window_start_sample = fread(fid, 1, 'single');
-            new_dac_channel(1).window_stop_sample = fread(fid, 1, 'single');
+            new_dac_channel(1).fsm_enable = fread(FID, 1, 'int16');
+            new_dac_channel(1).voltage_threshold = fread(FID, 1, 'int16');
+            new_dac_channel(1).amp_trigger_channel = fread(FID, 1, 'int16');
+            new_dac_channel(1).trigger_window_type = fread(FID, 1, 'int16'); % 0 include 1 exclude (from memory; not 100% sure)
+            new_dac_channel(1).window_start_sample = fread(FID, 1, 'single');
+            new_dac_channel(1).window_stop_sample = fread(FID, 1, 'single');
          else
-            new_trigger_channel(1).voltage_trigger_mode = fread(fid, 1, 'int16');
-            new_trigger_channel(1).voltage_threshold = fread(fid, 1, 'int16');
-            new_trigger_channel(1).digital_trigger_channel = fread(fid, 1, 'int16');
-            new_trigger_channel(1).digital_edge_polarity = fread(fid, 1, 'int16');
-            new_channel(1).electrode_impedance_magnitude = fread(fid, 1, 'single');
-            new_channel(1).electrode_impedance_phase = fread(fid, 1, 'single');
+            new_trigger_channel(1).voltage_trigger_mode = fread(FID, 1, 'int16');
+            new_trigger_channel(1).voltage_threshold = fread(FID, 1, 'int16');
+            new_trigger_channel(1).digital_trigger_channel = fread(FID, 1, 'int16');
+            new_trigger_channel(1).digital_edge_polarity = fread(FID, 1, 'int16');
+            new_channel(1).electrode_impedance_magnitude = fread(FID, 1, 'single');
+            new_channel(1).electrode_impedance_phase = fread(FID, 1, 'single');
          end
          [new_channel(1).chNum,new_channel(1).chStr] = ...
             nigeLab.utils.getChannelNum(new_channel(1).custom_channel_name);

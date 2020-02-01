@@ -17,9 +17,11 @@ blockObj.updateParams('Event');
 [fmt,idt] = blockObj.getDescriptiveFormatting();
 f = blockObj.Pars.Video.ScoringEventFieldName;
 if isempty(f)
-   nigeLab.utils.cprintf(fmt,'%s[DOEVENTDETECTION]: ',idt);
-   nigeLab.utils.cprintf(fmt(1:(end-1)),'No scoring to be done for %s\n',...
-      blockObj.Name);
+   if blockObj.Verbose
+      nigeLab.utils.cprintf(fmt,'%s[DOEVENTDETECTION]: ',idt);
+      nigeLab.utils.cprintf(fmt(1:(end-1)),'No scoring to be done for %s\n',...
+         blockObj.Name);
+   end
    extractHeader = false;
 else
    extractHeader = ~blockObj.Status.(f);
@@ -37,9 +39,11 @@ end
 
 if extractHeader
    if ~blockObj.doEventHeaderExtraction(behaviorData,vidOffset)
-      nigeLab.utils.cprintf('Errors*','\t\t->\t[DOEVENTDETECTION]: ');
-      nigeLab.utils.cprintf('[0.5 0.5 0.5]*',...
-         'Failed to initialize Header (%s)\n',blockObj.Name);
+      if blockObj.Verbose
+         nigeLab.utils.cprintf('Errors*','\t\t->\t[DOEVENTDETECTION]: ');
+         nigeLab.utils.cprintf('[0.5 0.5 0.5]*',...
+            'Failed to initialize Header (%s)\n',blockObj.Name);
+      end
       return;
    end
 end
@@ -60,7 +64,11 @@ switch nargin
             case 'Streams'
                trial = blockObj.getStream(detPars.Name);
             otherwise
-               error('Should be either ''Videos'' or ''Streams'', (not %s)',ft);
+               error(['nigeLab:' mfilename ':BadType'],...
+                  ['Event FieldType should be either:\n' ...
+                  '-->''Videos'' or\n' ...
+                  '-->''Streams''\n'
+                  '\t-->(not %s)\n'],ft);
          end
          % Get 'Trial' times
          ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
@@ -106,11 +114,13 @@ switch nargin
             case 'Streams'
                stream = blockObj.getStream(ePars.Name{iE});
             otherwise
-               dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
-               nigeLab.utils.cprintf('Errors*','%s[DOEVENTDETECTION]: ');
-               nigeLab.utils.cprintf(fmt,...
-                  'Parsing for %s (%s fieldType) not yet implemented (sorry -MM)\n',...
-                  ePars.Name{iE},upper(ft));
+               if blockObj.Verbose
+                  dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
+                  nigeLab.utils.cprintf('Errors*','%s[DOEVENTDETECTION]: ');
+                  nigeLab.utils.cprintf(fmt,...
+                     'Parsing for %s (%s fieldType) not yet implemented (sorry -MM)\n',...
+                     ePars.Name{iE},upper(ft));
+               end
                stream = [];
          end
          if isempty(stream)

@@ -47,7 +47,7 @@ switch S(1).type
          
          if numel(S)<2
             S(2).type = '()';
-            S(2).subs = {':'};
+            S(2).subs = {1, ':'};
          end
          
          if numel(S(2).subs) > 1
@@ -59,10 +59,8 @@ switch S(1).type
          out = arrayfun(@(x) subsref(x.(fixed_fields{idx}),S(2)),...
             Chans,...
             'UniformOutput',false);
-         varargout{1} = cat(1,out{:});
+         varargout{1} = horzcat(out{:});
          return;
-         
-         
       else
          % Standard case:
          [varargout{1:nargout}] = builtin('subsref',blockObj,S);
@@ -73,7 +71,9 @@ switch S(1).type
       % () Means Blocks was referenced as __.Block() ... so it should be
       % used for dealing with Block arrays
       % Should always be dealt with in standard way:
-      
+      if numel(S(1).subs)==1
+         S(1).subs = [1, S(1).subs]; % Make sure is indexing rows
+      end
       [varargout{1:nargout}] = builtin('subsref',blockObj,S);
       return;
       
@@ -183,7 +183,7 @@ switch S(1).type
          end
          
          switch checkSamplesInput(subs{jj})
-            case {'numeric','semicolon'}
+            case {'numeric','colon'}
                s(jj,:) = substruct(substructInArgs{:},subs(jj)); %#ok<AGROW>
             case 'cell'
                s(jj,:) = substruct(substructInArgs{:},subs{jj}); %#ok<AGROW>
@@ -205,7 +205,7 @@ end
 
 end
 
-% Return type as char ('numeric'; 'cell'; 'semicolon'; 'end'; 'invalid')
+% Return type as char ('numeric'; 'cell'; 'colon'; 'end'; 'invalid')
 function value = checkSamplesInput(subs)
 %CHECKSAMPLESINPUT  Helper function to check inputs
 %
@@ -221,7 +221,7 @@ if (isnumeric(subs) && isvector(subs))
 elseif iscell(subs) && all(cellfun(@(x) strcmp(checkSamplesInput(x),'numeric'), subs))
    value = 'cell';
 elseif ischar(subs) && strcmp(subs, ':')
-   value = 'semicolon';
+   value = 'colon';
 elseif ischar(subs) && strcmp(subs,'end')
    value = 'end';
 else

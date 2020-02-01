@@ -46,21 +46,25 @@ end
 [fmt,idt,type] = blockObj.getDescriptiveFormatting();
 if ~isfield(blockObj.Paths,'V')
    if ~forceExtraction
-      nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
-      nigeLab.utils.cprintf(fmt(1:(end-1)),...
-         'Video info for %s %s not yet set. See: ',...
-         type,blockObj.Name);
-      nigeLab.utils.cprintf('Keywords*','doVidInfoExtraction\n');
+      if blockObj.Verbose
+         nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            'Video info for %s %s not yet set. See: ',...
+            type,blockObj.Name);
+         nigeLab.utils.cprintf('Keywords*','doVidInfoExtraction\n');
+      end
    else
       doVidInfoExtraction(blockObj);
    end
    return;
    
 elseif ~isfield(blockObj.Paths.V,'Match')
-   nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
-   nigeLab.utils.cprintf(fmt,...
-      'No videos initialized for %s %s.\n',...
-      type,blockObj.Name);
+   if blockObj.Verbose
+      nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
+      nigeLab.utils.cprintf(fmt,...
+         'No videos initialized for %s %s.\n',...
+         type,blockObj.Name);
+   end
    flag = true;
    return;
 
