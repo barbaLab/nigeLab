@@ -471,7 +471,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             Index = obj.SelectionIndex(:,[2,3]);
          end
          
-         nigelObj = tankObj{Index};
+         nigelObj = tankObj{Index(:,1),Index(:,2)};
          
       end
       
@@ -514,7 +514,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   case 2  % block
                      animalIdx = unique(SelectedItems(:,1));
                      animal = obj.Tank{animalIdx};
-                     block = obj.Tank{SelectedItems};
+                     block = obj.Tank{SelectedItems(:,1),SelectedItems(:,2)};
                end
             case 'index'
                SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
@@ -1309,7 +1309,10 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                UserData = cellfun(@(x) x-1,{obj.Tree.Root.Children(indx:end).UserData},'UniformOutput',false);
                [obj.Tree.Root.Children(indx:end).UserData]=deal(UserData{:});
             else
-               nigeLab.utils.cprintf('SystemCommands','There is mimatch between the tank loaded in the dashboard and the one in memory.\n Try to reload it!');
+               nigeLab.utils.cprintf('SystemCommands*',...
+                  ['There is mimatch between the Tank loaded ' ...
+                  'in nigelDash and the one in memory.\n ' ...
+                  'Try to reload it!'],obj.Tank.Verbose);
             end
             
             case 'nigeLab.Block'
@@ -1322,7 +1325,10 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   UserData = cellfun(@(x) x-[0 1],{obj.Tree.Root.Children(indx(1)).Children(indx(2):end).UserData},'UniformOutput',false);
                   [obj.Tree.Root.Children(indx(1)).Children(indx(2):end).UserData]=deal(UserData{:});
                else
-                  nigeLab.utils.cprintf('SystemCommands','There is mimatch between the tank loaded in the dashboard and the one in memory.\n Try to reload it!');
+                  nigeLab.utils.cprintf('SystemCommands*',...
+                  ['There is mimatch between the Tank loaded ' ...
+                  'in nigelDash and the one in memory.\n ' ...
+                  'Try to reload it!'],obj.Tank.Verbose);
                end
          end
          
@@ -1417,7 +1423,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          if nargin < 2
             B = obj.getSelectedItems('obj');
          else
-            B = obj.Tank{SelectedItems};
+            B = obj.Tank{SelectedItems(:,1),SelectedItems(:,2)};
          end
          tt = list(B);
          if isempty(tt)
@@ -1562,6 +1568,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   SelectedItems = cat(1,Tree.SelectedNodes.UserData);
                   blockObj = blockObj([blockObj.IsMasked]);
                   obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
+               else
+                  vec = 1:blockObj.NumChannels;
+                  obj.Mask = ismember(vec,blockObj.Mask); 
                end
                evt = nigeLab.evt.treeSelectionChanged(...
                   obj.Tank,obj.SelectionIndex,'Block');

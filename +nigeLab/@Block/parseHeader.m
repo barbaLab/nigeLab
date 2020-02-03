@@ -1,10 +1,15 @@
-function header = parseHeader(blockObj,fid)
+function [header,fid] = parseHeader(blockObj,fid)
 % PARSEHEADER  Parse header from recording file or from folder hierarchy
 %
 %  header = blockObj.parseHeader();
 %
 %  header  --  struct with fields that are derived from header, as
 %              appropriate to blockObj.RecType and/or blockObj.RecSystem
+
+% Check if second input arg is provided
+if nargin < 2
+   fid = [];
+end
 
 % Check input
 if ~isscalar(blockObj)
@@ -13,7 +18,7 @@ if ~isscalar(blockObj)
 end
 
 % Always make sure to parse RecType FIRST
-blockObj.parseRecType();
+parseRecType(blockObj);
 
 %
 if isempty(blockObj.RecSystem)
@@ -23,28 +28,28 @@ if isempty(blockObj.RecSystem)
          header = blockObj.MatFileWorkflow.ReadFcn(blockObj.RecFile); 
 
       case 'nigelBlock'
-         header = blockObj.parseHierarchy();
+         header = parseHierarchy(blockObj);
          
       otherwise
          blockObj.RecType='other';
          str = nigeLab.utils.getNigeLink('nigeLab.Block','parseRecType');
          fprintf(1,'\n\t\t-->\tSee also: %s <--\n',str);
          error(['nigeLab:' mfilename ':missingCase'],...
-            'blockObj.FileExt == ''%s'' not yet handled.',...
-            blockObj.RecSystem.Name);
+            ['[BLOCK/PARSEHEADER]: blockObj.FileExt == ''%s'' ' ...
+            'not yet handled.'],blockObj.RecSystem.Name);
    end
 else
    % blockObj.RecFile is actually the recording
    switch blockObj.RecSystem.Name
       case 'RHD'
          if nargin < 2
-            header = ReadRHDHeader(blockObj.RecFile,blockObj.Verbose);
+            [header,fid] = ReadRHDHeader(blockObj.RecFile,blockObj.Verbose);
          else
             header = ReadRHDHeader([],blockObj.Verbose,fid);
          end
       case 'RHS'
          if nargin < 2
-            header = ReadRHSHeader(blockObj.RecFile,blockObj.Verbose); 
+            [header,fid] = ReadRHSHeader(blockObj.RecFile,blockObj.Verbose); 
          else
             header = ReadRHSHeader([],blockObj.Verbose,fid);
          end

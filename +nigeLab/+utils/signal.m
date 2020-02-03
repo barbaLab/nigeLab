@@ -271,7 +271,7 @@ classdef signal < matlab.mixin.SetGet
                subgroup = '';
                samples = [];
             
-            case {'STANDARD','HEADER','TRIAL'}
+            case {'STANDARD','HEADER','TRIAL','FSM'}
                field = '';
                fieldType = 'Events';
                source = '';

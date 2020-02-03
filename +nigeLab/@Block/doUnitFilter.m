@@ -1,22 +1,22 @@
 function flag = doUnitFilter(blockObj)
-%% DOUNITFILTER   Filter raw data using spike bandpass filter
+%DOUNITFILTER   Filter raw data using spike bandpass filter
 %
 %  blockObj = nigeLab.Block;
 %  doUnitFilter(blockObj);
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% IMPORTS
+% IMPORTS
 import nigeLab.libs.DiskData;
 import nigeLab.utils.getNigeLink;
 
-%% GET DEFAULT PARAMETERS
+% GET DEFAULT PARAMETERS
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doUnitFilter(blockObj(i));
          end
       end
    end
@@ -34,13 +34,13 @@ end
 [~,pars] = blockObj.updateParams('Filt');
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 
-%% ENSURE MASK IS ACCURATE
+% ENSURE MASK IS ACCURATE
 blockObj.checkMask;
 
-%% DESIGN FILTER
+% DESIGN FILTER
 [b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
 
-%% DO FILTERING AND SAVE
+% DO FILTERING AND SAVE
 if ~blockObj.OnRemote
    str = getNigeLink('nigeLab.Block','doUnitFilter',...
       'Unit Bandpass Filter');
@@ -77,9 +77,10 @@ for iCh = blockObj.Mask
          fType,fName,data,...
          'access','w',...
          'size',size(data),...
-         'class',class(data));
+         'class',class(data),...
+         'overwrite',true);
       
-      blockObj.Channels(iCh).Filt = lockData(blockObj.Channels(iCh).Filt);
+      lockData(blockObj.Channels(iCh).Filt);
    else
       warning('STIM SUPPRESSION method not yet available.');
       return;
@@ -108,7 +109,7 @@ end
 
 function Y = ff(b,a,X,nEdge,IC)
 
-%%
+
 % nedge dimension of the edge effect
 % IC initial condition. can usually be computed as
 % K       = eye(Order - 1);

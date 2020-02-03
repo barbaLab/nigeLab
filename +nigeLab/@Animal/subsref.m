@@ -42,8 +42,8 @@ switch S(1).type
    case '{}' % Handle {} "shortcut" indexing
       if numel(S) > 1
          error(['nigeLab:' mfilename ':BadSubscript'],...
-            ['Shortcut indexing using {} does not support subsequent ' ...
-            '''.'' or ''()'' references.']);
+            ['[ANIMAL/SUBSREF]: Shortcut indexing using {} does not ' ...
+            'support subsequent ''.'' or ''()'' references.']);
       end
       % If referencing a single animal, the behavior is different
       % if a single vector of subscripts is given.
@@ -53,7 +53,8 @@ switch S(1).type
          % allowed to input numeric and char indexes toghether
          if numel(unique(cellfun(@(x) class(x), subs, 'UniformOutput', false))) ~= 1
             error(['nigeLab:' mfilename ':badSubscriptReference'],...
-               ['Shortcut indexing using {} does not support different index types (numeric,char). ']);
+               ['[ANIMAL/SUBSREF]: Shortcut indexing using {} does ' ...
+               'not support different index types (numeric,char). ']);
          end
          if IsRightKeyFormat(animalObj,subs{1})
             % Attempting to use Key index. A cell array with n keys inside
@@ -64,14 +65,14 @@ switch S(1).type
                   'If you want to access more blocks, please put your keys betwee {}']);
             end
             s = substruct('.','findByKey','()',subs(1));
-         elseif IsSemiColon(subs{1})
+         elseif IsColon(subs{1})
             % one of the iputs is ':'
             if numel(subs)>1
                % and has some other input after it
                warning(['nigeLab:' mfilename ':badSubscriptReference'],...
                   '[ANIMAL/SUBSREF]: Ignoring all inputs except '':''. ');
             end
-            s = substruct('()',{':'});
+            s = substruct('()',{1,':'});
          elseif isnumeric(subs{1})
             if numel(subs)>1
                warning(['nigeLab:' mfilename ':badSubscriptReference'],...
@@ -132,8 +133,8 @@ switch S(1).type
                if IsRightKeyFormat(animalObj,subs{1})
                   % if is a char array of the right form or is cell
                   s = substruct('.','findByKey','()',subs(1));
-               elseif IsSemiColon(subs{1})
-                  s = substruct('()',subs(1));
+               elseif IsColon(subs{1})
+                  s = substruct('()',{1, ':'});
                elseif isnumeric(subs{1})
                   s = substruct('()',subs(1));
                else
@@ -162,8 +163,8 @@ switch S(1).type
                if  IsRightKeyFormat([an.Children],subs{2})
                   s = substruct('.','findByKey','()',subs(2));
                   s = repmat(s,numel(an),1);
-               elseif IsSemiColon(subs{2})
-                  s = substruct('()',subs(2));
+               elseif IsColon(subs{2})
+                  s = substruct('()',{1, ':'});
                   s = repmat(s,numel(an),1);
                elseif  iscell(subs{2})
                   if all( cellfun( @(x) IsRightKeyFormat(animalObj,x),subs{2}) )
@@ -206,7 +207,7 @@ switch S(1).type
                   s = repmat(s,numel(an),1);
                else
                   error(['nigeLab:' mfilename ':badReference'],...
-                     ['Unrecognized index element; '...
+                     ['[ANIMAL/SUBSREF]: Unrecognized index element; '...
                      '%s not allowed as index 2.'],class(subs{2}));
                end
                
@@ -215,7 +216,7 @@ switch S(1).type
                   varargout{1} = an;
                   return;
                end
-               aIdx = 1:numel(an);
+               aIdx = (1:numel(an));
                out = arrayfun(@(x,idx) subsref(x.Children,s(idx,:)),...
                   an,aIdx,... % inputs
                   'UniformOutput',false);
@@ -225,25 +226,20 @@ switch S(1).type
                % Otherwise too many input arguments given to
                % animalObj array
                error(['nigeLab:' mfilename ':tooManyInputs'],...
-                  'Too many subscript indexing args (%g) given.',...
-                  numel(subs))
+                  ['[ANIMAL/SUBSREF]: Too many subscript indexing ' ...
+                  'args (%g) given.\n'],numel(subs));
          end %switch(numel(subs))
       end %fi isscalar(animalObj)
    otherwise
-      % if not {}, proceed as always
-%       if nargout > 0
-         [varargout{1:nargout}] = builtin('subsref',animalObj,S);
-%       else
-%          builtin('subsref',animalObj,S);
-%       end
+      [varargout{1:nargout}] = builtin('subsref',animalObj,S);
 end % switch(S(1).type)
 end % function
 
 % Check that input is a semi-colon
-function value = IsSemiColon(subs)
+function value = IsColon(subs)
 %ISSEMICOLON  Returns true if subs is a `char` with value ':'
 %
-%  value = IsSemiColon(subs);
+%  value = IsColon(subs);
 
 value = ischar(subs) && strcmp(subs,':');
 end

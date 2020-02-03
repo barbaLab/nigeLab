@@ -8,7 +8,10 @@ function flag = initChannels(blockObj,header)
 %GET HEADER INFO DEPENDING ON RECORDING TYPE
 flag = false;
 if nargin < 2
-   header = blockObj.parseHeader();
+   [header,fid] = parseHeader(blockObj);
+   if ~isempty(fid)
+      fclose(fid); % Make sure that file is closed after parsing header
+   end
 end
 
 %ASSIGN DATA FIELDS USING HEADER INFO
@@ -16,7 +19,12 @@ blockObj.Channels = header.RawChannels;
 blockObj.RecSystem = nigeLab.utils.AcqSystem(header.Acqsys);
 
 if ~blockObj.parseProbeNumbers % Depends on recording system
-   warning('Could not properly parse probe identifiers.');
+   if blockObj.Verbose
+      [fmt,idt] = getDescriptiveFormatting(blockObj);
+      nigeLab.utils.cprintf(fmt,'%s[BLOCK/INITSTREAMS]: ',idt);
+      nigeLab.utils.cprintf(fmt(1:(end-1)),'(%s)',blockObj.Name); 
+      nigeLab.utils.cprintf('[0.55 0.55 0.55]','No PROBES initialized\n');
+   end
    return;
 end
 blockObj.SampleRate = header.SampleRate;
@@ -30,9 +38,9 @@ elseif isempty(blockObj.Mask)
 elseif islogical(blockObj.Mask)
    if numel(blockObj.Mask)~=numel(blockObj.NumChannels)
       error(['nigeLab:' mfilename ':MaskChannelsMismatch'],...
-         ['%s.Mask is a logical vector but has %g elements ',...
-          'while there are %g Channels\n'],...
-            blockObj.Name,numel(blockObj.Mask),blockObj.NumChannels);
+         ['[BLOCK/INITCHANNELS]: %s.Mask is a logical vector ' ...
+         'but has %g elements while there are %g Channels\n'],...
+          blockObj.Name,numel(blockObj.Mask),blockObj.NumChannels);
    end
    % Convert to `double`
    blockObj.Mask = find(blockObj.Mask); 

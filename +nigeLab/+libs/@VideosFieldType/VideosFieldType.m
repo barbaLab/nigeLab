@@ -572,95 +572,108 @@ classdef VideosFieldType < handle ...
       
       % % % SET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT]  Assigns .Duration property (cannot)
-      function set.Duration(~,~)
+      function set.Duration(obj,~)
          %SET.DURATION  Assigns .Duration property (cannot)
-         
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Duration\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Duration\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Height property (cannot)
-      function set.Height(~,~)
+      function set.Height(obj,~)
          %SET.HEIGHT  Assigns .Height property (cannot)
-         
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Height\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Height\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Index property (cannot)
-      function set.Index(~,~)
+      function set.Index(obj,~)
          % Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Index\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Index\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .IsIdle property (cannot)
-      function set.IsIdle(~,~)
+      function set.IsIdle(obj,~)
          % Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: IsIdle\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: IsIdle\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Key property (cannot)
-      function set.Key(~,~)
+      function set.Key(obj,~)
          %SET.KEY  Assigns .Key property (cannot)
-         
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Key\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Key\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Meta property
-      function set.Meta(~,~)
+      function set.Meta(obj,~)
          %SET.META  Assigns .Meta property (cannot)
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Meta\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Meta\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Name property
-      function set.Name(~,~)
+      function set.Name(obj,~)
          %SET.NAME  Assigns .Name property (cannot)
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Name\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Name\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .NumFrames property (cannot)
-      function set.NumFrames(~,~)
+      function set.NumFrames(obj,~)
          %SET.NUMFRAMES  Assigns .NumFrames property (cannot)
          
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: NumFrames\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: NumFrames\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Parent property
@@ -678,25 +691,29 @@ classdef VideosFieldType < handle ...
       end
       
       % [DEPENDENT]  Assigns .Pars property (cannot)
-      function set.Pars(~,~)
+      function set.Pars(obj,~)
          % Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Pars\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Pars\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .Source property (cannot)
-      function set.Source(~,~)
+      function set.Source(obj,~)
          % Does nothing
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Source\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Source\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .V property (for deleting VideoReader)
@@ -713,51 +730,59 @@ classdef VideosFieldType < handle ...
       end
       
       % [DEPENDENT]  Assigns .Width property (cannot)
-      function set.Width(~,~)
+      function set.Width(obj,~)
          %SET.WIDTH  Assigns .Width property (cannot)
          
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Width\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Width\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .fs property (cannot)
-      function set.fs(~,~)
+      function set.fs(obj,~)
          %SET.FS  Assigns .fs property (cannot)
          
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: fs\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: fs\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .tNeu property (cannot)
-      function set.tNeu(~,~)
+      function set.tNeu(obj,~)
          %SET.TNEU  Assigns .tNeu property (cannot)
          
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: tNeu\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: tNeu\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Assigns .tVid property (cannot)
-      function set.tVid(~,~)
+      function set.tVid(obj,~)
          %SET.TVID  Assigns .tVid property (cannot)
          
-         nigeLab.sounds.play('pop',2.7);
-         dbstack();
-         nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-         nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: tVid\n');
-         fprintf(1,'\n');
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: tVid\n');
+            fprintf(1,'\n');
+         end
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
@@ -1175,21 +1200,23 @@ classdef VideosFieldType < handle ...
          if ~any(inMeta)
             fD =fieldnames(pars.DynamicVars);
             fM = fieldnames(meta);
-            nigeLab.sounds.play('alert',0.8);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*',...
-               '\t\t->\t[VIDEOSFIELDTYPE/PARSEVIDMATCHSTRING]: ');
-            nigeLab.utils.cprintf('Errors',...
-               ['Could not find any metadata fields matching fields ' ...
-                ' of given nigeLab.Block.Pars.Video.DynamicVars: \n']);
-            nigeLab.utils.cprintf('[0.5 0.5 0.5]*',...
-               '\t\t\t->\t%s\n',fD{:});
-            nigeLab.utils.cprintf('Errors',...
-               'When compared to nigeLab.Block.Meta: \n');
-            nigeLab.utils.cprintf('Comments',...
-               '\t\t\t->\t%s\n',fM{:});
-            fprintf(1,'\t->\tReturning wildcard matchStr (''*'')\n');
-            fprintf(1,'\t\t->\t(Note that this is not intended use; check config)\n');
+            if obj.Block.Verbose
+               nigeLab.sounds.play('alert',0.8);
+               dbstack();
+               nigeLab.utils.cprintf('Errors*',...
+                  '\t\t->\t[VIDEOSFIELDTYPE/PARSEVIDMATCHSTRING]: ');
+               nigeLab.utils.cprintf('Errors',...
+                  ['Could not find any metadata fields matching fields ' ...
+                   ' of given nigeLab.Block.Pars.Video.DynamicVars: \n']);
+               nigeLab.utils.cprintf('[0.5 0.5 0.5]*',...
+                  '\t\t\t->\t%s\n',fD{:});
+               nigeLab.utils.cprintf('Errors',...
+                  'When compared to nigeLab.Block.Meta: \n');
+               nigeLab.utils.cprintf('Comments',...
+                  '\t\t\t->\t%s\n',fM{:});
+               fprintf(1,'\t->\tReturning wildcard matchStr (''*'')\n');
+               fprintf(1,'\t\t->\t(Note that this is not intended use; check config)\n');
+            end
             s = '*';
             return;
          end

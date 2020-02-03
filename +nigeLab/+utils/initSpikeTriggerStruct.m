@@ -46,7 +46,8 @@ switch RecType
          ... 'field1', cell(1,n), ... % Field depends on values to parse
          ... 'field2', cell(1,n) );
    otherwise
-      error('Unrecognized RecType: %s',RecType);
+      error(['nigeLab:' mfilename ':BadType'],...
+         '[INITSPIKETRIGGERSTRUCT]: Unrecognized RecType: %s',RecType);
 end
 
 

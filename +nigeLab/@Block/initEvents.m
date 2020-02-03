@@ -31,12 +31,14 @@ updateParams(blockObj,'Video');
 nEventTypes = numel(uF);
 if nEventTypes == 0
    flag = true;
-   [fmt,idt] = blockObj.getDescriptiveFormatting();
-   nigeLab.utils.cprintf(fmt,'%s[INITEVENTS]: ',idt);
-   nigeLab.utils.cprintf(fmt(1:(end-1)),'No ');
-   nigeLab.utils.cprintf(fmt,'EVENTS ');
-   nigeLab.utils.cprintf(fmt(1:(end-1)),'to initialize (%s)\n',...
-      blockObj.Name);
+   if blockObj.Verbose
+      [fmt,idt] = blockObj.getDescriptiveFormatting();
+      nigeLab.utils.cprintf(fmt,'%s[INITEVENTS]: ',idt);
+      nigeLab.utils.cprintf(fmt(1:(end-1)),'(%s) No ',blockObj.Name);
+      nigeLab.utils.cprintf(fmt,'EVENTS ');
+      nigeLab.utils.cprintf(fmt(1:(end-1)),'to initialize (%s)\n',...
+         blockObj.Name);
+   end
    return;
 end
 

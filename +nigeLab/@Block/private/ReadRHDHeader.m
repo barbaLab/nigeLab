@@ -125,7 +125,7 @@ end
 % If data file is from v2.0 or later (Intan Recording Controller),
 % load name of digital reference channel.
 if (data_file_main_version_number > 1)
-   reference_channel = nigeLab.utils.fread_QString(fid);
+   reference_channel = nigeLab.utils.fread_QString(FID);
 end
 
 % Place frequency-related information in data structure.

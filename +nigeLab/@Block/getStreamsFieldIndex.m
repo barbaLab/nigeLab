@@ -34,6 +34,7 @@ if numel(blockObj.Streams) == 0
 end
 
 if ~isfield(blockObj.Streams,field)
+   nigeLab.utils.cprintf('UnterminatedStrings*','\t\t->\t[BLOCK]: ');
    nigeLab.utils.cprintf('UnterminatedStrings',...
       'Missing %s field of Streams property struct array.',field);
    error('Check Block.initStreams; Streams not initialized correctly.');

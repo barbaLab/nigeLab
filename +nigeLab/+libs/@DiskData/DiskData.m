@@ -73,6 +73,7 @@ classdef DiskData < handle & ...
       const_dim_ext  double      % (numeric) Extent of dimension to remain constant
       const_dim_idx  double      % (numeric) Index of dimension to remain constant
       dims_h5        double      % (numeric) Dimensions (.size_ for h5)
+      inf_dim_idx    double      % (numeric) Dimension that gets `inf` value for "maxsize"
       maxdims_h5     double      % (numeric) Max. dims (depend on .type_)
       rank_h5   (1,1)double = 1  % (scalar double) H5 rank of memory space
       var_dim_idx    double      % (numeric) "Variable" dimension index (the one that extends)
@@ -91,7 +92,7 @@ classdef DiskData < handle & ...
       access_     (1,1) char    = 'r'     % Access type (default: 'r')
       writable_         logical           % Whether file is writable
       overwrite_  (1,1) logical = false   % By default, constructor does not overwrite if data is already present
-      verbose_    (1,1) logical = true    % Set false to suppress `getAttr` and `setAttr` print commands (maybe)
+      verbose_    (1,1) logical = false   % Set false to suppress `getAttr` and `setAttr` print commands (maybe)
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -258,12 +259,18 @@ classdef DiskData < handle & ...
             nigeLab.libs.DiskData.throwImproperAssignmentError('class',...
                obj.class_,class(data));
             out = [];
+            if nargout < 1
+               clear out;
+            end
             return;
          end
          
          % If data (to append) is empty, don't do anything
          if isempty(data)
             out = [];
+            if nargout < 1
+               clear out;
+            end
             return;
          end
          
@@ -303,6 +310,9 @@ classdef DiskData < handle & ...
          if nargout > 0
             out = h5read(obj.diskfile_,varname_,...
                ones(1,obj.rank_h5),[inf,inf],ones(1,obj.rank_h5));
+         else
+            out = [];
+            clear out; % Suppress output
          end
       end
       
@@ -705,15 +715,17 @@ classdef DiskData < handle & ...
          end
          
          if exist(obj.diskfile_,'file')==0
-            [p,f,e] = fileparts(obj.diskfile_);
-            p = nigeLab.utils.shortenedPath(p);
-            f = nigeLab.utils.shortenedName([f e]);
-            nigeLab.sounds.play('pop',0.35);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','\t\t\t->\t[DISKDATA/LOCKDATA]: ');
-            nigeLab.utils.cprintf('[0.55 0.55 0.55]',' Missing diskfile_ (');
-            nigeLab.utils.cprintf('Keywords*','%s%s',p,f);
-            nigeLab.utils.cprintf('[0.55 0.55 0.55]',')\n');
+            if verbose
+               [p,f,e] = fileparts(obj.diskfile_);
+               p = nigeLab.utils.shortenedPath(p);
+               f = nigeLab.utils.shortenedName([f e]);
+               nigeLab.sounds.play('pop',0.35);
+               dbstack();
+               nigeLab.utils.cprintf('Errors*','\t\t\t->\t[DISKDATA/LOCKDATA]: ');
+               nigeLab.utils.cprintf('[0.55 0.55 0.55]',' Missing diskfile_ (');
+               nigeLab.utils.cprintf('Keywords*','%s%s',p,f);
+               nigeLab.utils.cprintf('[0.55 0.55 0.55]',')\n');
+            end
             return;            
          end
          
@@ -797,7 +809,7 @@ classdef DiskData < handle & ...
          
          if exist(obj.diskfile_,'file')~=0
             fileattrib(obj.diskfile_,'+w');
-         else
+         elseif verbose
             [p,f,e] = fileparts(obj.diskfile_);
             p = nigeLab.utils.shortenedPath(p);
             f = nigeLab.utils.shortenedName([f e]);
@@ -807,7 +819,9 @@ classdef DiskData < handle & ...
             nigeLab.utils.cprintf('[0.55 0.55 0.55]',' Missing diskfile_ (');
             nigeLab.utils.cprintf('Keywords*','%s%s',p,f);
             nigeLab.utils.cprintf('[0.55 0.55 0.55]',')\n');
-            return;            
+            return;  
+         else
+            return;
          end
          
          obj.writable_ = true;
@@ -1120,6 +1134,27 @@ classdef DiskData < handle & ...
          value = fliplr(obj.size_);
       end
       
+      % [DEPENDENT] Returns .inf_dim_idx property
+      function value = get.inf_dim_idx(obj)
+         %GET.INF_DIM_IDX  Returns .inf_dim_idx property
+         %
+         %  value = get(obj,'inf_dim_idx');
+         %  --> Returns index of "inf" dimension. Depends on obj.type_
+         
+         value = [];
+         if isempty(obj.type_)
+            return;
+         end
+         switch obj.type_
+            case 'MatFile'
+               value = []; % Size remains fixed
+            case 'Hybrid'
+               value = 2; % Append along columns
+            case 'Event'
+               value = 1; % Append along rows
+         end
+      end
+      
       % [DEPENDENT]  Returns .maxdims_h5 property
       function value = get.maxdims_h5(obj)
          %GET.MAXDIMS_H5  Returns .maxdims_h5 property (from .size_,.type_)
@@ -1135,7 +1170,7 @@ classdef DiskData < handle & ...
          end
          % Value depends on obj.type_
          value = obj.size_;
-         value(obj.var_dim_idx) = inf; 
+         value(obj.inf_dim_idx) = inf; 
       end
       
       % [DEPENDENT]  Returns .rank_h5 property
@@ -1475,7 +1510,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .File property (does nothing)
-      function set.File(~,~)
+      function set.File(obj,~)
          %SET.FILE  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1575,7 +1610,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .chunks_h5 property (does nothing)
-      function set.chunks_h5(~,~)
+      function set.chunks_h5(obj,~)
          %SET.CHUNKS_H5  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1588,7 +1623,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .class_h5 property (does nothing)
-      function set.class_h5(~,~)
+      function set.class_h5(obj,~)
          %SET.CLASS_H5  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1601,7 +1636,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .const_dim_ext property (does nothing)
-      function set.const_dim_ext(~,~)
+      function set.const_dim_ext(obj,~)
          %SET.CONST_DIM_EXT  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1614,7 +1649,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .const_dim_idx property (does nothing)
-      function set.const_dim_idx(~,~)
+      function set.const_dim_idx(obj,~)
          %SET.CONST_DIM_IDX  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1636,7 +1671,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .dims_h5 property (does nothing)
-      function set.dims_h5(~,~)
+      function set.dims_h5(obj,~)
          %SET.DIMS_H5  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1648,8 +1683,21 @@ classdef DiskData < handle & ...
          end
       end
       
+      % [DEPENDENT]  Assigns .inf_dim_idx property (does nothing)
+      function set.inf_dim_idx(obj,~)
+         %SET.INF_DIM_IDX  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property:inf_dim_idx\n');
+            fprintf(1,'\n');
+         end
+      end
+      
       % [DEPENDENT]  Assigns .maxdims_h5 property (does nothing)
-      function set.maxdims_h5(~,~)
+      function set.maxdims_h5(obj,~)
          %SET.MAXDIMS_H5  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1706,7 +1754,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .rank_h5 property (does nothing)
-      function set.rank_h5(~,~)
+      function set.rank_h5(obj,~)
          %SET.RANK_H5  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1730,7 +1778,7 @@ classdef DiskData < handle & ...
       end
       
       % [DEPENDENT]  Assigns .var_dim_idx property (does nothing)
-      function set.var_dim_idx(~,~)
+      function set.var_dim_idx(obj,~)
          %SET.VAR_DIM_IDX  (does nothing)
          if obj.verbose_
             nigeLab.sounds.play('pop',2.7);
@@ -1836,6 +1884,12 @@ classdef DiskData < handle & ...
                   curSz = sz;
                end
             end
+         elseif numel(info.Datasets) < 1
+            fsize = 0;
+            dname = '';
+            dclass = 'unknown';
+            sz = [0 0];
+            return;
          else
             idx = 1;            
          end
@@ -2028,8 +2082,10 @@ classdef DiskData < handle & ...
             % By default: obj.name_ = 'data'
             data = ones(1,1,obj.class_); %#ok<PROPLC>
             save(fName,'data','-v7.3');
-            % Switch to `Hybrid`, since this MUST be expanded
-            obj.type_ = 'Hybrid';
+            if strcmp(obj.type_,'MatFile')
+               % Switch to `Hybrid`, since this MUST be expanded
+               obj.type_ = 'Hybrid';
+            end
          end
          
          obj.diskfile_ = fName;
@@ -2063,13 +2119,11 @@ classdef DiskData < handle & ...
          if nargin < 4
             type = obj.type_;
          end
-         
          if isempty(data)
             error(['nigeLab:' mfilename ':BadInit'],...
                ['[DISKDATA]: Cannot write EMPTY array to file. '...
                '\t->\t(Check constructor)\n']);
-         end
-         
+         end         
          if exist(fName,'file')~=0 
             if obj.overwrite_
                delete(fName);

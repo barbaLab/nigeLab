@@ -16,8 +16,22 @@ function obj = subsasgn(obj,S,data)
 %
 %  This should effectively work as a `save` method for DiskData class
 
+if strcmp(S(1).type,'.') % Check for '.'-indexed property assignment
+   mc = ?nigeLab.libs.DiskData;
+   diskProps = {mc.PropertyList.Name};
+   includedPropNames = setdiff(diskProps,...
+      {'type','value','tag','ts','snippet','data'});
+   if any(strcmp(includedPropNames,S(1).subs))
+      obj = builtin('subsasgn',obj,S,data);
+      return;
+   end
+end
+
 % Do validation that the DiskData object can be assigned to
-if isempty(obj)
+if strcmp(obj.type_,'MatFile') && (length(obj)==0) %#ok<ISMT>
+   nigeLab.libs.DiskData.throwImproperAssignmentError('empty');
+   return;
+elseif builtin('isempty',obj)
    nigeLab.libs.DiskData.throwImproperAssignmentError('empty');
    return;
 elseif ~isvalid(obj)

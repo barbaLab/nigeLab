@@ -81,7 +81,9 @@ classdef nigelObj < handle & ...
       Pars        (1,1) struct         % Parameters struct
       Paths       (1,1) struct         % Detailed paths specifications
       ShortFile         char           % Shortened filename
-      Type              char           %'Block', 'Animal' or 'Tank'
+      Type              char           % 'Block', 'Animal' or 'Tank'
+      User              char           % Current user
+      Version           char='unknown' % Version of most-recent release.
    end
    
    % DEPENDENT,PUBLIC/PROTECTED
@@ -129,13 +131,14 @@ classdef nigelObj < handle & ...
       InBlindMode(1,1)logical = false  % True if "blind mode" is activated
       IsEmpty    (1,1)logical = false  % True if no data in this (e.g. Empty() method used)
       IsMasked   (1,1)logical = true   % true --> obj is "enabled"
-      Verbose    (1,1)logical = true   % Display debug output?
    end
    
    % HIDDEN,TRANSIENT,ABORTSET,PUBLIC (Flags)
    properties (Hidden,Transient,AbortSet,Access=public)
       IsDashOpen (1,1)logical         % Is nigeLab.libs.DashBoard GUI open?
+      PathIsSet  (1,1)logical = false % Has temporary environment path been set?
       RemoteFlag (1,1)logical = false % "Container" for .OnRemote prop
+      Verbose    (1,1)logical = false % Display debug output?
    end
    
    % HIDDEN,TRANSIENT,PUBLIC (Listeners and Object "Containers")
@@ -160,11 +163,7 @@ classdef nigelObj < handle & ...
       Out    (1,1) struct                  % Output (folder tree) paths      
       Key    (1,1) struct = nigeLab.nigelObj.InitKey()   % Fields are "public" and "private" (reserved for later)
       Params (1,1) struct = struct('Pars',struct,'Paths',struct,'Type','') % Holds dependent properties
-   end
-   
-   % OBSERVABLE,PUBLIC/PROTECTED
-   properties (GetObservable,SetObservable,GetAccess=public,SetAccess=protected)
-      User  char  = nigeLab.nigelObj.Default('User','Experiment')  % Name of current User
+      UserContainer char                   % "Container" for username
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -312,6 +311,17 @@ classdef nigelObj < handle & ...
          %
          %  obj = nigeLab.nigelObj(__,'$ParsField.ParamName',paramVal);
          %  --> sets value of obj.Pars.(ParsField).(ParamName) to paramVal
+         
+         % Add nigeLab to search path
+         if isunix
+            if ~contains(path,nigeLab.utils.getNigelPath('UNC'))
+               addpath(nigeLab.utils.getNigelPath('UNC'));
+            end
+         else
+            if ~contains(path,nigeLab.utils.getNigelPath)
+               addpath(nigeLab.utils.getNigelPath);
+            end
+         end
          
          % Check inputs
          if nargin < 1 % Must include Type
@@ -1416,36 +1426,96 @@ classdef nigelObj < handle & ...
          %GET.User  Property Get method for .User
          %
          %  value = get(obj,'User');
+
+         
+         if isunix % On MAC/UNIX, use 'UNC' to set GIT_DIR environment var
+            p = nigeLab.utils.getNigelPath('UNC');
+            setenv('GIT_DIR',p);
+            [status,tmp] = system('who');
+            if status == 0 % Try to parse it from User list
+               tmp = textscan(tmp,'%s');
+               def = tmp{1}{1};
+            else % Otherwise try to parse from .git info
+               gitInfo = nigeLab.utils.Git.getGitInfo();
+               def = gitInfo.user;
+            end
+         else % Otherwise for Windows use windows convention
+            p = nigeLab.utils.getNigelPath();
+            setenv('GIT_DIR',p);
+            % whoami returns list of logged-in users
+            [status,tmp] = system('whoami');
+            if status == 0
+               tmp = textscan(tmp,'%s');
+               def = tmp{1}{1};
+            else % Otherwise try to parse from .git info
+               gitInfo = nigeLab.utils.Git.getGitInfo();
+               def = gitInfo.user;
+            end
+         end
+         
+         % Make sure it can be set as a field name
+         try
+            test = struct(def,'name'); % To test it
+         catch
+            def = regexprep(def,'[+-\\/ ]','_');
+            try
+               test = struct(def,'name'); % Test again
+            catch
+               def = 'anon';
+            end
+         end
          
          if numel(obj) > 1
             value = cell(size(obj));
             for i = 1:numel(obj)
-               value{i} = '';
+               value{i} = def;
                if isempty(obj(i))
                   continue;
                end
                if ~isvalid(obj(i))
                   continue;
                end
-               if isempty(obj(i).User)
-                  setUser(obj(i));
+               if isempty(obj(i).UserContainer)
+                  setUser(obj(i),def);
                end
-               value{i} = obj.User;
+               value{i} = obj(i).UserContainer;
             end
          else
-            value = '';
+            value = def;
             if isempty(obj)
                return;
             end
             if ~isvalid(obj)
                return;
             end
-            if isempty(obj.User)
-               setUser(obj);
+            if isempty(obj.UserContainer)
+               setUser(obj,def);
             end
-            value = obj.User;
+            value = obj.UserContainer;
          end
+      end
+      
+      % Get method for .Version (most-recent release version tag)
+      function value = get.Version(~)
+         %GET.VERSION  Returns the git .Version
+         %
+         %  value = get(obj,'Version');
+         %  --> Does not depend upon `nigelObj`
          
+         value = 'unknown';     
+         if isunix
+            setenv('GIT_DIR',nigeLab.utils.getNigelPath('UNC'));
+         else
+            setenv('GIT_DIR',nigeLab.utils.getNigelPath());
+         end
+         syscmdstr = sprintf(...
+            'git describe --abbrev=0 --tags --candidates=1');
+         [status,cmdout] = system(syscmdstr);
+         if status ~= 0
+            return;
+         end
+         s = textscan(cmdout,'%s');
+         value = s{1}{1};
       end
       % % % % % % % % % % END GET.PROPERTY METHODS % % %
       
@@ -1524,7 +1594,7 @@ classdef nigelObj < handle & ...
          try % The only thing here that can go wrong is something with save
             save(fname,'-struct','out');
             flag = true;
-            nigeLab.utils.cprintf(fmt,...
+            nigeLab.utils.cprintf(fmt,obj.Verbose,...
                '%s[SAVE]: %s saved successfully!\n',idt,name);
          catch
             nigeLab.utils.cprintf('Errors*',...
@@ -1660,7 +1730,7 @@ classdef nigelObj < handle & ...
          else
             p = nigeLab.utils.shortenedPath(path);
             nigeLab.utils.cprintf('Errors*',...
-               '[SET.FILE]: Bad File name (%s/%s)\n',p,[f e]);
+               '[SET.FILE]: Bad File name (%s%s)\n',p,[f e]);
             return;
          end
          
@@ -2311,7 +2381,25 @@ classdef nigelObj < handle & ...
          end
          
          for i = 1:numel(obj)
-            obj(i).User = value;
+            obj(i).UserContainer = value;
+         end
+      end
+      
+      % Set method for .Version (cannot assign from here)
+      function set.Version(obj,~)
+         %SET.VERSION  Does nothing
+         %
+         %  set(obj,'Version',value);
+         %  --> Does not depend upon `nigelObj`
+         
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            [fmt,idt,type] = getDescriptiveFormatting(obj);
+            nigeLab.utils.cprintf('Errors*','%s[%s/SET]: ',idt,type);
+            nigeLab.utils.cprintf(fmt,...
+               'Failed attempt to set DEPENDENT property: Version\n');
+            fprintf(1,'\n');
          end
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
@@ -2432,7 +2520,6 @@ classdef nigelObj < handle & ...
          % fields from a saved matfile to do the comparison against, as well.
          
          if isempty(requiredFields)
-            warning('obj.checkCompatibility was called on empty requiredFields, suggesting something is wrong.');
             fieldIdx = [];
             return;
          end
@@ -2466,7 +2553,9 @@ classdef nigelObj < handle & ...
                '-->\t%s\n',...
                requiredFields{idx(i)});
          end
-         error('Missing required Fields. Check nigeLab.defaults.Block');
+         error(['nigeLab:' mfilename ':BadConfig'],...
+            ['[%s/CHECKCOMPATIBILITY]: Missing required Fields. '...
+            'Check nigeLab.defaults.Block'],upper(obj.Type));
       end
       
       % Check compatibility for Remote/Parallel execution
@@ -2501,18 +2590,27 @@ classdef nigelObj < handle & ...
          lFlag = license('test','Distrib_Computing_Toolbox'); % Check if toolbox is licensed
          dFlag = ~isempty(ver('distcomp'));  % Check if distributed-computing toolkit is installed
          
-         if (pFlag || rFlag) && ~(dFlag && lFlag) % If user indicates they want to run parallel or remote
-            str = nigeLab.utils.getNigeLink('nigeLab.defaults.Queue',14,'configured');
-            fprintf(1,['nigeLab is %s to use parallel or remote processing, '...
-               'but encountered the following issue(s):\n'],str);
-            if ~lFlag
-               nigeLab.utils.cprintf('SystemCommands',['This machine does not '...
-                  'have the Parallel Computing Toolbox license.\n']);
-            end
-            
-            if ~dFlag
-               nigeLab.utils.cprintf('SystemCommands',['This machine does not '...
-                  'have the Distributed Computing Toolbox installed.\n']);
+         if obj.Verbose
+            [fmt,idt,type] = getDescriptiveFormatting(obj);
+            if (pFlag || rFlag) && ~(dFlag && lFlag) % If user indicates they want to run parallel or remote
+               str = nigeLab.utils.getNigeLink('nigeLab.defaults.Queue',14,'configured');
+               fprintf(1,['nigeLab is %s to use parallel or remote processing, '...
+                  'but encountered the following issue(s):\n'],str);
+               if ~lFlag
+                  nigeLab.utils.cprintf('SystemCommands*',...
+                     '%s[%s/CHECKPARALLEL]: ',idt,upper(type));
+                  nigeLab.utils.cprintf(fmt,...
+                     ['This machine does not have the ' ...
+                      'Parallel Computing Toolbox license.\n']);
+               end
+
+               if ~dFlag
+                  nigeLab.utils.cprintf('SystemCommands*',...
+                     '%s[%s/CHECKPARALLEL]: ',idt,upper(type));
+                  nigeLab.utils.cprintf(fmt,...
+                     ['This machine does not have the ' ...
+                     'Distributed Computing Toolbox installed.\n']);
+               end
             end
          end
          
@@ -2520,17 +2618,19 @@ classdef nigelObj < handle & ...
          
          obj.UseParallel = flag;
          
-         if (nargout < 1) && (~obj.OnRemote)
-            [fmt,idt,type] = obj.getDescriptiveFormatting();
-            nigeLab.utils.cprintf('Comments*','\n-----%s',idt);
-            nigeLab.utils.cprintf(fmt(1:(end-1)),...
-               '[CHECKPARALLEL]: %s (%s) flagged for ',obj.Name,type);
-            if flag
-               nigeLab.utils.cprintf('Keywords*','Parallel');
-            else
-               nigeLab.utils.cprintf('Keywords*','Serial');
+         if obj.Verbose
+            if (nargout < 1) && (~obj.OnRemote)
+               nigeLab.utils.cprintf('Comments*','\n-----%s',idt);
+               nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                  '[%s/CHECKPARALLEL]: %s (%s) flagged for ',...
+                  upper(type),obj.Name);
+               if flag
+                  nigeLab.utils.cprintf('Keywords*','Parallel');
+               else
+                  nigeLab.utils.cprintf('Keywords*','Serial');
+               end
+               nigeLab.utils.cprintf(fmt(1:(end-1)),' Processing -----\n');
             end
-            nigeLab.utils.cprintf(fmt(1:(end-1)),' Processing -----\n');
          end
          
          if ~isempty(obj.Children)
@@ -3178,7 +3278,7 @@ classdef nigelObj < handle & ...
                switch nargin
                   case 1
                      linkStr = [linkStr ...
-                        obj(i).getLink([],obj(i).Name) ...
+                        obj(i).getLink('',obj(i).Name) ...
                         newline];
                   case 2
                      linkStr = [linkStr ...
@@ -3410,8 +3510,18 @@ classdef nigelObj < handle & ...
          % returned by nigeLab.Block.linkField, this method issues warnings if not
          % all the files are found during the "link" process.
          
-         % DEFAULTS
-         flag = false;
+         % If not otherwise specified, assume extraction has not been done.
+         if nargin < 2
+            suppressWarning = false;
+         end           
+
+         if numel(obj) > 1
+            flag = true;
+            for i = 1:numel(obj)
+               flag = flag && linkToData(obj(i),suppressWarning);
+            end
+            return;
+         end
          
          if ismember(obj.Type,{'Animal','Tank'})
             flag = true;
@@ -3419,45 +3529,41 @@ classdef nigelObj < handle & ...
                if ~isempty(obj.Children(i))
                   c = obj.Children(i);
                   if isvalid(c)
-                     flag = flag && linkToData(c);
+                     flag = flag && linkToData(c,suppressWarning);
                   end
                end
             end
             flag = flag && obj.save();
             return;
+         else
+            flag = false;
          end
          
-         % If not otherwise specified, assume extraction has not been done.
-         if nargin < 2
-            suppressWarning = false;
-            field = obj.Fields;
-         else
-            switch class(suppressWarning)
-               case 'char'
-                  field = {suppressWarning};
-                  f = intersect(field,obj.Fields);
-                  if isempty(f)
-                     error(['nigeLab:' mfilename ':BadInputChar'],...
-                        'Invalid field: %s (%s)',field{:},obj.Name);
-                  end
-                  field = f;
-                  suppressWarning = true;
-               case 'cell'
-                  field = suppressWarning;
-                  f = intersect(field,obj.Fields);
-                  if isempty(f)
-                     error(['nigeLab:' mfilename ':BadInputChar'],...
-                        'Invalid field: %s (%s)',field{:},obj.Name);
-                  end
-                  field = f;
-                  suppressWarning = true;
-               case 'logical'
-                  field = obj.Fields;
-               otherwise
-                  error(['nigeLab:' mfilename ':BadInputClass'],...
-                     'Unexpected class for ''suppressWarning'': %s',...
-                     class(suppressWarning));
-            end
+         switch class(suppressWarning)
+            case 'char'
+               field = {suppressWarning};
+               f = intersect(field,obj.Fields);
+               if isempty(f)
+                  error(['nigeLab:' mfilename ':BadInputChar'],...
+                     'Invalid field: %s (%s)',field{:},obj.Name);
+               end
+               field = f;
+               suppressWarning = true;
+            case 'cell'
+               field = suppressWarning;
+               f = intersect(field,obj.Fields);
+               if isempty(f)
+                  error(['nigeLab:' mfilename ':BadInputChar'],...
+                     'Invalid field: %s (%s)',field{:},obj.Name);
+               end
+               field = f;
+               suppressWarning = true;
+            case 'logical'
+               field = obj.Fields;
+            otherwise
+               error(['nigeLab:' mfilename ':BadInputClass'],...
+                  'Unexpected class for ''suppressWarning'': %s',...
+                  class(suppressWarning));
          end
          
          % ITERATE ON EACH FIELD AND LINK THE CORRECT DATA TYPE
@@ -3810,7 +3916,7 @@ classdef nigelObj < handle & ...
             out = struct;
             out.(userName) = obj.Pars;
             nigeLab.utils.cprintf(fmt,...
-               'Creating new %sObj.Pars file: %s/%s (User: %s)\n',...
+               'Creating new %sObj.Pars file: %s%s (User: %s)\n',...
                lower(type),pname,fname,userName);
             f = fieldnames(obj.Pars);
             for i = 1:numel(f)
@@ -3822,7 +3928,7 @@ classdef nigelObj < handle & ...
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
                   nigeLab.utils.cprintf(fmt,...
-                     'Merging %sObj.Pars into %s/%s (User: %s)\n',...
+                     'Merging %sObj.Pars into %s%s (User: %s)\n',...
                      lower(type),pname,fname,userName);
                   for i = 1:numel(s_all)
                      if isfield(obj.Pars,s_all{i})
@@ -3832,7 +3938,7 @@ classdef nigelObj < handle & ...
                   end
                case 'reset'
                   nigeLab.utils.cprintf(fmt,...
-                     'Clearing %s/%s (User: %s)\n',...
+                     'Clearing %s%s (User: %s)\n',...
                      type,pname,fname,userName);
                   out.(userName)=struct;
                otherwise
@@ -3892,7 +3998,7 @@ classdef nigelObj < handle & ...
          for i = 1:numel(f)
             if ~isfield(s,f{i})
                error(['nigeLab:' mfilename ':MissingField'],...
-                  'Missing field (''%s'') of (obj.Pars.%s...)\n',...
+                  '[SETPARAMS]: Missing field (''%s'') of (obj.Pars.%s...)\n',...
                   f{i},parsField);
             end
          end
@@ -3978,18 +4084,20 @@ classdef nigelObj < handle & ...
          propList = {mc.PropertyList.Name};
          idx = ismember(lower(propList),lower(propName));
          if sum(idx) < 1
-            nigeLab.utils.cprintf('Comments','No %s property: %s',...
+            nigeLab.utils.cprintf('Comments',obj.Verbose,...
+               'No %s property: %s',...
                class(obj),propName);
             return;
          elseif sum(idx) > 1
             idx = ismember(propList,propName);
             if sum(idx) < 1
-               nigeLab.utils.cprintf('Comments','No %s property: %s',...
+               nigeLab.utils.cprintf('Comments',obj.Verbose,...
+                  'No %s property: %s',...
                   class(obj),propName);
                return;
             elseif sum(idx) > 1
                error(['nigeLab:' mfilename ':AmbiguousPropertyName'],...
-                  ['Bad obj Property naming convention.\n'...
+                  ['[SETPROP]: Bad obj Property naming convention.\n'...
                   'Avoid Property names that have case-sensitivity.\n'...
                   '->\tIn this case ''%s'' vs ''%s'' <-\n'],propList{idx});
             end
@@ -4047,8 +4155,8 @@ classdef nigelObj < handle & ...
                % Shouldn't have more than 3 fields (could use eval here,
                % but prefer to avoid eval whenever possible).
                error(['nigeLab:' mfilename ':TooManyStructFields'],...
-                  ['Too many ''.'' delimited fields.\n' ...
-                  'Max 2 ''.'' for struct Properties.']);
+                  ['[%s/SETPROP]: Too many ''.'' delimited fields.\n' ...
+                  'Max 2 ''.'' for struct Properties.'],upper(obj.Type));
          end
       end
       
@@ -4071,11 +4179,11 @@ classdef nigelObj < handle & ...
             return;
          end
          
-         if nargin < 2
+         if nargin < 2 || isempty(userName)
             if isstruct(obj.Pars) && ~isempty(obj.Pars)
-               if isfield(obj.Pars,'Video')
-                  if isfield(obj.Pars.Video,'User')
-                     userName = obj.Pars.Video.User;
+               if isfield(obj.Pars,'Experiment')
+                  if isfield(obj.Pars.Experiment,'User')
+                     userName = obj.Pars.Experiment.User;
                   else
                      userName = nigeLab.utils.makeHash();
                      userName = userName{:}; % Should be char array
@@ -4090,7 +4198,7 @@ classdef nigelObj < handle & ...
             end
          end
          
-         obj.User = userName; % Assignment
+         obj.UserContainer = userName; % Assignment
          obj.checkParsFile();
       end
       
@@ -4243,8 +4351,8 @@ classdef nigelObj < handle & ...
             % Otherwise, paramType must be a char array
          elseif ~ischar(paramType)
             error(['nigeLab:' mfilename ':BadInputClass'],...
-               ['[UPDATEPARAMS]: nigeLab.%s/updateParams expects ' ...
-               'paramType to be cell or char'],class(obj));
+               ['[%s/UPDATEPARAMS]: nigeLab.%s/updateParams expects ' ...
+               'paramType to be cell or char'],upper(obj.Type),obj.Type);
          end % iscell(paramType)
 
          % Handle the behavior for "special" non-paramType commands
@@ -4303,9 +4411,9 @@ classdef nigelObj < handle & ...
                idx = find(strcmpi(p_all,paramType),1,'first');
                if isempty(idx)
                   [fmt,idt] = obj.getDescriptiveFormatting(); % For cmd win
-                  nigeLab.utils.cprintf('Errors*',...
+                  nigeLab.utils.cprintf('Errors*',obj.Verbose,...
                      '%s[UPDATEPARAMS]: ',idt);
-                  nigeLab.utils.cprintf(fmt,...
+                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
                      'Bad .Pars fieldname (''%s'')\n',paramType);
                   flag = false;
                   return;
@@ -4316,7 +4424,7 @@ classdef nigelObj < handle & ...
          
          % Format initial part of command window output
          [fmt,idt,type] = obj.getDescriptiveFormatting(); % For cmd window
-         nigeLab.utils.cprintf(fmt,'%s[UPDATEPARAMS]: ',idt);
+         nigeLab.utils.cprintf(fmt,obj.Verbose,'%s[UPDATEPARAMS]: ',idt);
          fmt = fmt(1:(end-1)); % Rest is not bold
          
          % Handle behavior for known "good" (existing) paramType
@@ -4336,13 +4444,13 @@ classdef nigelObj < handle & ...
                end
                
                if obj.HasParsSaved.(field)
-                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',obj.Verbose,...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                   return;
                end 
                obj.Pars.(field) = p;
-               nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+               nigeLab.utils.cprintf('[0.35 0.35 0.35]',obj.Verbose,...
                   '%s Pars.%s inherited from Parent\n',...
                   obj.Name,field);
             case {'initonly','init'} % Load only if .HasParsInit is false
@@ -4357,12 +4465,12 @@ classdef nigelObj < handle & ...
                if obj.HasParsInit.(field)
                   flag = true;
                   obj.HasParsSaved.(field) = true;
-                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',obj.Verbose,...
                      '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
                      lower(type),field,obj.Name);
                else
                    flag = obj.updateParams(field,'Direct');
-                  nigeLab.utils.cprintf(fmt,...
+                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
                      '%sObj.Pars.%s must be initialized\n\t',...
                      lower(type),field);
                   flag = obj.updateParams(field,'Direct');
@@ -4373,7 +4481,7 @@ classdef nigelObj < handle & ...
                doComparison = true;
                p = nigeLab.defaults.(field)(); % Load parameter defaults
             case {'loadonly'} % Load direct from _Pars.mat
-               nigeLab.utils.cprintf(fmt,...
+               nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Loading %sObj.Pars.%s directly from %s_Pars.mat\n\t',...
                   lower(type),field,obj.Name);
                flag = loadParams(obj,field);
@@ -4394,11 +4502,11 @@ classdef nigelObj < handle & ...
                   obj.HasParsSaved.(field) = ~isequal(obj.Pars.(field),p);
                end
                obj.Pars.(field) = p;
-               nigeLab.utils.cprintf(fmt,...
+               nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Loaded directly from +defaults/%s.m file\n',...
                   field);
             otherwise % Otherwise, it is not recognized
-               nigeLab.utils.cprintf('Errors*',...
+               nigeLab.utils.cprintf('Errors*',obj.Verbose,...
                   'Unrecognized "method" behavior: %s\n',method);
                flag = false;
                return;
@@ -4408,7 +4516,7 @@ classdef nigelObj < handle & ...
          if doComparison
             if loadParams(obj,field) % If successful load:
                if isequal(obj.Pars.(field),p)
-                  nigeLab.utils.cprintf([0.35 0.35 0.35],...
+                  nigeLab.utils.cprintf([0.35 0.35 0.35],obj.Verbose,...
                      '%sObj.%s (%s_Pars.mat) parameters up-to-date\n',...
                      lower(type),field,obj.Name);
                   return; % No need to update anything else
@@ -4423,15 +4531,16 @@ classdef nigelObj < handle & ...
                      obj.Params.Pars.(field).(fmiss{i}) = p.(fmiss{i}); % So add
                   end
                   obj.HasParsInit.(field) = true;
-                  nigeLab.utils.cprintf(fmt,...
+                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
                      '%sObj.Pars.%s (%s_Pars.mat) was missing:\n',...
                      lower(type),field,obj.Name);
                   for i = 1:numel(fmiss)
-                     nigeLab.utils.cprintf('[0.25 0.25 0.25]*',...
+                     nigeLab.utils.cprintf('[0.25 0.25 0.25]*',obj.Verbose,...
                         '\t%s<strong>%s</strong>\n',idt,fmiss{i});
                   end
-                  nigeLab.utils.cprintf(fmt,'\n%s[UPDATEPARAMS]: ',idt);
-                  nigeLab.utils.cprintf(fmt,...
+                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
+                     '\n%s[UPDATEPARAMS]: ',idt);
+                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
                      ['Saving UPDATED %sObj.%s ' ...
                      '(Name: ''%s'' || User: ''%s'')\n'],...
                      lower(type),field,obj.Name,obj.User);
@@ -4453,15 +4562,16 @@ classdef nigelObj < handle & ...
                         obj.HasParsInit.(field) = true;
                      otherwise
                         error(['nigeLab:' mfilename ':BadCase'],...
-                           'Unexpected case: (%s); check code.\n',method);
+                           ['[UPDATEPARAMS]: Unexpected case: ' ...
+                           '(%s); check code.\n'],method);
                   end
                end
             else % Otherwise, couldn't load params from User file
-               nigeLab.utils.cprintf('Errors*',...
+               nigeLab.utils.cprintf('Errors*',obj.Verbose,...
                   '%sObj.Pars.%s (%s_Pars.mat) failed to load.\n',...
                   lower(type),field,obj.Name);
                obj.Params.Pars.(field) = p;
-               nigeLab.utils.cprintf(fmt,...
+               nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   '\t%s(Loaded from +defaults/%s.m)\n',idt,field);
                obj.HasParsInit.(field) = true;
                obj.HasParsSaved.(field) = false;
@@ -4544,8 +4654,9 @@ classdef nigelObj < handle & ...
             if isempty(SaveLoc)
                [fmt,idt,type] = obj.getDescriptiveFormatting();
                dbstack;
-               nigeLab.utils.cprintf('Errors*','%s[GENPATHS]: ',idt);
-               nigeLab.utils.cprintf(fmt,...
+               nigeLab.utils.cprintf('Errors*',obj.Verbose,...
+                  '%s[GENPATHS]: ',idt);
+               nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Tried to build [%s].Paths using empty base\n',type);
                return;
             end
@@ -4579,10 +4690,10 @@ classdef nigelObj < handle & ...
          
          obj.Params.Paths = paths;
          [fmt,idt,type] = obj.getDescriptiveFormatting();
-         nigeLab.utils.cprintf(fmt,...
+         nigeLab.utils.cprintf(fmt,obj.Verbose,...
             '%s[GENPATHS]: Paths updated for %s (%s)\n',...
             idt,upper(type),obj.Name);
-         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+         nigeLab.utils.cprintf(fmt(1:(end-1)),obj.Verbose,...
             '\t%s%sObj.Ouput is now %s\n',...
             idt,lower(type),nigeLab.utils.shortenedPath(paths.Output));
       end
@@ -4600,7 +4711,10 @@ classdef nigelObj < handle & ...
          if ~doRequest
             return;
          end
-         switch obj.Type % Since source is child object, cannot be Block
+         if numel(obj) < 1
+            return;
+         end
+         switch obj(1).Type % Since source is child object, cannot be Block
             case 'Block'
                % "Pass the notification up the chain"
                notify(obj,'DashChanged',evt);        
@@ -4740,7 +4854,7 @@ classdef nigelObj < handle & ...
             obj.Pars = builtin('subsasgn',obj.Pars,S,val);
             flag = true;
          catch
-            nigeLab.utils.cprintf('Errors',...
+            nigeLab.utils.cprintf('Errors',obj.Verbose,...
                'Could not assign Pars.%s value (%s)',str,val);
          end
       end
@@ -4900,7 +5014,8 @@ classdef nigelObj < handle & ...
          try
             m = matfile(params_fname);
          catch
-            warning('%s load issue: file may be corrupt.\n',params_fname);
+            warning(['nigeLab:' mfilename ':CHECKPARSFILE'],...
+               '%s load issue: file may be corrupt.\n',params_fname);
             obj.HasParsFile = false;
             return;
          end
@@ -4967,13 +5082,13 @@ classdef nigelObj < handle & ...
                   if ~parsAllReady
                      f_miss = setdiff(parsField,F);
                      [fmt,idt,type] = obj.getDescriptiveFormatting();
-                     nigeLab.utils.cprintf(fmt,...
+                     nigeLab.utils.cprintf(fmt,obj.Verbose,...
                         ['%s[CHECKPARSINIT]: %s (%s) ' ...
                          'failed to initialize these parameters-\n'],...
                          idt,obj.Name,type);
                      for i = 1:numel(f_miss)
                         nigeLab.utils.cprintf('[0.40 0.40 0.40]*',...
-                           '\t%s%s\n',idt,f_miss{i});
+                           obj.Verbose,'\t%s%s\n',idt,f_miss{i});
                      end
                      return;
                   else
@@ -5293,7 +5408,8 @@ classdef nigelObj < handle & ...
          
          if isempty(obj.SaveLoc)
             error(['nigelab:' mfilename ':BadSaveLoc'],...
-               'Tried to save params before SaveLoc was set.');
+               ['[%s/GETPARSFILENAME]: Tried to save parameters ' ...
+               'before SaveLoc was set.'],upper(obj.Type));
          end
 
          fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
@@ -5465,8 +5581,8 @@ classdef nigelObj < handle & ...
          propVal = C{2};
          if ~strcmpi(propName{1},obj.Type)
             error(['nigeLab:' mfilename ':BadFolderHierarchy'],...
-               'Attempt to load non-%s from %s folder.',obj.Type,...
-               obj.Type);
+               '[%s/LOADIDFILE]: Attempt to load non-%s from %s folder.',...
+               upper(obj.Type),obj.Type,obj.Type);
          end
          
          mc = metaclass(obj);
@@ -5481,14 +5597,16 @@ classdef nigelObj < handle & ...
                switch propVal{i}
                   case 'User' % Special case
                      if recursionFlag
-                        warning('Bad %s file. Retry load once.\n',...
+                        warning(['nigeLab:' mfilename ':LOADIDFILE'],...
+                           'Bad %s file. Retry load once.\n',...
                             obj.FolderIdentifier);
                         obj.saveIDFile;
                         obj.loadIDFile(false);
                      end
                      return;                     
                   otherwise
-                     warning('%s %s value missing.\n',propName{i},...
+                     warning(['nigeLab:' mfilename ':LOADIDFILE'],...
+                        '%s %s value missing.\n',propName{i},...
                         obj.FolderIdentifier);
                      continue;
                end
@@ -5601,7 +5719,7 @@ classdef nigelObj < handle & ...
                end
             else
                pars = struct;
-               nigeLab.utils.cprintf('Comments',...
+               nigeLab.utils.cprintf('Comments',obj.Verbose,...
                   ['\nNo parsing parameters detected.\n' ...
                    '-->\tUsing values in ~/+nigeLab/+defaults/%s.m'],...
                    obj.Type);
@@ -5703,7 +5821,8 @@ classdef nigelObj < handle & ...
                      f,nigeLab.utils.getNigeLink(link_str));
                end
                if isempty(pars.SpecialMeta.(f).vars)
-                  warning(['No <strong>%s</strong> "SpecialMeta" configured\n' ...
+                  warning(['nigeLab:' mfilename ':PARSE'],...
+                     ['No <strong>%s</strong> "SpecialMeta" configured\n' ...
                            '-->\t Making random "%s"'],f,f);
                   meta.(f) = nigeLab.utils.makeHash();
                   meta.(f) = meta.(f){:};
@@ -5854,20 +5973,22 @@ classdef nigelObj < handle & ...
          
          % Save .nigel___ file to identify this "Type" of folder
          if isempty(obj.IDFile)
-            [fmt,idt,type] = obj.getDescriptiveFormatting();
-            dbstack;
-            if isempty(obj.Name)
-               nigeLab.utils.cprintf(fmt,...
-                  '%s[SAVEIDFILE]: %s cannot save .nigelFile\n',...
-                  idt,type);
-               nigeLab.utils.cprintf(fmt(1:(end-1)),...
-                  '\t%s(Missing parsed .Name of %s)\n',idt,type);
-            else
-               nigeLab.utils.cprintf(fmt,...
-                  '%s[SAVEIDFILE]: %s (%s) cannot save .nigelFile\n',...
-                  idt,obj.Name,type);
-               nigeLab.utils.cprintf(fmt(1:(end-1)),...
-                  '\t%s(Output path location data is missing.)\n',idt);
+            if obj.Verbose
+               [fmt,idt,type] = obj.getDescriptiveFormatting();
+               dbstack;
+               if isempty(obj.Name)
+                  nigeLab.utils.cprintf(fmt,...
+                     '%s[SAVEIDFILE]: %s cannot save .nigelFile\n',...
+                     idt,type);
+                  nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                     '\t%s(Missing parsed .Name of %s)\n',idt,type);
+               else
+                  nigeLab.utils.cprintf(fmt,...
+                     '%s[SAVEIDFILE]: %s (%s) cannot save .nigelFile\n',...
+                     idt,obj.Name,type);
+                  nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                     '\t%s(Output path location data is missing.)\n',idt);
+               end
             end
             return;
          else
@@ -5897,7 +6018,8 @@ classdef nigelObj < handle & ...
             fclose(fid);
             flag = true;
          else
-            warning('Could not write FolderIdentifier (%s)',obj.IDFile);
+            warning(['nigeLab:' mfilename ':SAVEIDFILE'],...
+               'Could not write FolderIdentifier (%s)',obj.IDFile);
             flag = false;
          end         
       end
@@ -5991,14 +6113,16 @@ classdef nigelObj < handle & ...
             obj.Output = outPath;
             return;
          end
-         [fmt,idt,type] = obj.getDescriptiveFormatting();
-         dbstack;
-         nigeLab.utils.cprintf('Errors*','%s[INVALID]: ',idt);
-         nigeLab.utils.cprintf(fmt,...
-            'Tried to set unknown [%s] .Output path\n',type)
-         nigeLab.utils.cprintf(fmt,...
-            '\t%sAssigned ''%s'' (but %s was missing)\n',...
-            idt,nigeLab.utils.shortenedPath(outPath),f);
+         if obj.Verbose
+            [fmt,idt,type] = obj.getDescriptiveFormatting();
+            dbstack;
+            nigeLab.utils.cprintf('Errors*','%s[INVALID]: ',idt);
+            nigeLab.utils.cprintf(fmt,...
+               'Tried to set unknown [%s] .Output path\n',type)
+            nigeLab.utils.cprintf(fmt,...
+               '\t%sAssigned ''%s'' (but %s was missing)\n',...
+               idt,nigeLab.utils.shortenedPath(outPath),f);
+         end
       end
       
       % Toggle .IsDashOpen of all Children
@@ -6050,11 +6174,13 @@ classdef nigelObj < handle & ...
          end
          
          if isempty(saveLoc)
-            [fmt,idt,type] = obj.getDescriptiveFormatting();
-            dbstack;
-            nigeLab.utils.cprintf('Errors*','%s[UPDATEPATHS]: ',idt);
-            nigeLab.utils.cprintf(fmt,...
-               'Tried to update [%s].Paths using empty base\n',type);
+            if obj.Verbose
+               [fmt,idt,type] = obj.getDescriptiveFormatting();
+               dbstack;
+               nigeLab.utils.cprintf('Errors*','%s[UPDATEPATHS]: ',idt);
+               nigeLab.utils.cprintf(fmt,...
+                  'Tried to update [%s].Paths using empty base\n',type);
+            end
             return;
          end
          
@@ -6216,8 +6342,11 @@ classdef nigelObj < handle & ...
                case {'Tank','nigelTank'}
                   b = nigeLab.Tank(a);
                otherwise
-                  error(['nigeLab:' mfilename ':BadLoad'],...
-                     'Could not load object due to unknown Type');
+                  nigeLab.utils.cprintf('Errors*',...
+                     ['[LOADOBJ]: Could not load object due ' ...
+                     'to unknown Type (''%s'')'],type);
+                  b = nigeLab.nigelObj.Empty();
+                  return;
             end
          else
             b = a;
@@ -6246,7 +6375,7 @@ classdef nigelObj < handle & ...
                b.PropListener(1).Enabled = true;
          end
          [fmt,idt,type] = b.getDescriptiveFormatting();
-         nigeLab.utils.cprintf(fmt,...
+         nigeLab.utils.cprintf(fmt,b.Verbose,...
             '%s\b\b\b[LOAD]: %s (%s) loaded successfully!\n',...
             idt,b.Name,type);
       end
@@ -6309,7 +6438,8 @@ classdef nigelObj < handle & ...
          
          if ~ismember(obj.Type,{'Tank','Animal'})
             error(['nigeLab:' mfilename ':BadClass'],...
-               'nigelObj.doMethod should only iterate on Tank and Animal');
+               'nigelObj.%s should only iterate on Tank and Animal\n',...
+               char(fcn_handle));
          end
          
          if numel(obj.Children) > 0

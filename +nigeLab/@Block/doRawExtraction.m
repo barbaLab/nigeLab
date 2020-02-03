@@ -66,7 +66,7 @@ switch blockObj.RecType
       %  
       %  * All formats listed on open-ephys "data formats"
         
-      warning('%s is not a supported (case-sensitive).',...
+      warning('%s is not a supported data format (case-sensitive)',...
          blockObj.RecType);
       return;
 end
