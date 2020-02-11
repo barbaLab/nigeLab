@@ -1,5 +1,5 @@
 function [fname,data] = behaviorData2BlockEvents(behaviorData,f_out,f_str)
-%% BEHAVIORDATA2BLOCKEVENTS  Convert behaviorData table to EVENT data files
+%BEHAVIORDATA2BLOCKEVENTS  Convert behaviorData table to EVENT data files
 %
 %  nigeLab.workflow.behaviorData2BlockEvents(behaviorData,f_out,f_str);
 %
@@ -8,7 +8,7 @@ function [fname,data] = behaviorData2BlockEvents(behaviorData,f_out,f_str)
 %     --> f_out  :  Location where file should be saved
 %     --> f_str  :  Naming convention string
 
-%%
+
 if nargin < 3
    f_str = 'Curated_%s_Events.mat';
 end

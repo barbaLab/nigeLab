@@ -124,11 +124,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.Color = nigeLab.libs.DashBoard.initColors();
          
          % Build figure and all container panels 
-         obj.nigelGUI = obj.buildGUI();
+         obj.nigelGUI = buildGUI(obj);
          
          % Add nigelObj hierarchy as a uiw.widget.Tree to "Tree" panel
-         pTree = obj.getChild('TreePanel');
-         obj.Tree = obj.buildTree(pTree);
+         pTree = getChild(obj,'TreePanel');
+         obj.Tree = buildTree(obj,pTree);
          
          % Add the remote monitor to the "Queue" panel
          pQueue = obj.getChild('QueuePanel');
@@ -162,7 +162,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.addAllListeners();
          
          % Add "rollover" interaction mediator for nigelButtons
-         obj.RollOver = nigeLab.utils.Mouse.rollover(obj.nigelGUI);
+         obj.RollOver = nigeLab.utils.Mouse.rollover(...
+            obj.nigelGUI,[obj.nigelButtons.Tree,obj.nigelButtons.TitleBar]);
       end
    end
    

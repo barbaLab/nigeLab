@@ -1,5 +1,5 @@
 function todays_date = getNigelDate(dt)
-% GETNIGELDATE  Returns today's date in standardized "nigeLab" format
+%GETNIGELDATE  Returns today's date in standardized "nigeLab" format
 %
 %  todays_date = nigeLab.utils.getNigelDate();
 %  todays_date = nigeLab.utils.getNigelDate(dt);
@@ -10,7 +10,7 @@ function todays_date = getNigelDate(dt)
 %  outputs:
 %  todays_date  --  Returned as char array of 'YYYY-mm-DD' format
 
-%%
+
 if nargin < 1
    dt = datenum(datetime);
 end

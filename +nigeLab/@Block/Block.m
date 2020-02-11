@@ -81,10 +81,19 @@ classdef Block < nigeLab.nigelObj
    
    % HIDDEN,TRANSIENT,DEPENDENT,PUBLIC
    properties (Hidden,Transient,Dependent,Access=public)
-      ChannelID      double   % [NumChannels x 2] array of channel and probe numbers
-      NumChannels    double   % Total number of channels 
-      NumProbes      double   % Total number of Probes
-      ScoringField   char     % blockObj.Pars.Video.ScoringEventFieldName
+      ChannelID            double   % [NumChannels x 2] array of channel and probe numbers
+      NumChannels (1,1)    double   % Total number of channels 
+      NumProbes   (1,1)    double   % Total number of Probes
+      ScoringField         char     % blockObj.Pars.Video.ScoringEventFieldName
+      Trial                double   % Timestamp list of trials
+      TrialVideoOffset     double   % Matrix where rows are video cameras and columns are trials. Each value is a trial/camera-specific offset.
+      VideoHeader          double   % "Header" for Video/Event data
+   end
+   
+   % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC
+   properties (AbortSet,Hidden,SetObservable,Access=public)
+      CurNeuralTime  (1,1) double = 0  % Current "Neural Time" for analyses
+      TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
    end
    
    % PUBLIC
@@ -261,6 +270,57 @@ classdef Block < nigeLab.nigelObj
             value = blockObj.Pars.Video.ScoringEventFieldName;
          end
       end
+      
+      % [DEPENDENT] Returns .Trial property
+      function value = get.Trial(blockObj)
+         %GET.TRIAL  Returns .Trial property
+         %
+         %  value = get(blockObj,'Trial');
+         %  --> Returns vector of time stamps of trial onsets
+         value = getEventData(blockObj,blockObj.ScoringField,'ts','Trial');
+      end
+      
+      % [DEPENDENT] Returns .TrialVideoOffset property
+      function value = get.TrialVideoOffset(blockObj)
+         %GET.TRIALVIDEOOFFSET  Returns .TrialVideoOffset property
+         %
+         %  value = get(blockObj,'TrialVideoOffset');
+         %  --> Returns a matrix of times (seconds) in double precision.
+         %      * Rows are video cameras (indexed as in VideoHeader and .Videos)
+         %      * Columns are trials 
+         %  --> Each value is a trial/camera-specific offset
+         %  --> The Neural time can be recovered from any _Events timestamp
+         %      if _Events timestamp == tEvent
+         %      if neural time == tNeu
+         %      if offset in header file (column 4) == videoOffset
+         %      and if the trial/camera specific matrix element == specific
+         %     ("specific" is returned by get(blockObj,'TrialVideoOffset'))
+         %
+         %        >> tNeu = tEvent + videoOffset + specific;
+         %
+         %  If the value cannot be accessed or is not initialized, returns
+         %  zero.
+         
+
+         header = blockObj.VideoHeader;
+         nMeta = header(1,2);
+         if size(header,2) >= (5+nMeta)
+            value = header(:,(5+nMeta):end);
+            value(isnan(value)) = 0;
+         else
+            value = zeros(size(header,1),1);
+         end
+      end
+      
+      % [DEPENDENT]  Returns .VideoHeader property
+      function value = get.VideoHeader(blockObj)
+         %GET.VIDEOHEADER  Returns .VideoHeader property
+         %
+         %  value = get(obj,'Header');
+         
+         value = getEventData(blockObj,blockObj.ScoringField,...
+            'snippet','Header');
+      end
       % % % % % % % % % % END GET.PROPERTY METHODS % % %
 
       % Overloaded method to get 'end' indexing
@@ -357,6 +417,63 @@ classdef Block < nigeLab.nigelObj
                'Failed attempt to set DEPENDENT property: ScoringField\n');
             fprintf(1,'\n');
          end
+      end
+      
+      % [DEPENDENT] Assign .Trial property
+      function set.Trial(blockObj,value)
+         %SET.Trial  Assigns .Trial property
+         setEventData(blockObj,blockObj.ScoringField,'ts','Trial',value);
+      end
+      
+      % [DEPENDENT] Assign .TrialVideoOffset property
+      function set.TrialVideoOffset(blockObj,value)
+         %SET.TRIALVIDEOOFFSET  Returns .TrialVideoOffset property
+         %
+         %  set(blockObj,'TrialVideoOffset');
+         %  --> Set a matrix of times (seconds) in double precision.
+         %      * Rows are video cameras (indexed as in VideoHeader and .Videos)
+         %      * Columns are trials 
+         %  --> Each value is a trial/camera-specific offset
+         %  --> The Neural time can be recovered from any _Events timestamp
+         %      if _Events timestamp == tEvent
+         %      if neural time == tNeu
+         %      if offset in header file (column 4) == videoOffset
+         %      and if the trial/camera specific matrix element == specific
+         %     ("specific" is returned by get(blockObj,'TrialVideoOffset'))
+         %
+         %        >> tNeu = tEvent + videoOffset + specific;
+         %
+         %  If the value cannot be accessed or is not initialized, returns
+         %  zero.
+         
+         header = blockObj.VideoHeader;
+         nMeta = header(1,2);
+         nSpecific = size(value,2);
+         if size(header,2) == (4+nMeta+nSpecific)
+            header(:,(5+nMeta):end) = value;
+            blockObj.VideoHeader = header;
+         else
+            if blockObj.Verbose
+               dbstack();
+               [fmt,idt] = getDescriptiveFormatting(blockObj);
+               nigeLab.sounds.play('pop',0.5);
+               nigeLab.utils.cprintf('Errors*','%s[BLOCK.SET]: ',idt);
+               nigeLab.utils.cprintf(fmt,...
+                  ['Wrong dimensions: Header has %g columns but ' ...
+                  'should have %g columns\n'],size(header,2),...
+                  4+nMeta+nSpecific);
+            end
+            return; % Otherwise dimensions aren't correct
+         end
+      end
+      
+      % [DEPENDENT]  Assigns .VideoHeader property
+      function set.VideoHeader(blockObj,value)
+         %SET.HEADER  Assigns .VideoHeader property
+         % Only uses values in "snippet" field to keep those ones as the
+         % "non-ts" Events
+         setEventData(blockObj,blockObj.ScoringField,...
+            'snippet','Header',value);
       end
       % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
@@ -515,13 +632,14 @@ classdef Block < nigeLab.nigelObj
       fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
       offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo);
       addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
-      info = getScoringMetadata(blockObj,fieldName,hashID); % Retrieve row of metadata scoring
+      clearScoringMetadata(blockObj,fieldName);  % Erase "empty" scoring metadata for a given tracking field
+      info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
       flag = checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
       flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      flag = doEventDetection(blockObj,behaviorData,vidOffset) % Detect "Trials" for candidate behavioral Events
-      flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset)  % Create "Header" for behavioral Events
+      flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction) % Detect "Trials" for candidate behavioral Events
+      flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset,forceHeaderExtraction)  % Create "Header" for behavioral Events
       flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
       flag = doReReference(blockObj)    % Do virtual common-average re-reference
       flag = doSD(blockObj)             % Do spike detection for extracellular field
@@ -532,7 +650,7 @@ classdef Block < nigeLab.nigelObj
       flag = doAutoClustering(blockObj,chan,unit,useSort) % Do automatic spike clustiring
       
       % Methods for streams info
-      stream = getStream(blockObj,streamName,source,scaleOpts); % Returns stream data corresponding to streamName
+      stream = getStream(blockObj,streamName,scaleOpts); % Returns stream data corresponding to streamName
       
       % Methods for parsing channel info
       flag = parseProbeNumbers(blockObj) % Get numeric probe identifier
@@ -551,7 +669,7 @@ classdef Block < nigeLab.nigelObj
       flag = checkSpikeFile(blockObj,ch) % Check a spike file for compatibility
       
       % Method for accessing event info:
-      idx = getEventsIndex(blockObj,field,eventName);
+      [idx,field] = getEventsIndex(blockObj,field,eventName); % Returns index to Events field as well as name of Events.(field)
       [data,blockIdx] = getEventData(blockObj,field,prop,ch,matchValue,matchField) % Retrieve event data
       flag = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
       
