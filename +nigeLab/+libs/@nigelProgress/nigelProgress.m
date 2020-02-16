@@ -1,6 +1,5 @@
 classdef nigelProgress < handle & matlab.mixin.SetGet
-% NIGELPROGRESS    Create a bar allowing graphical tracking of
-%                  completion status via the bar progress.
+% NIGELPROGRESS    Create a bar to allow visual inspection of progress.
 %
 %   bar = nigeLab.libs.nigelProgress('barName',jobObj,UserData);
 %

@@ -1,82 +1,108 @@
-classdef nigelButton < handle & matlab.mixin.SetGet
-%NIGELBUTTON   Buttons in format of nigeLab interface
-%
-%  NIGELBUTTON Properties:
-%     ButtonDownFcn - Function executed by button.
-%        This can be set publically and will change the button down
-%        function for any child objects associated with the nigelButton
-%
-%     Parent - Handle to parent axes object.
-%
-%     Button - Handle to Rectangle object with curved corners.
-%
-%     Label - Handle to Text object displaying some label string.
-%
-%  NIGELBUTTON Methods:
-%     nigelButton - Class constructor.
-%           b = nigeLab.libs.nigelButton(); Add to current axes
-%           b = nigeLab.libs.nigelButton(nigelPanelObj); Add to nigelPanel
-%           b = nigeLab.libs.nigelButton(ax);  Add to axes
-%           b = nigeLab.libs.nigelButton(__,buttonPropPairs,labPropPairs);
-%           b = nigeLab.libs.nigelButton(__,pos,string,buttonDownFcn);
-% 
-%           container can be:
-%           -> nigeLab.libs.nigelPanel
-%           -> axes
-%           -> uipanel
-% 
-%           buttonPropPairs & labPropPairs are {'propName', value}
-%           argument pairs, each given as a [1 x 2*k] cell arrays of pairs
-%           for k properties to set.
-% 
-%           Alternatively, buttonPropPairs can be given as the position of
-%           the button rectangle, and labPropPairs can be given as the
-%           string to go into the button. In this case, the fourth input
-%           (fcn) should be provided as a function handle for ButtonDownFcn
+classdef nigelButton < handle & matlab.mixin.SetGet 
+   %NIGELBUTTON   Buttons in format of nigeLab interface
+   %
+   %  NIGELBUTTON Properties:
+   %     ButtonDownFcn - Function executed by button.
+   %        This can be set publically and will change the button down
+   %        function for any child objects associated with the nigelButton
+   %
+   %     Parent - Handle to parent axes object.
+   %
+   %     Button - Handle to Rectangle object with curved corners.
+   %
+   %     Label - Handle to Text object displaying some label string.
+   %
+   %  NIGELBUTTON Methods:
+   %     nigelButton - Class constructor.
+   %           b = nigeLab.libs.nigelButton(); Add to current axes
+   %           b = nigeLab.libs.nigelButton(nigelPanelObj); Add to nigelPanel
+   %           b = nigeLab.libs.nigelButton(ax);  Add to axes
+   %           b = nigeLab.libs.nigelButton(__,buttonPropPairs,labPropPairs);
+   %           b = nigeLab.libs.nigelButton(__,pos,string,buttonDownFcn);
+   %
+   %           container can be:
+   %           -> nigeLab.libs.nigelPanel
+   %           -> axes
+   %           -> uipanel
+   %
+   %           buttonPropPairs & labPropPairs are {'propName', value}
+   %           argument pairs, each given as a [1 x 2*k] cell arrays of pairs
+   %           for k properties to set.
+   %
+   %           Alternatively, buttonPropPairs can be given as the position of
+   %           the button rectangle, and labPropPairs can be given as the
+   %           string to go into the button. In this case, the fourth input
+   %           (fcn) should be provided as a function handle for ButtonDownFcn
    
    % % % PROPERTIES % % % % % % % % % %
    % PUBLIC
    properties (Access=public)
-      SelectedColor    % Color for border change on "selected" highlight
-      HoveredColor     % Color for border change on "rollover" mouse hover
+      DefaultColor      % Default border color
+      DefaultPosition   % Default position 
+      HoveredColor      % Color for border change on "rollover" mouse hover
+      HoveredFontColor  % Color for font change on "rollover" mouse hover
+      HoveredPosition   % Position for change on "rollover" mouse hover
+      SelectedColor     % Color for border change on "selected" highlight
+      SelectedPosition  % Position for change on "selected"
+      UserData          % Public property to store User Data
+   end
+   
+   % ABORTSET,DEPENDENT,PUBLIC
+   properties (AbortSet,Dependent,Access=public)
+      Enable            char = 'on'             % Is the button enabled?
+      Hovered           char = 'off'            % Flags Button as "hovered"
+      Selected          char = 'off'            % Flags Button as "selected"
+      Visible           char = 'on'             % 'Button' visibility
    end
    
    % DEPENDENT,PUBLIC
    properties (Dependent,Access=public)
-      FontName    char = 'DroidSans'
-      FontWeight  char = 'normal'
+      ButtonDownFcn                                % Function handle
+      Clipping             char = 'off'            % 'Button' clipping
+      Curvature      (1,2) double = [0.2 0.6]      % [X- Y-] curvature
+      FaceColor                                    % 'Button' face color
+      EdgeColor                                    % 'Button' edge color
+      FontColor                                    % 'Label' Font color
+      FontName             char = 'DroidSans'      % 'Label' font name
+      FontSize       (1,1) double = 0.35           % 'Label' font size
+      FontUnits            char = 'normalized'     % 'Label' font units
+      FontWeight           char = 'normal'         % 'Label' font weight
+      HorizontalAlignment  char = 'center'         % 'Label' horizontal align
+      HoldSelection        char = 'off'            % If 'off' (default), release "Selected" on MouseUp
+      IconDisplayStyle     char = 'off'            % If 'off' does not show in legends
+      LineWidth      (1,1) double = 1.00           % 'Button' edge width
+      PixelPosition  (1,4) double                  % Read-only Pixel position
+      Position       (1,4) double = [0 0 1 1]      % 'Button' position
+      String               char                    % String displayed on b.Label
+      Tag                  char                    % Same as String
+      VerticalAlignment    char = 'middle'         % 'Label' vertical align
+      WindowButtonUpFcn    cell                    % Reformatted version of Fcn_ and Fcn_Args_ properties
+   end
+   
+   % CONSTANT,PUBLIC
+   properties (Constant,Access=public)
+      MinimumPixelHeight   double = 35             % Minimum height (in pixels) for 'Label'
+      Type                 char = 'nigelbutton'    % Type of graphics object
+      Units                char = 'data'           % 'Label' position units
    end
    
    % SETOBSERVABLE,PUBLIC
    properties (SetObservable,Access=public)
-      Enable char = 'on'  % Is the button enabled?
       FaceColorEnable     % b.Button.FaceColor
       FaceColorDisable    % Color for face when button disabled
       FontColorEnable     % b.Label.Color
       FontColorDisable    % Color for string on button when disabled
-      String char         % String displayed on b.Label
-   end
-
-   % HIDDEN,PUBLIC
-   properties (Hidden,Access=public)
-      Fcn                      % Function to be executed
-      Fcn_Args    cell         % (Optional) function arguments
    end
    
-   % SETOBSERVABLE,RESTRICTED:nigeLab.utils.Mouse.rollover
-   properties (SetObservable,Access=?nigeLab.utils.Mouse.rollover)
-      Hovered char = 'off'    % Does this button have mouse over it?
-   end
-   
-   % SETOBSERVABLE,PUBLIC/PROTECTED
-   properties (SetObservable,GetAccess=public,SetAccess=protected)
-      Selected char = 'off'   % Is this button currently clicked
+   % HIDDEN,SETOBSERVABLE,TRANSIENT,PUBLIC/PROTECTED
+   properties (Hidden,SetObservable,Transient,GetAccess=public,SetAccess=protected)
+      Border  matlab.graphics.primitive.Rectangle  % Border of "button"
       Button  matlab.graphics.primitive.Rectangle  % Curved rectangle
       Label   matlab.graphics.primitive.Text       % Text to display
    end
    
-   % PUBLIC/IMMUTABLE
-   properties (GetAccess=public,SetAccess=immutable)
+   % TRANSIENT,PUBLIC/IMMUTABLE
+   properties (Transient,GetAccess=public,SetAccess=immutable)
       Figure  matlab.ui.Figure           % Figure containing the object
       Group   matlab.graphics.primitive.Group  % "Container" object
       Parent  matlab.graphics.axis.Axes  % Axes container
@@ -84,82 +110,493 @@ classdef nigelButton < handle & matlab.mixin.SetGet
    
    % PROTECTED
    properties (Access=protected)
-      Border    matlab.graphics.primitive.Rectangle  % Border of "button"
-      Listener  event.listener                   % Property event listener
+      Enable_     char = 'on'     % Store for .Enable Dependent prop
+      Fcn_                        % Executed on WindowButtonUpFcn
+      Fcn_Args_   cell            % (Optional) args for nigelButton.Fcn
+      Hovered_    char = 'off'    % Does this button have mouse over it?
+      HoldSelection_ char = 'off' % If 'on', then MouseUp does not "release" selected state
+      LineWidth_  double = 1.00   % Button line width (default)
+      Selected_   char = 'off'    % Is this button currently clicked
+      Visible_    char = 'on'     % Is it Visible?
    end
    % % % % % % % % % % END PROPERTIES %
    
    % % % METHODS% % % % % % % % % % % %
    % NO ATTRIBUTES (overloaded methods)
    methods
-      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
-      function value = get.FontName(obj)
-         value = obj.Label.FontName;
+      % Overloaded methods
+      % Set properties for an array
+      function set(b,varargin)
+         if numel(b) > 1
+            for i = 1:numel(b)
+               set(b(i),varargin{:});
+            end
+            return;
+         end
+         propNamesAll = properties(b);
+         for iV = 1:2:numel(varargin)
+            idx = strcmpi(propNamesAll,varargin{iV});
+            if sum(idx)==1
+               b.(propNamesAll{idx}) = varargin{iV+1};
+            end
+         end
       end
       
-      function value = get.FontWeight(obj)
-         value = obj.Label.FontWeight;
+      % Delete associated graphics objects
+      function delete(b)
+         %DELETE  Delete associated graphics objects
+         %
+         %  delete(b);
+         %  --> Called if any of the Graphics (Button, Border, or Label)
+         %      are destroyed
+         
+         % Handle array elements individually
+         if numel(b) > 1
+            for i = 1:numel(b)
+               if isvalid(b(i))
+                  delete(b(i));
+               end
+            end
+            return;
+         end
+         
+         % Delete the Group to delete the rest of the objects
+         if ~isempty(b.Group)
+            if isvalid(b.Group)
+               delete(b.Group);
+            end
+         end
       end
-      % % % % % % % % % % END GET.PROPERTY METHODS % % %
       
-      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
-      function set.FontName(obj,value)
-         obj.Label.FontName = value;
+      % [DEPENDENT] property get/set methods
+      function value = get.ButtonDownFcn(b)
+         value = [{b.Fcn_}, b.Fcn_Args_];
+      end
+      function set.ButtonDownFcn(b,value)
+         if isempty(value)
+            b.Fcn_ = @(txt)disp(txt);
+            b.Fcn_Args_ = {b};
+            return;
+         end         
+         if iscell(value)
+            if numel(value) == 1
+               b.Fcn_ = value{:};
+               b.Fcn_Args_ = cell(1,0);
+            else
+               b.Fcn_ = value{1};
+               value(1) = [];
+               b.Fcn_Args_ = value;
+            end
+         else
+            b.Fcn_ = value;
+            b.Fcn_Args_ = cell(1,0);
+         end
       end
       
-      function set.FontWeight(obj,value)
-         obj.Label.FontWeight = value;
+      function value = get.Curvature(b)
+         value = b.Button.Curvature;
       end
-      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+      function set.Curvature(b,value)
+         b.Button.Curvature = value;
+         b.Border.Curvature = value;
+      end
+      
+      function value = get.Clipping(b)
+         value = b.Button.Clipping;
+      end
+      function set.Clipping(b,value)
+         b.Button.Clipping = value;
+         b.Border.Clipping = value;
+         b.Label.Clipping = value;
+      end
+      
+      function set.DefaultColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value); 
+         b.DefaultColor = c;
+      end      
+      
+      function value = get.EdgeColor(b)
+         value = b.Border.EdgeColor;
+      end
+      function set.EdgeColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value);    
+         b.Border.EdgeColor = c;
+         b.DefaultColor = c;
+      end
+      
+      function value = get.Enable(b)
+         value = b.Enable_;
+      end
+      function set.Enable(b,value)
+         switch value
+            case 'on'
+               b.FaceColor = b.FaceColorEnable;
+               b.FontColor = b.FontColorEnable;
+            case 'off'
+               b.FaceColor = b.FaceColorDisable;
+               b.FontColor = b.FontColorDisable;
+         end
+         b.Enable_ = value;
+         drawnow;
+      end
+      
+      function value = get.FaceColor(b)
+         if strcmp(b.Enable,'on')
+            value = b.FaceColorEnable;
+         else
+            value = b.FaceColorDisable;
+         end
+      end
+      function set.FaceColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value);               
+         b.Button.FaceColor = c;
+         if strcmp(b.Enable,'on')
+            b.FaceColorEnable = c;
+         else
+            b.FaceColorDisable = c;
+         end
+      end
+      
+      function value = get.FontColor(b)
+         if strcmp(b.Enable,'on')
+            value = b.FontColorEnable;
+         else
+            value = b.FontColorDisable;
+         end
+      end
+      function set.FontColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value);    
+         b.Label.Color = c;
+         if strcmp(b.Enable,'on')
+            b.FontColorEnable = c;
+         else
+            b.FontColorDisable = c;
+         end
+      end
+      
+      function value = get.FontName(b)
+         value = b.Label.FontName;
+      end
+      function set.FontName(b,value)
+         b.Label.FontName = value;
+      end
+      
+      function value = get.FontWeight(b)
+         value = b.Label.FontWeight;
+      end
+      function set.FontWeight(b,value)
+         b.Label.FontWeight = value;
+      end
+      
+      function value = get.FontSize(b)
+         if strcmp(b.FontUnits,'normalized')
+            scl = b.Button.Position(4) / diff(b.Parent.XLim);
+            value = b.Label.FontSize / scl;
+         else
+            value = b.Label.FontSize;
+         end
+      end
+      function set.FontSize(b,value)
+         if strcmp(b.FontUnits,'normalized')
+            b.Label.FontSize = fixLabelSize(obj,value);
+         else
+            b.Label.FontSize = value;
+         end
+      end
+      
+      function value = get.FontUnits(b)
+         value = b.Label.FontUnits;
+      end
+      function set.FontUnits(b,value)
+         b.Label.FontUnits = value;
+      end
+      
+      function value = get.HoldSelection(b)
+         value = b.HoldSelection_;
+      end
+      function set.HoldSelection(b,value)
+         b.HoldSelection_ = value;
+      end
+      
+      function value = get.HorizontalAlignment(b)
+         value = b.Label.HorizontalAlignment;
+      end
+      function set.HorizontalAlignment(b,value)
+         b.Label.HorizontalAlignment = value;
+      end
+      
+      function value = get.Hovered(b)
+         value = b.Hovered_;
+      end
+      function set.Hovered(b,value)
+         if strcmp(value,'on')
+            uistack(b.Group,'top');
+         end
+         
+         if strcmp(b.Selected,'on') || strcmp(b.Enable,'off')
+            b.Hovered_ = 'off';
+            return;
+         end
+         
+         b.Hovered_ = value;
+         switch b.Hovered_
+            case 'on'
+               b.Border.EdgeColor = b.HoveredColor;
+               b.Border.LineWidth = b.LineWidth_ * 1.75;
+               set(b.Label,...
+                  'Color',b.HoveredFontColor,...
+                  'FontWeight','normal');
+               b.Position = b.HoveredPosition;
+            case 'off'
+               b.Border.EdgeColor = b.DefaultColor;
+               b.Border.LineWidth = b.LineWidth_;
+               b.Label.Color = b.FontColor;
+               b.Position = b.DefaultPosition;
+         end
+         drawnow;
+      end
+      
+      function set.HoveredColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value);    
+         b.HoveredColor = c;
+      end
+      
+      function set.HoveredFontColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value);    
+         b.HoveredFontColor = c;
+      end
+      
+      function value = get.IconDisplayStyle(b)
+         value = b.Group.Annotation.LegendInformation.IconDisplayStyle;
+      end
+      function set.IconDisplayStyle(b,value)
+         b.Group.Annotation.LegendInformation.IconDisplayStyle = value;
+      end
+      
+      function value = get.LineWidth(b)
+         if strcmp(b.Selected,'on')
+            value = b.LineWidth_ * 2.5;
+         elseif strcmp(b.Hovered,'on')
+            value = b.LineWidth_ * 1.75;
+         else
+            value = b.LineWidth_;
+         end
+      end
+      function set.LineWidth(b,value)
+         b.LineWidth_ = value;
+         b.Button.LineWidth = value;
+         b.Border.LineWidth = value;
+      end
+      
+      function value = get.PixelPosition(b)
+         value = getpixelposition(b.Parent);
+      end
+      function set.PixelPosition(~,~)
+         % Does nothing
+         nigeLab.sounds.play('pop',2.7);
+         dbstack();
+         nigeLab.utils.cprintf('Errors*','[NIGELBUTTON]: ');
+         nigeLab.utils.cprintf('Errors',...
+            'Failed attempt to set READ-ONLY property: PixelPosition\n');
+         fprintf(1,'\n');
+      end
+      
+      function value = get.Position(b)
+         value = b.Button.Position;
+      end
+      function set.Position(b,value)
+         b.Button.Position = value;
+         b.Border.Position = value;
+         b.Label.Position = b.getCenter(value);
+         if strcmpi(b.Selected,'on')
+            b.SelectedPosition = value;
+         elseif strcmpi(b.Hovered,'on')
+            b.HoveredPosition = value;
+         else
+            b.DefaultPosition = value;            
+         end
+      end
+      
+      function value = get.Selected(b)
+         value = b.Selected_;
+      end
+      function set.Selected(b,value)
+         b.Selected_ = value;
+         switch b.Selected_
+            case 'on'
+               b.Border.EdgeColor = b.SelectedColor;
+               b.Border.LineWidth = b.LineWidth_ * 2.5;
+               b.Label.FontWeight = 'bold';
+               b.Label.Color  = b.SelectedColor;
+               b.Position = b.SelectedPosition;
+               uistack(b.Group,'top');
+               set(b.Figure,'WindowButtonUpFcn',@(obj,~,~)ButtonUpFcn(b));
+            case 'off'
+               if strcmp(b.Hovered,'on')
+                  b.Hovered = 'off';
+               end
+               b.Border.LineWidth = b.LineWidth_;
+               b.Border.EdgeColor = b.DefaultColor;
+               b.Label.Color = b.FontColor;
+               b.Position = b.DefaultPosition;
+               b.Label.FontWeight = 'normal';
+         end
+         drawnow;
+      end
+      
+      function set.SelectedColor(b,value)
+         c = nigeLab.libs.nigelButton.parseColor(value); 
+         b.SelectedColor = c;
+      end
+      
+      function value = get.String(b)
+         value = b.Label.String;
+      end
+      function set.String(b,value)
+         b.Label.String = value;
+      end
+      
+      function value = get.Tag(b)
+         value = b.String;
+      end
+      function set.Tag(b,value)
+         b.String = value;
+      end
+      
+      function value = get.VerticalAlignment(b)
+         value = b.Label.VerticalAlignment;
+      end
+      function set.VerticalAlignment(b,value)
+         b.Label.VerticalAlignment = value;
+      end
+      
+      function value = get.Visible(b)
+         value = b.Visible_;
+      end
+      function set.Visible(b,value)
+         if ~ischar(value)
+            return;
+         else
+            value = lower(value);
+         end
+         if ismember(value,{'on','off'})
+            b.Label.Visible = value;
+            b.Button.Visible = value;
+            b.Border.Visible = value;
+         end
+      end
+      
+      function value = get.WindowButtonUpFcn(b)
+         value = b.ButtonDownFcn;
+      end
+      function set.WindowButtonUpFcn(~,~)
+         % Does nothing
+         nigeLab.sounds.play('pop',2.7);
+         dbstack();
+         nigeLab.utils.cprintf('Errors*','[NIGELBUTTON]: ');
+         nigeLab.utils.cprintf('Errors',...
+            'Failed attempt to set READ-ONLY property: WindowButtonUpFcn\n');
+         fprintf(1,'\n');
+      end
    end
    
    % PUBLIC
    methods (Access = public)
       % Class constructor
-      function b = nigelButton(container,buttonPropPairs,labPropPairs,varargin)
+      function b = nigelButton(container,pos,string,fcn,varargin)
          %NIGELBUTTON   Buttons in format of nigeLab interface
          %
-         %  b = nigeLab.libs.nigelButton(); Add to current axes
-         %  b = nigeLab.libs.nigelButton(nigelPanelObj); Add to nigelPanel
-         %  b = nigeLab.libs.nigelButton(ax);  Add to axes
+         %  b = nigeLab.libs.nigelButton();
+         %     -> This forces `container` to be the current `axes` (gca)
+         %
+         %  b = nigeLab.libs.nigelButton(container);
+         %     -> container can be:
+         %        * nigeLab.libs.nigelPanel
+         %        * axes
+         %        * uipanel
+         %
          %  b = nigeLab.libs.nigelButton(__,buttonPropPairs,labPropPairs);
-         %  b = nigeLab.libs.nigelButton(__,pos,string,@ButtonDownFcn);
-         %  b = nigeLab.libs.nigelButton(__,@ButtonDownFcn,{arg1,...,argk});
+         %     ## Example ##
+         %     ```
+         %     b = nigeLab.libs.nigelButton(ax,...
+         %         {'Position',[0 0 1 1]},{'String','test'});
+         %        -> This is the same as calling
+         %     b = nigeLab.libs.nigelButton(ax,[0 0 1 1],'test');
+         %     ```
          %
-         %  container can be:
-         %  -> nigeLab.libs.nigelPanel
-         %  -> axes
-         %  -> uipanel
+         %  Note that if no `fcn` arg is provided, the default interaction
+         %  when the button is clicked is to call
          %
-         %  buttonPropPairs & labPropPairs are {'propName', value}
-         %  argument pairs, each given as a [1 x 2*k] cell arrays of pairs
-         %  for k properties to set.
+         %     >> disp(b); % Where b is the button object
          %
-         %  Alternatively, buttonPropPairs can be given as the position of
-         %  the button rectangle, and labPropPairs can be given as the
-         %  string to go into the button. In this case, the fourth input
-         %  (fcn) should be provided as a function handle for ButtonDownFcn
+         %  b = nigeLab.libs.nigelButton(__,pos,string,@ButtonUpFcn);
+         %     -> Include "@ButtonUpFcn" a handle to a function that is
+         %        executed when the `nigeLab.libs.nigelButton` object is
+         %        released after being clicked.
          %
-         %  Example syntax:
-         %  >> fig = figure; % Test 1
-         %  >> p = nigeLab.libs.nigelPanel(fig);
-         %  >> b = nigeLab.libs.nigelButton(p,...
-         %         {'FaceColor',[1 0 0],...
-         %          'ButtonDownFcn',@(src,~)disp(class(src))},...
-         %         {'String','test'});
+         %  b = nigeLab.libs.nigelButton(__,{@ButtonUpFcn,arg1,...,argk});
+         %     -> Include additional arguments as cell array
          %
-         %  >> fig = figure; % Test 2
-         %  >> ax = axes(fig);
-         %  >> bPos = [-0.35 0.2 0.45 0.15];
-         %  >> b = nigeLab.libs.nigelButton(ax,bPos,'test2',...
-         %           @(~,~)disp('test2'));
+         %  b = nigeLab.libs.nigelButton(ax,__,[],'prop1',val1,...);
+         %     -> Specify function handle as empty to skip to
+         %        <'Name',value> input argument pairs.
+         %
+         %  b = nigeLab.libs.nigelButton(__,@ButtonUpFcn,'prop1',val1,...);
+         %     -> Can still specify the function handle with this syntax.
+         %
+         %  b = nigeLab.libs.nigelButton(__,{@Fcn,arg1},'prop1',val1,...);
+         %     -> Can still include arguments
+         %
+         %  Alternatively, `pos` and `string` can be given as
+         %  {'propName', value} argument pairs. This syntax requires each
+         %  to be given as a [1 x 2*k] cell arrays of pairs for k
+         %  properties to set. In this case, `pos` pairs are for the
+         %  rectangle part of the button and `string` pairs are for the
+         %  text part of the button.
+         %
+         %  ## Example 1 ## (Syntax not recommended)
+         %  ```
+         %  fig = figure; % Test 1
+         %  p = nigeLab.libs.nigelPanel(fig);
+         %  b = nigeLab.libs.nigelButton(p,...
+         %      {'FaceColor',[1 0 0],...
+         %       'ButtonDownFcn',{{@(src)disp(class(src)),p}}},...
+         %      {'String','test'});
+         %  ```
+         %  * Creates a button in an axes of panel `p`
+         %  * Button has label 'test'
+         %  * Button displays 'nigelPanel (nigelPanel)' in Command Window
+         %
+         %  ## Example 2 ## (<strong>Recommended syntax</strong>)
+         %  ```
+         %  fig = figure; % Test 2
+         %  ax = axes(fig,'XLim',[-2 2],'YLim',[-2 2],'NextPlot','add');
+         %  bPos = [-0.5 -0.5 1 1];
+         %  b = nigeLab.libs.nigelButton(ax,bPos,'test2',...
+         %     {@disp,'hi'},...
+         %     'HoveredColor','hl','SelectedColor','blue',...
+         %     'FaceColor','tertiary','EdgeColor','ontertiary',...
+         %     'LineWidth',2.5,'Color','ontertiary',...
+         %     'Curvature',[1 1],'FontSize',0.35);
+         %  ro = nigeLab.utils.Mouse.rollover(fig,b);
+         %  ```
+         %  * Creates an orange button at the origin of axes `ax`
+         %  * Adding the rollover object allows the green highlight to show
+         %     up on mouse-over
+         %  * Clicking the button displays 'hi' in the command window,
+         %     causes the font to become bold while clicked, and changes
+         %     the edge color to blue temporarily.
+         
+         if nargin < 4
+            fcn = [];
+         end
          
          if nargin < 3
-            labPropPairs = {};
+            string = {};
          end
          
          if nargin < 2
-            buttonPropPairs = {};
+            pos = {};
          end
          
          if nargin < 1
@@ -180,52 +617,27 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          
          % Set immutable properties in constructor
          b.Parent = nigeLab.libs.nigelButton.parseContainer(container);
+         k = numel(b.Parent.Children);
          b.Group = hggroup(b.Parent);
-         b.Figure = b.parseFigure(); 
-         
-         % Set Function handle and input arguments
-         if nargin > 3
-            b.Fcn = varargin{1};
-         end
-         
-         if nargin > 4
-            b.Fcn_Args = varargin(2:end);
-         end
+         b.Figure = parseFigure(b);
          
          % Initialize rest of graphics
-         b.initColors();
-         b.buildGraphic(buttonPropPairs,'Button');
-         b.buildGraphic(labPropPairs,'Label');
-         b.completeGroup();
-         b.addListeners();
+         initColors(b);
+         [pos,string,varargin]=b.parseSpecificArgPairs(pos,string,varargin);
+         buildGraphic(b,pos,'Button');
+         buildGraphic(b,string,'Label');
+         completeGroup(b);
          
-      end
-      
-      % Overloaded delete ensures Listener is destroyed
-      function delete(b)
-         % DELETE  Overloaded delete ensures Listener property is destroyed
-         %
-         %  delete(b);
+         % Set Function handle and input arguments
+         b.ButtonDownFcn = fcn;
          
-         % Handle array elements individually
-         if numel(b) > 1
-            for i = 1:numel(b)
-               delete(b(i));
-            end
-            return;
-         end
-         
-         if ~isempty(b.Listener)
-            for lh = b.Listener
-               if isvalid(lh)
-                  delete(lh);
-               end
-            end
-         end
-         
-         if ~isempty(b.Group)
-            if isvalid(b.Group)
-               delete(b.Group);
+         % Parse varargin
+         mc = metaclass(b);
+         propNameList = {mc.PropertyList.Name};
+         for iV = 1:2:numel(varargin)
+            idx = strcmpi(propNameList,varargin{iV});
+            if sum(idx)==1
+               b.(propNameList{idx}) = varargin{iV+1};
             end
          end
       end
@@ -248,8 +660,8 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          % GETBUTTON  Return the correct button from an array by specifying
          %            its name, which is the char array on the text label
          %
-         %  setButton(bArray,'labelString','propName',propVal);  
-         %  
+         %  setButton(bArray,'labelString','propName',propVal);
+         %
          %  Set the value of the button in array with label 'labelString'
          %  for 'propName' to propVal.
          %
@@ -272,7 +684,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
             error(['nigeLab:' mfilename ':badInputType2'],...
                'Unexpected input class for "name" (%s)',class(name));
          end
-            
+         
          B = bArray(idx);
          for i = 1:numel(B)
             B.(propName) = propval;
@@ -282,42 +694,6 @@ classdef nigelButton < handle & matlab.mixin.SetGet
    
    % HIDDEN,PROTECTED
    methods (Hidden,Access=protected)
-      function addListeners(b)
-         % ADDLISTENERS  Adds all listeners to propertly .Listener
-         %
-         %  b.addListeners();
-         
-         % Make the border follow select property values of Button
-         b.Listener = [b.Listener, ...
-            addlistener(b.Button,'Position','PostSet',...
-               @(~,evt)set(b.Border,'Position',...
-                  evt.AffectedObject.Position))];
-         b.Listener = [b.Listener, ...
-            addlistener(b.Button,'LineWidth','PostSet',...
-               @(~,evt)set(b.Border,'LineWidth',...
-                  evt.AffectedObject.LineWidth))];
-         b.Border.Position = b.Button.Position;
-         b.Border.LineWidth = b.Button.LineWidth;
-
-         % Figure UserData will be set on Figure ButtonUpFcn
-         b.Listener = [b.Listener, addlistener(b.Figure,...
-            'UserData','PostSet',...
-            @(~,evt)b.ButtonUpFcn(evt.AffectedObject))];
-         
-         % Add listener so text label stays in middle of button
-         b.Listener = [b.Listener, ...
-            addlistener(b.Button,'Position','PostSet',...
-             @(~,evt)set(b.Label,'Position',...
-                        b.getCenter(evt.AffectedObject.Position)))];
-                     
-         % Add listeners for SetObservable properties
-         b.Listener = [b.Listener, ...
-            addlistener(b,'Enable','PostSet',@(~,~)b.setEnable),...
-            addlistener(b,'Selected','PostSet',@(~,~)b.setSelected),...
-            addlistener(b,'Hovered','PostSet',@(~,~)b.setHovered),...
-            addlistener(b,'String','PostSet',@(~,~)b.setString)];
-      end
-      
       % Button click graphic
       function ButtonClickGraphic(b)
          % BUTTONCLICKGRAPHIC  Crude method to show the highlight border of
@@ -335,40 +711,38 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          end
          
          b.Selected = 'on';
+         drawnow;
       end
       
       % Button click graphic
-      function ButtonUpFcn(b,AffectedObject)
+      function ButtonUpFcn(b)
          % BUTTONUPFCN  Crude method to show the highlight border of
          %                       button that was clicked on a left-click,
          %                       and then execute current button callback.
          
-         if ~isa(AffectedObject,'matlab.ui.Figure')
-            return;
-         end
-         
          if numel(b) > 1
             for i = 1:numel(b)
-               ButtonUpFcn(b(i),AffectedObject);
+               ButtonUpFcn(b(i));
             end
             return;
          end
          
          if strcmpi(b.Selected,'off')
+            set(b.Figure,'WindowButtonUpFcn',[]);
             return;
          elseif strcmpi(b.Enable,'off')
+            set(b.Figure,'WindowButtonUpFcn',[]);
             return;
          end
          % If button is released, turn off "highlight border"
-         b.Selected = 'off';
+         b.Selected = b.HoldSelection;
          drawnow;
-         switch lower(AffectedObject.UserData)
+         switch lower(b.Figure.SelectionType)
             case 'normal'
-               if ~isempty(b.Fcn)
-                  feval(b.Fcn,b.Fcn_Args{:});
+               if ~isempty(b.Fcn_)
+                  b.Fcn_(b.Fcn_Args_{:});
                end
-               
-            otherwise 
+            otherwise
                ... % nothing
          end
       end
@@ -402,19 +776,24 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                   'Curvature',[.2 .6],...
                   'FaceColor',b.FaceColorEnable,...
                   'EdgeColor','none',...
-                  'LineWidth',1,...
+                  'Clipping','off',...
+                  'LineWidth',1.5,...
                   'Tag','Button',...
+                  'Visible','on',...
                   'ButtonDownFcn',@(~,~)b.ButtonClickGraphic,...
-                  'UserData',b);
+                  'DeleteFcn',@(~,~)b.delete);
                b.Border = rectangle(b.Group,...
                   'Position',[0.15 0.10 0.70 0.275],...
                   'Curvature',[.2 .6],...
+                  'Clipping','off',...
                   'FaceColor','none',...
-                  'EdgeColor','none',...
+                  'EdgeColor',b.DefaultColor,...
                   'LineWidth',1.5,...
+                  'Visible','on',...
                   'Tag','Border',...
-                  'PickableParts','none');
-
+                  'PickableParts','none',...
+                  'DeleteFcn',@(~,~)b.delete);
+               
             case 'Label'
                % Do not make additional label graphics
                if ~isempty(b.Label)
@@ -425,20 +804,23 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                
                % By default put it in the middle of the button
                pos = b.getCenter(b.Button.Position);
+               sz_ = fixLabelSize(b,0.35);
                b.Label = text(b.Group,pos(1),pos(2),'',...
                   'Color',b.FontColorEnable,...
                   'FontName','Droid Sans',...
+                  'Clipping','off',...
                   'Units','data',...
                   'FontUnits','normalized',...
-                  'FontSize',0.8 * b.Button.Position(4),...
+                  'FontSize',sz_,...
                   'Tag','Label',...
                   'HorizontalAlignment','center',...
                   'VerticalAlignment','middle',...
-                  'PickableParts','none');
+                  'PickableParts','none',...
+                  'DeleteFcn',@(~,~)b.delete);
                
             otherwise
                error(['nigeLab:' mfilename ':badInputType4'],...
-                'Unexpected graphics property name: %s',propName);
+                  'Unexpected graphics property name: %s',propName);
          end
          
          % If no property pairs specified, skip next part
@@ -453,8 +835,18 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                allPropList = {ob.PropertyList.Name};
                allPropList = allPropList(~[ob.PropertyList.Hidden]);
                
-               % Don't let the ButtonDownFcn be set (it should be fixed)
-               allPropList = setdiff(allPropList,'ButtonDownFcn'); 
+               % Don't allow the following properties to be set in
+               % constructor:
+               allPropList = setdiff(allPropList,...
+                  {'ButtonDownFcn',...
+                  'DeleteFcn',...
+                  'EdgeColor',...
+                  'FaceColor',...
+                  'HitTest',...
+                  'HorizontalAlignment',...
+                  'PickableParts',...
+                  'UserData',...
+                  'VerticalAlignment'});
                for i = 1:2:numel(propPairsIn)
                   % Do it this way to allow mismatch on case syntax
                   idx = find(...
@@ -501,14 +893,56 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          %  lh = b.completeGroup();
          %
          %  fcn  --  Function handle
-         %  lh  --  Property 'ButtonDownFcn' PostSet listener object
          
          b.Group.Tag = b.Label.String;
          b.Group.DisplayName = b.Label.String;
          
          % Make it not show up in legends:
          b.Group.Annotation.LegendInformation.IconDisplayStyle = 'off';
-
+         
+         % Make sure it deletes "parent" button when destroyed
+         b.Group.DeleteFcn = @(~,~)b.delete;
+         
+         % Make sure things are in same "spot"
+         b.Position = b.Button.Position;
+         b.LineWidth = b.Border.LineWidth;
+         
+         % Assign object to button UserData
+         b.Button.UserData = b;
+         
+         % Match Hovered Font Color to standard Font Color
+         b.HoveredFontColor = b.FontColor;
+         hx = b.Position(1) - 0.3  *  b.Position(3);
+         hy = b.Position(2) - 0.1  *  b.Position(4);
+         hw = b.Position(3) * 1.6;
+         hh = b.Position(4) * 1.2;
+         b.HoveredPosition = [hx,hy,hw,hh];
+         
+         sx = b.Position(1) - 0.2  * b.Position(3);
+         sy = b.Position(2) - 0.08 * b.Position(4);
+         sw = b.Position(3) * 1.4;
+         sh = b.Position(4) * 1.16;
+         b.SelectedPosition = [sx,sy,sw,sh];
+      end
+      
+      % "Fixes" the label size to a minimum pixel dimension
+      function sz = fixLabelSize(b,normDim)
+         %FIXLABELSIZE  "Fixes" label size based on minimum pixel dim
+         %
+         %  sz = fixLabelSize(b,normDim);
+         %
+         %  b:       nigeLab.libs.nigelButton object
+         %  normDim: normalized (scalar) dimension (e.g. 0.5)
+         
+         pct = b.Button.Position(4) / diff(b.Parent.XLim);
+         
+         pos = b.PixelPosition; % Pixel dims of axes container
+         hButton = pos(3) * pct;         
+         
+         sz = normDim * pct;
+         if (hButton * sz) < b.MinimumPixelHeight % Then it is too small
+            sz = b.MinimumPixelHeight / pos(3);   % Clip to minimum size
+         end
       end
       
       % Initialize the colors for disable/enable conditions
@@ -519,6 +953,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          
          b.SelectedColor = nigeLab.defaults.nigelColors('highlight');
          b.HoveredColor = nigeLab.defaults.nigelColors('rollover');
+         b.DefaultColor = 'none'; % No edges by default
          b.FaceColorEnable = nigeLab.defaults.nigelColors('enable');
          b.FaceColorDisable = nigeLab.defaults.nigelColors('disable');
          b.FontColorEnable = nigeLab.defaults.nigelColors('enabletext');
@@ -535,79 +970,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          while ~isa(fig,'matlab.ui.Figure')
             fig = fig.Parent;
          end
-         set(fig,'WindowButtonUpFcn',...
-            @(src,~)set(fig,'UserData',src.SelectionType));
       end
-      
-      % PROPERTY LISTENER CALLBACK: Toggles enable status
-      function setEnable(b)
-         %SETENABLE  Toggle enable status of button
-         %
-         %  addlistener(b,'Enable','PostSet',@(~,~)b.setEnable);
-         %  --> Changes face/font color when enable is toggled
-         
-         switch b.Enable
-            case 'on'
-               b.Button.FaceColor = b.FaceColorEnable;
-               b.Label.Color = b.FontColorEnable;
-            case 'off'
-               b.Button.FaceColor = b.FaceColorDisable;
-               b.Label.Color = b.FontColorDisable;
-         end
-         drawnow;
-      end
-      
-      % PROPERTY LISTENER CALLBACK: Set 'Hovered' status of button
-      function setHovered(b)
-         %SETHOVERED  Toggle 'Hovered' status of button
-         %
-         %  addlistener(b,'Hovered','PostSet',@(~,~)b.setHovered);
-         
-         if strcmp(b.Selected,'on') || strcmp(b.Enable,'off')
-            return;
-         end
-         
-         switch b.Hovered
-            case 'on'
-               b.Border.EdgeColor = b.HoveredColor;
-               b.Border.LineWidth = 1.5;
-               b.Label.FontWeight = 'normal';
-            case 'off'
-               b.Border.EdgeColor = 'none';
-         end
-         drawnow;
-      end
-      
-      % PROPERTY LISTENER CALLBACK: Set 'Selected' status of button
-      function setSelected(b)
-         %SETHOVERED  Toggle 'Selected' status of button
-         %
-         %  addlistener(b,'Selected','PostSet',@(~,~)b.setSelected);
-         
-         switch b.Selected
-            case 'on'
-               b.Border.EdgeColor = b.SelectedColor;
-               b.Border.LineWidth = 3;
-               b.Label.FontWeight = 'bold';
-            case 'off'
-               if strcmp(b.Hovered,'on')
-                  b.Border.EdgeColor = b.HoveredColor;
-               else
-                  b.Border.EdgeColor = 'none';
-               end
-         end
-         drawnow;
-      end
-
-      % PROPERTY LISTENER CALLBACK: Set 'String' for b.Label
-      function setString(b)
-         %SETSTRING  Set 'String' for b.Label
-         %
-         %  addlistener(b,'String','PostSet',@(~,~)b.setString);
-         
-         b.Label.String = b.String;         
-      end
-      
    end
    
    % STATIC,PUBLIC
@@ -626,7 +989,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          else
             n = [0,max(n)];
          end
-         b = nigeLab.libs.nigelButton(n);         
+         b = nigeLab.libs.nigelButton(n);
       end
    end
    
@@ -658,6 +1021,33 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          
       end
       
+      % Parse color argument
+      function c = parseColor(value)
+         %PARSECOLOR  Return color using `nigelColors` defaults or 'none'
+         %
+         %  c = nigeLab.libs.nigelButton.parseColor(value);
+         %  --> value : Can be numeric or char
+         
+         if ischar(value) 
+            c = nigeLab.defaults.nigelColors(value);
+            if strcmpi(value,'none')
+               c = value;
+            end
+         elseif isscalar(value)
+            c = nigeLab.defaults.nigelColors(value);
+         else
+            if ~isnumeric(value) || (numel(value)~=3) || iscolumn(value)
+               dbstack();
+               disp('<strong>Attempted value:</strong>');
+               disp(value);
+               error(['nigeLab:' mfilename ':BadColorFormat'],...
+                  '[NIGELBUTTON]: Unrecognized color format (value above)');
+            else
+               c = value;
+            end
+         end
+      end
+      
       % Parse first input argument and provide appropriate axes object
       function ax = parseContainer(container)
          % PARSECONTAINER  Parses first input argument and returns the
@@ -669,8 +1059,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          %  object.
          
          switch builtin('class',container)
-            case 'nigeLab.libs.nigelPanel'
-               %% If containerObj is nigelPanel, then use ButtonAxes
+            case 'nigeLab.libs.nigelPanel' % If containerObj is nigelPanel, then use ButtonAxes
                ax = getChild(container,'ButtonAxes',true);
                if isempty(ax)
                   pos = container.InnerPosition;
@@ -682,10 +1071,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                      'Tag','ButtonAxes',...
                      'Position', pos,...
                      'Color','none',...
-                     'XColor','none',...
-                     'YColor','none',...
                      'NextPlot','add',...
-                     'XLimMode','manual',...
                      'XLimMode','manual',...
                      'XLim',[0 1],...
                      'YLimMode','manual',...
@@ -694,12 +1080,10 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                   container.nestObj(ax,'ButtonAxes');
                end
                
-            case 'matlab.graphics.axis.Axes'
-               %% If axes, just use axes as provided
+            case 'matlab.graphics.axis.Axes' % If axes, just use axes as provided
                ax = container;
                
-            case 'matlab.ui.container.Panel'
-               %% If uiPanel, get top axes in the panel or make new axes
+            case 'matlab.ui.container.Panel' % If uiPanel, get top axes in the panel or make new axes
                ax = [];
                for i = 1:numel(container.Children)
                   ax = container.Children(i);
@@ -718,8 +1102,6 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                      'Tag','ButtonAxes',...
                      'Position', pos,...
                      'Color','none',...
-                     'XColor','none',...
-                     'YColor','none',...
                      'NextPlot','add',...
                      'XLimMode','manual',...
                      'XLim',[0 1],...
@@ -727,11 +1109,57 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                      'YLim',[0 1],...
                      'FontName',container.FontName);
                end
-            otherwise
-               %% Current support only for axes, nigelPanel, panel
+            otherwise % Current support only for axes, nigelPanel, panel
                error(['nigeLab:' mfilename ':badInputType2'],...
                   'Bad input type for containerObj: %s',...
                   class(container));
+         end
+      end
+      
+      % Parse 'Name',value pairs and remove extraneous args
+      function [p,s,v] = parseSpecificArgPairs(p,s,v)
+         %PARSESPECIFICARGPAIRS  Remove extraneous 'Name', value pairs
+         %
+         %  [p,s,v]=nigeLab.libs.nigelButton.parseSpecificArgPairs(p,s,v);
+         %
+         %  p: `pos` constructor input (can be given as cell array)
+         %  s: `string` constructor input (can be given as cell array)
+         %  v: `varargin` constructor input 
+         
+         special_args = {...
+            'buttondownfcn',...
+            'userdata',...
+            'facecolor',...
+            'edgecolor',...
+            'horizontalalignment',...
+            'verticalalignment'...
+            };
+         
+         
+         if iscell(p)
+            if ~isrow(p)
+               p = p.';
+            end
+            idx = find(ismember(lower(p(1:2:end)),special_args));
+            idx = 2*idx-1;
+            if numel(idx) > 0
+               tmp = [p(idx); p(idx+1)];
+               p([idx,idx+1]) = [];
+               v = horzcat(tmp{:},v);
+            end
+         end
+         
+         if iscell(s)
+            if ~isrow(s)
+               s = s.';
+            end
+            idx = find(ismember(lower(s(1:2:end)),special_args));
+            idx = 2*idx-1;
+            if numel(idx) > 0
+               tmp = [s(idx); s(idx+1)];
+               s([idx,idx+1]) = [];
+               v = horzcat(v,tmp{:});
+            end
          end
       end
    end

@@ -1,5 +1,5 @@
 function behaviorData = changeAlignOffset(behaviorData,offset,add_rm,varType)
-%% CHANGEALIGNOFFSET    Change alignment of table
+%CHANGEALIGNOFFSET    Change alignment of table
 %
 %  behaviorData = CHANGEALIGNOFFSET(behaviorData,offset,add_rm,varType);
 %
@@ -26,13 +26,11 @@ function behaviorData = changeAlignOffset(behaviorData,offset,add_rm,varType)
 %   OUTPUT
 %  --------
 %  behaviorData   :     Same as input but with updated fields.
-%
-% By: Max Murphy  v1.0  09/11/2018  Original version (R2017b)
 
-%% PARSE INPUT
+% PARSE INPUT
 % Default for "Trials" "Reach" "Grasp" "Support" and then nothing else
 % needs offset added or removed.
-if exist('varType','var')==0
+if nargin < 4
    varType = [0,1,1,1,2,3,4,5]; % Works for RC project
 end
 
@@ -51,7 +49,7 @@ if numel(u)~=numel(v)
    behaviorData.Properties.UserData = u;
 end
 
-%% REMOVE OR ADD OFFSET TO CORRECT VARIABLE TYPES
+% REMOVE OR ADD OFFSET TO CORRECT VARIABLE TYPES
 for ii = 1:numel(v)
    if u(ii) < 2
       behaviorData.(v{ii}) = behaviorData.(v{ii}) + (offset * add_rm);

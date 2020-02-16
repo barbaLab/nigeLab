@@ -12,13 +12,15 @@ if nargin < 3
    type = 0;
 end
 
+% Do this way so either nSnippet of 0 or 1 works (must have at least 5 col)
+nCol = max(nSnippet+4,5); 
 varargout = cell(nargout,1);
 for iV = 1:nargout
-   varargout{iV} = nan(nEvent,max(nSnippet+4,5));
+   varargout{iV} = nan(nEvent,nCol);
    varargout{iV}(:,1) = type;
+   varargout{iV}(:,3) = ones(nEvent,1);
    if type == 1
       varargout{iV}(:,2) = (1:nEvent).';
-      varargout{iV}(:,3) = ones(nEvent,1);
    end
 end
 

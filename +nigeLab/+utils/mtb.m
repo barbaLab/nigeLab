@@ -1,9 +1,11 @@
 function mtb(variable,varargin)
 %MTB  Move variable to base workspace
 % 
-%   MTB(variable)
+%  nigeLab.utils.mtb(variable)
 %
-%   MTB('var1_name',var1,'var2_name',var2,...)
+%  nigeLab.utils.mtb('varName',varValue);
+%
+%  nigeLab.utils.mtb('var1_name',var1,'var2_name',var2,...)
 %
 %   --------
 %    INPUTS

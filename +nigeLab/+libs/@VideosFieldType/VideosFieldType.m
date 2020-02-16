@@ -14,13 +14,17 @@ classdef VideosFieldType < handle ...
    % DEPENDENT,TRANSIENT,PUBLIC (no default values)
    properties (Dependent,Transient,Access=public)
       Duration  double     % Duration of video (seconds)      
+      GrossOffset (1,1) double  % Start-time with respect to neural data
       Height    double     % Height of video frame (pixels)
       Index       char     % Index of this video (for GoPro multi-videos)
       Key         char     % "Key" that corresponds to Block object
       Name        char     % Name of video file
+      NeuOffset   (1,1) double  % Generic start-time offset beyond the Video offset
       NumFrames double     % Total number of frames
       Source      char     % Camera "view" (e.g. Door, Top, etc...)
+      TrialOffset (1,1) double  % Trial/camera-specific offset
       Width     double     % Width of video frame (pixels)
+      VideoIndex  (1,1) double  % Index of this video within array
       fs        double     % Sample rate
    end
    
@@ -40,18 +44,14 @@ classdef VideosFieldType < handle ...
    % HIDDEN,TRANSIENT,PROTECTED
    properties (Hidden,Transient,Access=protected)
       V_             VideoReader     % VideoReader object
+      VideoIndex_    double       % Stored index
       store_   (1,1) struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
-   end
-   
-   % HIDDEN,PUBLIC
-   properties (Hidden,Access=public)
-      offset (1,1) double = nan % Start-time with respect to neural data
    end
    
    % HIDDEN,PUBLIC/PROTECTED
    properties (Hidden,GetAccess=public,SetAccess=protected)
-      Streams  nigeLab.libs.VidStreamsType % nigeLab.libs.VidStreamsType video parsed streams
-      tStart (1,1) double = 0   % Start-time with respect to full video
+      Streams           nigeLab.libs.VidStreamsType % nigeLab.libs.VidStreamsType video parsed streams
+      VideoOffset (1,1) double = 0   % Start-time with respect to full video
    end
    
    % HIDDEN,PROTECTED
@@ -199,20 +199,20 @@ classdef VideosFieldType < handle ...
          end
          
          h = findobj(obj,'Source',viewToInit);
-         o = 0; % No video-related offset initially
+         o = 0; % No video-related Offset initially
          for i = 1:numel(h)
             thisIndex = num2str(i-1); % zero-indexed
             hh = findobj(h,'Index',thisIndex);
-            hh.tStart = o;
+            hh.VideoOffset = o;
             tt = get(hh,'tVid');
-            o = max(tt) + (1/hh.fs); % Offset by 1 frame from end of record
+            o = max(tt) + (1/hh.fs); % offset by 1 frame from end of record
          end
       end
    end
    
    % NO ATTRIBUTES (Constructor)
    methods
-      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      % % % (DEPENDENT) GET/SET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT]  Returns .Duration property
       function value = get.Duration(obj)
          %GET.DURATION  Returns .Duration property
@@ -227,6 +227,41 @@ classdef VideosFieldType < handle ...
             obj.store_ = initSecondaryTempProps(obj);
          end
          value = obj.store_.Duration;
+      end
+      function set.Duration(obj,~)
+         %SET.DURATION  Assigns .Duration property (cannot)
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Duration\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Returns .GrossOffset property
+      function value = get.GrossOffset(obj)
+         %GET.GROSSOFFSET  Returns .GrossOffset property
+         %
+         % Returns scalar offset for this video relative to neural data 
+         
+         value = getEventData(obj.Block,obj.Block.ScoringField,...
+            'ts','Header');
+         value = value(obj.VideoIndex);
+      end
+      function set.GrossOffset(obj,value)
+         %SET.GROSSOFFSET  Assigns .GrossOffset property (to 'Header' diskdata)
+         %
+         %  set(obj,'GrossOffset',value);
+         %  --> Assigns "Gross" offset that encompasses the VideoOffset as
+         %  well as any additional generic offset between the video series
+         %  and the neural data. Does not include the "trial-specific"
+         %  offset component that can be set based on individual trial
+         %  jitter.
+
+         setEventData(obj.Block,obj.Block.ScoringField,...
+            'ts','Header',value,obj.VideoIndex);
       end
       
       % [DEPENDENT]  Returns .Height property
@@ -244,21 +279,16 @@ classdef VideosFieldType < handle ...
          end
          value = obj.store_.Height;
       end
-      
-      % [DEPENDENT]  Returns .Key property
-      function value = get.Key(obj)
-         %GET.KEY  Returns .Key property
-         %
-         % Returns unique movie ID that is linked to block
-         
-         if isempty(obj)
-            return;
-         elseif ~isvalid(obj)
-            return;
-         elseif isempty(obj.store_.Key)
-            obj.store_ = initPrimaryTempProps(obj);
+      function set.Height(obj,~)
+         %SET.HEIGHT  Assigns .Height property (cannot)
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Height\n');
+            fprintf(1,'\n');
          end
-         value = obj.store_.Key;
       end
       
       % [DEPENDENT]  Returns .Index property (Index from GoPro series)
@@ -270,6 +300,7 @@ classdef VideosFieldType < handle ...
          %        videos taken during the same recording that were chopped
          %        into multiple files due to the limits of file size.
          
+         value = '';
          if isempty(obj)
             return;
          elseif ~isvalid(obj)
@@ -278,6 +309,17 @@ classdef VideosFieldType < handle ...
             obj.store_ = initPrimaryTempProps(obj);
          end
          value = obj.store_.Index;
+      end
+      function set.Index(obj,~)
+         % Does nothing
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Index\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Returns .IsIdle property flag
@@ -301,6 +343,44 @@ classdef VideosFieldType < handle ...
             value = false; % Then obj.V_ exists and is valid
          end
       end
+      function set.IsIdle(obj,~)
+         % Does nothing
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: IsIdle\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Returns .Key property
+      function value = get.Key(obj)
+         %GET.KEY  Returns .Key property
+         %
+         % Returns unique movie ID that is linked to block
+         
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         elseif isempty(obj.store_.Key)
+            obj.store_ = initPrimaryTempProps(obj);
+         end
+         value = obj.store_.Key;
+      end
+      function set.Key(obj,~)
+         %SET.KEY  Assigns .Key property (cannot)
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Key\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .Meta property
       function value = get.Meta(obj)
@@ -321,6 +401,17 @@ classdef VideosFieldType < handle ...
          
          value = obj.Block.Meta.Video(obj.mIndex,:);
       end
+      function set.Meta(obj,~)
+         %SET.META  Assigns .Meta property (cannot)
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Meta\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .Name property
       function value = get.Name(obj)
@@ -328,6 +419,7 @@ classdef VideosFieldType < handle ...
          %
          % Returns the name of the video
          
+         value = '';
          if isempty(obj)
             return;
          elseif ~isvalid(obj)
@@ -336,6 +428,39 @@ classdef VideosFieldType < handle ...
             obj.store_ = initPrimaryTempProps(obj);
          end
          value = obj.store_.Name;
+      end
+      function set.Name(obj,~)
+         %SET.NAME  Assigns .Name property (cannot)
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Name\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT]  Returns .NeuOffset property
+      function value = get.NeuOffset(obj)
+         %GET.NEUOFFSET  Returns .NeuOffset property
+         %
+         %  value = get(obj,'NeuOffset');
+         %  --> Returns the offset that is obj.GrossOffset -
+         %  obj.VideoOffset
+         
+         value = obj.GrossOffset - obj.VideoOffset;
+      end
+      function set.NeuOffset(obj,value)
+         %SET.NEUOFFSET  Assign corresponding video of linked Block   
+         %
+         %  set(obj,'NeuOffset',value);
+         %  --> value should be:
+         %  value = (tNeu - tEvent) - tSpecific;
+         %  Where tSpecific is the "Trial-Specific" and "Camera-Specific"
+         %  offset.
+         
+         obj.GrossOffset = value+obj.VideoOffset;
       end
       
       % [DEPENDENT]  Returns .NumFrames property
@@ -353,11 +478,35 @@ classdef VideosFieldType < handle ...
          end
          value = obj.store_.NumFrames;
       end
+      function set.NumFrames(obj,~)
+         %SET.NUMFRAMES  Assigns .NumFrames property (cannot)
+         
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: NumFrames\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .Parent property (.Block)
       function value = get.Parent(obj)
          %GET.PARENT  Returns .Parent property (.Block)
          value = obj.Block;
+      end
+      function set.Parent(obj,value)
+         %SET.PARENT  Assigns .Parent property (obj.Block)
+         %
+         %  set(obj,'Parent',value);
+         %  --> Assigns `value` to obj.Block property
+         %     --> Assign only works if value is `nigeLab.Block` or
+         %           `nigeLab.nigelObj` class
+         
+         if ismember(class(value),{'nigeLab.Block','nigeLab.nigelObj'})
+            obj.Block = value;
+         end
       end
       
       % [DEPENDENT]  Returns .Pars property
@@ -374,6 +523,17 @@ classdef VideosFieldType < handle ...
          end
          value = obj.Block.Pars.Video;
       end
+      function set.Pars(obj,~)
+         % Does nothing
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Pars\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .Source property (Camera angle or view)
       function value = get.Source(obj)
@@ -383,6 +543,7 @@ classdef VideosFieldType < handle ...
          %  --> For example, 'Left-A', or 'Front'; typically used when
          %        multiple cameras are used on same experiment
          
+         value = '';
          if isempty(obj)
             return;
          elseif ~isvalid(obj)
@@ -393,6 +554,17 @@ classdef VideosFieldType < handle ...
          
          value = obj.store_.Source;
       end
+      function set.Source(obj,~)
+         % Does nothing
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Source\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .StreamNames property (from .Streams)
       function value = get.StreamNames(obj)
@@ -402,6 +574,7 @@ classdef VideosFieldType < handle ...
          %  --> Returns cell array for all unique stream names for this
          %      video.
          
+         value = {};
          if isempty(obj)
             return;
          elseif ~isvalid(obj)
@@ -411,6 +584,33 @@ classdef VideosFieldType < handle ...
          end
          
          value = obj.store_.Source;
+      end
+      
+      % [DEPENDENT] Returns .TrialOffset property (from linked Block)
+      function value = get.TrialOffset(obj)
+         %GET.TRIALOFFSET  Returns .TrialOffset property (from Block)
+         %
+         %  value = get(obj,'TrialOffset');
+         %  --> Returns Trial/Camera-specific offset for current trial
+         
+         iRow = obj.VideoIndex;
+         iCol = obj.Block.TrialIndex;
+         value = obj.Block.TrialVideoOffset(iRow,iCol);
+      end
+      function set.TrialOffset(obj,value)
+         %SET.TRIALOFFSET  Assign corresponding video of linked Block   
+         %
+         %  set(obj,'TrialOffset',value);
+         %  --> value should be:
+         %  value = (tNeu - tEvent) - GrossOffset;
+         %  Where "GrossOffset" is the VideosFieldType.GrossOffset property
+         
+         if isempty(obj.Block)
+            return;
+         end
+         iRow = keyToIndex(obj);
+         iCol = obj.Block.TrialIndex;
+         obj.Block.TrialVideoOffset(iRow,iCol) = value;
       end
       
       % [DEPENDENT]  Returns .V property (VideoReader object)
@@ -443,6 +643,36 @@ classdef VideosFieldType < handle ...
          value = VideoReader(obj.fname);
          obj.V_ = value;
       end
+      function set.V(obj,value)
+         %SET.V  Can delete value of obj.V_ (stored VideoReader)
+         if isempty(value)
+            if ~isempty(obj.V_)
+               if isvalid(obj.V_)
+                  delete(obj.V_);
+                  obj.V_(:) = [];
+               end
+            end
+         end
+      end
+      
+      % [DEPENDENT]  Returns .VideoIndex property 
+      function value = get.VideoIndex(obj)
+         %GET.VIDEOINDEX  Returns .VideoIndex property (index to this obj)
+         %
+         %  value = get(obj,'VideoIndex');
+         %  --> Returns array index to this object within parent array
+         
+         if ~isempty(obj.VideoIndex_)
+            value = obj.VideoIndex_;
+            return;
+         end
+         value = findVideo(obj);
+         obj.VideoIndex_ = value;
+      end
+      function set.VideoIndex(obj,value)
+         %SET.VIDEOINDEX  Assign .VideoIndex_ store
+         obj.VideoIndex_ = value;
+      end
       
       % [DEPENDENT]  Returns .Width property
       function value = get.Width(obj)
@@ -458,6 +688,18 @@ classdef VideosFieldType < handle ...
             obj.store_ = initSecondaryTempProps(obj);
          end
          value = obj.store_.Width;
+      end
+      function set.Width(obj,~)
+         %SET.WIDTH  Assigns .Width property (cannot)
+         
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: Width\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Returns .fname_t property
@@ -489,15 +731,23 @@ classdef VideosFieldType < handle ...
          %
          % Returns number of frames per second in this video (double)
          
-         if isempty(obj)
-            return;
-         elseif ~isvalid(obj)
-            return;
-         elseif isempty(obj.store_.fs)
+         if isempty(obj.store_.fs)
             obj.store_ = initSecondaryTempProps(obj);
          end
          value = obj.store_.fs;
             
+      end
+      function set.fs(obj,~)
+         %SET.FS  Assigns .fs property (cannot)
+         
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: fs\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Returns .tNeu property
@@ -506,7 +756,7 @@ classdef VideosFieldType < handle ...
          %
          % Returns time vector associated with each frame of the video
          %  --> This is in the "same time-alignment" as neural data (as
-         %        long as obj.offset has been set correctly)
+         %        long as obj.Offset has been set correctly)
          
          value = [];
          if isempty(obj)
@@ -524,16 +774,24 @@ classdef VideosFieldType < handle ...
                error(['nigeLab:' mfilename ':BadInit'],...
                   '[VIDEOSFIELDTYPE]: Bad time file initialization');
             end
-         elseif isnan(obj.offset)
+         elseif isnan(obj.GrossOffset)
             return;
          end
          
          tmp = obj.Time.data(:);
-         % Value returned reflects start offset (obj.tStart) within 
-         % series of videos related to each other, as well as offset
-         % relative to neural data (obj.offset)
-         value = tmp + obj.tStart + obj.offset;
+         value = tmp+obj.GrossOffset+obj.TrialOffset;
+      end
+      function set.tNeu(obj,~)
+         %SET.TNEU  Assigns .tNeu property (cannot)
          
+         if obj.Block.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: tNeu\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Returns .tVid property
@@ -563,215 +821,11 @@ classdef VideosFieldType < handle ...
          end
          
          tmp = obj.Time(:);
-         % Value returned only reflects start offset (obj.tStart) within
+         % Value returned only reflects start Offset (obj.VideoOffset) within
          % series of videos related to each other
-         value = tmp + obj.tStart;
+         value = tmp + obj.VideoOffset;
          
       end
-      % % % % % % % % % % END GET.PROPERTY METHODS % % %
-      
-      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT]  Assigns .Duration property (cannot)
-      function set.Duration(obj,~)
-         %SET.DURATION  Assigns .Duration property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Duration\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Height property (cannot)
-      function set.Height(obj,~)
-         %SET.HEIGHT  Assigns .Height property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Height\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Index property (cannot)
-      function set.Index(obj,~)
-         % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Index\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .IsIdle property (cannot)
-      function set.IsIdle(obj,~)
-         % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: IsIdle\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Key property (cannot)
-      function set.Key(obj,~)
-         %SET.KEY  Assigns .Key property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Key\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Meta property
-      function set.Meta(obj,~)
-         %SET.META  Assigns .Meta property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Meta\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Name property
-      function set.Name(obj,~)
-         %SET.NAME  Assigns .Name property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Name\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .NumFrames property (cannot)
-      function set.NumFrames(obj,~)
-         %SET.NUMFRAMES  Assigns .NumFrames property (cannot)
-         
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: NumFrames\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Parent property
-      function set.Parent(obj,value)
-         %SET.PARENT  Assigns .Parent property (obj.Block)
-         %
-         %  set(obj,'Parent',value);
-         %  --> Assigns `value` to obj.Block property
-         %     --> Assign only works if value is `nigeLab.Block` or
-         %           `nigeLab.nigelObj` class
-         
-         if ismember(class(value),{'nigeLab.Block','nigeLab.nigelObj'})
-            obj.Block = value;
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Pars property (cannot)
-      function set.Pars(obj,~)
-         % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Pars\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Source property (cannot)
-      function set.Source(obj,~)
-         % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Source\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .V property (for deleting VideoReader)
-      function set.V(obj,value)
-         %SET.V  Can delete value of obj.V_ (stored VideoReader)
-         if isempty(value)
-            if ~isempty(obj.V_)
-               if isvalid(obj.V_)
-                  delete(obj.V_);
-                  obj.V_(:) = [];
-               end
-            end
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Width property (cannot)
-      function set.Width(obj,~)
-         %SET.WIDTH  Assigns .Width property (cannot)
-         
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Width\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .fs property (cannot)
-      function set.fs(obj,~)
-         %SET.FS  Assigns .fs property (cannot)
-         
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: fs\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .tNeu property (cannot)
-      function set.tNeu(obj,~)
-         %SET.TNEU  Assigns .tNeu property (cannot)
-         
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: tNeu\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .tVid property (cannot)
       function set.tVid(obj,~)
          %SET.TVID  Assigns .tVid property (cannot)
          
@@ -784,32 +838,96 @@ classdef VideosFieldType < handle ...
             fprintf(1,'\n');
          end
       end
-      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+      % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
    end
    
    % PUBLIC
    % Common methods
    methods (Access = public)   
+      % Return all videos from the same "Source"
+      function obj = FromSame(objArray,sourceName)
+         %FROMSAME  Return all videos from the same "source"
+         %
+         %  obj = FromSame(objArray,'Left-A');
+         %  --> Returns all VideosFieldType objects from an array that have
+         %      .Source of 'Left-A'
+         
+         obj = objArray(strcmpi({objArray.Source},sourceName));
+      end
+      
       % "Idles" the VideosFieldType object (removes VideoReader)
       function Idle(obj)
          %IDLE  "Idles" the VideosFieldType object to reduce memory usage
          %
          %  Idle(obj);
          
-         obj.V = [];
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               Idle(obj(i));
+            end
+            return;
+         end
+         
+         obj.V = []; % This deletes obj.V_ due to [Dependent] property .V
+      end
+      
+      % Returns Max timestamp from videos in objArray
+      function tMax = Max(objArray)
+         %MAX  Return maximum timestamp value from videos in objArray
+         %
+         %  tMax = Max(objArray);
+         
+         tMax = -inf;
+         for i = 1:numel(objArray)
+            tMax = max(tMax,max(objArray(i).tVid));
+         end
       end
       
       % "Readies" the VideosFieldType object for playing videos
-      function Ready(obj)
+      function v = Ready(obj)
          %READY  "Readies" the VideosFieldType object for playing videos
          %
          %  Ready(obj);
+         %  v = Ready(obj);  Return handle to "readied" VideoReader object
          
          if isempty(obj.V_)
+            nigeLab.utils.cprintf('[0.45 0.45 0.45]',obj.Block.Verbose,...
+               '\t\t->\t[VIDEOS]: Readying %s...',obj.Name);
             obj.V_ = VideoReader(obj.fname);
+            nigeLab.utils.cprintf('Keywords*',obj.Block.Verbose,...
+               'complete\n');
          elseif ~isvalid(obj.V_)
+            nigeLab.utils.cprintf('[0.45 0.45 0.45]',obj.Block.Verbose,...
+               '\t\t->\t[VIDEOS]: Readying %s...',obj.Name);
             obj.V_ = VideoReader(obj.fname);
+            nigeLab.utils.cprintf('Keywords*',obj.Block.Verbose,...
+               'complete\n');
          end
+         v = obj.V_;
+      end
+      
+      % Find video from parent object array of videos
+      function idx = findVideo(obj,objArray)
+         %FINDVIDEO  Returns index to object from parent object array
+         %
+         %  idx = findVideo(obj);
+         %  --> Return idx as element of parent .Block.Videos array
+         %
+         %  idx = findVideo(obj,objArray);
+         %  --> Return idx as element of objArray
+         
+         if nargin < 2
+            objArray = obj.Block.Videos;
+         end
+         
+         if numel(obj) > 1
+            idx = ones(size(obj));
+            for i = 1:numel(obj)
+               idx(i) = findVideo(obj(i));
+            end
+            return;
+         end
+         idx = find(objArray == obj,1,'first');
       end
       
       % Returns the VidStream corresponding to streamName & source
@@ -839,7 +957,8 @@ classdef VideosFieldType < handle ...
          end
          
          if nargin < 3
-            error('Must provide 3 input arguments.');
+            error(['nigeLab:' mfilename ':TooFewInputs'],...
+               '[VIDEOSFIELDTYPE]: Must provide 3 input arguments.');
          end
          
          idx = findIndex(obj,{streamName; source},{'Name','Source'});
@@ -856,7 +975,7 @@ classdef VideosFieldType < handle ...
                obj(i).Streams.at(idx(i)).diskdata.data];
          end
          stream.fs = obj.at(idx).fs;
-         stream.t = (0:(numel(stream.data)-1))/stream.fs;
+         stream.t  = obj.tNeu;
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
          
       end
@@ -1136,6 +1255,15 @@ classdef VideosFieldType < handle ...
          end
       end
       
+      % Convert '.Key' ending to index from overall list of videos
+      function idx = keyToIndex(obj)
+         %KEYTOINDEX  Convert 'Key' to Index in overall list of videos
+         %
+         %  idx = keyToIndex(obj);
+         
+         idx = strsplit(obj.Key,'-');
+         idx = str2double(idx{2}) + 1;
+      end
    end
    
    % STATIC,PUBLIC (empty)
