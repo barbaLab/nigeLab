@@ -34,6 +34,8 @@ switch S(1).type
       % All Channels fields are adressable this way.
       %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
       fixed_fields = blockObj(1).Pars.Block.Fields;
+      Exceptions = {'Time'};
+      fixed_fields = setdiff(fixed_fields,Exceptions);
       idx = strcmpi(fixed_fields,S(1).subs);
       % Shortcut case:
       if any(idx)
@@ -71,9 +73,9 @@ switch S(1).type
       % () Means Blocks was referenced as __.Block() ... so it should be
       % used for dealing with Block arrays
       % Should always be dealt with in standard way:
-      if numel(S(1).subs)==1
-         S(1).subs = [1, S(1).subs]; % Make sure is indexing rows
-      end
+%       if numel(S(1).subs)==1
+%          S(1).subs = [1, S(1).subs]; % Make sure is indexing rows
+%       end
       [varargout{1:nargout}] = builtin('subsref',blockObj,S);
       return;
       
@@ -233,5 +235,5 @@ end
 % Checks that input subscript arguments "work" together
 function value = checkInputArgsCoherence(prevElNum,args)
 %CHECKINPUTARGSCOHERENCE  Ensure that subscript args "work" together
-value = isnumeric(args) || (iscell(args) && (numel(args) == prevElNum));
+value = isnumeric(args) || (iscell(args) && (numel(args) == prevElNum)) || (ischar(args) && strcmp(args,':'));
 end
