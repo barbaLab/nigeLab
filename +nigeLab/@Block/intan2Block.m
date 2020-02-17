@@ -130,7 +130,7 @@ for f = fields_to_extract
          % One file per probe and channel
          group = info(1).signal.Group;
          Files.Standard.(curDataField).(group) = cell(blockObj.NumChannels,1);
-         nCh.Standard.(curDataField).(group) = blockObj.NumChannels;
+         nCh.Standard.(curDataField).(group) = header.(['Num' curDataField 'Channels']);
          % Assume data has same # samples per channel
          data = zeros(1,info(1).signal.Samples,'single');
          reportProgress(blockObj,'Header parsed.','clc');
@@ -189,6 +189,7 @@ for f = fields_to_extract
             'verbose',blockObj.Verbose && ~blockObj.OnRemote);
          % Do not need the substruct here because of the fact it is just
          % 'Time' and is handled differently
+         data = zeros(diskPars.size,diskPars.class);
          Files.Time = nigeLab.utils.makeDiskFile(diskPars);
          
       case 'Streams'
@@ -293,7 +294,7 @@ time_buffer_index = false(1,nDataPoints);
 [time_buffer_index,end_] = getDigBuffer(time_buffer_index,end_,...
    2,nPerBlock,nChunks);
 
-
+ 
 if (nCh.Standard.Raw.Data > 0)
    buffer.Standard.Raw.Data = zeros(1,nDataPoints,'uint16');
    [buffer.Standard.Raw.Data,end_] = getBufferIndex(buffer.Standard.Raw.Data,end_,...
@@ -370,6 +371,7 @@ if (nCh.Standard.AnalogIO.Dac > 0)
    %    dataOffset.Dac = 32768;
 end
 
+buffer.Dig.DigIO = struct;
 % Get TTL streams as well
 if (nCh.Dig.DigIO.DigIn > 0)
    buffer.Dig.DigIO.DigIn = false(1,nDataPoints);
@@ -409,7 +411,7 @@ validNamesIndex = ismember(standardFields, fieldnames(Files.Standard));
 stimFields = intersect({'Stim'},standardFields(validNamesIndex));
 standardFields = setdiff(standardFields(validNamesIndex),{'Stim'});
 nStandard = numel(standardFields);
-nStimFields = numel(standardFields);
+nStimFields = numel(stimFields);
 nDig = numel(digStreamFields);
 nChunkMax = ceil(header.NumDataBlocks/nChunks);
 reportProgress(blockObj,'Indexing complete.','clc','toWindow');

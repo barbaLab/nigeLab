@@ -25,6 +25,12 @@ if iscell(field)
    return;
 end
 
+if ~isfield(blockObj.Streams,field)
+    
+    blockObj.updateStatus(field,false,1);
+    flag = true;
+   return; 
+end
 %%
 flag = false;
 str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
