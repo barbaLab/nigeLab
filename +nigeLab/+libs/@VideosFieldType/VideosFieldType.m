@@ -18,6 +18,7 @@ classdef VideosFieldType < handle ...
       Height    double     % Height of video frame (pixels)
       Index       char     % Index of this video (for GoPro multi-videos)
       Key         char     % "Key" that corresponds to Block object
+      Masked      (1,1)    % Is this video "masked" (true: enabled)?
       Name        char     % Name of video file
       NeuOffset   (1,1) double  % Generic start-time offset beyond the Video offset
       NumFrames double     % Total number of frames
@@ -43,7 +44,7 @@ classdef VideosFieldType < handle ...
    
    % HIDDEN,TRANSIENT,PROTECTED
    properties (Hidden,Transient,Access=protected)
-      V_             VideoReader     % VideoReader object
+      V_                          % VideoReader object
       VideoIndex_    double       % Stored index
       store_   (1,1) struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
    end
@@ -380,6 +381,19 @@ classdef VideosFieldType < handle ...
                'Failed attempt to set DEPENDENT property: Key\n');
             fprintf(1,'\n');
          end
+      end
+      
+      % [DEPENDENT]  Returns .Masked property
+      function value = get.Masked(obj)
+         %GET.MASKED  References "Header" diskfile (column 3: 'Tag')
+         value = getEventData(obj.Block,obj.Block.ScoringField,...
+            'tag','Header');
+         value = logical(value(obj.VideoIndex));
+      end
+      function set.Masked(obj,value)
+         %SET.MASKED  References "Header" diskfile (column 3: 'Tag')
+         setEventData(obj.Block,obj.Block.ScoringField,...
+            'ts','Header',value,obj.VideoIndex);
       end
       
       % [DEPENDENT]  Returns .Meta property

@@ -41,6 +41,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
    % TRANSIENT,PUBLIC
    properties (Transient,Access=public)
       BehaviorInfoObj            % "Parent" BehaviorInfo object
+      CameraObj                  % "Source" Camera object
+      MaskObj                    % Image for showing "grayed out" non-included regions
       VidGraphicsObj             % "Parent" VidGraphics object
    end
    
@@ -167,7 +169,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %
          %  value = get(obj,'FrameTime');
          %  --> If unset, default value is 0
-         value = obj.VidGraphicsObj.FrameTime;
+         value = obj.VidGraphicsObj.SeriesTime - obj.VideoOffset;
       end
       % [DEPENDENT]  Assign .FrameTime to parent
       function set.FrameTime(obj,value)
@@ -177,7 +179,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %  --> Sets time of "desired" frame (causing parent VideoReader to
          %        "jump" and display the corresponding frame time)
 
-         obj.VidGraphicsObj.FrameTime = value;
+         obj.VidGraphicsObj.SeriesTime = value - obj.VideoOffset;
       end
       
       % [DEPENDENT]  Returns .NeuOffset (from "parent" VidGraphics object)
@@ -332,7 +334,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          if obj.ZoomLevel < 1
             value = [0, Max(FromSame(obj.Block.Videos,obj.VidGraphicsObj.VideoSource))];
          else
-            value = [obj.FrameTime - obj.Zoom, obj.FrameTime + obj.Zoom];
+            value = [obj.Camera.Time - obj.Zoom, obj.Camera.Time + obj.Zoom];
          end
       end
       % [DEPENDENT]  Assign .XLim
@@ -344,13 +346,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          if ischar(value)
             switch value
                case {'far','all'}
-                  xLim = [0, Max(FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource))];
+                  xLim = [0, Max(FromSame(obj.Block.Videos,obj.VidGraphicsObj.VideoSource))];
                case {'near','close'}
                   if obj.ZoomLevel < 1
                      obj.ZoomLevel = 1;
                   end
-                  xLim = [obj.FrameTime - obj.Zoom,...
-                          obj.FrameTime + obj.Zoom];
+                  xLim = [obj.Camera.Time - obj.Zoom,...
+                          obj.Camera.Time + obj.Zoom];
             end
          elseif isnumeric(value) && (numel(value)==2) && (value(2) > value(1))
             xLim = value;
@@ -393,6 +395,14 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             obj.Zoom_ = obj.ZoomedOffset(value);
          end
          obj.CMap_ = C;
+      end
+      
+      function delete(obj)
+         if ~isempty(obj.CameraObj)
+            if isvalid(obj.CameraObj)
+               delete(obj.CameraObj);
+            end
+         end
       end
    end
    
@@ -463,6 +473,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          % Initialize x-scaling and x-offset (based on "Parents" of fig)
          parseXScaling(obj);
+         obj.CameraObj = nigeLab.libs.nigelCamera(obj);
          obj.Figure.WindowButtonMotionFcn = @obj.cursorMotionCB;
       end
    end
@@ -624,7 +635,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %
          %  checkAxesLimits(obj);
          
-         if (obj.FrameTime>obj.XLim_(2)) || (obj.FrameTime<obj.XLim_(1))
+         if (obj.CameraObj.Time > obj.XLim_(2)) || ...
+            (obj.CameraObj.Time < obj.XLim_(1))
             updateZoom(obj);
          end
       end
@@ -651,7 +663,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %  indicateTime(obj);
          
          % Obj.VideoOffset == "Series Offset" for GoPro series videos
-         obj.Now.XData = ones(1,2)*(obj.FrameTime+obj.VideoOffset);
+         obj.Now.XData = ones(1,2)*(obj.VidGraphicsObj.SeriesTime);
          
          % Fix axis limits
          checkAxesLimits(obj);
@@ -835,13 +847,11 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             else
                tUpdate = obj.Axes.CurrentPoint(1,1);
             end
-            obj.VidGraphicsObj.NeuTime=tUpdate+...
-               obj.VidGraphicsObj.NeuOffset+obj.VidGraphicsObj.TrialOffset-obj.VidGraphicsObj.VideoOffset;
-            obj.VidGraphicsObj.FrameTime = tUpdate;
-            obj.Figure.UserData.FrameTime = tUpdate;
             
-            updateTimeLabelsCB(obj.VidGraphicsObj,...
-               obj.VidGraphicsObj.FrameTime,obj.VidGraphicsObj.NeuTime);
+            % Camera object manages time changes
+            obj.CameraObj.Time = tUpdate;
+            % Update labels (seconds)
+            updateTimeLabelsCB(obj.VidGraphicsObj);
          end
       end
       
@@ -1102,17 +1112,20 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          tmp = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
          c = linspace(0.75,0.95,numel(tmp)-1);
          for i = 1:(numel(tmp)-1)
-            t = max(tmp(i).tVid);
-            sep = line(obj.Axes,[t,t],[-0.15 0.05],...
-               'LineWidth',2,...
-               'Color',nigeLab.defaults.nigelColors('light'),...
-               'Displayname','','Tag','',...
-               'MarkerIndices',1,'Marker','^','LineStyle','-',...
-               'MarkerFaceColor',ones(1,3)*c(i),...
-               'MarkerEdgeColor',ones(1,3)*c(i),...
-               'Clipping','off',...
-               'LineJoin','miter','PickableParts','none');
-            sep.Annotation.LegendInformation.IconDisplayStyle = 'off';
+            if tmp(i).Masked
+               rX = max(tmp(i).tVid);
+            else
+               rX = min(tmp(i).tVid);
+            end
+            rW = max(rX - min(tmp(i+1).tVid),0.005);
+            sep = rectangle(obj.Axes,...
+               'Position',[rX,-0.15,rW,1.15],...
+               'Curvature',[0.2 0.2],...
+               'EdgeColor','none',...
+               'FaceColor',nigeLab.defaults.nigelColors('light'),...
+               'Tag','Video Boundary',...
+               'Clipping','on',...
+               'PickableParts','none');
          end
          
          % Add indicator for current times

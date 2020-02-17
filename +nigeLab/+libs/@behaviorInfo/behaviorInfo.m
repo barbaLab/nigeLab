@@ -894,13 +894,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          % Update video time if needed
          if isa(src,'nigeLab.libs.VidGraphics')
-            src.FrameTime = obj.Trial(newTrialIndex);
+            src.SeriesTime = obj.Trial(newTrialIndex) - ...
+               src.NeuOffset - src.TrialOffset;
             src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
             src.DataLabel.Color = ...
                obj.TrialButtonArray(newTrialIndex).EdgeColor;
             obj.NeedsLabels = true;
          elseif ~isempty(obj.VidGraphics)
-            obj.VidGraphics.FrameTime = obj.Trial(newTrialIndex);
+            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) - ...
+               obj.VidGraphics.NeuOffset - obj.VidGraphics.TrialOffset;
             obj.VidGraphics.DataLabel.String =...
                sprintf('Trial: %g',newTrialIndex);
             obj.NeedsLabels = true;
@@ -1322,6 +1324,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             obj.SuccessIndicatorLabel.Color =  ...
                nigeLab.defaults.nigelColors('white');
          end
+         updateTimeLabelsCB(obj.VidGraphics);
       end
       
       % Update object labels

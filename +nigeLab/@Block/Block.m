@@ -85,6 +85,7 @@ classdef Block < nigeLab.nigelObj
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
       ScoringField         char   = 'ScoredEvents'   % blockObj.Pars.Video.ScoringEventFieldName
+      Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
       TrialField           char   = 'trial-running'  % blockObj.Pars.Event.TrialDetectionInfo.Name
       TrialVideoOffset     double   % Matrix where rows are video cameras and columns are trials. Each value is a trial/camera-specific offset.
@@ -143,6 +144,7 @@ classdef Block < nigeLab.nigelObj
       NumChannels_      % (Transient) store for .NumChannels property
       NumProbes_        % (Transient) store for .NumProbes property
       ScoringField_     % (Transient) store for .ScoringField property
+      Shortcut_         % (Transient) store for .Shortcut property
       TrialField_       % (Transient) store for .TrialField property
       TrialVideoOffset_ % (Transient) store for .TrialVideoOffset property
       VideoHeader_      % (Transient) store for .VideoHeader property
@@ -307,6 +309,21 @@ classdef Block < nigeLab.nigelObj
       function set.ScoringField(blockObj,value)
          %SET.SCORINGFIELD  Assigns .ScoringField
          blockObj.ScoringField_ = value;
+      end
+      
+      % [DEPENDENT] Returns .Shortcut property
+      function value = get.Shortcut(blockObj)
+         %GET.SHORTCUT  Returns .Shortcut_
+         if isempty(blockObj.Shortcut_)
+            blockObj.Shortcut_ = nigeLab.defaults.Shortcuts();
+         end
+         value = blockObj.Shortcut_;
+      end
+      function set.Shortcut(blockObj,value)
+         %SET.SHORTCUT  Assigns .Shortcut (nigeLab.defaults.Shortcuts())
+         %
+         %  set(blockObj,'Shortcut',value);
+         blockObj.Shortcut_ = value;
       end
       
       % [DEPENDENT] Returns .Trial property

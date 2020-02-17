@@ -25,8 +25,6 @@ function varargout = subsref(blockObj,S)
 %                                              each block returns the array
 %                                              as a separate cell array.
 
-% Shrt: cell array of shortcuts
-Shrt = nigeLab.defaults.Shortcuts();
 switch S(1).type
    case '.' % Handle '.' subscripted references
       % . means Block was referenced as __.Block.[method or property]
@@ -105,10 +103,10 @@ switch S(1).type
       subs = S(1).subs;
       if ischar(subs{1})
          shrtName = subs{1};
-         shrtStruct = Shrt.(shrtName);
+         shrtStruct = blockObj.Shortcut.(shrtName);
       elseif isnumeric(subs{1}) && isscalar(subs{1})
-         ff = fieldnames(Shrt);
-         shrtStruct = Shrt.(ff{subs{1}});
+         ff = fieldnames(blockObj.Shortcut);
+         shrtStruct = blockObj.Shortcut.(ff{subs{1}});
       else
          error(['nigeLab:' mfilename ':BadSubsType'],...
             '[BLOCK/SUBSREF]: Invalid first input.');
