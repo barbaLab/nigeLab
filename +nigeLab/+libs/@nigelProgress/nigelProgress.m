@@ -37,6 +37,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
       IsRunning   (1,1) logical = false    % If true, job is running on remote
       Position  double   % Position of "container" but updates graphics
       job
+      FinishedFun cell
    end
 
    properties (SetAccess = private, GetAccess = public)
@@ -64,7 +65,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                          ?nigeLab.evt.barStopped,...
                          ?nigeLab.evt.barCleared,...
                          ?nigeLab.libs.DashBoard})
-      BlockSelectionIndex  double   % Index of the [animal block]
+      BlockSelectionIndex  cell     % Key of the {animal block}
       Timer                timer    % Timer running "remote" monitor
    end
    
@@ -234,7 +235,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          
          %% Add Timer
          bar.Timer = timer(...
-            'Name',sprintf('timer_A%02g_B%02g',sel(1),sel(2)),...
+            'Name',sprintf('timer_A%s_B%s',sel{1},sel{2}),...
             'Period',bar.NotifyTimer,...
             'ExecutionMode','fixedSpacing',...
             'UserData',sel,...
@@ -325,10 +326,10 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          %
          %  bar = getBar(barArray,sel);
          %
-         %  sel  --  [1 x 2] array [animalIndex blockIndex]
+         %  sel  --  [1 x 2] cell array {animalKey blockKey}
          
          for bar = barArray
-            if all(bar.BlockSelectionIndex == sel)
+            if all(strcmp(bar.BlockSelectionIndex,sel))
                return;
             end
          end
@@ -411,6 +412,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                b.reload(); % Reload the block so it is linked properly
                evt = nigeLab.evt.jobCompleted(bar);
                notify(bar.Monitor,'JobCompleted',evt);
+               nigelab.utils.multiCallbackWrap(bar, evt, bar.FinishedFun);
             end
          else
             % I hate this sound! Boo! You should also hate it!
@@ -604,44 +606,45 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          bar.setState(pct,str);
          
          % If on remote, wait for job to finish--it will do indicator
-         if bar.IsRemote
-            if strcmpi(str,bar.CompleteKey)
-               % If the job is completed, then run the completion method
-               bar.stopBar();
-               if pct >= 100
-                  bar.IsComplete = true;
-                  % If `indicateCompletion()` runs with `bar.IsComplete`
-                  % true, it does the "bell" ring; otherwise, it does the
-                  % "alert" noise
-               else
-                  % If bar reached "Complete" at some point
-                  bar.IsComplete = bar.IsComplete || false;
-               end
-            end
-         elseif bar.IsParallel
-             if strcmp(bar.job.State,'finished')
-                 bar.stopBar();
-            
-               % If the job is completed, then run the completion method
-               
-               if pct >= 100 || strcmpi(str,bar.CompleteKey) || bar.IsComplete
-                  bar.IsComplete = true;
-                  % If `indicateCompletion()` runs with `bar.IsComplete`
-                  % true, it does the "bell" ring; otherwise, it does the
-                  % "alert" noise
-               else
-                   bar.IsComplete = false;
-               end
-               bar.indicateCompletion();
-            end
-         else
-            % Otherwise just wait until it hits 100% to indicate complete
-            if pct >= 100
-               bar.IsComplete = true; % So the "bell" will sound
-               bar.indicateCompletion();
-               bar.stopBar();
-            end
-         end
+%          if bar.IsRemote
+%             if strcmpi(str,bar.CompleteKey)
+%                % If the job is completed, then run the completion method
+%                bar.stopBar();
+%                if pct >= 100
+%                   bar.IsComplete = true;
+%                   % If `indicateCompletion()` runs with `bar.IsComplete`
+%                   % true, it does the "bell" ring; otherwise, it does the
+%                   % "alert" noise
+%                else
+%                   % If bar reached "Complete" at some point
+%                   bar.IsComplete = bar.IsComplete || false;
+%                end
+%             end
+%          else
+if bar.IsParallel
+    if strcmp(bar.job.State,'finished')
+        bar.stopBar();
+        
+        % If the job is completed, then run the completion method
+        
+        if pct >= 100 || strcmpi(str,bar.CompleteKey) || bar.IsComplete
+            bar.IsComplete = true;
+            % If `indicateCompletion()` runs with `bar.IsComplete`
+            % true, it does the "bell" ring; otherwise, it does the
+            % "alert" noise
+        else
+            bar.IsComplete = false;
+        end
+        bar.indicateCompletion();
+    end
+else
+    % Otherwise just wait until it hits 100% to indicate complete
+    if pct >= 100
+        bar.IsComplete = true; % So the "bell" will sound
+        bar.indicateCompletion();
+        bar.stopBar();
+    end
+end
 
       end
    end
@@ -660,22 +663,25 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          %
          %  lh = addPropertyListeners(bar);  Returns array of listeners
          
+         
          lh = addlistener(bar,'BarIndex','PostSet',...
-                        @(~,~)bar.setVisualQueuePosition);
+             @(~,~)bar.setVisualQueuePosition);
          lh = [lh, addlistener(bar,'Visible','PostSet',...
-                        @(~,~)bar.toggleVisible)];
+             @(~,~)bar.toggleVisible)];
          lh = [lh, addlistener(bar,'IsRunning','PostSet',...
-                        @(~,~)bar.toggleColor)];
+             @(~,~)bar.toggleColor)];
          lh = [lh, addlistener(bar,'Position','PostSet',...
-                        @(~,~)bar.updatePosition)];
+             @(~,~)bar.updatePosition)];
          lh = [lh, addlistener(bar,'Color','PostSet',...
-                        @(~,~)bar.updateColor)];
+             @(~,~)bar.updateColor)];
          lh = [lh, addlistener(bar,'Progress','PostSet',...
-                        @(~,~)bar.updateProgress)];
+             @(~,~)bar.updateProgress)];
          lh = [lh, addlistener(bar,'Status','PostSet',...
-                        @(~,~)bar.updateStatus)];
+             @(~,~)bar.updateStatus)];
          lh = [lh, addlistener(bar,'Name','PostSet',...
-                        @(~,~)bar.updateName)];
+             @(~,~)bar.updateName)];
+%          lh = [lh, addlistener(bar,'FinishedFun','PostSet',...
+%              @(obj,evtdata)CheckCallabck(obj,evtdata))];
       end
 
       % Internal function to deal with job being removed via Job Monitor
@@ -831,3 +837,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
    
    
 end
+
+% function CheckCallabck(obj,evtdata)
+% evtdata.AffectedObject.(obj.Name)
+% end
