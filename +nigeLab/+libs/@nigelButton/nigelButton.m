@@ -1029,9 +1029,10 @@ classdef nigelButton < handle & matlab.mixin.SetGet
          %  --> value : Can be numeric or char
          
          if ischar(value) 
-            c = nigeLab.defaults.nigelColors(value);
             if strcmpi(value,'none')
                c = value;
+            else
+               c = nigeLab.defaults.nigelColors(value);
             end
          elseif isscalar(value)
             c = nigeLab.defaults.nigelColors(value);
