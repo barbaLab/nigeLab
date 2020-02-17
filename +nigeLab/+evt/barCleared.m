@@ -27,7 +27,7 @@ classdef (ConstructOnLoad) barCleared < event.EventData
 
    properties (Access = public)
       BarIndex            double   % Index of bar into remote monitor 'bars' array
-      BlockSelectionIndex double   % Index of [animal block] from tank{} ref
+      BlockSelectionIndex cell   % Index of [animal block] from tank{} ref
       IsComplete          logical  % Was the job completed?
       IsRemote            logical  % Was job run remotely?
       Name                char     % Name (AnimalID.RecID) of job

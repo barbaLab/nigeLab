@@ -418,6 +418,11 @@ classdef nigelObj < handle & ...
                'Both inPath and savePath must be `char`');
          end
          
+         % Initialize parameters
+         if any(~obj.updateParams('init'))
+            error(['nigeLab:' mfilename ':BadInit'],...
+               'Could not properly initialize parameters.');
+         end
          % Handle I/O path specifications
          if ~obj.parseInputPath(inPath)
             nigeLab.utils.cprintf('Errors*',...
@@ -428,12 +433,6 @@ classdef nigelObj < handle & ...
             nigeLab.utils.cprintf('Errors*',...
                '[constructor canceled]: Output file/folder not given\n');
             return;
-         end
-         
-         % Initialize parameters
-         if any(~obj.updateParams('init'))
-            error(['nigeLab:' mfilename ':BadInit'],...
-               'Could not properly initialize parameters.');
          end
       end
       
@@ -546,10 +545,14 @@ classdef nigelObj < handle & ...
               case '.'
                   switch class(nigelObj)
                       case 'nigeLab.Block'
-                          Ffields = nigelObj(1).Pars.Block.Fields;
-                          idx = strcmpi(Ffields,s(1).subs);
-                          if any(idx)
-                              n = numel(nigelObj);
+                          if ~isempty(nigelObj(1).Pars)
+                              Ffields = nigelObj(1).Pars.Block.Fields;
+                              idx = strcmpi(Ffields,s(1).subs);
+                              if any(idx)
+                                  n = numel(nigelObj);
+                              else
+                                  n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                              end
                           else
                               n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                           end
@@ -983,7 +986,9 @@ classdef nigelObj < handle & ...
             if ~isfield(obj.Pars,obj.Type)
                [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type);
             end
-            obj.Paths.Name = obj.parseNamingMetadata();
+
+            name = obj.genName();
+            obj.Paths.Name = name;
          end
          % Just in case something went wrong with parsing:
          if isempty(obj.Paths.Name) 
@@ -992,19 +997,19 @@ classdef nigelObj < handle & ...
                   if isfield(obj.Out,'TankName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
                case 'Animal'
                   if isfield(obj.Out,'AnimalName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
                case 'Block'
                   if isfield(obj.Out,'BlockName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
             end
          end
@@ -1849,12 +1854,12 @@ classdef nigelObj < handle & ...
             obj(i).InBlindMode = value;
             if value
                if isempty(obj(i).Key.Name)
-                  obj(i).Key.Name = parseNamingMetadata(obj(i));
+                  obj(i).Key.Name = genName(obj(i));
                end
                obj(i).Name = getKey(obj(i),'Public');
             else
                if isempty(obj(i).Key.Name)
-                  obj(i).Key.Name = parseNamingMetadata(obj(i));
+                  obj(i).Key.Name = genName(obj(i));
                end
                obj(i).Name = getKey(obj(i),'Name');
             end
@@ -1960,7 +1965,11 @@ classdef nigelObj < handle & ...
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
-         obj.parseNamingMetadata();
+         if ~isfield(obj.Pars.(obj.Type),'Parsing')
+             [obj.Name,obj.Meta] = obj.parseNamingMetadata();
+         else
+             obj.Name = obj.genName();
+         end
       end
       
       % [FLAG] Set method for .IsDashOpen (flag true if GUI is open)
@@ -2172,6 +2181,7 @@ classdef nigelObj < handle & ...
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
+         obj.genPaths;
          obj.saveIDFile();
          
       end
@@ -2466,19 +2476,26 @@ classdef nigelObj < handle & ...
          if nargin < 3
             obj.Children = [obj.Children childObj];
          else
-            if numel(size(idx)) == 1
-               S = substruct('()',{1,idx});
-            else
-               S = substruct('()',{idx});
-            end
-            obj.Children = builtin('subsasgn',obj.Children,...
-               S,childObj);
+             % we need to explicitly handle the assignement of empty elements 
+             % ie when idx = [2 4]; obj.Children(3) needs to be empty;
+             % the same goes for the case numel(obj.Children) = n; and
+             % min(idx) > n
+             
+             NChildren = numel(obj.Children);
+             fullIdx = (NChildren+1):max(idx);
+             nullIdx = ~ismember(fullIdx,idx);
+             newChildObj = nigeLab.(childObj.Type).Empty([1 numel(fullIdx)]);
+             newChildObj(~nullIdx) = childObj;
+             S = substruct('()',{1,fullIdx});
+             obj.Children = builtin('subsasgn',obj.Children,...
+               S,newChildObj);
+             
          end % if nargin < 3
          
          for i = 1:numel(childObj)
             obj.ChildListener = [obj.ChildListener, ...
                addlistener(childObj(i),'ObjectBeingDestroyed',...
-               @(~,evt)obj.assignNULL(evt.AffectedObject)), ...
+               @(src,evt)obj.assignNULL(src)), ...
                addlistener(childObj(i),'StatusChanged',...
                @(~,evt)notify(obj,'StatusChanged',evt)), ...,...
                addlistener(childObj(i),'DashChanged',...
@@ -2585,11 +2602,14 @@ classdef nigelObj < handle & ...
          
          pFlag = qPars.UseParallel; % Check user preference for using Parallel
          rFlag = qPars.UseRemote;   % Check user preference for using Remote
-         uFlag = pFlag && rFlag;
+%          uFlag = pFlag && rFlag;
          
          lFlag = license('test','Distrib_Computing_Toolbox'); % Check if toolbox is licensed
-         dFlag = ~isempty(ver('distcomp'));  % Check if distributed-computing toolkit is installed
-         
+         if verLessThan('matlab','9.7')
+             dFlag = ~isempty(ver('distcomp'));  % Check if distributed-computing toolkit is installed
+         else
+             dFlag = ~isempty(ver('parallel'));
+         end
          if obj.Verbose
             [fmt,idt,type] = getDescriptiveFormatting(obj);
             if (pFlag || rFlag) && ~(dFlag && lFlag) % If user indicates they want to run parallel or remote
@@ -2614,7 +2634,7 @@ classdef nigelObj < handle & ...
             end
          end
          
-         flag = uFlag && lFlag && dFlag;
+         flag = pFlag && lFlag && dFlag;
          
          obj.UseParallel = flag;
          
@@ -3789,6 +3809,13 @@ classdef nigelObj < handle & ...
             error(['nigeLab:' mfilename ':TooFewInputs'],...
                'Not enough input args, no Child objects removed.');
          end
+         switch class(ind)
+             case 'double'
+                 ...Nothing really to do here
+             case 'nigeLab.Block'
+                    ind = find(ismember( obj.Children,ind));
+             otherwise
+         end
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
@@ -4740,7 +4767,7 @@ classdef nigelObj < handle & ...
             case 'Tank'
                % Note that nigeLab.libs.DashBoard constructor is only
                % available from tankObj method nigeLab.nigelObj/nigelDash.
-               if ~obj.IsDashOpen
+               if ~obj.IsDashOpen || isempty(obj.GUI)
                   obj.GUI = nigeLab.libs.DashBoard(obj);
                else
                   if isvalid(obj.GUI)
@@ -4781,10 +4808,10 @@ classdef nigelObj < handle & ...
             for lh = obj.ChildListener
                if isvalid(lh)
                   delete(lh);
+                  obj.ChildListener(1) = [];
                end
             end
          end
-         obj.ChildListener = [];
          
          if nargin < 2
             C = obj.Children;
@@ -5852,19 +5879,32 @@ classdef nigelObj < handle & ...
             end
          end         
          
-         % Last, concatenate parsed (included) variables to get .Name
-         str = [];
-         nameCon = pars.NamingConvention;
-         for ii = 1:numel(nameCon)
-            if isfield(meta,nameCon{ii})
-               str = [str,meta.(nameCon{ii}),pars.Concatenater];
-            end
-         end
-         name = str(1:(end-numel(pars.Concatenater)));
-         
-         % Make assignments
-         obj.Name = name;
+         obj.Meta = meta; 
          obj.Pars.(obj.Type).Parsing = pars;
+         obj.Name = obj.genName();
+         name = obj.Name;
+      end
+      
+      function name = genName(obj)
+          if ~isfield( obj.Pars.(obj.Type),'Parsing')
+                [name,obj.Meta] = obj.parseNamingMetadata;
+                return;
+          end
+          
+          pars = obj.Pars.(obj.Type).Parsing;
+          meta = obj.Meta;
+          % Last, concatenate parsed (included) variables to get .Name
+          str = [];
+          nameCon = pars.NamingConvention;
+          for ii = 1:numel(nameCon)
+              if isfield(meta,nameCon{ii})
+                  str = [str,meta.(nameCon{ii}),pars.Concatenater];
+              end
+          end
+          name = str(1:(end-numel(pars.Concatenater)));
+          
+%           % Make assignments
+%           obj.Name = name;
       end
       
       % Parse output path (constructor probably always)
@@ -6206,6 +6246,7 @@ classdef nigelObj < handle & ...
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
             p = obj.Output;
+            flag = true;
             for i = 1:numel(obj.Children)
                if ~isempty(obj.Children(i))
                   c = obj.Children(i);
@@ -6232,7 +6273,7 @@ classdef nigelObj < handle & ...
          OldFN = [];
          
          % generate new obj.Paths
-         obj.genPaths(saveLoc);
+         obj.Output = fullfile(saveLoc,obj.Name);
          P = obj.Paths;
          
          uniqueTypes = unique(obj.FieldType);
@@ -6261,9 +6302,9 @@ classdef nigelObj < handle & ...
          % moves all the files from folder to folder
          for ii=1:numel(filePaths)
             source = filePaths{ii};
-            [~,target] = strsplit(source,'\\\w*\\\w*.mat',...
+            [~,target] = strsplit(source,'\w*\\\w*.mat',...
                'DelimiterType', 'RegularExpression');
-            target = fullfile(P.SaveLoc,target{1});
+            target = fullfile(P.Output,target{1});
             [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
          end
          
@@ -6273,10 +6314,11 @@ classdef nigelObj < handle & ...
             moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
             d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
                {'.','..'}));
-            if isempty(d)
+            if isempty(d) && exist(OldP.(OldFN{jj}).dir,'dir')
                rmdir(OldP.(OldFN{jj}).dir);
             end
          end
+         flag = true;
          flag = flag && obj.linkToData;
          flag = flag && obj.save;
          
@@ -6377,8 +6419,9 @@ classdef nigelObj < handle & ...
                % Be sure to re-assign transient .Block property to Videos
                if ~isempty(b.Videos)
                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
-               else
+               elseif b.Pars.Video.HasVideo
                   b.Videos = nigeLab.libs.VideosFieldType.empty();
+               else
                end
             case {'Animal','Tank'}
                b.PropListener(1).Enabled = false;
@@ -6597,6 +6640,7 @@ classdef nigelObj < handle & ...
             'Private',randomAlphaNumeric(2),...% Reserved, basically
             'Name','');
          
+       
       end
       
       % Merge structs while retaining old struct fields
