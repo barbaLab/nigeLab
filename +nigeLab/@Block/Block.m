@@ -82,6 +82,7 @@ classdef Block < nigeLab.nigelObj
    % HIDDEN,TRANSIENT,DEPENDENT,PUBLIC
    properties (Hidden,Transient,Dependent,Access=public)
       ChannelID            double   % [NumChannels x 2] array of channel and probe numbers
+      EventTimes           double   % Timestamps of different scored events
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
       ScoringField         char   = 'ScoredEvents'   % blockObj.Pars.Video.ScoringEventFieldName
@@ -241,6 +242,32 @@ classdef Block < nigeLab.nigelObj
       function set.ChannelID(obj,value)
          % Does nothing
          obj.ChannelID_ = value;
+      end
+      
+      % [DEPENDENT]  Returns .EventTimes property (write to DiskData)
+      function value = get.EventTimes(blockObj)
+         %GET.EVENTTIMES  Returns .EventTimes property
+         %
+         %  value = get(obj,'EventTimes');
+         
+         v = blockObj.Pars.Video.VarsToScore(blockObj.Pars.Video.VarType == 1);
+         value = nan(numel(blockObj.Trial),numel(v));
+         for iV = 1:numel(v)
+            value(:,iV) = getEventData(blockObj,blockObj.ScoringField,...
+               'ts',v{iV});
+         end
+      end
+      function set.EventTimes(blockObj,value)
+         %SET.EVENTTIMES  Assigns .EventTimes property
+         %
+         %  set(blockObj,'EventTimes',__);
+         
+         v = blockObj.Pars.Video.VarsToScore(...
+            blockObj.Pars.Video.VarType == 1);  
+         for iV = 1:numel(v)
+            setEventData(blockObj,blockObj.ScoringField,...
+               'ts',v{iV},value(:,iV));
+         end
       end
       
       % [DEPENDENT] Returns .NumChannels property

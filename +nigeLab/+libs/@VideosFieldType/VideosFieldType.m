@@ -475,6 +475,10 @@ classdef VideosFieldType < handle ...
          %  offset.
          
          obj.GrossOffset = value+obj.VideoOffset;
+%          % Since times are relative to the VIDEO record, any time a NEURAL
+%          % or TRIAL offset is changed, then change the event times
+%          obj.Block.Trial = obj.Block.Trial - value;
+%          obj.Block.EventTimes = obj.Block.EventTimes - value;
       end
       
       % [DEPENDENT]  Returns .NumFrames property

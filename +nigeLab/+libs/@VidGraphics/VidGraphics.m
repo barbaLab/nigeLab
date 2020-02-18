@@ -335,6 +335,16 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  offset, and tStart is the Video-Series offset
          
          obj.GrossOffset = value+obj.VideoOffset;
+         
+         % Since times are relative to the VIDEO record, any time a NEURAL
+         % or TRIAL offset is changed, then change the event times
+         obj.Block.Trial = obj.Block.Trial + value;
+         
+         % Set the offset for any other videos in this camera series
+         v = setdiff(obj.SeriesList_,obj.Video);
+         for iV = 1:numel(v)
+            v(iV).NeuOffset = value;
+         end
       end
       
       % [DEPENDENT] Returns .NumFrames property (total # frames in current)
@@ -444,6 +454,7 @@ classdef VidGraphics < matlab.mixin.SetGet
          iRow = obj.VideoIndex;
          iCol = obj.Block.TrialIndex;
          obj.Block.TrialVideoOffset(iRow,iCol) = value;
+         obj.Block.Trial(obj.Block.TrialIndex) = obj.Block.Trial(obj.Block.TrialIndex) - value;
       end
       
       % [DEPENDENT]  .TimerPeriod property (from .FPS)
@@ -496,7 +507,7 @@ classdef VidGraphics < matlab.mixin.SetGet
          %
          %  value = get(obj,'Video');
          %  --> Returns current element of Block.Videos, a
-         %  nigeLab.libs.VideosFieldType object
+         %        nigeLab.libs.VideosFieldType object
          
          value = obj.Block.Videos(obj.VideoIndex_);
       end

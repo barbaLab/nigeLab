@@ -104,7 +104,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.Axes_;
       end
-      % [DEPENDENT]  Assign .Axes (container for TimeScrollerAxes graphic)
       function set.Axes(obj,value)
          %SET.AXES  Assign .Axes (container for graphic)
          %
@@ -125,7 +124,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.VidGraphicsObj.Block;
       end
-      % [DEPENDENT]  Assigns .Block
       function set.Block(obj,value)
          %SET.BLOCK  Assigns .Block via VidGraphicsObj
          obj.VidGraphicsObj.Block = value;
@@ -140,7 +138,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          % Return "default" nigeLab colormap
          value = obj.CMap_;
       end
-      % [DEPENDENT]  Assign .CMap (sets .CMap_)
       function set.CMap(obj,value)
          %SET.CMAP  Assigns value to .CMap_
          obj.CMap_ = value;
@@ -154,7 +151,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
 
          value = obj.VidGraphicsObj.Figure;
       end
-      % [DEPENDENT]  Assign .Figure (via VidGraphicsObj)
       function set.Figure(obj,value)
          % SET.FIGURE  Assigns .Figure property via VidGraphicsObj
          %
@@ -171,7 +167,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %  --> If unset, default value is 0
          value = obj.VidGraphicsObj.SeriesTime - obj.VideoOffset;
       end
-      % [DEPENDENT]  Assign .FrameTime to parent
       function set.FrameTime(obj,value)
          %SET.FRAMETIME  Assigns .FrameTime to parent VideoGraphics object
          %
@@ -191,7 +186,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
 
          value = obj.VidGraphicsObj.NeuOffset;
       end
-      % [DEPENDENT]  Assign .NeuOffset
       function set.NeuOffset(obj,value)
          %SET.NEUOFFSET  set(obj.VidGraphicsObj,'NeuOffset',value);
 
@@ -207,7 +201,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.VidGraphicsObj.NeuTime;
       end
-      % [DEPENDENT]  Assign .NeuTime
       function set.NeuTime(obj,value)
          %SET.NEUOFFSET  Assign neural time of current frame
          %
@@ -225,7 +218,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.Panel_;
       end
-      % [DEPENDENT]  Assign .Panel
       function set.Panel(obj,value)
          %SET.PANEL   Assign .Panel
          obj.Panel_ = value;
@@ -240,7 +232,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.Panel;
       end
-      % [DEPENDENT]  Assign .Panel 
       function set.Parent(obj,value)
          %SET.PARENT 
          if isa(value,'nigeLab.libs.nigelPanel')
@@ -255,7 +246,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %GET.POSITION  Returns .Position (from .Position_)
          value = obj.Position_;
       end
-      % [DEPENDENT]  Assigns .Position (to .Axes, .Position_)
       function set.Position(obj,value)
          %SET.POSITION  Assigns .Position (to .Axes, .Position_)
          obj.Position_ = value;
@@ -271,7 +261,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.VidGraphicsObj.TrialOffset;
       end
-      % [DEPENDENT]  Assign .TrialOffset
       function set.TrialOffset(obj,value)
          %SET.TRIALOFFSET  Assign trial-specific "jitter" offset
          %
@@ -293,7 +282,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          end
          value = obj.VidGraphicsObj.Verbose;
       end
-      % [DEPENDENT]  Assign .VideoOffset (does nothing)
       function set.Verbose(obj,~)
          %SET.VERBOSE  (Does nothing)
          if obj.Verbose
@@ -315,7 +303,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.VidGraphicsObj.VideoOffset;
       end
-      % [DEPENDENT]  Assign .VideoOffset (assigns to parent VideoGraphics)
       function set.VideoOffset(obj,value)
          %SET.VideoOffset  Assigns to parent VideoGraphics object
          %
@@ -334,10 +321,9 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          if obj.ZoomLevel < 1
             value = [0, Max(FromSame(obj.Block.Videos,obj.VidGraphicsObj.VideoSource))];
          else
-            value = [obj.Camera.Time - obj.Zoom, obj.Camera.Time + obj.Zoom];
+            value = [obj.CameraObj.Time - obj.Zoom, obj.CameraObj.Time + obj.Zoom];
          end
       end
-      % [DEPENDENT]  Assign .XLim
       function set.XLim(obj,value)
          %SET.XLIM  set(obj,'XLim',__);
          %
@@ -351,8 +337,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
                   if obj.ZoomLevel < 1
                      obj.ZoomLevel = 1;
                   end
-                  xLim = [obj.Camera.Time - obj.Zoom,...
-                          obj.Camera.Time + obj.Zoom];
+                  xLim = [obj.CameraObj.Time - obj.Zoom,...
+                          obj.CameraObj.Time + obj.Zoom];
             end
          elseif isnumeric(value) && (numel(value)==2) && (value(2) > value(1))
             xLim = value;
@@ -373,7 +359,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.Zoom_;
       end
-      % [DEPENDENT]  Assign .Zoom property
       function set.Zoom(obj,value)
          %SET.ZOOM  Sets .Zoom_ value
          obj.Zoom_ = value;
@@ -384,7 +369,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       function value = get.ZoomLevel(obj)
          value = obj.ZoomLevel_;
       end      
-      % [DEPENDENT]  Assign .ZoomLevel property (sets .ZoomLevel_,.CMap)
       function set.ZoomLevel(obj,value)
          %SET.ZOOMLEVEL  Assign .ZoomLevel property (sets .ZoomLevel_)
          obj.ZoomLevel_ = value;
@@ -450,7 +434,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          % Initialize different property structs
          obj.flags = struct('BeingDragged',false);
          obj.x = struct('new',0,'orig',0,...
-            'updated_offset',obj.VidGraphicsObj.Video.NeuOffset,...
+            'delta_offset',0,...
             'axes_offset',0,'axes_scaling',1);
          
          % Depending on purpose, make application-specific differences here
@@ -815,9 +799,18 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          if obj.flags.BeingDragged     
             % Depends on button
             switch evt.Button
-               case 1
-                  obj.NeuOffset = obj.NeuOffset + obj.x.updated_offset;
-               case 3
+               case 1 % For left-click, complete the offset update process
+                  % If we drag the "streams" left, then our delta_offset
+                  % becomes negative. By convention, NeuOffset is the
+                  % number of seconds BEHIND of the video that the neural
+                  % data was started. This should typically be a positive
+                  % value, since neural recording is started AFTER the
+                  % video. Therefore, we ADD the value of delta_offset
+                  obj.NeuOffset = obj.NeuOffset + obj.x.delta_offset;
+                  
+                  obj.x.delta_offset = 0; % Return delta to zero
+
+               case 3 % For right-click, cancel, and reset other axes
                   for i = 1:numel(obj.dig)
                      obj.dig(i).h.XData = obj.dig(i).obj.t;
                   end
@@ -906,11 +899,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          if obj.flags.BeingDragged
             % If the flag is HIGH, then compute a new offset and
             % set the alignment using the current cursor position.
-            obj.x.updated_offset = curX - obj.x.orig;
+            obj.x.delta_offset = curX - obj.x.orig;
             
             % Moves the beam and press streams, relative to VIDEO
             for i = 1:numel(obj.dig)
-               obj.dig(i).h.XData = obj.dig(i).obj.t + obj.x.updated_offset;
+               % Use obj.t: Original times, as well as the neural offset
+               obj.dig(i).h.XData = obj.dig(i).obj.t + ...
+                  obj.x.delta_offset + obj.NeuOffset;
             end
             drawnow;
          end
@@ -1135,7 +1130,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          for i = 1:numel(obj.vid)
             obj.vid(i).h = ...
                plot(obj.Axes,...
-               obj.vid(i).obj.t,...       % Time from diskfile_
+               obj.vid(i).obj.t  + obj.NeuOffset,...       % Time from diskfile_
                obj.vid(i).obj.data,...    % Data from diskfile_
                'Color',obj.v(i).col,...
                'Displayname',obj.v(i).name,...
@@ -1149,7 +1144,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          for i = 1:numel(obj.dig)
             obj.dig(i).h = ...
                plot(obj.Axes,...
-               obj.dig(i).obj.t,...       % Time from diskfile_
+               obj.dig(i).obj.t + obj.NeuOffset,...       % Time from diskfile_
                obj.dig(i).obj.data,...    % Data from diskfile_
                'Tag',obj.dig(i).name,...
                'DisplayName',obj.dig(i).name,...

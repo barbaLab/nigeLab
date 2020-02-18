@@ -92,13 +92,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    end
    % % % % % % % % % % END PROPERTIES %
    
-   % % % EVENTS % % % % % % % % % % % %
-   % PUBLIC
-   events (ListenAccess=public,NotifyAccess=public)
-      TrialChanged  % Issued when trial is changed
-   end
-   % % % % % % % % % % END EVENTS % % %
-   
    % % % METHODS% % % % % % % % % % % %
    % RESTRICTED:{nigeLab.Block,nigeLab.nigelObj} (constructor)
    methods (Access={?nigeLab.Block,?nigeLab.nigelObj,?nigelab.libs.VidGraphics})
@@ -233,7 +226,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             value(:,iV) = getEventData(obj.Block,obj.FieldName,'ts',v{iV});
          end
       end
-      % [DEPENDENT]  Assigns .EventTimes property (write to DiskData)
       function set.EventTimes(obj,~)
          %SET.EVENTTIMES  Assigns .EventTimes property
          %
@@ -259,7 +251,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          idx = obj.Type == 1;
          value = obj.Variable(idx); 
       end
-      % [DEPENDENT]  Assigns .EventNames property (cannot)
       function set.EventNames(obj,value)
          % SET.EVENTNAMES  Sets subset of variables of 'EventTime' type
          %
@@ -276,7 +267,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  --> Returns char array (default: 'ScoredEvents')
          value = obj.Block.ScoringField;
       end
-      % [DEPENDENT]  Assigns .FieldName property (cannot)
       function set.FieldName(~,~)
          %SET.FIELDNAME (Does nothing)
       end 
@@ -289,7 +279,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.VideoHeader;
       end
-      % [DEPENDENT]  Assigns .Header property
       function set.Header(obj,value)
          %SET.HEADER  Assigns .Header property
          obj.Block.VideoHeader = value;
@@ -305,7 +294,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          mask(isnan(mask)) = true; % "NaN" masked trials are included
          value = logical(mask);
       end
-      % [DEPENDENT]  Assigns .Mask property
       function set.Mask(obj,value)
          %SET.Mask  Assigns .Mask property
          %
@@ -324,7 +312,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = getEventData(obj.Block,obj.FieldName,'snippet','Trial');
       end
-      % [DEPENDENT]  Assigns .Meta property
       function set.Meta(obj,~)
          %SET.META  Assigns .Meta property
          %
@@ -347,7 +334,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          idx = obj.Type > 1;
          value = obj.Variable(idx); 
       end
-      % [DEPENDENT]  Assigns .MetaNames property 
       function set.MetaNames(obj,value)
          % SET.METANAMES  Assigns .MetaNames property
          
@@ -375,7 +361,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          value = obj.Meta(:,iOut);
          value(isnan(value)) = false;
       end
-      % [DEPENDENT]  Assigns .Outcome property
       function set.Outcome(obj,value)
          %SET.Outcome  Assigns obj.Outcome 
          %
@@ -391,7 +376,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             return;
          end
          obj.Meta(:,iOut) = value;
-         updateBehaviorTracker(obj);
+         refreshGraphics(obj);
       end
       
       % [DEPENDENT]  Returns .OutcomeVarName property
@@ -402,7 +387,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Event.OutcomeVarName;
       end
-      % [DEPENDENT]  Assigns .OutcomeVarName property (cannot)
       function set.OutcomeVarName(~,~)
          %SET.OutcomeVarName  Does nothing
       end
@@ -415,7 +399,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = sum(obj.State);
       end
-      % [DEPENDENT]  Assigns .NScored property (cannot)
       function set.NScored(~,~)
          % SET.NSCORED  Does nothing
       end 
@@ -428,7 +411,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = nansum(obj.Outcome);
       end
-      % [DEPENDENT]  Assigns .NSuccessful property (cannot)
       function set.NSuccessful(~,~)
          % SET.NSUCCESSFUL  Does nothing
       end 
@@ -449,7 +431,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             end
          end
       end
-      % [DEPENDENT]  Assigns .NTotal property (cannot)
       function set.NTotal(~,~)
          % SET.NTotal  Does nothing
       end  
@@ -462,7 +443,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Video.ValueShortcutFcn;
       end
-      % [DEPENDENT]  Assigns .SetValueFcn  (does nothing)
       function set.SetValueFcn(~,~)
          %SET.SETVALUEFCN  Does nothing
       end
@@ -477,7 +457,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          value = ~any(isnan(getFullDataArray(obj)),2);
          value(~obj.Mask) = true; % If Masked, consider "State" complete
       end
-      % [DEPENDENT] Assign .State property (cannot)
       function set.State(~,~)
          %SET.STATE  Does nothing
          nigeLab.sounds.play('pop',2.7);
@@ -498,7 +477,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
 
          value = obj.Block.Pars.Video.VideoScoringStringsFcn;
       end
-      % [DEPENDENT] Assign .StringFcn property (cannot)
       function set.StringFcn(~,~)
          %SET.STRINGFCN  Does nothing
          nigeLab.sounds.play('pop',2.7);
@@ -520,7 +498,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          value = obj.Block.Trial;
 
       end
-      % [DEPENDENT]  Assigns putative trial times
       function set.Trial(obj,value)
          %SET.TRIAL  Assigns putative Trial timestamps
          %
@@ -539,7 +516,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.TrialIndex; 
       end
-      % [DEPENDENT] Sets trial popup box value to ensure match
       function set.TrialIndex(obj,value)
          %SET.TRIALINDEX  Sets trial popup box value to ensure match
          
@@ -568,7 +544,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Video.TrialBuffer; 
       end
-      % [DEPENDENT]  Assigns .TrialBuffer Property (does nothing)
       function set.TrialBuffer(~,~)
          %SET.TRIALBUFFER  Does nothing
       end
@@ -588,7 +563,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          value = obj.Block.Pars.Video.VarType;
 
       end
-      % [DEPENDENT]  Assigns .Type property (cannot)
       function set.Type(~,~)
          %SET.TYPE  (Does nothing)
       end
@@ -602,7 +576,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Video.VarsToScore;
       end
-      % [DEPENDENT]  Assigns .Variable property (cannot)
       function set.Variable(~,~)
          %SET.VARIABLE (Does nothing)
       end
@@ -620,7 +593,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          end
          value = obj.Block.Verbose;
       end
-      % [DEPENDENT] Assign .Verbose property (cannot)
       function set.Verbose(~,~)
          %SET.VERBOSE  Does nothing
          nigeLab.sounds.play('pop',2.7);
@@ -789,7 +761,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          info.Status{1} = checkProgress(obj);
          setScoringMetadata(obj,info);
          save(obj.Block);    
-         nigeLab.sounds.play('camera',2.25);
+         nigeLab.sounds.play('camera',2.25,-50);
       end
       
       % Save the trial timestamp data from the current trial

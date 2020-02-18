@@ -98,7 +98,7 @@ switch obj.Variable{curVarIndex}
    case 'Outcome' % Write Outcome directly
       obj.VariableIndex = curVarIndex;
       obj.Value(curVarIndex) = updatedValue;
-      obj
+      obj.Outcome(obj.TrialIndex) = updatedValue;
    otherwise
       % Default behavior is to set the value and notify of update
       obj.VariableIndex = curVarIndex;
