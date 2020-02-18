@@ -662,7 +662,6 @@ classdef VidGraphics < matlab.mixin.SetGet
          %      Figure, as well as the Width of the Figure Image itself
          axW = obj.VidImAx.Position(3) * obj.Panel.Panel.Position(3);
          panelW = obj.Panel.Position(3);
-         
          value = panelW * axW;         
       end
       function set.XImScale(~,~)
