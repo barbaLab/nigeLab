@@ -2139,12 +2139,17 @@ classdef nigelObj < handle & ...
          
          value = 'unknown';     
          if isunix
-            setenv('GIT_DIR',nigeLab.utils.getNigelPath('UNC'));
+            nigelPath = nigeLab.utils.getNigelPath('UNC');
+            nigelPath = [nigelPath '/.git'];
+            setenv('GIT_DIR',nigelPath);
          else
-            setenv('GIT_DIR',nigeLab.utils.getNigelPath());
+            nigelPath = nigeLab.utils.getNigelPath();
+            nigelPath = strrep(nigelPath,'\','/');
+            nigelPath = [nigelPath '/.git'];
+            setenv('GIT_DIR',nigelPath);
          end
          syscmdstr = sprintf(...
-            'git describe --abbrev=0 --tags --candidates=1');
+               'git describe --abbrev=0 --tags --candidates=1');
          [status,cmdout] = system(syscmdstr);
          if status ~= 0
             return;
