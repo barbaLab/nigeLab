@@ -58,7 +58,9 @@ switch nargin
             elseif strcmpi(varargin{1},'Gui')
                ...
             elseif strcmpi(varargin{1},'init')
-            
+            if ~isempty(blockObj.MultiAnimalsLinkedBlocks)
+                return;
+            end
             CreateChildrenBlocks(blockObj);
             assignPropsToFirstChild(blockObj);
             end
@@ -95,8 +97,9 @@ function CreateChildrenBlocks(blockObj)
 %
 %  CreateChildrenBlocks(blockObj);
 
+% split meta that contains MultiAnimalsChar
 ff = fieldnames(blockObj.Meta)';
-ff = ff(~strcmp(ff,'Header'));
+ff = setdiff(ff,{'Header','FileExt','OrigName','OrigPath'});
 types =  structfun(@(x) class(x),blockObj.Meta,'UniformOutput',false);
 for ii = ff
    if ~strcmp(types.(ii{:}),'char'),continue;end
@@ -110,14 +113,17 @@ for ii = ff
    end
 end
 
+% Main cycle, create all MultiAnimalsLinkedObjects
 for ii=1:numel(SplittedMeta)
    ff=fields(SplittedMeta);
    bl = copy(blockObj);
    
+   % assign correct meta
    for jj=1:numel(ff)
       bl.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
    end %jj
    
+    % create name from meta
    str = [];
    nameCon = bl.Pars.Block.NamingConvention;
    for kk = 1:numel(nameCon)
@@ -128,39 +134,36 @@ for ii=1:numel(SplittedMeta)
       end
    end %kk
    bl.Name = str(1:(end-1));
+   
+   % Channels needs to be empty
    Chf = fieldnames(bl.Channels)';
    Chf{2,1} = {};
    bl.Channels = struct(Chf{:});
+   
+   % Events needs to be empty
    bl.initEvents;
+   
+   % Streams needs to be empty
    ff = fieldnames(bl.Streams);
    for ss=1:numel(ff)
       Stf = fieldnames(bl.Streams.(ff{ss}))';
       Stf{2,1} = {};
       bl.Streams.(ff{ss}) = struct(Stf{:});
    end
+   
 %    bl.NumProbes = 0;
    bl.Mask = [];
    bl.Output = fullfile(bl.SaveLoc,bl.Name);
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
+   bl.Key = bl.InitKey();
+   bl.save;
    splittedBlocks(ii) = bl;
 end %ii
-
-
-% save new blocks under the Parent block folder
-%     for ii=1:numel(splittedBlocks)
-%         newPath = fullfile(fileparts(splittedBlocks(ii).Paths.SaveLoc),splittedBlocks(ii).Name);
-%         splittedBlocks(ii).Move(newPath);
-%     end
 
 blockObj.MultiAnimalsLinkedBlocks = splittedBlocks;
 
 % Save the blocks in the corresponding Animal folders.
-for ii =1:numel(blockObj.MultiAnimalsLinkedBlocks)
-   animalPath = fullfile((fileparts(blockObj.Paths.SaveLoc)));
-   BlockPath_ = fullfile(animalPath,blockObj.MultiAnimalsLinkedBlocks(ii).Name);
-   blockObj.MultiAnimalsLinkedBlocks(ii).Paths.SaveLoc = BlockPath_;
-end
 end
 
 % Find things to move and move them to correct location
@@ -215,6 +218,8 @@ for kk=1:size(Tree_,1)
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
       bl.Move(bl.Paths.SaveLoc);
+      bl.updateStatus('init');
+      bl.linkToData;
       bl.save();
    end
 end
@@ -315,9 +320,11 @@ function [trgtStuff] = getUpdatedStreams(trgtBlck,Stff,Tree,ii)
 % GETUPDATEDSTREAMS  Return the appropriate Streams since there is a subset
 %                    of "sync" behavior streams associated with each box
 %                    that should be assigned to each block after splitting.
-
-trgtStuff = struct();
 StreamsTypes = {Stff.Name};
+StreamsStruct = cellfun(@(x)  nigeLab.utils.initChannelStruct('Streams',0),...
+    StreamsTypes,'UniformOutput',false);
+trgtStuff = cell2struct(StreamsStruct,StreamsTypes,2);
+
 for jj=1:numel(StreamsTypes)
    tmp = [Stff(jj).Children.Children];
    if isempty([Stff(jj).Children.Children]),continue;end

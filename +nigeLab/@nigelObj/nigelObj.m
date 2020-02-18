@@ -418,6 +418,11 @@ classdef nigelObj < handle & ...
                'Both inPath and savePath must be `char`');
          end
          
+         % Initialize parameters
+         if any(~obj.updateParams('init'))
+            error(['nigeLab:' mfilename ':BadInit'],...
+               'Could not properly initialize parameters.');
+         end
          % Handle I/O path specifications
          if ~obj.parseInputPath(inPath)
             nigeLab.utils.cprintf('Errors*',...
@@ -428,12 +433,6 @@ classdef nigelObj < handle & ...
             nigeLab.utils.cprintf('Errors*',...
                '[constructor canceled]: Output file/folder not given\n');
             return;
-         end
-         
-         % Initialize parameters
-         if any(~obj.updateParams('init'))
-            error(['nigeLab:' mfilename ':BadInit'],...
-               'Could not properly initialize parameters.');
          end
       end
       
@@ -546,10 +545,14 @@ classdef nigelObj < handle & ...
               case '.'
                   switch class(nigelObj)
                       case 'nigeLab.Block'
-                          Ffields = nigelObj(1).Pars.Block.Fields;
-                          idx = strcmpi(Ffields,s(1).subs);
-                          if any(idx)
-                              n = numel(nigelObj);
+                          if ~isempty(nigelObj(1).Pars)
+                              Ffields = nigelObj(1).Pars.Block.Fields;
+                              idx = strcmpi(Ffields,s(1).subs);
+                              if any(idx)
+                                  n = numel(nigelObj);
+                              else
+                                  n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                              end
                           else
                               n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                           end
@@ -561,8 +564,8 @@ classdef nigelObj < handle & ...
           end
       end
       
-      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT] Get method for .AnimalLoc (backwards compatibility)
+      % % % (DEPENDENT) GET/SET.PROPERTY METHODS % % % % % % % % % % % %
+      % [DEPENDENT]  .AnimalLoc (backwards compatibility)
       function value = get.AnimalLoc(obj)
          %GET.ANIMALLOC  Dependent property for backwards compatibility
          %
@@ -583,8 +586,22 @@ classdef nigelObj < handle & ...
             value = '';
          end
       end
+      function set.AnimalLoc(obj,value)
+         %SET.ANIMALLOC  Dependent property for backwards compatibility
+         %
+         %  set(obj,'AnimalLoc',value);
+         %  --> Sets value of obj.Out.Animal instead
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         obj.Out.Animal = value;
+      end
       
-      % [DEPENDENT] Get method for .Animals (backwards compatibility)
+      % [DEPENDENT]  Reference child .Animals (backwards compatibility)
       function value = get.Animals(obj)
          %GET.ANIMALS  Returns .Children of Tank (backwards compatibility)
          %
@@ -618,8 +635,26 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.Animals(obj,value)
+         %SET.ANIMALS  Sets .Children of Tank (backwards compatibility)
+         %
+         %  set(obj,'Animals',animalObj);
+         %  --> Sets (Tank) obj.Children to elements of animalObj array
+         
+         if numel(obj) > 1
+            error(['nigeLab:' mfilename ':BadSize'],...
+               'Cannot set .Animals of multiple tankObj simultaneously.');
+         end
+         
+         % Make sure obj.Children is nigeLab.Animal object
+         if all(isempty(value))
+            obj.Children = nigeLab.Animal.Empty();
+         else
+            obj.Children = value;
+         end
+      end
       
-      % [DEPENDENT] Get method for .Blocks (backwards compatibility)
+      % [DEPENDENT]  .Blocks (backwards compatibility)
       function value = get.Blocks(obj)
          %GET.BLOCKS  Returns .Children of Animal (backwards compatibility)
          %
@@ -654,8 +689,26 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.Blocks(obj,value)
+         %SET.BLOCKS  Sets .Children of Animal (backwards compatibility)
+         %
+         %  set(obj,'Blocks',blockObj);
+         %  --> Sets (Animal) obj.Children to elements of blockObj array
+         
+         if numel(obj) > 1
+            error(['nigeLab:' mfilename ':BadSize'],...
+               'Cannot set .Blocks of multiple animalObj simultaneously.');
+         end
+         
+         % Make sure .Children is nigeLab.Block object
+         if all(isempty(value))
+            obj.Children = nigeLab.Block.Empty();
+         else
+            obj.Children = value;
+         end
+      end
       
-      % [DEPENDENT] Get method for .Children (handles Empty case)
+      % [DEPENDENT]  .Children (handles Empty case)
       function value = get.Children(obj)
          %GET.CHILDREN Get method for .Children (handles Empty case)
          %
@@ -685,8 +738,21 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.Children(obj,value)
+         %SET.CHILDREN  Set method for .Children property (Index)
+         %
+         %  set(obj,'Children',value);
+         %  --> Updates value.Index for each handle in value
+         
+         if all(isempty(value))
+            obj.ChildContainer(:) = [];
+            return;
+         end
+         obj.ChildContainer = value;
+         obj.setChildIndex; % Sets Index based on Parent Index
+      end
       
-      % [DEPENDENT] Get method for .Duration
+      % [DEPENDENT]  .Duration
       function value = get.Duration(obj)
          %GET.DURATION  Returns a time string of the duration of recording
          %
@@ -707,8 +773,11 @@ classdef nigelObj < handle & ...
             value = 'Unknown';
          end
       end
+      function set.Duration(~,~)
+         %SET.DURATION  Duration is only set by .Samples and .SampleRate
+      end
       
-      % [DEPENDENT] Get method for .File (_Obj.mat)
+      % [DEPENDENT]  .File (_Obj.mat)
       function value = get.File(obj)
          %GET.FILE  Returns _Obj.mat file as char array
          %
@@ -741,8 +810,35 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.File(obj,value)
+         %SET.FILE  Sets _Obj.mat file info
+         %
+         %  set(obj,'File','/c/path/tank/.nigelTank');
+         %  --> obj.FolderIdentifier is now set as '.nigelTank'
+         %  --> obj.Output is now set as '/c/path/tank'
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         [path,f,e]=fileparts(value);
+         fparts = strsplit(f,'_');
+         
+         if ismember(fparts{end},{'Block','Animal','Tank'})
+            obj.Type = fparts{end};
+            obj.Output = path;
+         else
+            p = nigeLab.utils.shortenedPath(path);
+            nigeLab.utils.cprintf('Errors*',...
+               '[SET.FILE]: Bad File name (%s%s)\n',p,[f e]);
+            return;
+         end
+         
+      end
       
-      % [DEPENDENT] Get method for .FolderIdentifier (.nigelFile)
+      % [DEPENDENT]  .FolderIdentifier (.nigelFile file name (no path))
       function value = get.FolderIdentifier(obj)
          %GET.FOLDERIDENTIFIER  Returns .nigel[Type] char array
          %
@@ -756,8 +852,24 @@ classdef nigelObj < handle & ...
          end
          value = sprintf('.nigel%s',obj.Type);
       end
+      function set.FolderIdentifier(obj,value)
+         %SET.FOLDERIDENTIFIER  Sets .nigelFile char array
+         %
+         %  set(obj,'FolderIdentifier','.nigelTank');
+         %  --> Set folder identifier for 'Tank' type nigelObj
+         
+         if isempty(value)
+            return;
+         elseif ~ischar(value)
+            return;
+         end
+         value = strrep(value,'.nigel','');
+         if ismember(value,{'Block','Animal','Tank'})
+            set(obj,'Type',value);
+         end
+      end
       
-      % [DEPENDENT] Get method for .FileExt (recording file type)
+      % [DEPENDENT]  .FileExt (recording file type)
       function value = get.FileExt(obj)
          %GET.FILEEXT  Returns char array of file extension
          %
@@ -817,8 +929,25 @@ classdef nigelObj < handle & ...
          end
          
       end
+      function set.FileExt(obj,value)
+         %SET.FILEEXT  Sets _Obj.mat file info
+         %
+         %  >> set(obj,'FileExt','.rhs');
+         %  --> obj.In.FileExt = '.rhs'
+         
+         if ismember(obj.Type,{'Tank','Animal'})
+            return;
+         end
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         obj.In.FileExt = value;
+      end
       
-      % [DEPENDENT] Get method for .GUI (handle to nigelDash)
+      % [DEPENDENT]  .GUI (handle to nigelDash)
       function value = get.GUI(obj)
          %GET.GUI  Returns handle to nigeLab.libs.DashBoard object
          %
@@ -838,8 +967,46 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.GUI(obj,value)
+         %SET.GUI  Sets handle to nigeLab.libs.DashBoard object
+         %
+         %  set(obj,'GUI',value);
+         
+         if isempty(value)
+            if ~isempty(obj.GUIContainer)
+               obj.GUIContainer = nigeLab.libs.DashBoard.empty();
+            end
+            obj.IsDashOpen = false;   % Set flag to false
+         else
+            if obj.IsDashOpen % It is already open; no need to assign
+               if isvalid(value)
+                  if isprop(value,'nigelGUI')
+                     figure(value.nigelGUI); % Make sure figure is focused
+                  else
+                     [fmt,idt,type] = obj.getDescriptiveFormatting();
+                     nigeLab.utils.cprintf(fmt,'%s[NIGELOBJ/SET.GUI]: ',...
+                        idt);
+                     nigeLab.utils.cprintf(fmt(1:(end-1)),...
+                        'Invalid GUI assignment (%s %s)\n',type,obj.Name);
+                  end
+               end
+            else % Otherwise it is not open
+               flag = isvalid(value);
+               if ~flag
+                  value = nigeLab.libs.DashBoard.empty();
+               end
+               % Store association to handle object
+               obj.GUIContainer = value; 
+               % Set .IsDashOpen AFTER setting obj.GUIContainer
+               obj.IsDashOpen = flag;
+               return;
+            end
+         end
+         
+         setChildProp(obj,'GUI',value);
+      end
       
-      % [DEPENDENT] Get method for .IDFile
+      % [DEPENDENT]  .IDFile (full .nigelFile name depends on .Type)
       function value = get.IDFile(obj)
          %GET.IDFile  Make sure it exists first, then return it
          %
@@ -874,8 +1041,25 @@ classdef nigelObj < handle & ...
             value = fullfile(obj.Output,fname);
          end
       end
+      function set.IDFile(obj,value)
+         %SET.IDFile  Set method for .IDFile READ-ONLY property
+         %
+         %  >> set(obj,'IDFile',fullfile(pwd,'.nigelAnimal'));
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         [obj.Output,~,obj.FolderIdentifier] ...
+            = fileparts(value);
+         type = strrep(obj.FolderIdentifier,'.nigel','');
+         obj.Type = type;        
+         
+      end
       
-      % [DEPENDENT] Get method for .InDef (default input location)
+      % [DEPENDENT]  .InDef (default input location)
       function value = get.InDef(obj)
          %GET.INDEF  Default input location (char array)
          %
@@ -902,28 +1086,15 @@ classdef nigelObj < handle & ...
          value = obj.getParams(obj.Type,'DefaultRecLoc');
          obj.In.Default = value;
       end
-      
-      % [DEPENDENT] Get method for .Input
-      function value = get.Input(obj)
-         %GET.INPUT  Input file or folder location
+      function set.InDef(obj,value)
+         %SET.INDEF  Default output location (char array)
          %
-         %  value = get(obj,'Input');
+         %  set(obj,'InDef',value);
          
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         if ~isfield(obj.In,obj.Type)
-            return;
-         end
-         value = nigeLab.utils.getUNCPath(obj.In.(obj.Type));
-         value = strrep(value,'\','/');
+         obj.In.Default = value;
       end
       
-      % [DEPENDENT] Get method for .InPrompt
+      % [DEPENDENT]  .InPrompt (prompt for input file or folder)
       function value = get.InPrompt(obj)
          %GET.INPROMPT  Header prompt for input file or folder selection
          %
@@ -948,8 +1119,105 @@ classdef nigelObj < handle & ...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
       end
+      function set.InPrompt(~,~)
+         %SET.INPROMPT  Does nothing probably
+         %
+         %  set(obj,'InPrompt',value);
+         
+         warning('Cannot set `.InPrompt` (Dependent) property');
+      end
       
-      % [DEPENDENT] Get method for .KeyPair (backwards compatibility)
+      % [DEPENDENT]  .Input (input data file or folder depends on .Type)
+      function value = get.Input(obj)
+         %GET.INPUT  Input file or folder location
+         %
+         %  value = get(obj,'Input');
+         
+         value = '';
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         if ~isfield(obj.In,obj.Type)
+            return;
+         end
+         value = nigeLab.utils.getUNCPath(obj.In.(obj.Type));
+         value = strrep(value,'\','/');
+      end
+      function set.Input(obj,value)
+         %SET.INPUT  Sets .Input property (recording file or folder)
+         %
+         %  set(obj,'Input',value);
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         value = strrep(value,'\','/');
+         
+         % Assign this to the "container" folder
+         switch obj.Type
+            case 'Block'
+               [a,b,ext] = fileparts(value);
+               if strcmp(ext,obj.FolderIdentifier)
+                  obj.Output = a;
+                  obj.loadIDFile();
+                  if isfield(obj.IDInfo,'RecFile')
+                     obj.RecFile = obj.IDInfo.RecFile;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: RecFile|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  if isfield(obj.IDInfo,'RecDir')
+                     obj.RecDir = obj.IDInfo.RecDir;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: RecDir|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  if isfield(obj.IDInfo,'FileExt')
+                     obj.In.FileExt = obj.IDInfo.FileExt;
+                  else
+                     error(['nigeLab:' mfilename ':BadNigelFile'],...
+                        ['Missing line: FileExt|%s in .nigelBlock\n' ...
+                         '->\tEither add manually or init from recording']);
+                  end
+                  [~,obj.In.BlockName,~] = fileparts(obj.RecFile);
+               elseif ~isempty(ext)
+                  % obj.In.Block = value; % same as line below
+                  obj.RecFile = value;
+                  obj.In.FileExt = ext;
+                  % obj.In.Animal = a; % same as line below
+                  obj.RecDir = a;
+                  obj.In.BlockName = b;
+               end               
+               [obj.In.Tank,obj.In.AnimalName,~] = fileparts(obj.In.Animal);
+               [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
+               obj.In.Name = obj.In.BlockName;
+            case 'Animal'
+               % obj.In.Animal = value; % same as line below
+               obj.RecDir = value;
+               [obj.In.Tank,obj.In.AnimalName,~] = fileparts(value);
+               [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
+               obj.In.Name = obj.In.AnimalName;
+            case 'Tank'
+               % obj.In.Tank = value; % same as line below
+               obj.RecDir = value;
+               [obj.In.Experiment,obj.In.TankName,~] = fileparts(value);
+               obj.In.Name = obj.In.TankName;
+            otherwise
+               error(['nigeLab:' mfilename ':BadType'],...
+                  'nigelObj has bad Type (%s)',obj.Type);
+         end
+         obj.parseNamingMetadata();
+      end
+      
+      % [DEPENDENT]  .KeyPair (backwards compatible)
       function value = get.KeyPair(obj)
          %GET.KEYPAIR  Dependent property for backwards compatibility
          %
@@ -965,8 +1233,15 @@ classdef nigelObj < handle & ...
          end
          value = obj.Key;
       end
+      function set.KeyPair(obj,value)
+         %SET.KEYPAIR  Assigns .KeyPair (as .Key, backwards-compatible)
+         if isempty(value)
+            return;
+         end
+         obj.Key = value;
+      end
       
-      % [DEPENDENT] Get method for .Name
+      % [DEPENDENT]  .Name (depends on .Type, parsing)
       function value = get.Name(obj)
          %GET.Name  Property Get method for .Name
          %
@@ -983,7 +1258,9 @@ classdef nigelObj < handle & ...
             if ~isfield(obj.Pars,obj.Type)
                [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type);
             end
-            obj.Paths.Name = obj.parseNamingMetadata();
+
+            name = obj.genName();
+            obj.Paths.Name = name;
          end
          % Just in case something went wrong with parsing:
          if isempty(obj.Paths.Name) 
@@ -992,26 +1269,91 @@ classdef nigelObj < handle & ...
                   if isfield(obj.Out,'TankName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
                case 'Animal'
                   if isfield(obj.Out,'AnimalName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
                case 'Block'
                   if isfield(obj.Out,'BlockName')
                      obj.Paths.Name = obj.Out.TankName;
                   else
-                     obj.Paths.Name = obj.parseNamingMetadata();
+                     obj.Paths.Name = obj.genName();
                   end
             end
          end
          value = obj.Paths.Name;
       end
+      function set.Name(obj,value)
+         %SET.Name   Set method for 'Name' property assignments
+         
+         if isempty(value)
+            return;
+         end
+         if iscell(value)
+            if numel(value)==1
+               value = repmat(value,1,numel(obj));
+            end
+            if numel(value) ~= numel(obj)
+               error(['nigeLab:' mfilename ':InputSizeMismatch'],...
+                  'If using cell, must have same number of elements.');
+            else
+               for i = 1:numel(obj)
+                  switch class(obj)
+                     case 'nigeLab.Tank'
+                        for k = 1:numel(obj.Children)
+                           if ~isempty(obj.Children(k))
+                              c = obj.Children(k);
+                              if isvalid(c)
+                                 c.Meta.TankID = value;
+                              end
+                           end
+                        end
+                     case 'nigeLab.Animal'
+                        for k = 1:numel(obj.Children)
+                           if ~isempty(obj.Children(k))
+                              c = obj.Children(k);
+                              if isvalid(c)
+                                 c.Meta.AnimalID = value;
+                              end
+                           end
+                        end
+                  end
+                  obj(i).Paths.Name = value{i};
+               end
+            end
+         elseif ischar(value)
+            obj.Paths.Name = value;
+            switch class(obj)
+               case 'nigeLab.Tank'
+                  for k = 1:numel(obj.Children)
+                     if ~isempty(obj.Children(k))
+                        c = obj.Children(k);
+                        if isvalid(c)
+                           c.Meta.TankID = value;
+                        end
+                     end
+                  end
+               case 'nigeLab.Animal'
+                  for k = 1:numel(obj.Children)
+                     if ~isempty(obj.Children(k))
+                        c = obj.Children(k);
+                        if isvalid(c)
+                           c.Meta.AnimalID = value;
+                        end
+                     end
+                  end
+            end
+         else
+            error(['nigeLab:' mfilename ':BadClass'],...
+               'value is %s, but should be cell or char',class(value));
+         end
+      end
       
-      % [DEPENDENT] Get method for .OnRemote (running remote job if true)
+      % [DEPENDENT]  .OnRemote (running remote job if true)
       function value = get.OnRemote(obj)
          %GET.ONREMOTE  Returns value of OnRemote flag
          %
@@ -1026,8 +1368,39 @@ classdef nigelObj < handle & ...
          end
          value = obj.RemoteFlag;
       end
+      function set.OnRemote(obj,value)
+         %SET.ONREMOTE  Sets value of OnRemote flag
+         %
+         %  set(obj,'OnRemote',value);
+         %  --> Toggles leading string to .Input and .Output property to
+         %        properly reflect the configured path on local or remote
+         %        machine.
+         
+         obj.RemoteFlag = value;
+         if ~isfield(obj.Pars,'Queue')
+            obj.updateParams('Queue');
+         end
+         % Toggle "path root" based on remote flag value
+         out = obj.Output;
+         in = obj.Input;
+         if value
+            in = strrep(in,obj.Pars.Queue.Remote.SaveRoot,...
+               obj.Pars.Queue.Local.SaveRoot);
+            obj.Input = in;
+            out = strrep(out,obj.Pars.Queue.Remote.SaveRoot,...
+               obj.Pars.Queue.Local.SaveRoot);
+            obj.Output = out;
+         else
+            in = strrep(in,obj.Pars.Queue.Local.SaveRoot,...
+               obj.Pars.Queue.Remote.SaveRoot);
+            obj.Input = in;
+            out = strrep(out,obj.Pars.Queue.Local.SaveRoot,...
+               obj.Pars.Queue.Remote.SaveRoot);
+            obj.Output = out;
+         end
+      end
       
-      % [DEPENDENT] Get method for .Output
+      % [DEPENDENT]  .Output (saved output location depends on .Type)
       function value = get.Output(obj)
          %GET.OUTPUT  Return output folder tree container folder
          %
@@ -1088,8 +1461,59 @@ classdef nigelObj < handle & ...
          end
 
       end
+      function set.Output(obj,value)
+         %SET.OUTPUT  Sets .Output property (.Paths.SaveLoc)
+         %
+         %  set(obj,'Output',value);
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         
+         value = strrep(value,'\','/');         
+         % Assign this to the "container" folder
+         switch obj.Type
+            case 'Block'
+               if exist(fullfile(value,'.nigelAnimal'),'file')~=0
+                  if ~isempty(obj.Name)
+                     value = fullfile(value,obj.Name);
+                  else
+                     return;
+                  end
+               end
+               obj.Out.Block = value;
+               [obj.Out.Animal,obj.Out.BlockName,~] = fileparts(value);
+               obj.SaveLoc = obj.Out.Animal;
+               [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(obj.Out.Animal);
+               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
+            case 'Animal'
+               if exist(fullfile(value,'.nigelTank'),'file')~=0
+                  if ~isempty(obj.Name)
+                     value = fullfile(value,obj.Name);
+                  else
+                     return;
+                  end
+               end
+               obj.Out.Animal = value;
+               [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(value);
+               obj.SaveLoc = obj.Out.Tank;
+               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
+            case 'Tank'
+               obj.Out.Tank = value;
+               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(value);
+               obj.SaveLoc = obj.Out.Experiment;
+            otherwise
+               error(['nigeLab:' mfilename ':BadType'],...
+                  'nigelObj has bad Type (%s)',obj.Type);
+         end
+         obj.saveIDFile();
+         
+      end
       
-      % [DEPENDENT] Get method for .OutDef (default output location)
+      % [DEPENDENT]  .OutDef (default output location depends on .Type)
       function value = get.OutDef(obj)
          %GET.OUTDEF  Default output location (char array)
          %
@@ -1122,8 +1546,16 @@ classdef nigelObj < handle & ...
             obj.Out.Default = value;
          end
       end
+      function set.OutDef(obj,value)
+         %SET.OUTDEF  Default output location (char array)
+         %
+         %  set(obj,'OutDef',value);
+         
+         obj.Out.Default = value;
+         
+      end
       
-      % [DEPENDENT] Get method for .OutPrompt
+      % [DEPENDENT]  .OutPrompt (prompt for selecting output location)
       function value = get.OutPrompt(obj)
          %GET.OUTPROMPT   Header prompt for output folder tree location
          %
@@ -1145,38 +1577,62 @@ classdef nigelObj < handle & ...
                value = '[output] TANK container folder (Experiment)';
          end
       end
+      function set.OutPrompt(~,~)
+         %SET.OUTPROMPT  Does nothing probably
+         %
+         %  set(obj,'OutPrompt',value);
+         
+         warning('Cannot set `.OutPrompt` (Dependent) property');
+      end
       
-      % [DEPENDENT] Get method for 'Pars' property
+      % [DEPENDENT]  .Pars parameter info struct
       function value = get.Pars(obj)
          %GET.PARS  Gets .Pars property of nigelObj
          %
          %  value = get(obj,'Pars',pathStruct);
          %  --> Returns value held in .Params.Pars
          
-         value = struct.empty;
-         if ~isempty(obj)
-            if isvalid(obj)
-               value = obj.Params.Pars;
-            end
+         value = obj.Params.Pars;
+
+      end
+      function set.Pars(obj,value)
+         %SET.PARS  Sets .Pars property of nigelObj
+         %
+         %  set(obj,'Pars',pathStruct);
+         %  --> If 'Pars' already exists with fields not included in
+         %      pathStruct, keep those fields from the old pathStruct
+         
+         if isempty(value)
+            return;
          end
+         obj.Params.Pars = obj.MergeStructs(obj.Params.Pars,value);
       end
       
-      % [DEPENDENT] Get method for 'Paths' property
+      % [DEPENDENT]  .Paths file path info struct
       function value = get.Paths(obj)
          %GET.PATHS  Gets .Paths property of nigelObj
          %
          %  value = get(obj,'Paths',pathStruct);
          %  --> Returns value held in .Params.Paths
+
+         value = obj.Params.Paths;
+      end
+      function set.Paths(obj,value)
+         %SET.PATHS  Sets .Paths property of nigelObj
+         %
+         %  set(obj,'Paths',pathStruct);
+         %  --> If 'Paths' already exists with fields not included in
+         %      pathStruct, keep those fields from the old pathStruct
          
-         value = struct.empty;
-         if ~isempty(obj)
-            if isvalid(obj)
-               value = obj.Params.Paths;
-            end
+         if isempty(value)
+            return;
          end
+         
+         obj.Params.Paths = obj.MergeStructs(obj.Params.Paths,value);
+         
       end
       
-      % [DEPENDENT] Get method for .RecDir (backwards compatibility)
+      % [DEPENDENT]  .RecDir (backwards compatibility)
       function value = get.RecDir(obj)
          %GET.RECDIR  Dependent property for backwards compatibility
          %
@@ -1203,8 +1659,30 @@ classdef nigelObj < handle & ...
          value = nigeLab.utils.getUNCPath(obj.Input);
          value = strrep(value,'\','/');
       end
+      function set.RecDir(obj,value)
+         %GET.RECDIR  Dependent property for backwards compatibility
+         %
+         %  set(obj,'RecDir',value);
+         %  --> Sets value of obj.In.Animal if obj is Block
+         %  --> Sets value of obj.In.Tank if obj is Animal
+         %  --> Sets value of obj.In.Experiment if obj is Tank
+         
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         switch obj.Type
+            case 'Block'
+               obj.In.Animal = value;
+            otherwise
+               obj.In.(obj.Type) = value;
+         end
+         obj.Paths.RecDir = value;
+      end
       
-      % [DEPENDENT] Get method for .RecFile (backwards compatibility)
+      % [DEPENDENT]  .RecFile (backwards compatibility)
       function value = get.RecFile(obj)
          %GET.RECFILE  Dependent property for backwards compatibility
          %
@@ -1233,8 +1711,22 @@ classdef nigelObj < handle & ...
          value = nigeLab.utils.getUNCPath(obj.Input);
          value = strrep(value,'\','/');
       end
+      function set.RecFile(obj,value)
+         %SET.RECFILE  Dependent property for backwards compatibility
+         %
+         %  set(obj,'RecFile',value);
+         %  --> Sets value of obj.In.Block instead
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         obj.In.Block = value;
+         obj.Paths.RecFile = value;
+      end
       
-      % [DEPENDENT] Get method for .RecSystem
+      % [DEPENDENT]  .RecSystem
       function value = get.RecSystem(obj)
          %GET.RECSYSTEM  Returns value .RecSystem property
          %
@@ -1254,8 +1746,23 @@ classdef nigelObj < handle & ...
          
          value = obj.AcqSystem;
       end
+      function set.RecSystem(obj,value)
+         %SET.RECSYSTEM  Sets value .RecSystem property
+         %
+         %  set(obj,'RecSystem',value);
+         
+         % Block can only have one Acquisition system; 
+         % Similarly, if property is empty, then just make assignment
+         if isempty(obj.AcqSystem) || strcmp(obj.Type,'Block')
+            obj.AcqSystem = value;
+            return;
+         end
+         
+         % Otherwise, include any unique acquisition systems used
+         obj.AcqSystem = unique([obj.AcqSystem, value]);
+      end
       
-      % [DEPENDENT] Get method for .RecType
+      % [DEPENDENT]  .RecType
       function value = get.RecType(obj)
          %GET.RECTYPE  Returns value .RecType property
          %
@@ -1287,8 +1794,16 @@ classdef nigelObj < handle & ...
          
          value = obj.parseRecType();
       end
+      function set.RecType(obj,value)
+         %SET.RECTYPE  Sets value .RecType property
+         %
+         %  set(obj,'RecType',value);
+         %  --> Depends upon value of obj.FileExt
+         
+         obj.In.RecType = value;
+      end
       
-      % [DEPENDENT] Get method for .SaveLoc (backwards compatibility)
+      % [DEPENDENT]  .SaveLoc (backwards compatibility)
       function value = get.SaveLoc(obj)
          %GET.SAVELOC  Dependent property for backwards compatibility
          %
@@ -1337,8 +1852,45 @@ classdef nigelObj < handle & ...
          value = nigeLab.utils.getUNCPath(value);
          value = strrep(value,'\','/');
       end
+      function set.SaveLoc(obj,value)
+         %SET.SAVELOC  Dependent property for backwards compatibility
+         %
+         %  set(obj,'SaveLoc',value);
+         %  --> Sets value of obj.Out.Animal if obj is Block
+         %  --> Sets value of obj.Out.Tank if obj is Animal
+         %  --> Sets value of obj.Out.Experiment if obj is Tank
+         
+         if isempty(value)
+            return;
+         end
+         
+         if ~ischar(value)
+            return;
+         end
+         
+         if exist(fullfile(value,obj.FolderIdentifier),'file')==0
+            obj.Paths.SaveLoc = value;
+            switch obj.Type
+               case 'Block'
+                  obj.Out.Animal = value;
+               case 'Animal'
+                  obj.Out.Tank = value;
+               case 'Tank'
+                  obj.Out.Experiment = value;
+            end
+         else
+            [~,idt,type] = obj.getDescriptiveFormatting();
+            dbstack;
+            nigeLab.utils.cprintf('Errors*',...
+               '%s[INVALID]: Tried to set bad [%s] SaveLoc.\n',...
+               idt,type);
+            nigeLab.utils.cprintf('Errors',...
+               '\t%sAssigned ''%s'', which contains ID File (%s)\n',...
+               idt,nigeLab.utils.shortenedPath(value),obj.FolderIdentifier);
+         end
+      end
       
-      % [DEPENDENT] Get method for .ShortFile (for printing names)
+      % [DEPENDENT]  .ShortFile (short char array for printing names)
       function value = get.ShortFile(obj)
          %GET.SHORTFILE  Get shortened _Obj.mat file name
          %
@@ -1360,8 +1912,11 @@ classdef nigelObj < handle & ...
          short_path = nigeLab.utils.shortenedPath(p);
          value = [short_path short_name];
       end
-
-      % [DEPENDENT] Get method for .SortGUI (handle to nigeLab.Sort)
+      function set.ShortFile(~,~)
+         %SET.SHORTFILE  No set method for this property
+      end
+      
+      % [DEPENDENT]  .SortGUI (nigeLab.Sort depends if .GUI is open)
       function value = get.SortGUI(obj)
          %GET.SORTGUI  Returns handle to nigeLab.Sort object
          %
@@ -1378,8 +1933,35 @@ classdef nigelObj < handle & ...
             value = obj.SortGUIContainer;
          end
       end
-      
-      % [DEPENDENT] Get method for .TankLoc (backwards compatibility)
+      function set.SortGUI(obj,value)
+         %SET.SortGUI  Sets handle to nigeLab.Sort object
+         %
+         %  set(obj,'SortGUI',value);
+
+         for i = 1:numel(obj)
+            if isempty(value)
+               obj(i).SortGUIContainer = nigeLab.Sort.empty(); % Remove handle association
+               if obj(i).IsDashOpen             % Make sure Dash is un-hidden
+                  visible = obj(i).GUI.Visible;
+                  if strcmpi(visible,'off')
+                     Show(obj(i).GUI);
+                  end
+               end
+            else
+               obj(i).SortGUIContainer = value; % Store association to handle object
+               if obj(i).IsDashOpen         % Make sure Dash is hidden
+                  visible = obj(i).GUI.Visible;
+                  if strcmpi(visible,'on')
+                     Hide(obj(i).GUI);
+                  end
+               end
+            end
+
+            obj.setChildProp('SortGUI',value);
+         end
+      end
+
+      % [DEPENDENT]  .TankLoc (backwards compatibility)
       function value = get.TankLoc(obj)
          %GET.TANKLOC  Dependent property for backwards compatibility
          %
@@ -1396,8 +1978,21 @@ classdef nigelObj < handle & ...
          value = nigeLab.utils.getUNCPath(obj.Out.Tank);
          value = strrep(value,'\','/');
       end
+      function set.TankLoc(obj,value)
+         %SET.TANKLOC  Dependent property for backwards compatibility
+         %
+         %  set(obj,'TankLoc',value);
+         %  --> Sets value of obj.Out.Tank instead
+         if isempty(value)
+            return;
+         end
+         if ~ischar(value)
+            return;
+         end
+         obj.Out.Tank = value;
+      end
       
-      % [DEPENDENT] Get method for .Type (ensure returns good .Type)
+      % [DEPENDENT]  .Type (ensure returns good .Type)
       function value = get.Type(obj)
          %GET.TYPE  Returns obj.Type ('Block', 'Animal', or 'Tank')
          %
@@ -1420,6 +2015,32 @@ classdef nigelObj < handle & ...
             end
          end
       end
+      function set.Type(obj,value)
+         %SET.TYPE  Sets obj.Type ('Block', 'Animal', or 'Tank')
+         %
+         %  set(obj,'Type',value);
+         %  --> Sets value in obj.Params.Type, checking that .Type is
+         %      actually a valid value.
+         
+         if ~ischar(value)
+            error(['nigeLab:' mfilename ':BadClass'],...
+               '[SET.TYPE]: nigelObj.Type must be char');
+         end
+         
+         if ~ismember(value,{'Block','Animal','Tank'})
+            value = strrep(value,'.nigel','');
+            if ~ismember(value,{'Block','Animal','Tank'})
+               value = strrep(class(obj),'nigeLab.','');
+               if ~ismember(value,{'Block','Animal','Tank','nigelObj'})
+                  error(['nigeLab:' mfilename ':BadType'],...
+                     ['[SET.TYPE]: Unexpected Type: %s\n' ...
+                     '\t-->\tMust be: ''Block,'' ''Animal,'' or ''Tank'''],...
+                     value);
+               end
+            end
+         end
+         obj.Params.Type = value;
+      end
       
       % Get method for .User
       function value = get.User(obj)
@@ -1427,7 +2048,6 @@ classdef nigelObj < handle & ...
          %
          %  value = get(obj,'User');
 
-         
          if isunix % On MAC/UNIX, use 'UNC' to set GIT_DIR environment var
             p = nigeLab.utils.getNigelPath('UNC');
             setenv('GIT_DIR',p);
@@ -1494,6 +2114,21 @@ classdef nigelObj < handle & ...
             value = obj.UserContainer;
          end
       end
+      function set.User(obj,value)
+         %SET.User   Set method for 'User' property assignments
+         
+         value = strrep(value,' ','_');
+         value = strrep(value,'-','_');
+         value = strrep(value,'.','_');
+         if ~regexpi(value(1),'[a-z]')
+            error(['nigeLab:' mfilename ':InvalidUser'],...
+               'obj.User must start with alphabetical element.');
+         end
+         
+         for i = 1:numel(obj)
+            obj(i).UserContainer = value;
+         end
+      end
       
       % Get method for .Version (most-recent release version tag)
       function value = get.Version(~)
@@ -1517,7 +2152,23 @@ classdef nigelObj < handle & ...
          s = textscan(cmdout,'%s');
          value = s{1}{1};
       end
-      % % % % % % % % % % END GET.PROPERTY METHODS % % %
+      function set.Version(obj,~)
+         %SET.VERSION  Does nothing
+         %
+         %  set(obj,'Version',value);
+         %  --> Does not depend upon `nigelObj`
+         
+         if obj.Verbose
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            [fmt,idt,type] = getDescriptiveFormatting(obj);
+            nigeLab.utils.cprintf('Errors*','%s[%s/SET]: ',idt,type);
+            nigeLab.utils.cprintf(fmt,...
+               'Failed attempt to set READ-ONLY property: Version\n');
+            fprintf(1,'\n');
+         end
+      end
+      % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
       
       % Overloaded `getdisp` method just uses `list`
       function getdisp(obj)
@@ -1630,209 +2281,8 @@ classdef nigelObj < handle & ...
          
       end
       
-      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT] Set method for .AnimalLoc (backwards compatibility)
-      function set.AnimalLoc(obj,value)
-         %SET.ANIMALLOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'AnimalLoc',value);
-         %  --> Sets value of obj.Out.Animal instead
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.Out.Animal = value;
-      end
-      
-      % [DEPENDENT] Set method for .Animals (backwards compatibility)
-      function set.Animals(obj,value)
-         %SET.ANIMALS  Sets .Children of Tank (backwards compatibility)
-         %
-         %  set(obj,'Animals',animalObj);
-         %  --> Sets (Tank) obj.Children to elements of animalObj array
-         
-         if numel(obj) > 1
-            error(['nigeLab:' mfilename ':BadSize'],...
-               'Cannot set .Animals of multiple tankObj simultaneously.');
-         end
-         
-         % Make sure obj.Children is nigeLab.Animal object
-         if all(isempty(value))
-            obj.Children = nigeLab.Animal.Empty();
-         else
-            obj.Children = value;
-         end
-      end
-      
-      % [DEPENDENT] Set method for .Blocks (backwards compatibility)
-      function set.Blocks(obj,value)
-         %SET.BLOCKS  Sets .Children of Animal (backwards compatibility)
-         %
-         %  set(obj,'Blocks',blockObj);
-         %  --> Sets (Animal) obj.Children to elements of blockObj array
-         
-         if numel(obj) > 1
-            error(['nigeLab:' mfilename ':BadSize'],...
-               'Cannot set .Blocks of multiple animalObj simultaneously.');
-         end
-         
-         % Make sure .Children is nigeLab.Block object
-         if all(isempty(value))
-            obj.Children = nigeLab.Block.Empty();
-         else
-            obj.Children = value;
-         end
-      end
-      
-      % [DEPENDENT] Set method for .Children property (updates Index)
-      function set.Children(obj,value)
-         %SET.CHILDREN  Set method for .Children property (Index)
-         %
-         %  set(obj,'Children',value);
-         %  --> Updates value.Index for each handle in value
-         
-         if all(isempty(value))
-            obj.ChildContainer(:) = [];
-            return;
-         end
-         obj.ChildContainer = value;
-         obj.setChildIndex; % Sets Index based on Parent Index
-      end
-      
-      % [DEPENDENT] Set method for .Duration property (does nothing)
-      function set.Duration(~,~)
-         %SET.DURATION  Duration is only set by .Samples and .SampleRate
-      end
-      
-      % [DEPENDENT] Set method for .File (_Obj.mat)
-      function set.File(obj,value)
-         %SET.FILE  Sets _Obj.mat file info
-         %
-         %  set(obj,'File','/c/path/tank/.nigelTank');
-         %  --> obj.FolderIdentifier is now set as '.nigelTank'
-         %  --> obj.Output is now set as '/c/path/tank'
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         [path,f,e]=fileparts(value);
-         fparts = strsplit(f,'_');
-         
-         if ismember(fparts{end},{'Block','Animal','Tank'})
-            obj.Type = fparts{end};
-            obj.Output = path;
-         else
-            p = nigeLab.utils.shortenedPath(path);
-            nigeLab.utils.cprintf('Errors*',...
-               '[SET.FILE]: Bad File name (%s%s)\n',p,[f e]);
-            return;
-         end
-         
-      end
-      
-      % [DEPENDENT] Set method for .FolderIdentifier (.nigelFile)
-      function set.FolderIdentifier(obj,value)
-         %SET.FOLDERIDENTIFIER  Sets .nigelFile char array
-         %
-         %  set(obj,'FolderIdentifier','.nigelTank');
-         %  --> Set folder identifier for 'Tank' type nigelObj
-         
-         if isempty(value)
-            return;
-         elseif ~ischar(value)
-            return;
-         end
-         value = strrep(value,'.nigel','');
-         if ismember(value,{'Block','Animal','Tank'})
-            set(obj,'Type',value);
-         end
-      end
-      
-      % [DEPENDENT] Set method for .FileExt (recording binary)
-      function set.FileExt(obj,value)
-         %SET.FILEEXT  Sets _Obj.mat file info
-         %
-         %  >> set(obj,'FileExt','.rhs');
-         %  --> obj.In.FileExt = '.rhs'
-         
-         if ismember(obj.Type,{'Tank','Animal'})
-            return;
-         end
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.In.FileExt = value;
-      end
-      
-      % [DEPENDENT] Set method for .GUI (handle to nigelDash)
-      function set.GUI(obj,value)
-         %SET.GUI  Sets handle to nigeLab.libs.DashBoard object
-         %
-         %  set(obj,'GUI',value);
-         
-         if isempty(value)
-            if ~isempty(obj.GUIContainer)
-               obj.GUIContainer = nigeLab.libs.DashBoard.empty();
-            end
-            obj.IsDashOpen = false;   % Set flag to false
-         else
-            if obj.IsDashOpen % It is already open; no need to assign
-               if isvalid(value)
-                  if isprop(value,'nigelGUI')
-                     figure(value.nigelGUI); % Make sure figure is focused
-                  else
-                     [fmt,idt,type] = obj.getDescriptiveFormatting();
-                     nigeLab.utils.cprintf(fmt,'%s[NIGELOBJ/SET.GUI]: ',...
-                        idt);
-                     nigeLab.utils.cprintf(fmt(1:(end-1)),...
-                        'Invalid GUI assignment (%s %s)\n',type,obj.Name);
-                  end
-               end
-            else % Otherwise it is not open
-               flag = isvalid(value);
-               if ~flag
-                  value = nigeLab.libs.DashBoard.empty();
-               end
-               % Store association to handle object
-               obj.GUIContainer = value; 
-               % Set .IsDashOpen AFTER setting obj.GUIContainer
-               obj.IsDashOpen = flag;
-               return;
-            end
-         end
-         
-         setChildProp(obj,'GUI',value);
-      end
-      
-      % [DEPENDENT] Set method for .IDFile DEPENDENT property
-      function set.IDFile(obj,value)
-         %SET.IDFile  Set method for .IDFile DEPENDENT property
-         %
-         %  >> set(obj,'IDFile',fullfile(pwd,'.nigelAnimal'));
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         [obj.Output,~,obj.FolderIdentifier] ...
-            = fileparts(value);
-         type = strrep(obj.FolderIdentifier,'.nigel','');
-         obj.Type = type;        
-         
-      end
-      
-      % Set method for .InBlindMode property
+      % % % (NON-DEPENDENT) SET.PROPERTY METHODS % % % % % % % % % % % %      
+      % [FLAG] Set method for .InBlindMode property
       function set.InBlindMode(obj,value)
          %SET.InBlindMode  Set method for .InBlindMode property
          %
@@ -1849,28 +2299,19 @@ classdef nigelObj < handle & ...
             obj(i).InBlindMode = value;
             if value
                if isempty(obj(i).Key.Name)
-                  obj(i).Key.Name = parseNamingMetadata(obj(i));
+                  obj(i).Key.Name = genName(obj(i));
                end
                obj(i).Name = getKey(obj(i),'Public');
             else
                if isempty(obj(i).Key.Name)
-                  obj(i).Key.Name = parseNamingMetadata(obj(i));
+                  obj(i).Key.Name = genName(obj(i));
                end
                obj(i).Name = getKey(obj(i),'Name');
             end
          end
       end
-      
-      % [DEPENDENT] Set method for .InDef (default input location)
-      function set.InDef(obj,value)
-         %SET.INDEF  Default output location (char array)
-         %
-         %  set(obj,'InDef',value);
-         
-         obj.In.Default = value;
-      end
-      
-      % [DEPENDENT] Set method for .Index property (to assign all children)
+
+      % [ASSIGN CHILDREN] Sets .Index property (to assign all children)
       function set.Index(obj,value)
          %SET.INDEX  Set method for .Index 
          %
@@ -1881,88 +2322,7 @@ classdef nigelObj < handle & ...
          obj.Index = value;
          obj.setChildIndex();
       end
-      
-      % [DEPENDENT] Set method for .InPrompt
-      function set.InPrompt(~,~)
-         %SET.INPROMPT  Does nothing probably
-         %
-         %  set(obj,'InPrompt',value);
-         
-         warning('Cannot set `.InPrompt` (Dependent) property');
-      end
-      
-      % [DEPENDENT] Set method for .Input (recording file or folder)
-      function set.Input(obj,value)
-         %SET.INPUT  Sets .Input property (recording file or folder)
-         %
-         %  set(obj,'Input',value);
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         value = strrep(value,'\','/');
-         
-         % Assign this to the "container" folder
-         switch obj.Type
-            case 'Block'
-               [a,b,ext] = fileparts(value);
-               if strcmp(ext,obj.FolderIdentifier)
-                  obj.Output = a;
-                  obj.loadIDFile();
-                  if isfield(obj.IDInfo,'RecFile')
-                     obj.RecFile = obj.IDInfo.RecFile;
-                  else
-                     error(['nigeLab:' mfilename ':BadNigelFile'],...
-                        ['Missing line: RecFile|%s in .nigelBlock\n' ...
-                         '->\tEither add manually or init from recording']);
-                  end
-                  if isfield(obj.IDInfo,'RecDir')
-                     obj.RecDir = obj.IDInfo.RecDir;
-                  else
-                     error(['nigeLab:' mfilename ':BadNigelFile'],...
-                        ['Missing line: RecDir|%s in .nigelBlock\n' ...
-                         '->\tEither add manually or init from recording']);
-                  end
-                  if isfield(obj.IDInfo,'FileExt')
-                     obj.In.FileExt = obj.IDInfo.FileExt;
-                  else
-                     error(['nigeLab:' mfilename ':BadNigelFile'],...
-                        ['Missing line: FileExt|%s in .nigelBlock\n' ...
-                         '->\tEither add manually or init from recording']);
-                  end
-                  [~,obj.In.BlockName,~] = fileparts(obj.RecFile);
-               elseif ~isempty(ext)
-                  % obj.In.Block = value; % same as line below
-                  obj.RecFile = value;
-                  obj.In.FileExt = ext;
-                  % obj.In.Animal = a; % same as line below
-                  obj.RecDir = a;
-                  obj.In.BlockName = b;
-               end               
-               [obj.In.Tank,obj.In.AnimalName,~] = fileparts(obj.In.Animal);
-               [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
-               obj.In.Name = obj.In.BlockName;
-            case 'Animal'
-               % obj.In.Animal = value; % same as line below
-               obj.RecDir = value;
-               [obj.In.Tank,obj.In.AnimalName,~] = fileparts(value);
-               [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
-               obj.In.Name = obj.In.AnimalName;
-            case 'Tank'
-               % obj.In.Tank = value; % same as line below
-               obj.RecDir = value;
-               [obj.In.Experiment,obj.In.TankName,~] = fileparts(value);
-               obj.In.Name = obj.In.TankName;
-            otherwise
-               error(['nigeLab:' mfilename ':BadType'],...
-                  'nigelObj has bad Type (%s)',obj.Type);
-         end
-         obj.parseNamingMetadata();
-      end
-      
+
       % [FLAG] Set method for .IsDashOpen (flag true if GUI is open)
       function set.IsDashOpen(obj,value)
          %SET.ISDASHOPEN  Set method for .IsDashOpen (flag for GUI)
@@ -1974,435 +2334,7 @@ classdef nigelObj < handle & ...
          obj.IsDashOpen = value;
          obj.toggleChildDashStatus(value);
       end
-      
-      % [DEPENDENT] Set method for .KeyPair (now, .Key) to maintain compatibility
-      function set.KeyPair(obj,value)
-         if isempty(value)
-            return;
-         end
-         obj.Key = value;
-      end
-      
-      % [DEPENDENT] Set method for 'Name' property
-      function set.Name(obj,value)
-         %SET.Name   Set method for 'Name' property assignments
-         
-         if isempty(value)
-            return;
-         end
-         if iscell(value)
-            if numel(value)==1
-               value = repmat(value,1,numel(obj));
-            end
-            if numel(value) ~= numel(obj)
-               error(['nigeLab:' mfilename ':InputSizeMismatch'],...
-                  'If using cell, must have same number of elements.');
-            else
-               for i = 1:numel(obj)
-                  switch class(obj)
-                     case 'nigeLab.Tank'
-                        for k = 1:numel(obj.Children)
-                           if ~isempty(obj.Children(k))
-                              c = obj.Children(k);
-                              if isvalid(c)
-                                 c.Meta.TankID = value;
-                              end
-                           end
-                        end
-                     case 'nigeLab.Animal'
-                        for k = 1:numel(obj.Children)
-                           if ~isempty(obj.Children(k))
-                              c = obj.Children(k);
-                              if isvalid(c)
-                                 c.Meta.AnimalID = value;
-                              end
-                           end
-                        end
-                  end
-                  obj(i).Paths.Name = value{i};
-               end
-            end
-         elseif ischar(value)
-            obj.Paths.Name = value;
-            switch class(obj)
-               case 'nigeLab.Tank'
-                  for k = 1:numel(obj.Children)
-                     if ~isempty(obj.Children(k))
-                        c = obj.Children(k);
-                        if isvalid(c)
-                           c.Meta.TankID = value;
-                        end
-                     end
-                  end
-               case 'nigeLab.Animal'
-                  for k = 1:numel(obj.Children)
-                     if ~isempty(obj.Children(k))
-                        c = obj.Children(k);
-                        if isvalid(c)
-                           c.Meta.AnimalID = value;
-                        end
-                     end
-                  end
-            end
-         else
-            error(['nigeLab:' mfilename ':BadClass'],...
-               'value is %s, but should be cell or char',class(value));
-         end
-      end
-      
-      % [DEPENDENT] Set method for 'Pars' property
-      function set.Pars(obj,value)
-         %SET.PARS  Sets .Pars property of nigelObj
-         %
-         %  set(obj,'Pars',pathStruct);
-         %  --> If 'Pars' already exists with fields not included in
-         %      pathStruct, keep those fields from the old pathStruct
-         
-         if isempty(value)
-            return;
-         end
-         obj.Params.Pars = obj.MergeStructs(obj.Params.Pars,value);
-      end
-      
-      % [DEPENDENT] Set method for 'Paths' property
-      function set.Paths(obj,value)
-         %SET.PATHS  Sets .Paths property of nigelObj
-         %
-         %  set(obj,'Paths',pathStruct);
-         %  --> If 'Paths' already exists with fields not included in
-         %      pathStruct, keep those fields from the old pathStruct
-         
-         if isempty(value)
-            return;
-         end
-         
-         obj.Params.Paths = obj.MergeStructs(obj.Params.Paths,value);
-         
-      end
-      
-      % [DEPENDENT] Set method for .OnRemote (running remote job if true)
-      function set.OnRemote(obj,value)
-         %SET.ONREMOTE  Sets value of OnRemote flag
-         %
-         %  set(obj,'OnRemote',value);
-         %  --> Toggles leading string to .Input and .Output property to
-         %        properly reflect the configured path on local or remote
-         %        machine.
-         
-         obj.RemoteFlag = value;
-         if ~isfield(obj.Pars,'Queue')
-            obj.updateParams('Queue');
-         end
-         % Toggle "path root" based on remote flag value
-         out = obj.Output;
-         in = obj.Input;
-         if value
-            in = strrep(in,obj.Pars.Queue.Remote.SaveRoot,...
-               obj.Pars.Queue.Local.SaveRoot);
-            obj.Input = in;
-            out = strrep(out,obj.Pars.Queue.Remote.SaveRoot,...
-               obj.Pars.Queue.Local.SaveRoot);
-            obj.Output = out;
-         else
-            in = strrep(in,obj.Pars.Queue.Local.SaveRoot,...
-               obj.Pars.Queue.Remote.SaveRoot);
-            obj.Input = in;
-            out = strrep(out,obj.Pars.Queue.Local.SaveRoot,...
-               obj.Pars.Queue.Remote.SaveRoot);
-            obj.Output = out;
-         end
-      end
-      
-      % [DEPENDENT] Set method for .OutDef (default output location)
-      function set.OutDef(obj,value)
-         %SET.OUTDEF  Default output location (char array)
-         %
-         %  set(obj,'OutDef',value);
-         
-         obj.Out.Default = value;
-         
-      end
-      
-      % [DEPENDENT] Set method for .Output
-      function set.Output(obj,value)
-         %SET.OUTPUT  Sets .Output property (.Paths.SaveLoc)
-         %
-         %  set(obj,'Output',value);
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         
-         value = strrep(value,'\','/');         
-         % Assign this to the "container" folder
-         switch obj.Type
-            case 'Block'
-               if exist(fullfile(value,'.nigelAnimal'),'file')~=0
-                  if ~isempty(obj.Name)
-                     value = fullfile(value,obj.Name);
-                  else
-                     return;
-                  end
-               end
-               obj.Out.Block = value;
-               [obj.Out.Animal,obj.Out.BlockName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Animal;
-               [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(obj.Out.Animal);
-               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
-            case 'Animal'
-               if exist(fullfile(value,'.nigelTank'),'file')~=0
-                  if ~isempty(obj.Name)
-                     value = fullfile(value,obj.Name);
-                  else
-                     return;
-                  end
-               end
-               obj.Out.Animal = value;
-               [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Tank;
-               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
-            case 'Tank'
-               obj.Out.Tank = value;
-               [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Experiment;
-            otherwise
-               error(['nigeLab:' mfilename ':BadType'],...
-                  'nigelObj has bad Type (%s)',obj.Type);
-         end
-         obj.saveIDFile();
-         
-      end
-      
-      % [DEPENDENT] Set method for .OutPrompt
-      function set.OutPrompt(~,~)
-         %SET.OUTPROMPT  Does nothing probably
-         %
-         %  set(obj,'OutPrompt',value);
-         
-         warning('Cannot set `.OutPrompt` (Dependent) property');
-      end
-      
-      % [DEPENDENT] Set method for .RecDir (backwards compatibility)
-      function set.RecDir(obj,value)
-         %GET.RECDIR  Dependent property for backwards compatibility
-         %
-         %  set(obj,'RecDir',value);
-         %  --> Sets value of obj.In.Animal if obj is Block
-         %  --> Sets value of obj.In.Tank if obj is Animal
-         %  --> Sets value of obj.In.Experiment if obj is Tank
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         switch obj.Type
-            case 'Block'
-               obj.In.Animal = value;
-            otherwise
-               obj.In.(obj.Type) = value;
-         end
-         obj.Paths.RecDir = value;
-      end
-      
-      % [DEPENDENT] Set method for .RecFile (backwards compatibility)
-      function set.RecFile(obj,value)
-         %SET.RECFILE  Dependent property for backwards compatibility
-         %
-         %  set(obj,'RecFile',value);
-         %  --> Sets value of obj.In.Block instead
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.In.Block = value;
-         obj.Paths.RecFile = value;
-      end
-      
-      % [DEPENDENT] Set method for .RecSystem
-      function set.RecSystem(obj,value)
-         %SET.RECSYSTEM  Sets value .RecSystem property
-         %
-         %  set(obj,'RecSystem',value);
-         
-         % Block can only have one Acquisition system; 
-         % Similarly, if property is empty, then just make assignment
-         if isempty(obj.AcqSystem) || strcmp(obj.Type,'Block')
-            obj.AcqSystem = value;
-            return;
-         end
-         
-         % Otherwise, include any unique acquisition systems used
-         obj.AcqSystem = unique([obj.AcqSystem, value]);
-      end
-      
-      % [DEPENDENT] Set method for .RecType
-      function set.RecType(obj,value)
-         %SET.RECTYPE  Sets value .RecType property
-         %
-         %  set(obj,'RecType',value);
-         %  --> Depends upon value of obj.FileExt
-         
-         obj.In.RecType = value;
-      end
-      
-      % [DEPENDENT] Set method for .SaveLoc (backwards compatibility)
-      function set.SaveLoc(obj,value)
-         %SET.SAVELOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'SaveLoc',value);
-         %  --> Sets value of obj.Out.Animal if obj is Block
-         %  --> Sets value of obj.Out.Tank if obj is Animal
-         %  --> Sets value of obj.Out.Experiment if obj is Tank
-         
-         if isempty(value)
-            return;
-         end
-         
-         if ~ischar(value)
-            return;
-         end
-         
-         if exist(fullfile(value,obj.FolderIdentifier),'file')==0
-            obj.Paths.SaveLoc = value;
-            switch obj.Type
-               case 'Block'
-                  obj.Out.Animal = value;
-               case 'Animal'
-                  obj.Out.Tank = value;
-               case 'Tank'
-                  obj.Out.Experiment = value;
-            end
-         else
-            [~,idt,type] = obj.getDescriptiveFormatting();
-            dbstack;
-            nigeLab.utils.cprintf('Errors*',...
-               '%s[INVALID]: Tried to set bad [%s] SaveLoc.\n',...
-               idt,type);
-            nigeLab.utils.cprintf('Errors',...
-               '\t%sAssigned ''%s'', which contains ID File (%s)\n',...
-               idt,nigeLab.utils.shortenedPath(value),obj.FolderIdentifier);
-         end
-      end
-      
-      % [DEPENDENT] Set method for .ShortFile (for printing names)
-      function set.ShortFile(~,~)
-         %SET.SHORTFILE  No set method for this property
-      end
-      
-      % [DEPENDENT] Set method for .SortGUI (handle to nigeLab.Sort object)
-      function set.SortGUI(obj,value)
-         %SET.SortGUI  Sets handle to nigeLab.Sort object
-         %
-         %  set(obj,'SortGUI',value);
-
-         for i = 1:numel(obj)
-            if isempty(value)
-               obj(i).SortGUIContainer = nigeLab.Sort.empty(); % Remove handle association
-               if obj(i).IsDashOpen             % Make sure Dash is un-hidden
-                  visible = obj(i).GUI.Visible;
-                  if strcmpi(visible,'off')
-                     Show(obj(i).GUI);
-                  end
-               end
-            else
-               obj(i).SortGUIContainer = value; % Store association to handle object
-               if obj(i).IsDashOpen         % Make sure Dash is hidden
-                  visible = obj(i).GUI.Visible;
-                  if strcmpi(visible,'on')
-                     Hide(obj(i).GUI);
-                  end
-               end
-            end
-
-            obj.setChildProp('SortGUI',value);
-         end
-      end
-
-      % [DEPENDENT] Set method for .TankLoc (backwards compatibility)
-      function set.TankLoc(obj,value)
-         %SET.TANKLOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'TankLoc',value);
-         %  --> Sets value of obj.Out.Tank instead
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.Out.Tank = value;
-      end
-      
-      % [DEPENDENT] Set method for .Type (ensure returns good .Type)
-      function set.Type(obj,value)
-         %SET.TYPE  Sets obj.Type ('Block', 'Animal', or 'Tank')
-         %
-         %  set(obj,'Type',value);
-         %  --> Sets value in obj.Params.Type, checking that .Type is
-         %      actually a valid value.
-         
-         if ~ischar(value)
-            error(['nigeLab:' mfilename ':BadClass'],...
-               '[SET.TYPE]: nigelObj.Type must be char');
-         end
-         
-         if ~ismember(value,{'Block','Animal','Tank'})
-            value = strrep(value,'.nigel','');
-            if ~ismember(value,{'Block','Animal','Tank'})
-               value = strrep(class(obj),'nigeLab.','');
-               if ~ismember(value,{'Block','Animal','Tank','nigelObj'})
-                  error(['nigeLab:' mfilename ':BadType'],...
-                     ['[SET.TYPE]: Unexpected Type: %s\n' ...
-                     '\t-->\tMust be: ''Block,'' ''Animal,'' or ''Tank'''],...
-                     value);
-               end
-            end
-         end
-         obj.Params.Type = value;
-      end
-      
-      % Set method for 'User' property (validation)
-      function set.User(obj,value)
-         %SET.User   Set method for 'User' property assignments
-         
-         value = strrep(value,' ','_');
-         value = strrep(value,'-','_');
-         value = strrep(value,'.','_');
-         if ~regexpi(value(1),'[a-z]')
-            error(['nigeLab:' mfilename ':InvalidUser'],...
-               'obj.User must start with alphabetical element.');
-         end
-         
-         for i = 1:numel(obj)
-            obj(i).UserContainer = value;
-         end
-      end
-      
-      % Set method for .Version (cannot assign from here)
-      function set.Version(obj,~)
-         %SET.VERSION  Does nothing
-         %
-         %  set(obj,'Version',value);
-         %  --> Does not depend upon `nigelObj`
-         
-         if obj.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            [fmt,idt,type] = getDescriptiveFormatting(obj);
-            nigeLab.utils.cprintf('Errors*','%s[%s/SET]: ',idt,type);
-            nigeLab.utils.cprintf(fmt,...
-               'Failed attempt to set DEPENDENT property: Version\n');
-            fprintf(1,'\n');
-         end
-      end
-      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+      % % % % % % % % % % END (NON-DEPENDENT) SET.PROPERTY METHODS % % %
    end
   
    % PUBLIC
@@ -2466,19 +2398,26 @@ classdef nigelObj < handle & ...
          if nargin < 3
             obj.Children = [obj.Children childObj];
          else
-            if numel(size(idx)) == 1
-               S = substruct('()',{1,idx});
-            else
-               S = substruct('()',{idx});
-            end
-            obj.Children = builtin('subsasgn',obj.Children,...
-               S,childObj);
+             % we need to explicitly handle the assignement of empty elements 
+             % ie when idx = [2 4]; obj.Children(3) needs to be empty;
+             % the same goes for the case numel(obj.Children) = n; and
+             % min(idx) > n
+             
+             NChildren = numel(obj.Children);
+             fullIdx = (NChildren+1):max(idx);
+             nullIdx = ~ismember(fullIdx,idx);
+             newChildObj = nigeLab.(childObj.Type).Empty([1 numel(fullIdx)]);
+             newChildObj(~nullIdx) = childObj;
+             S = substruct('()',{1,fullIdx});
+             obj.Children = builtin('subsasgn',obj.Children,...
+               S,newChildObj);
+             
          end % if nargin < 3
          
          for i = 1:numel(childObj)
             obj.ChildListener = [obj.ChildListener, ...
                addlistener(childObj(i),'ObjectBeingDestroyed',...
-               @(~,evt)obj.assignNULL(evt.AffectedObject)), ...
+               @(src,evt)obj.assignNULL(src)), ...
                addlistener(childObj(i),'StatusChanged',...
                @(~,evt)notify(obj,'StatusChanged',evt)), ...,...
                addlistener(childObj(i),'DashChanged',...
@@ -2527,7 +2466,7 @@ classdef nigelObj < handle & ...
          if numel(obj) > 1
             fieldIdx = cell(size(obj));
             for i = 1:numel(obj)
-               fieldIdx{i} = obj(i).checkCompatibility(requiredFields);
+               fieldIdx{i} = checkCompatibility(obj(i),requiredFields);
             end
             return;
          end
@@ -2585,11 +2524,14 @@ classdef nigelObj < handle & ...
          
          pFlag = qPars.UseParallel; % Check user preference for using Parallel
          rFlag = qPars.UseRemote;   % Check user preference for using Remote
-         uFlag = pFlag && rFlag;
+%          uFlag = pFlag && rFlag;
          
          lFlag = license('test','Distrib_Computing_Toolbox'); % Check if toolbox is licensed
-         dFlag = ~isempty(ver('distcomp'));  % Check if distributed-computing toolkit is installed
-         
+         if verLessThan('matlab','9.7')
+             dFlag = ~isempty(ver('distcomp'));  % Check if distributed-computing toolkit is installed
+         else
+             dFlag = ~isempty(ver('parallel'));
+         end
          if obj.Verbose
             [fmt,idt,type] = getDescriptiveFormatting(obj);
             if (pFlag || rFlag) && ~(dFlag && lFlag) % If user indicates they want to run parallel or remote
@@ -2614,7 +2556,7 @@ classdef nigelObj < handle & ...
             end
          end
          
-         flag = uFlag && lFlag && dFlag;
+         flag = pFlag && lFlag && dFlag;
          
          obj.UseParallel = flag;
          
@@ -3789,6 +3731,13 @@ classdef nigelObj < handle & ...
             error(['nigeLab:' mfilename ':TooFewInputs'],...
                'Not enough input args, no Child objects removed.');
          end
+         switch class(ind)
+             case 'double'
+                 ...Nothing really to do here
+             case 'nigeLab.Block'
+                    ind = find(ismember( obj.Children,ind));
+             otherwise
+         end
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
@@ -3905,6 +3854,7 @@ classdef nigelObj < handle & ...
                obj.HasParsSaved.(parsField) = false;
             elseif obj.HasParsSaved.(parsField) && ~forceSave
                flag = true;
+               dbstack();
                nigeLab.utils.cprintf(fmt,...
                   '%s is up-to-date for Pars.%s\n',...
                   fname_params,parsField);
@@ -4444,9 +4394,12 @@ classdef nigelObj < handle & ...
                end
                
                if obj.HasParsSaved.(field)
-                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',obj.Verbose,...
-                     '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
-                     lower(type),field,obj.Name);
+                  if obj.Verbose
+                     dbstack();
+                     nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                        '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
+                        lower(type),field,obj.Name);
+                  end
                   return;
                end 
                obj.Pars.(field) = p;
@@ -4465,11 +4418,14 @@ classdef nigelObj < handle & ...
                if obj.HasParsInit.(field)
                   flag = true;
                   obj.HasParsSaved.(field) = true;
-                  nigeLab.utils.cprintf('[0.35 0.35 0.35]',obj.Verbose,...
-                     '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
-                     lower(type),field,obj.Name);
+                  if obj.Verbose
+                     dbstack();
+                     nigeLab.utils.cprintf('[0.35 0.35 0.35]',...
+                        '%sObj.Pars.%s (%s_Pars.mat) is up-to-date\n',...
+                        lower(type),field,obj.Name);
+                  end
                else
-                   flag = obj.updateParams(field,'Direct');
+                  flag = obj.updateParams(field,'Direct');
                   nigeLab.utils.cprintf(fmt,obj.Verbose,...
                      '%sObj.Pars.%s must be initialized\n\t',...
                      lower(type),field);
@@ -4516,9 +4472,12 @@ classdef nigelObj < handle & ...
          if doComparison
             if loadParams(obj,field) % If successful load:
                if isequal(obj.Pars.(field),p)
-                  nigeLab.utils.cprintf([0.35 0.35 0.35],obj.Verbose,...
-                     '%sObj.%s (%s_Pars.mat) parameters up-to-date\n',...
-                     lower(type),field,obj.Name);
+                  if obj.Verbose
+                     dbstack();
+                     nigeLab.utils.cprintf([0.35 0.35 0.35],...
+                        '%sObj.%s (%s_Pars.mat) parameters up-to-date\n',...
+                        lower(type),field,obj.Name);
+                  end
                   return; % No need to update anything else
                end
                % Otherwise, figure out what fields are missing or inequal
@@ -4531,19 +4490,22 @@ classdef nigelObj < handle & ...
                      obj.Params.Pars.(field).(fmiss{i}) = p.(fmiss{i}); % So add
                   end
                   obj.HasParsInit.(field) = true;
-                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
-                     '%sObj.Pars.%s (%s_Pars.mat) was missing:\n',...
-                     lower(type),field,obj.Name);
-                  for i = 1:numel(fmiss)
-                     nigeLab.utils.cprintf('[0.25 0.25 0.25]*',obj.Verbose,...
-                        '\t%s<strong>%s</strong>\n',idt,fmiss{i});
+                  if obj.Verbose
+                     dbstack();
+                     nigeLab.utils.cprintf(fmt,...
+                        '%sObj.Pars.%s (%s_Pars.mat) was missing:\n',...
+                        lower(type),field,obj.Name);
+                     for i = 1:numel(fmiss)
+                        nigeLab.utils.cprintf('[0.25 0.25 0.25]*',...
+                           '\t%s<strong>%s</strong>\n',idt,fmiss{i});
+                     end
+                     nigeLab.utils.cprintf(fmt,...
+                        '\n%s[UPDATEPARAMS]: ',idt);
+                     nigeLab.utils.cprintf(fmt,...
+                        ['Saving UPDATED %sObj.%s ' ...
+                        '(Name: ''%s'' || User: ''%s'')\n'],...
+                        lower(type),field,obj.Name,obj.User);
                   end
-                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
-                     '\n%s[UPDATEPARAMS]: ',idt);
-                  nigeLab.utils.cprintf(fmt,obj.Verbose,...
-                     ['Saving UPDATED %sObj.%s ' ...
-                     '(Name: ''%s'' || User: ''%s'')\n'],...
-                     lower(type),field,obj.Name,obj.User);
                   obj.HasParsSaved.(field) = false;
                   flag = obj.saveParams(obj.User,field);
                   p = obj.Params.Pars.(field);
@@ -4567,12 +4529,15 @@ classdef nigelObj < handle & ...
                   end
                end
             else % Otherwise, couldn't load params from User file
-               nigeLab.utils.cprintf('Errors*',obj.Verbose,...
-                  '%sObj.Pars.%s (%s_Pars.mat) failed to load.\n',...
-                  lower(type),field,obj.Name);
-               obj.Params.Pars.(field) = p;
-               nigeLab.utils.cprintf(fmt,obj.Verbose,...
-                  '\t%s(Loaded from +defaults/%s.m)\n',idt,field);
+               if obj.Verbose
+                  dbstack();
+                  nigeLab.utils.cprintf('Errors*',...
+                     '%sObj.Pars.%s (%s_Pars.mat) failed to load.\n',...
+                     lower(type),field,obj.Name);
+                  obj.Params.Pars.(field) = p;
+                  nigeLab.utils.cprintf(fmt,...
+                     '\t%s(Loaded from +defaults/%s.m)\n',idt,field);
+               end
                obj.HasParsInit.(field) = true;
                obj.HasParsSaved.(field) = false;
                flag = true;
@@ -4724,7 +4689,7 @@ classdef nigelObj < handle & ...
             case 'Tank'
                % Note that nigeLab.libs.DashBoard constructor is only
                % available from tankObj method nigeLab.nigelObj/nigelDash.
-               if ~obj.IsDashOpen
+               if ~obj.IsDashOpen || isempty(obj.GUI)
                   obj.GUI = nigeLab.libs.DashBoard(obj);
                else
                   if isvalid(obj.GUI)
@@ -4765,10 +4730,10 @@ classdef nigelObj < handle & ...
             for lh = obj.ChildListener
                if isvalid(lh)
                   delete(lh);
+                  obj.ChildListener(1) = [];
                end
             end
          end
-         obj.ChildListener = [];
          
          if nargin < 2
             C = obj.Children;
@@ -5836,19 +5801,32 @@ classdef nigelObj < handle & ...
             end
          end         
          
-         % Last, concatenate parsed (included) variables to get .Name
-         str = [];
-         nameCon = pars.NamingConvention;
-         for ii = 1:numel(nameCon)
-            if isfield(meta,nameCon{ii})
-               str = [str,meta.(nameCon{ii}),pars.Concatenater];
-            end
-         end
-         name = str(1:(end-numel(pars.Concatenater)));
-         
-         % Make assignments
-         obj.Name = name;
+         obj.Meta = meta; 
          obj.Pars.(obj.Type).Parsing = pars;
+         obj.Name = obj.genName();
+         name = obj.Name;
+      end
+      
+      function name = genName(obj)
+          if ~isfield( obj.Pars.(obj.Type),'Parsing')
+                [name,obj.Meta] = obj.parseNamingMetadata;
+                return;
+          end
+          
+          pars = obj.Pars.(obj.Type).Parsing;
+          meta = obj.Meta;
+          % Last, concatenate parsed (included) variables to get .Name
+          str = [];
+          nameCon = pars.NamingConvention;
+          for ii = 1:numel(nameCon)
+              if isfield(meta,nameCon{ii})
+                  str = [str,meta.(nameCon{ii}),pars.Concatenater];
+              end
+          end
+          name = str(1:(end-numel(pars.Concatenater)));
+          
+%           % Make assignments
+%           obj.Name = name;
       end
       
       % Parse output path (constructor probably always)
@@ -6190,6 +6168,7 @@ classdef nigelObj < handle & ...
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
             p = obj.Output;
+            flag = true;
             for i = 1:numel(obj.Children)
                if ~isempty(obj.Children(i))
                   c = obj.Children(i);
@@ -6216,7 +6195,7 @@ classdef nigelObj < handle & ...
          OldFN = [];
          
          % generate new obj.Paths
-         obj.genPaths(saveLoc);
+         obj.Output = fullfile(saveLoc,obj.Name);
          P = obj.Paths;
          
          uniqueTypes = unique(obj.FieldType);
@@ -6245,9 +6224,9 @@ classdef nigelObj < handle & ...
          % moves all the files from folder to folder
          for ii=1:numel(filePaths)
             source = filePaths{ii};
-            [~,target] = strsplit(source,'\\\w*\\\w*.mat',...
+            [~,target] = strsplit(source,'\w*\\\w*.mat',...
                'DelimiterType', 'RegularExpression');
-            target = fullfile(P.SaveLoc,target{1});
+            target = fullfile(P.Output,target{1});
             [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
          end
          
@@ -6257,10 +6236,11 @@ classdef nigelObj < handle & ...
             moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
             d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
                {'.','..'}));
-            if isempty(d)
+            if isempty(d) && exist(OldP.(OldFN{jj}).dir,'dir')
                rmdir(OldP.(OldFN{jj}).dir);
             end
          end
+         flag = true;
          flag = flag && obj.linkToData;
          flag = flag && obj.save;
          
@@ -6361,8 +6341,9 @@ classdef nigelObj < handle & ...
                % Be sure to re-assign transient .Block property to Videos
                if ~isempty(b.Videos)
                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
-               else
+               elseif b.Pars.Video.HasVideo
                   b.Videos = nigeLab.libs.VideosFieldType.empty();
+               else
                end
             case {'Animal','Tank'}
                b.PropListener(1).Enabled = false;
@@ -6581,6 +6562,7 @@ classdef nigelObj < handle & ...
             'Private',randomAlphaNumeric(2),...% Reserved, basically
             'Name','');
          
+       
       end
       
       % Merge structs while retaining old struct fields

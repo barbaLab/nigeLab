@@ -29,13 +29,17 @@ end
 %% PARSE DATE AND TIME INFO
 Format = '';
 str='';
-if ~strcmp(blockObj.Meta.RecDate,'YYMMDD')
-    Format = [Format 'yyMMdd'];
-    str = [str blockObj.Meta.RecDate];
+if isfield(blockObj.Meta,'RecDate')
+    if ~strcmp(blockObj.Meta.RecDate,'YYMMDD')
+        Format = [Format 'yyMMdd'];
+        str = [str blockObj.Meta.RecDate];
+    end
 end
-if ~strcmp(blockObj.Meta.RecTime,'hhmmss')
-    Format = [Format 'HHmmss' ];
-    str = [str blockObj.Meta.RecTime];
+if isfield(blockObj.Meta,'RecTime')
+    if ~strcmp(blockObj.Meta.RecTime,'hhmmss')
+        Format = [Format 'HHmmss' ];
+        str = [str blockObj.Meta.RecTime];
+    end
 end
 
 try

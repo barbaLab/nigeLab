@@ -34,6 +34,16 @@ classdef DiskData < handle & ...
    %                                     'w' (for write access)
    %
    %  DISKDATA Properties:
+   %     ## Dependent (File Attributes) ##
+   %     Animal - Animal used in recording
+   %     Block - Name of recording Block
+   %     Complete - Flag indicating file contents complete
+   %     Empty - Flag indicating file is empty
+   %     Index - Current index in data record
+   %     Locked - Flag indicating locked (true) or unlocked
+   %     Tank - Name of recording tank
+   %
+   %     ## Protected ##
    %     diskfile_ - Contains actual 'MatFile'
    %     type_ - 'MatFile' (only MatFile) or 'Hybrid' (combo H5 stuff)
    %     name_ - Name of variable pointed to by DiskData array
@@ -133,7 +143,7 @@ classdef DiskData < handle & ...
          % Get the index where to start parsing "variable" part of varargin
          jj=nargin+1;
          for ii=1:nargin
-            if ~isempty(find(strcmp(varargin(ii),keyProps),1))
+            if ~isempty(find(strcmpi(varargin(ii),keyProps),1))
                jj=ii;
                break;
             end
@@ -778,11 +788,22 @@ classdef DiskData < handle & ...
                '[DISKDATA]: Invalid Attribute (''%s'')\n',attname);
          end
          val = cast(attvalue,'like',DEF{attidx});
-         flag = true;         
+         flag = true;
+         if ~strcmpi(attname,'Locked')
+            lFlag = obj.Locked;
+            unlockData(obj,false);
+         end
+
          try 
             h5writeatt(obj.diskfile_,'/',attname,val);
          catch
             flag = false;
+         end
+         
+         if ~strcmpi(attname,'Locked')
+            if lFlag
+               lockData(obj,false);
+            end
          end
          
          if numel(varargin) >= 2
@@ -948,7 +969,7 @@ classdef DiskData < handle & ...
          %  --> Value set to true on call of `lockData`
          %  --> Value set to false on call of `unlockData`
          
-         value = logical.empty();
+         value = false;
          if isempty(obj.diskfile_)
             return;
          end
@@ -1910,6 +1931,9 @@ classdef DiskData < handle & ...
          %  s = obj.getFooter();
          
          s = '';
+         if builtin('isempty',obj)
+            return;
+         end
          switch obj.type_
             case 'Event'
                [~,f,~] = fileparts(obj.diskfile_);
@@ -2347,7 +2371,7 @@ classdef DiskData < handle & ...
          
          switch lower(propName)
             case {'data','all'} % All columns
-               iCol = numColumns;
+               iCol = 1:numColumns;
             case 'type' % First column
                iCol = 1;
             case {'value','group','index','ind','idx',... % Second column
@@ -2426,11 +2450,15 @@ classdef DiskData < handle & ...
             end
             
             if isnumeric(S.subs{2})
-               iCol = S.subs{2};
+               iCol = S.subs{2} + colOffset;
             elseif strcmpi(S.subs{2},':')
-               iCol = 1:(dataSize(2) + colOffset);
+               iCol = (1:dataSize(2)) + colOffset;
             elseif strcmpi(S.subs{2},'end')
-               iCol = dataSize(2) + colOffset;
+               if colOffset > 4
+                  iCol = dataSize(2);
+               else
+                  iCol = 1 + colOffset;
+               end
             end
          else 
             iCol = 1 + colOffset;

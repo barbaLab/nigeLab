@@ -1,9 +1,9 @@
 function [x,y,w,h,lab] = uiMakeLabels(panel,labels,varargin)
-%% UIMAKELABELS  Make labels at equally spaced increments along left of panel
+%UIMAKELABELS  Make labels at equally spaced increments along left of panel
 %
-%  y = UIMAKELABELS(panel,labels);
-%  [y,lab] = UIMAKELABELS(panel,labels);
-%  [y,lab] = UIMAKELABELS(panel,labels,'NAME',value,...);
+%  [x,y] = UIMAKELABELS(panel,labels);
+%  [x,y,w,h,lab] = UIMAKELABELS(panel,labels);
+%  [__] = UIMAKELABELS(panel,labels,'NAME',value,...);
 %
 %  --------
 %   INPUTS
@@ -32,44 +32,43 @@ function [x,y,w,h,lab] = uiMakeLabels(panel,labels,varargin)
 %  --------
 %     y        :     Y coordinate corresponding to each element of lab
 %
-%    lab       :     Label cell array
-%
-% By: Max Murphy  v1.0   08/08/2018    Original version (R2017b)
+%    lab       :     Label object array
 
-%% DEFAULTS
-TOP = 0.025;
-BOT = 0.025;
+% DEFAULTS
+pars = struct;
+pars.TOP = 0.025;
+pars.BOT = 0.025;
 
-LEFT = 0.025;
+pars.LEFT = 0.025;
 
-BACKGROUND_COL = nigeLab.defaults.nigelColors('surface');
-FOREGROUND_COL = nigeLab.defaults.nigelColors('onsurface');
-FONTSIZE = 12;
-FONTNAME = 'DroidSans';
+pars.BACKGROUND_COL = nigeLab.defaults.nigelColors('surface');
+pars.FOREGROUND_COL = nigeLab.defaults.nigelColors('onsurface');
+pars.FONTSIZE = 12;
+pars.FONTNAME = 'DroidSans';
 
-%% PARSE VARARGIN
+% PARSE VARARGIN
 for iV = 1:2:numel(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
+   pars.(varargin{iV}) = varargin{iV+1};
 end
 
-%% COMPUTE POSITIONS
+% COMPUTE POSITIONS
 n = numel(labels);
-[x,w] = uiGetHorizontalSpacing(1,... % 1 column
-   'LEFT',LEFT);
-[y,h] = uiGetVerticalSpacing(n,...
-   'TOP',TOP,...
-   'BOT',BOT);
+[x,w] = nigeLab.utils.uiGetHorizontalSpacing(1,... % 1 column
+   'LEFT',pars.LEFT);
+[y,h] = nigeLab.utils.uiGetVerticalSpacing(n,...
+   'TOP',pars.TOP,...
+   'BOT',pars.BOT);
 
 
-%% CREATE LABELS
-lab = cell(n,1);
+% CREATE LABELS
+lab = gobjects(1,n);
 for ii = 1:n
-   lab{ii} = uicontrol(panel,'Style','text',...
+   lab(ii) = uicontrol(panel,'Style','text',...
             'Units','Normalized',...
-            'FontName',FONTNAME,...
-            'FontSize',FONTSIZE,...
-            'BackgroundColor',BACKGROUND_COL,...
-            'ForegroundColor',FOREGROUND_COL,...
+            'FontName',pars.FONTNAME,...
+            'FontSize',pars.FONTSIZE,...
+            'BackgroundColor',pars.BACKGROUND_COL,...
+            'ForegroundColor',pars.FOREGROUND_COL,...
             'Position',[x, y(ii), w, h/2],...
             'String',labels{ii});
 end

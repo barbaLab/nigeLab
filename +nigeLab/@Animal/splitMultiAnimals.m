@@ -43,11 +43,18 @@ switch nargin
             ApplyChanges(animalObj,Tree);
             return;
             
-         case 'string'
+         case 'char'
             switch lower(varargin{1})
                case 'init'
                   % This is invoked from nigeLab.libs.splitMultiAnimalsUI
                   
+                  % If this is not a "multi-animals" animal then return
+                  if ~(animalObj.MultiAnimals)
+                      warning('No multi animals recording detected');
+                      return;
+                  end
+                  
+                  createChildrenAnimals(animalObj)
                case {'nogui','cmd'}
                   % This is invoked from command window (probably)
                   
@@ -60,48 +67,77 @@ switch nargin
             ...
       end
 end
+flag = true;
+end %function
 
-% If this is not a "multi-animals" animal then return
-if ~(animalObj.MultiAnimals)
-   warning('No multi animals recording detected');
-   return;
+function createChildrenAnimals(animalObj)
+% CREATECHILDRENANIMALS creates the two children animals from the parent
+% animals. It also calls splitmultianimals(init) on all the blocks of the
+% current animal and assigns the splitted block to the correct splitted
+% animal
+
+
+% split meta that contains MultiAnimalsChar
+ff = fieldnames(animalObj.Meta)';
+ff = setdiff(ff,{'Header','FileExt','OrigName','OrigPath'});
+types =  structfun(@(x) class(x),animalObj.Meta,'UniformOutput',false);
+for ii = ff
+   if ~strcmp(types.(ii{:}),'char'),continue;end
+   if contains(animalObj.Meta.(ii{:}),animalObj.Pars.Block.MultiAnimalsChar)
+      str = strsplit(animalObj.Meta.(ii{:}),animalObj.Pars.Block.MultiAnimalsChar);
+      if exist('SplittedMeta','var')
+         [SplittedMeta.(ii{:})]=deal(str{:});
+      else
+         SplittedMeta = cell2struct(str,ii{:});
+      end
+   end
 end
 
-animalDestructor_lh = addlistener(animalObj.Children,...
-   'ObjectBeingDestroyed',...
-   @(h,e)deleteAnimalWhenEmpty(animalObj));
 
 % Figure out where the "new" split animals should be saved
-TankPath = fileparts(animalObj.Paths.SaveLoc);
 
-% animalObjPaths is a cell array of cell arrays of paths to one or more
-% "parent" animals:
-animalObjPaths = cell(numel(animalObj.Children),1);
-for ii = 1:numel(animalObj.Children)
-   animalObj.Children(ii).splitMultiAnimals('init');
-   Metas = [animalObj.Children(ii).MultiAnimalsLinkedBlocks.Meta];
-   animalObjPaths{ii} = cellfun(@(x) fullfile(TankPath,x),...
-      {Metas.AnimalID},'UniformOutput',false);
-end % ii
+arrayfun(@(x) x.splitMultiAnimals('init'), animalObj.Children);
+AllSplittedBlocks = [animalObj.Children.MultiAnimalsLinkedBlocks];
+animalNames = arrayfun(@(x) x.AnimalID, [AllSplittedBlocks.Meta],'UniformOutput',false);
 
-uAnimals = unique(animalObjPaths);
 splittedAnimals = [];
-for ii = 1:numel(uAnimals)
-   an = copy(animalObj);
-   an.Children = [];
-   an.Paths.SaveLoc = uAnimals{ii};
-   [~,Name]=fileparts(uAnimals{ii});
-   an.Name = Name;
-   an.save;
-   splittedAnimals = [splittedAnimals, an];
+% Main cycle, create all MultiAnimalsLinkedObjects
+for ii = 1:numel(SplittedMeta)
+    ff=fields(SplittedMeta);
+    an = copy(animalObj);
+    
+    % assign correct meta
+    for jj=1:numel(ff)
+        an.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
+    end %jj
+   
+    % create name from meta
+   str = [];
+   nameCon = an.Pars.Animal.NamingConvention;
+   for kk = 1:numel(nameCon)
+      if isfield(an.Meta,nameCon{kk})
+         str = [str, ...
+            an.Meta.(nameCon{kk}),...
+            an.Pars.Block.Delimiter]; %#ok<AGROW>
+      end
+   end %kk
+    an.Name =  str(1:(end-1));
+    
+    an.MultiAnimals = 2;
+    an.MultiAnimalsLinkedAnimals(:) = [];
+    an.Output = fullfile(an.SaveLoc,an.Name);
+    an.Children = AllSplittedBlocks(strcmp(animalNames,an.Name));
+    
+    an.Key = an.InitKey();
+    an.save;
+    splittedAnimals = [splittedAnimals, an];
 end
 animalObj.MultiAnimalsLinkedAnimals = splittedAnimals;
 animalObj.save;
 
-delete(animalDestructor_lh);
+end
 
-flag = true;
-end %function
+
 
 function ApplyChanges(animalObj,Tree)
 % APPLYCHANGES  Apply all the changes in the blocks specified in input Tree
@@ -110,34 +146,36 @@ function ApplyChanges(animalObj,Tree)
 %                 this, it assigns the Blocks to the corresponding animal.
 %
 %  ApplyChanges(animalObj,Tree)
+% 
+% animalDestructor_lh = addlistener(animalObj,'Children',...
+%     'PostSet',...
+%     @(h,e)deleteAnimalWhenEmpty(animalObj));
 
 B = animalObj.Children;
+BToRemove = nigeLab.Block.Empty([1,size(Tree,1)]);
 for kk=1:size(Tree,1)
-   indx = find(cellfun(@(x) any(x == Tree(kk,1).UserData),...
-      {B.MultiAnimalsLinkedBlocks},'UniformOutput',true));
-   B(indx).splitMultiAnimals(Tree); %#ok<FNDSB>
-   for ii=1:size(Tree,2)
-      bl = Tree(kk,ii).UserData;
-      match = find( strcmp({animalObj.MultiAnimalsLinkedAnimals.Name},bl.Meta.AnimalID));
-      blocks = animalObj.MultiAnimalsLinkedAnimals(match).Children;
-      animalObj.MultiAnimalsLinkedAnimals(match).Children = [blocks, bl];
-   end % ii
+    blocksInCells = arrayfun(@(x) x.MultiAnimalsLinkedBlocks,B,'UniformOutput',false);
+    key = Tree(kk,1).UserData.Key.Public;
+   indx = cellfun(@(x) ~isempty(findByKey(x,key)),...
+      blocksInCells);
+   B(indx).splitMultiAnimals(Tree);
+   BToRemove(kk) = B(indx);
+%    for ii=1:size(Tree,2)
+%       bl = Tree(kk,ii).UserData;
+%       bl.splitMultiAnimals(Tree);
+%       match = find( strcmp({animalObj.MultiAnimalsLinkedAnimals.Name},bl.Meta.AnimalID));
+%       blocks = animalObj.MultiAnimalsLinkedAnimals(match).Children;
+%       animalObj.MultiAnimalsLinkedAnimals(match).Children = [blocks, bl];
+%    end % ii
 end % kk
 
 for ii = 1:numel(animalObj.MultiAnimalsLinkedAnimals)
    animalObj.MultiAnimalsLinkedAnimals(ii).updatePaths();
 end
 
+for bb = BToRemove
+    animalObj.removeChild(bb);
 end
 
-function deleteAnimalWhenEmpty(animalObj)
-% DELETEANIMALWHENEMPTY  Listener callback to delete animal when all Blocks
-%                        are removed from it (during multi-animal split).
-%
-%  
+end
 
-if  ( isvalid(animalObj)) && (numel(animalObj.Children)==1)
-   delete(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
-   delete(animalObj);
-end
-end

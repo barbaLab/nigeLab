@@ -108,12 +108,12 @@ classdef remoteMonitor < handle
 
          monitorObj.bars = nigeLab.libs.nigelProgress(0);
          
-         for iA = 1:numel(tankObj.Children)
-            a = tankObj.Children(iA);
-            for iB = 1:numel(a.Children)
-               b = a.Children(iB);
+         for a = tankObj.Children
+            iA = a.getKey;
+            for b = a.Children
+               iB = b.getKey;
                monitorObj.bars = [monitorObj.bars, ...
-                  monitorObj.addBar(b,[iA,iB])];
+                  monitorObj.addBar(b,{iA,iB})];
             end
          end
       end
@@ -175,6 +175,8 @@ classdef remoteMonitor < handle
             otherwise
                if isnumeric(sel)
                   bar = monitorObj.getBar(sel);
+               elseif ischar(sel) || iscell(sel) && all(cellfun(@(x) ischar(x) ,sel))
+                  bar = monitorObj.getBar(sel);
                else
                   error(['nigeLab:' mfilename ':BadInputType2'],...
                      'Unexpected class for ''sel'' input: %s',...
@@ -201,7 +203,7 @@ classdef remoteMonitor < handle
          bar.Progress = 0;
          bar.Name = name;
          bar.IsParallel = ~isempty(job);
-         bar.IsRemote = strcmp('parallel.cluster.MJS',class(job.Parent));
+%          bar.IsRemote = strcmp('parallel.cluster.MJS',class(job.Parent));
          bar.job = job;
          
          % Changing BarIndex toggles the visibility, queue position etc.
@@ -244,7 +246,7 @@ classdef remoteMonitor < handle
    methods (Access = private)
       % Adds a nigeLab.libs.nigelBar progress bar that is used in
       % combination with the remoteMonitor to track processing status
-      function bar = addBar(monitorObj,blockObj,sel)
+      function bar = addBar(monitorObj,blockObj,key)
          % ADDBAR  Add a "bar" to the remoteMonitor object, allowing the
          %         remoteMonitor to track completion status via the "bar"
          %         progress.
@@ -289,7 +291,7 @@ classdef remoteMonitor < handle
             'Tag',name);
 
          % Create the actual nigelProgress bar object
-         bar = nigeLab.libs.nigelProgress(pp,name,sel,monitorObj);
+         bar = nigeLab.libs.nigelProgress(pp,name,key,monitorObj);
          bar.BarIndex = nan;
          
          %%% Nest the panel in in the nigelPanel

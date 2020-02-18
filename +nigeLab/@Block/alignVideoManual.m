@@ -1,5 +1,5 @@
 function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamInfo)
-% ALIGNVIDEOMANUAL  Manually obtain offset between video and neural record,
+%ALIGNVIDEOMANUAL  Manually obtain offset between video and neural record,
 %                    using specific streams from the digital record that
 %                    are overlayed on top of streams parsed from the video
 %                    record.
@@ -35,7 +35,7 @@ function fig = alignVideoManual(blockObj,digStreamInfo,vidStreamInfo)
 %  of a special 'Header' file located with the other 'ScoredEvents' files 
 %  in the block hierarchy.
 
-%% Parse inputs
+% Parse inputs
 if nargin < 3
    vidStreamInfo = [];
 end
@@ -53,7 +53,7 @@ blockObj.UserData = struct(...
    'digStreamInfo',digStreamInfo,...
    'vidStreamInfo',vidStreamInfo);
 
-%% Build graphics
+% Build graphics
 % Make figure to put everything in
 fig=figure('Name','Manual Video Alignment Interface',...
    'Color',nigeLab.defaults.nigelColors('background'),...
@@ -199,26 +199,26 @@ set(fig,'DeleteFcn',{@deleteFigCB,alignInfoObj,vidInfoObj,graphicsUpdateObj});
       switch evt.Key     
          case 's' % Press 'alt' and 's' at the same time to save
             if strcmpi(evt.Modifier,'alt')
-               a.saveAlignment;
+               saveAlignment(a);
             end
             
          case 'a' % Press 'a' to go back one frame
-            v.retreatFrame;
+            advanceFrame(v,-1);
             
          case 'leftarrow' % Press 'leftarrow' key to go back 5 frames
-            v.retreatFrame(5);
+            advanceFrame(v,-5);
             
          case 'd' % Press 'd' to go forward one frame
-            v.advanceFrame;
+            advanceFrame(v,1);
             
          case 'rightarrow' % Press 'rightarrow' key to go forward 5 framse
-            v.advanceFrame(5);
+            advanceFrame(v,5);
             
          case  'subtract' % Press numpad '-' key to zoom out on time series
-            a.zoomOut;
+            zoomOut(a);
             
          case 'add' % Press numpad '+' key to zoom in on time series
-            a.zoomIn;
+            zoomIn(a);
             
          case 'space' % Press 'spacebar' key to play or pause video
             v.playPauseVid;

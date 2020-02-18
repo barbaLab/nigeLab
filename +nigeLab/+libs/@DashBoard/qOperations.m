@@ -1,4 +1,4 @@
-function qOperations(obj,operation,target,sel)
+function bar = qOperations(obj,operation,target,sel)
 %QOPERATIONS  Wrapper for "do" methods of Block, for adding to
 %             jobs to a queue for parallel and/or remote
 %             processing.
@@ -27,7 +27,11 @@ function qOperations(obj,operation,target,sel)
 
 % Set indexing to assign to UserData property of Jobs
 if nargin < 4
-   sel = [1 1];
+    key = target.getKey;
+    an = obj.Tank{:};
+    indx = cellfun(@(bs) ~isempty(findByKey(bs,key)),...
+        arrayfun(@(a) a.Children, an,'UniformOutput',false));
+   sel = {an(indx).getKey,key};
 end
 
 % Want to split this up based on target type so that we can
@@ -36,15 +40,17 @@ switch class(target)
    case 'nigeLab.Tank'
       for ii = 1:numel(target.Children)
          for ik = 1:target.Children(ii).getNumBlocks
+             keys = {target.Children(ii).getKey,...
+                  target.Children(ii).Children(ik).getKey};
             qOperations(obj,operation,...
-               target.Children(ii).Children(ik),[ii ik]);
+               target.Children(ii).Children(ik),keys);
             drawnow;
          end
       end
       return;
    case 'nigeLab.Animal'
       for ii = 1:numel(target.Children)
-         qOperations(obj,operation,target.Children(ii),[sel ii]);
+         qOperations(obj,operation,target.Children(ii),[sel {target.Children(ii).getKey}]);
          drawnow;
       end
       return;
@@ -73,7 +79,7 @@ switch class(target)
       end
       opLink = getNigeLink('nigeLab.Block',operation);
                  
-      if obj.Tank.UseParallel
+      if obj.Tank.Pars.Queue.UseParallel
          %% Configure remote or local cluster for correct parallel computation
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
                                 'Parallel');
@@ -89,6 +95,9 @@ switch class(target)
          else
             myCluster = parcluster();
          end
+         
+         % if we are in a local cluster deactivate the UseRemote flag
+         qPars.UseRemote = ~isa(myCluster,'parallel.cluster.Local');
          
          if isempty(qPars.RemoteRepoPath)
             attachedFiles = ...
@@ -125,7 +134,7 @@ switch class(target)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
             target.Meta.RecID);
          % target is nigelab.Block
-         blockName = blockName(1:min(end,nPars.NMaxNameChars));
+%          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
          
          job = createCommunicatingJob(myCluster, ...
@@ -143,17 +152,21 @@ switch class(target)
             return;
          end
 
-         if qPars.UseRemote
-         % Assign callbacks to update labels and timers etc.
-         job.FinishedFcn=@(~,~)bar.indicateCompletion();
-         end
+%          if qPars.UseRemote
+%          % Assign callbacks to update labels and timers etc.
+%          job.FinishedFcn=@(~,~)bar.indicateCompletion();
+%          end
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else
             % Will always run on _Block
             nigeLab.utils.cprintf(fmt,'\t%s[QOPERATIONS]: ',idt);
             fprintf(1,'Target: %s\n',target.File);
+            
+            oldDir = pwd;
+            cd(fullfile(nigeLab.utils.getNigelPath,'+nigeLab','temp'));            
             createTask(job,@qWrapper,0,{target.File});
+            cd(oldDir);
          end
          submit(job);
          nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
@@ -169,7 +182,7 @@ switch class(target)
          % (target is scalar nigeLab.Block)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
             target.Meta.RecID);
-         blockName = blockName(1:min(end,nPars.NMaxNameChars));
+%          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();
          bar = obj.RemoteMonitor.startBar(barName,sel);

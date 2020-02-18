@@ -1,5 +1,5 @@
 function editArray = uiMakeEditArray(container,y,varargin)
-%% UIMAKEEDITARRAY  Make array of edit boxes that corresponds to set of labels
+%UIMAKEEDITARRAY  Make array of edit boxes that corresponds to set of labels
 %
 %  editArray = UIMAKEEDITARRAY(container,y,);
 %  editArray = UIMAKEEDITARRAY(container,y,'NAME',value,...);
@@ -24,36 +24,42 @@ function editArray = uiMakeEditArray(container,y,varargin)
 %  --------
 %   OUTPUT
 %  --------
-%  editArray   :     k x 1 cell array of edit style uicontrols.
-%
-% By: Max Murphy  v1.0  08/30/2018   Original version (R2017b)
-%
-%                 v1.1  09/07/2018   Modified varargin format
+%  editArray   :     1 x k  Array of edit style
+%                       'matlab.ui.control.UIControl' objects.
 
-%% DEFAULTS
+% DEFAULTS
 % Normalized position coordinates
-H = 0.150;
-W = 0.475;
-X = 0.500;
-TAG = repmat({''},numel(y),1);
+pars = struct;
+pars.H = 0.150;
+pars.W = 0.475;
+pars.X = 0.500;
+pars.TAG = repmat({''},numel(y),1);
 
-%% PARSE VARARGIN
+% PARSE VARARGIN
+if (numel(varargin) == 1)
+   if isstruct(varargin{1})
+      pars = varargin{1};
+   else
+      error(['nigeLab:' mfilename ':BadNumInputs'],...
+         '[UIMAKEEDITARRAY]: Must either specify varargin as pars struct or name, value pairs');
+   end
+end
 for iV = 1:2:numel(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
+   pars.(upper(varargin{iV})) = varargin{iV+1};
 end
 
-%% CONSTRUCT GRAPHICS ARRAY
-editArray = cell(numel(y),1);
+% CONSTRUCT GRAPHICS ARRAY
+editArray = gobjects(1,numel(y));
 
 for ii = 1:numel(y)
-   editArray{ii,1} = uicontrol(container,'Style','edit',...
+   editArray(ii) = uicontrol(container,'Style','edit',...
       'Units','Normalized',...
-      'Position',[X y(ii) W H],...
+      'Position',[pars.X y(ii) pars.W pars.H],...
       'FontName','DroidSans',...
       'FontSize',13,...
       'Enable','off',...
       'String','N/A',...
-      'Tag',TAG{ii},...
+      'Tag',pars.TAG{ii},...
       'UserData',ii);
    
 end

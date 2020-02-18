@@ -91,8 +91,7 @@ classdef VidStreamsType < handle ...
          %                       + if provided as an array, then
          %                         obj is returned as an array where each
          %                         array element has a 1:1 correspondence
-         %                         with an element of videosFieldObj
-         %                         represented as the 'obj.v' property.
+         %                         with an element of videosFieldObj.
          %
          %  vidSig -- nigeLab.utils.signal class object (scalar or array)
          %                 --> If given as array, obj is returned as an

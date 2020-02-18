@@ -35,6 +35,10 @@ elseif isinf(iCol)
    iCol = 1:obj.size_(2);
 end
 
+if isscalar(data)
+   data = repmat(data,numel(iRow),numel(iCol));
+end
+
 % Do the H5 assignment
 varname_ = ['/' obj.name_];
 
@@ -43,7 +47,8 @@ varname_ = ['/' obj.name_];
 % unless the number of rows is so small that it becomes a trivial tradeoff
 for i = 1:numel(iCol)
    a = h5read(obj.diskfile_,varname_,[1 iCol(i)],[N 1]);
-   a(iRow,1) = data(:,i);
+   assigned_data = data(:,i);
+   a(iRow,1) = assigned_data;
    h5write(obj.diskfile_,varname_,a,[1 iCol(i)],[N 1]);
 end
 

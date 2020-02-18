@@ -93,10 +93,13 @@ switch S(1).type
       if numel(S) > 1
          [iRow,iCol] = obj.parseRowColumnIndices(S(2),dims,offset);
       else
-         if any(c >= 5)
-            obj.validateEventDataSize(c,dataSize(2)-4,S.subs);
-         else
-            obj.validateEventDataSize(c,1,S.subs);
+         switch lower(propName)
+            case 'data'
+               nigeLab.libs.DiskData.validateEventDataSize(c,dataSize(2),S.subs);
+            case 'snippet'
+               nigeLab.libs.DiskData.validateEventDataSize(c,dataSize(2)-4,S.subs);
+            otherwise
+               nigeLab.libs.DiskData.validateEventDataSize(c,1,S.subs);
          end
          iRow = 1:n;
          iCol = c;

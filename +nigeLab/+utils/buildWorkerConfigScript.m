@@ -36,7 +36,7 @@ switch lower(queueMode)
    case {'remote','fromremote'}
       % Just makes sure nigeLab is added to path (didn't work for MM)
       % This works if the method is queued FROM repo on remote location:
-      p = getNigelPath('UNC'); 
+      p =  varargin{1};
       if ~iscell(p)
          p = {p};
       end
@@ -45,7 +45,7 @@ switch lower(queueMode)
    case {'local','fromlocal'}
       % "Wrap" everything in a script that is executed by the worker,
       % instead of the `doAction`
-      p = varargin{1};
+      p = getNigelPath('UNC');
       if ~iscell(p)
          p = {p};
       end
@@ -61,7 +61,7 @@ switch lower(queueMode)
       
       makeConfigScript(configFile,p);
       
-      wrapperFile = fullfile(pwd,WRAPPER_FCN_NAME);
+      wrapperFile = fullfile(Tempdir,WRAPPER_FCN_NAME);
       if numel(varargin) > 2
          if add_debug_outputs
             makeWrapperFunction_debug(wrapperFile,operation,p,db_p);

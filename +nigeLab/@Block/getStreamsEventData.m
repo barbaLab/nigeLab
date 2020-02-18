@@ -9,20 +9,20 @@ function eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp
 
 propName = lower(prop);
 switch propName % Define some things to make it easier to avoid typo etc
-   case {'times','timestamps','t'}
+   case {'times','timestamps','t','ts'}
       propName = 'ts';
-   case {'index','id','val','group'}
+   case {'index','id','val','group','value'}
       propName = 'value';
-   case {'snip','snips','rate','lfp','aligned','x'}
+   case {'snip','snips','rate','lfp','aligned','x','snippet'}
       propName = 'snippet';
-   case {'mask','label','name'}
+   case {'mask','label','name','tag'}
       propName = 'tag';
    otherwise
       % do nothing
 end
 
 
-idx = blockObj.getEventsIndex(field,eventName);
+idx = getEventsIndex(blockObj,field,eventName);
 
 % Note that .data is STRUCT field; .data.data would be DiskData "data"
 eventData = [];
@@ -34,23 +34,41 @@ if isfield(blockObj.Events,field)
             tmp = blockObj.Events.(field)(idx).data;
             eventData = tmp.(propName);
          else
-            warning(['DiskData for Events.%s(%g) exists, but is ' ...
-               'not initialized correctly (too small -- ' ...
-               'only %g columns).'],field,idx,...
-               size(blockObj.Events.(field)(idx).data,2));
+            if strcmp(eventName,'Header')
+               switch propName
+                  case 'ts'
+                     eventData = nan(numel(blockObj.Videos),1);
+                  case 'value'
+                     eventData = nan(numel(blockObj.Videos),1);
+                  case 'snippet'
+                     eventData = [];
+                  case 'tag'
+                     eventData = nan(numel(blockObj.Videos),1);
+                  case 'data'
+                     eventData = [];
+                  otherwise
+                     eventData = [];
+               end
+               
+            else
+               eventData = [];
+            end
             return;
          end
       else
-         warning('''data'' is not a field of Events.%s(%g) yet.',...
+         warning(['nigeLab:' mfilename ':BadField'],...
+            '''data'' is not a field of Events.%s(%g) yet.',...
             field,idx);
          return;
       end
    else
-      warning('Events.%s(%g) exceeds array dimensions.',field,idx);
+      warning(['nigeLab:' mfilename 'BadIndex'],...
+         'Events.%s(%g) exceeds array dimensions.',field,idx);
       return;
    end
 else
-   warning('%s is not a field of Block.Events.',field);
+   warning(['nigeLab:' mfilename ':BadField'],...
+      '%s is not a field of Block.Events.',field);
    return;
 end
 
