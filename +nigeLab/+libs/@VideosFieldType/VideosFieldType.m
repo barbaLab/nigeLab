@@ -55,6 +55,11 @@ classdef VideosFieldType < handle ...
       VideoOffset (1,1) double = 0   % Start-time with respect to full video
    end
    
+   % HIDDEN,PUBLIC
+   properties (Hidden,Access=public)
+      ROI cell = {}  % Region of interest ({iRow, iCol})
+   end
+   
    % HIDDEN,PROTECTED
    properties (Hidden,Access=protected)
       Time           nigeLab.libs.DiskData % disk-file for actual `Time` data

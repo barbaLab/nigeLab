@@ -99,6 +99,11 @@ classdef Block < nigeLab.nigelObj
       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
    end
    
+   % HIDDEN,PUBLIC (flags)
+   properties (Hidden,Access=public)
+      HasTrials   (1,1) logical = false   % Does the Block have extracted trials?
+   end
+   
    % PUBLIC
    properties (Access=public)
       Channels struct                        % Struct array of neurophysiological stream data
@@ -594,7 +599,7 @@ classdef Block < nigeLab.nigelObj
    
    % PROTECTED
    methods (Access=protected)
-      % Modify inherited superclass name parsing method
+      % Modify inherited name parsing method
       function [name,meta] = parseNamingMetadata(blockObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
@@ -708,6 +713,28 @@ classdef Block < nigeLab.nigelObj
          blockObj.FileExt = meta.FileExt;
          blockObj.Meta = nigeLab.nigelObj.MergeStructs(blockObj.Meta,meta);
       end
+      
+      % Modify inherited ID file saving method
+      function flag = saveIDFile(blockObj)
+         %SAVEIDFILE  Save small folder identifier file
+         %
+         %  flag = blockObj.saveIDFile();
+         %  --> Returns true if save was successful
+         %
+         %  Adds the following fields to .nigelBlock file via `propList`:
+         %     * 'FileExt'
+         %     * 'RecType'
+         %     * 'RecFile'
+         %     * 'HasTrials'
+         
+         BLOCK_PROPS = {'FileExt', 'RecType', 'RecFile', 'HasTrials'};
+         flag = saveIDFile@nigeLab.nigelObj(blockObj,BLOCK_PROPS);
+         if ~flag
+            % Missing RecFile or IDFile
+            return;
+         end
+         
+      end
    end
    
    % RESTRICTED:nigeLab.libs.VideosFieldType
@@ -750,19 +777,20 @@ classdef Block < nigeLab.nigelObj
       info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
-      flag = checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
-      flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction) % Detect "Trials" for candidate behavioral Events
+      flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
+      flag = doAutoClustering(blockObj,chan,unit,useSort)   % Do automatic spike clustiring
+      flag = doBehaviorSync(blockObj)                       % Get sync from neural data for external triggers
+      flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction)         % Detect "Trials" for candidate behavioral Events
       flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset,forceHeaderExtraction)  % Create "Header" for behavioral Events
-      flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
-      flag = doReReference(blockObj)    % Do virtual common-average re-reference
-      flag = doSD(blockObj)             % Do spike detection for extracellular field
-      flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
+      flag = doLFPExtraction(blockObj)       % Extract LFP decimated streams
+      flag = doRawExtraction(blockObj)       % Extract raw data to Matlab BLOCK
+      flag = doReReference(blockObj)         % Do virtual common-average re-reference
+      flag = doSD(blockObj)                  % Do spike detection for extracellular field
+      flag = doTrialVidExtraction(blockObj)  % Extract "chunks" of video frames as trial videos
+      flag = doUnitFilter(blockObj)          % Apply multi-unit activity bandpass filter
       flag = doVidInfoExtraction(blockObj,vidFileName,forceParamsUpdate) % Get video information
-      flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
-      flag = doVidSyncExtraction(blockObj) % Get sync info from video
-      flag = doAutoClustering(blockObj,chan,unit,useSort) % Do automatic spike clustiring
-      
+      flag = doVidSyncExtraction(blockObj)   % Get sync info from video
+
       % Methods for streams info
       stream = getStream(blockObj,streamName,scaleOpts); % Returns stream data corresponding to streamName
       

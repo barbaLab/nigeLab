@@ -2637,6 +2637,11 @@ classdef nigelObj < handle & ...
          flag = nigeLab.nigelObj.doMethod(obj,@doSD);
       end
       
+      % Does trial video extraction
+      function flag = doTrialVidExtraction(obj)
+         flag = nigeLab.nigelObj.doMethod(obj,@doTrialVidExtraction);
+      end
+      
       % Apply spike unit bandpass (300 - 5000 Hz) filter
       function flag = doUnitFilter(obj)
          %DOSD  Apply spike unit bandpass (300 to 5000 Hz) filter
@@ -5941,13 +5946,28 @@ classdef nigelObj < handle & ...
       end
       
       % Save small folder identifier file
-      function flag = saveIDFile(obj)
+      function flag = saveIDFile(obj,propList)
          %SAVEIDFILE  Save small folder identifier file
          %
          %  flag = obj.saveIDFile();
          %  --> Returns true if save was successful
+         %  * Default "propList" depends on .Type
+         %
+         %  flag = obj.saveIDFile(propList);
+         %  --> Adds properties in `propList` to the defaults saved:
+         %     * 'Key.Public'
+         %     * All fields of 'Out'
+         %     * 'RecDir'
+         %     * 'User'
+         %
+         %  propList : Cell array of char vectors that are names of
+         %             properties of nigelObj to save in .nigelFile
          
          flag = false;
+         if nargin < 2
+            propList = {};
+         end
+         
          if strcmp(obj.Type,'Block')
             if isempty(obj.RecFile)
                return;
@@ -5991,13 +6011,12 @@ classdef nigelObj < handle & ...
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            if strcmp(obj.Type,'Block')
-               fprintf(fid,'FileExt|%s\n',obj.FileExt);
-               fprintf(fid,'RecType|%s\n',obj.RecType);
-               fprintf(fid,'RecFile|%s\n',obj.RecFile);
-            end
             fprintf(fid,'RecDir|%s\n',obj.RecDir);
-            fprintf(fid,'User|%s', obj.User);
+            fprintf(fid,'User|%s\n', obj.User);
+            for i = 1:numel(propList)
+               fprintf(fid,'%s|%s\n',...
+                  propList{i},num2str(obj.(propList{i})));
+            end
             fclose(fid);
             flag = true;
          else
