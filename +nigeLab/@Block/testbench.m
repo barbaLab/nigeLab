@@ -5,7 +5,7 @@ function varargout = testbench(blockObj,varargin)
 
 varargout = cell(1,nargout);
 
-varargout{1} = initEvents(blockObj);
+blockObj.initVideos;
 
 
 

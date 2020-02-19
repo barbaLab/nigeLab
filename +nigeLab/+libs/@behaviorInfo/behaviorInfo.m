@@ -214,7 +214,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    
    % NO ATTRIBUTES (overloaded methods)
    methods 
-      % [DEPENDENT]  Returns .EventTimes property (write to DiskData)
+      % [DEPENDENT]  Handles .EventTimes (from DiskData; wrt NEURAL rec)
       function value = get.EventTimes(obj)
          %GET.EVENTTIMES  Returns .EventTimes property
          %
@@ -222,8 +222,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          v = obj.Variable(obj.Type == 1);
          value = nan(numel(obj.Trial),numel(v));
+         f = obj.FieldName;
          for iV = 1:numel(v)
-            value(:,iV) = getEventData(obj.Block,obj.FieldName,'ts',v{iV});
+            value(:,iV) = getEventData(obj.Block,f,'ts',v{iV});
          end
       end
       function set.EventTimes(obj,~)
@@ -235,9 +236,13 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          idx = obj.Type == 1;
          v = obj.Variable(idx);         
          val = obj.Value(idx);
+         f = obj.FieldName;
          for iV = 1:numel(v)
-            setEventData(obj.Block,obj.FieldName,...
+            setEventData(obj.Block,f,...
                'ts',v{iV},val(iV),obj.TrialIndex);
+            useTimestamp = double((~isnan(val(iV))) && (~isinf(val(iV))));
+            setEventData(obj.Block,f,...
+               'tag',v{iV},useTimestamp,obj.TrialIndex);
          end
       end
       
@@ -320,8 +325,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          idx = obj.Type > 1;       
          val = obj.Value(idx);
-         setEventData(obj.Block,obj.FieldName,'meta','Trial',val,obj.TrialIndex);
-
+         setEventData(obj.Block,obj.FieldName,...
+            'snippet','Trial',val,...
+            obj.TrialIndex,1:numel(val));
       end
       
       % [DEPENDENT]  Returns .MetaNames property
@@ -387,8 +393,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Event.OutcomeVarName;
       end
-      function set.OutcomeVarName(~,~)
-         %SET.OutcomeVarName  Does nothing
+      function set.OutcomeVarName(obj,value)
+         %SET.OutcomeVarName  Updates obj.Block.Pars.Event.OutcomeVarName
+         obj.Block.Pars.Event.OutcomeVarName = value;
       end
       
       % [DEPENDENT]  Returns .NScored property (number of trials scored)
@@ -463,7 +470,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          dbstack();
          nigeLab.utils.cprintf('Errors*','[BEHAVIORINFO.SET]: ');
          nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: State\n');
+            'Failed attempt to set READ-ONLY property: State\n');
          fprintf(1,'\n');
       end
       
@@ -483,7 +490,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          dbstack();
          nigeLab.utils.cprintf('Errors*','[BEHAVIORINFO.SET]: ');
          nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: StringFcn\n');
+            'Failed attempt to set READ-ONLY property: StringFcn\n');
          fprintf(1,'\n');
       end
       
@@ -542,10 +549,11 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  value = get(obj,'TrialBuffer');
          %  --> Simply return value of obj.Block.Pars.Video.TrialBuffer
          
-         value = obj.Block.Pars.Video.TrialBuffer; 
+         value = obj.Block.Pars.Video.PreTrialBuffer; 
       end
-      function set.TrialBuffer(~,~)
-         %SET.TRIALBUFFER  Does nothing
+      function set.TrialBuffer(obj,value)
+         %SET.TRIALBUFFER  Assign to block parameter
+         obj.Block.Pars.Video.PreTrialBuffer = value;
       end
       
       % [DEPENDENT]  Returns .Type property (indexes "type" of .Variable)
@@ -556,15 +564,16 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  ts = obj.Trial(trialIdx); Returns indexed values of Trial
          %  obj.Trial(trialIdx,val);  Sets indexed values of Trial
          
-         value = [];
+         value = [];         
          if isempty(obj.Block)
             return;
          end
          value = obj.Block.Pars.Video.VarType;
 
       end
-      function set.Type(~,~)
-         %SET.TYPE  (Does nothing)
+      function set.Type(obj,value)
+         %SET.TYPE  Assigns .Type to current .Video
+         obj.VidGraphics.Video.VarType = value;
       end
       
       % [DEPENDENT]  Returns .Variable property (names of .Value elements)
@@ -576,8 +585,10 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          value = obj.Block.Pars.Video.VarsToScore;
       end
-      function set.Variable(~,~)
-         %SET.VARIABLE (Does nothing)
+      function set.Variable(obj,value)
+         %SET.VARIABLE Assigns value to obj.Block.Pars.Video.VarsToScore
+         
+         obj.Block.Pars.Video.VarsToScore = value;
       end
       
       % [DEPENDENT]  Returns .Verbose property (from linked Block)
@@ -599,7 +610,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          dbstack();
          nigeLab.utils.cprintf('Errors*','[BEHAVIORINFO.SET]: ');
          nigeLab.utils.cprintf('Errors',...
-            'Failed attempt to set DEPENDENT property: Verbose\n');
+            'Failed attempt to set READ-ONLY property: Verbose\n');
          fprintf(1,'\n');
       end
       
@@ -715,6 +726,11 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          updateObjColors(obj,curTrial); % Updates con panel, tracker background
          if ~isempty(obj.TimeAxes)
             updateTimeAxesIndicators(obj);
+         end
+         if ~isempty(obj.VidGraphics)
+            set(obj.VidGraphics.TrialOffsetLabel,'String',...
+               sprintf('Trial Offset: %6.3f sec',...
+               obj.VidGraphics.TrialOffset));
          end
       end
       
@@ -840,13 +856,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             return;
          end
             
-         % Update "Trials" to reflect the earliest "timestamped" indicator
-         tsIdx = (obj.Type==1) & ~isnan(obj.Value) & ~isinf(obj.Value);
-         curTrial = obj.TrialIndex;
-         if sum(tsIdx) > 0
-            t = min(obj.Value(tsIdx));
-            obj.Trial(curTrial) = t; % Update to reflect new time
-         end
+         % 2020-02-19: MM -- Begin Removed Feature
+         %  % Update "Trials" to reflect the earliest timestamp in Trial
+         %  tsIdx = (obj.Type==1) & ~isnan(obj.Value) & ~isinf(obj.Value);
+         %  curTrial = obj.TrialIndex;
+         %  if sum(tsIdx) > 0
+         %     t = min(obj.Value(tsIdx));
+         %     obj.Trial(curTrial) = t; % Update to reflect new time
+         %  end
+         % 2020-02-19: MM -- End Removed Feature
 
          % Write "buffered" data to diskfile before advancing
          setCurrentTrialData(obj);
@@ -866,17 +884,17 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          % Update video time if needed
          if isa(src,'nigeLab.libs.VidGraphics')
-            src.SeriesTime = obj.Trial(newTrialIndex) - ...
-               src.NeuOffset - src.TrialOffset;
+            src.SeriesTime = obj.Trial(newTrialIndex);
             src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
             src.DataLabel.Color = ...
                obj.TrialButtonArray(newTrialIndex).EdgeColor;
             obj.NeedsLabels = true;
          elseif ~isempty(obj.VidGraphics)
-            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) - ...
-               obj.VidGraphics.NeuOffset - obj.VidGraphics.TrialOffset;
+            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex);
             obj.VidGraphics.DataLabel.String =...
                sprintf('Trial: %g',newTrialIndex);
+            obj.VidGraphics.DataLabel.Color = ...
+               obj.TrialButtonArray(newTrialIndex).EdgeColor;
             obj.NeedsLabels = true;
          end
          

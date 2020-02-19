@@ -83,6 +83,7 @@ classdef Block < nigeLab.nigelObj
    properties (Hidden,Transient,Dependent,Access=public)
       ChannelID            double   % [NumChannels x 2] array of channel and probe numbers
       EventTimes           double   % Timestamps of different scored events
+      HasROI      (1,1)    logical = false   % Do all the video cameras have ROI set?
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
       ScoringField         char   = 'ScoredEvents'   % blockObj.Pars.Video.ScoringEventFieldName
@@ -101,7 +102,7 @@ classdef Block < nigeLab.nigelObj
    
    % HIDDEN,PUBLIC (flags)
    properties (Hidden,Access=public)
-      HasTrials   (1,1) logical = false   % Does the Block have extracted trials?
+      HasVideoTrials   (1,1) logical = false   % Does the Block have extracted trials?
    end
    
    % PUBLIC
@@ -273,6 +274,22 @@ classdef Block < nigeLab.nigelObj
             setEventData(blockObj,blockObj.ScoringField,...
                'ts',v{iV},value(:,iV));
          end
+      end
+      
+      % [DEPENDENT]  Returns .HasROI property: are all Videos ROI set?
+      function value = get.HasROI(blockObj)
+         %GET.HASROI  Returns .HasROI property: are all Videos ROI set?
+         value = false;
+         if isempty(blockObj)
+            return;
+         elseif isempty(blockObj.Videos)
+            return;
+         end
+         value = all(cellfun(@isempty,{blockObj.Videos.ROI}));
+      end
+      function set.HasROI(~,~)
+         %SET.HASROI  Cannot set READ-ONLY property
+         warning('Cannot set READ-ONLY property: <strong>HASROI</strong>');
       end
       
       % [DEPENDENT] Returns .NumChannels property
@@ -725,9 +742,9 @@ classdef Block < nigeLab.nigelObj
          %     * 'FileExt'
          %     * 'RecType'
          %     * 'RecFile'
-         %     * 'HasTrials'
+         %     * 'HasVideoTrials'
          
-         BLOCK_PROPS = {'FileExt', 'RecType', 'RecFile', 'HasTrials'};
+         BLOCK_PROPS = {'FileExt', 'RecType', 'RecFile', 'HasVideoTrials'};
          flag = saveIDFile@nigeLab.nigelObj(blockObj,BLOCK_PROPS);
          if ~flag
             % Missing RecFile or IDFile
@@ -737,9 +754,56 @@ classdef Block < nigeLab.nigelObj
       end
    end
    
+   % RESTRICTED:{?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal}
+   methods (Access={?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal})
+      function updateVideosFolder(blockObj,newFolderPath)
+         %UPDATEVIDEOSFOLDER  Updates all Videos.fname with newFolderPath
+         %
+         %  updateVideosFolder(blockObj);
+         %  blockObj : nigeLab.Block object
+         %
+         %  * When only given one input argument, it automatically directly
+         %     uses the value in ~/+nigeLab/+defaults/Video.m as the value
+         %     of `newFolderPath` (pars.VidFilePath)
+         %     --> If there are more than one element, it automatically
+         %         chooses the first cell array element.
+         %
+         %  updateVideosFolder(blockObj,newFolderPath);
+         %  
+         %  newFolderPath : Char array of new video folder path.
+         %  * This path should contain all the "full" videos that had been
+         %     associated with .Videos elements. Use this method if you
+         %     moved the folder containing Videos for some reason.
+         %
+         %  * To update all Videos in a Tank, call as:
+         %    `runFun(tankObj,'updateVideosFolder',newFolderPath);`
+         %
+         %     e.g.
+         %     >> runFun(tankObj,'updateVideosFolder','new/videos/folder');
+         
+         if nargin < 2
+            newFolderPath = [];
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               updateVideosFolder(blockObj(i),newFolderPath);
+            end
+            return;
+         end
+         
+         if isempty(newFolderPath)
+            updateParams(blockObj,'Video','Direct');
+            newFolderPath = blockObj.Pars.Video.VidFilePath{1};
+         end
+         
+         updateVideoFileLocation(blockObj.Videos,newFolderPath);
+      end
+   end
+   
    % RESTRICTED:nigeLab.libs.VideosFieldType
    methods (Access=?nigeLab.libs.VideosFieldType)
-      index = parseVidFileName(blockObj,fName)  % Add to Block.Meta.Video table and return corresponding index
+      index = parseVidFileName(blockObj,fName,keyIndex)  % Add to Block.Meta.Video table and return corresponding index
       s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
    end
    

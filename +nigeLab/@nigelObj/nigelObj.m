@@ -5559,9 +5559,7 @@ classdef nigelObj < handle & ...
                '[%s/LOADIDFILE]: Attempt to load non-%s from %s folder.',...
                upper(obj.Type),obj.Type,obj.Type);
          end
-         
-         mc = metaclass(obj);
-         mcp = {mc.PropertyList.Name};
+
          obj.IDInfo = struct;
          obj.IDInfo.(upper(propName{1})) = propVal{1};
          for i = 2:numel(propName)
@@ -6628,17 +6626,18 @@ classdef nigelObj < handle & ...
                      ['Please input nigelObj.Type (must be: ' ...
                      'Tank, Animal, or Block)'],...
                      'Insufficient Load Info',...
-                     1,'Tank');
+                     1,{'Tank'});
                   if ~ismember(type,{'Tank','Animal','Block'})
                      error(['nigeLab:' mfilename ':BadType'],...
                         'Invalid .Type: %s\n',type);
                   end
+                  type = type{:};
                else
-                  type = strsplit(a.FolderIdentifier,'.');
+                  type = strsplit(a.FolderIdentifier,'.nigel');
                   type = type{end};
                end
             else
-               type = strsplit(a.IDFile,'.');
+               type = strsplit(a.IDFile,'.nigel');
                type = type{end};
             end
          elseif isempty(a.Type)
@@ -6648,17 +6647,18 @@ classdef nigelObj < handle & ...
                      ['Please input nigelObj.Type (must be: ' ...
                      'Tank, Animal, or Block)'],...
                      'Insufficient Load Info',...
-                     1,'Tank');
+                     1,{'Tank'});
                   if ~ismember(type,{'Tank','Animal','Block'})
                      error(['nigeLab:' mfilename ':BadType'],...
                         'Invalid .Type: %s\n',type);
                   end
+                  type = type{:};
                else
-                  type = strsplit(a.FolderIdentifier,'.');
+                  type = strsplit(a.FolderIdentifier,'.nigel');
                   type = type{end};
                end
             else
-               type = strsplit(a.IDFile,'.');
+               type = strsplit(a.IDFile,'.nigel');
                type = type{end};
             end
          else

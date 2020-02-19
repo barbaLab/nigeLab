@@ -653,6 +653,26 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          checkAxesLimits(obj);
       end
       
+      % Reset stream XData
+      function resetStreamXData(obj,offset)
+         % RESETSTREAMXDATA  Update xData of "alignment" streams
+         %
+         %  resetStreamXData(obj,offset);
+         %
+         %  obj : nigeLab.libs.TimeScrollerAxes object
+         %  offset : Some scalar alignment offset to change ORIGINAL
+         %           (neural) stream time by, assuming the x-axis times
+         %           denote the current video (series) time.
+         
+         if isempty(obj)
+            return;
+         end
+         
+         for i = 1:numel(obj.dig)
+            obj.dig(i).h.XData = obj.dig(i).obj.t + offset;
+         end
+      end
+      
       % Set timestamps (make new objects)
       function setTimeStamps(obj,ts,style,varargin)
          %SETTIMESTAMPS  Set timestamp markers for events of interest
@@ -809,11 +829,10 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
                   obj.NeuOffset = obj.NeuOffset + obj.x.delta_offset;
                   
                   obj.x.delta_offset = 0; % Return delta to zero
-
+                  % The XData does not need to be updated, since it was
+                  % actively updated during "dragging"
                case 3 % For right-click, cancel, and reset other axes
-                  for i = 1:numel(obj.dig)
-                     obj.dig(i).h.XData = obj.dig(i).obj.t;
-                  end
+                  resetStreamXData(obj,obj.NeuOffset+obj.TrialOffset);
             end
             
             % Place the (dragged) neural streams with cursor
@@ -879,9 +898,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          src.UserData.down = false;
       end
       
-      % Update the current cursor X-position in figure frame, taking into
-      % account: Width of any parent panels, width of axes relative to
-      % panels.
+      % Update the current cursor X-position in figure frame
       function cursorMotionCB(obj,~,~)
          % CURSORMOTIONCB  Update the current cursor X-position based on
          %               mouse cursor movement in current figure frame.

@@ -1,5 +1,5 @@
 function runFun(tankObj,f,varargin)
-% RUNFUN   Run function f on all child Blocks in tank
+%RUNFUN   Run function f on all child Blocks in tank
 %
 %  example:
 %  runFun(myTank,'checkMask'); Runs the function 'checkMask' of all child
@@ -8,7 +8,7 @@ function runFun(tankObj,f,varargin)
 %  runFun(myTank,'fcn_handle',arg1,arg2,...);
 %  --> As long as input arg is same for all block cases this works
 
-%% Check if it is a valid method
+% Check if it is a valid method
 clc;
 fprintf(1,' \n');
 nigeLab.utils.cprintf('*Blue','%s: ',tankObj.Name);
@@ -23,7 +23,7 @@ else
    return;
 end
 
-%% Iterate on all Blocks, of all Animals
+% Iterate on all Blocks, of all Animals
 for iA = 1:numel(tankObj.Children)
    nigeLab.utils.cprintf('Comment-','->\t%s\n',tankObj.Verbose,...
       tankObj.Children(iA).Name);
@@ -34,7 +34,11 @@ for iA = 1:numel(tankObj.Children)
          tankObj.Children(iA).Children(iB).(f)(varargin{:});
          nigeLab.utils.cprintf('*Blue',tankObj.Verbose,...
             '\t\t\t\t\t\t\t->\tsuccessful\n');
-      catch
+      catch me
+         disp(me);
+         for i = 1:numel(me.stack)
+            disp(me.stack(i));
+         end
          nigeLab.utils.cprintf('*Red',tankObj.Verbose,...
             '\t\t\t\t\t\t\t->\tunsuccessful\n');
       end

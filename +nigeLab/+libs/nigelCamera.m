@@ -120,7 +120,7 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
    
    % RESTRICTED:nigeLab.libs.TimeScrollerAxes (constructor)
-   methods (Access=?nigeLab.libs.TimeScrollerAxes)
+   methods (Access={?nigeLab.libs.TimeScrollerAxes,?nigeLab.Block,?nigeLab.nigelObj})
       % Class constructor
       function obj = nigelCamera(timeAxesObj,varargin)
          %NIGELCAMERA  Constructor for object to reference video series
@@ -130,9 +130,45 @@ classdef nigelCamera < matlab.mixin.SetGet
          %
          %  cameraObj = nigeLab.libs.nigelCamera(timeAxesObj,varargin);
          
-         obj.Parent = timeAxesObj;
-         obj.Block_ = timeAxesObj.Block;
-         obj.Series = timeAxesObj.VidGraphicsObj.SeriesList;
+         if isa(timeAxesObj,'nigeLab.libs.TimeScrollerAxes')
+            obj.Parent = timeAxesObj;
+            obj.Block_ = timeAxesObj.Block;
+            obj.Series = timeAxesObj.VidGraphicsObj.SeriesList;
+         elseif isa(timeAxesObj,'nigeLab.Block')
+            blockObj = timeAxesObj;
+            if nargin < 2
+               error(['nigeLab:' mfilename ':TooFewInputs'],...
+                  ['[NIGELCAMERA]: If first input is Block, ' ...
+                  'at least two inputs are required.']);
+            end            
+            
+            s = varargin{1};
+            varargin(1) = [];
+            if isa(s,'nigeLab.libs.VideosFieldType')
+               obj.Series = s;
+               src = s(1).Source;
+            elseif isa(s,'char')
+               obj.Series = FromSame(blockObj.Videos,s);
+               src = s;
+            else
+               error(['nigeLab:' mfilename ':BadClass'],...
+                  ['\t\t->\t<strong>[NIGELCAMERA]</strong>: ' ...
+                  'When first input is `nigeLab.Block`, second '...
+                  'argument should be member of one of the following:\n' ...
+                  '\t\t\t->\t<strong>nigeLab.libs.VideosFieldType</strong>\n' ...
+                  '\t\t\t->\t<strong>char</strong>\n']);
+            end
+            obj.Parent = struct('VidGraphicsObj',struct(...
+               'SeriesIndex_',1,...
+               'VideoIndex_',1,...
+               'VideoSource_',src,...
+               'FrameTime',0,...
+               'NeuTime',0));
+         else
+            error(['nigeLab:' mfilename ':BadClass'],...
+               '[NIGELCAMERA]: Invalid input class (''%s'')\n',...
+               class(timeAxesObj));
+         end
          
          % No error-checking here
          for iV = 1:2:numel(varargin)

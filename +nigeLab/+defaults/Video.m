@@ -163,11 +163,11 @@ pars.VidStreamSource = '';  % If pars.CameraSourceVar is non-empty
 pars.VidFilePath    = { ... % "Includes" for where videos might be. Stops after first non-empty path.
 ...   'K:\Rat\Video\BilateralReach\Murphy'; 
 ...   'K:\Rat\Video\BilateralReach\RC';
-   'K:\Rat\Video\Audio Discrimination Task\post-surg'
+   'P:\Rat\BilateralReach\Video\post-surg'
    };
 
 % Default search path for UI selection:
-pars.DefaultSearchPath = 'K:/Rat/Video/Audio Discrimination Task/post-surg';
+pars.DefaultSearchPath = 'P:\Rat\BilateralReach\Video\post-surg';
 % Valid extensions for UI selection:
 pars.ValidVidExtensions = {'*_Right-A_0.MP4','Right Camera Videos Only';...
                            '*_0.MP4','First Video Only';...
@@ -179,7 +179,7 @@ pars.FileExt = '.MP4';
 % included as metadata variables; '$' vs '~' only denotes whether to use
 % that particular variable in figuring out other videos belonging to a
 % given recording.
-pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$SessionID','~View','~MovieID'}; % KUMC: "Murphy"
+pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$RecID','~View','~MovieID'}; % KUMC: "Murphy"
 % pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','~MovieID'}; % KUMC: "RC"
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 
@@ -187,12 +187,13 @@ pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 % pars.OutcomeEvent = [];
 pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
 % pars.User = 'MM'; % Who did the scoring? -- This is set elsewhere
-pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
-                            % a given scoring "trial." It is useful to
-                            % start at an earlier frame, because the
-                            % VideoReader object is faster at reading the
-                            % "next" frame rather than going backwards, for
-                            % whatever reason (it seems).
+pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
+                             % a given scoring "trial." It is useful to
+                             % start at an earlier frame, because the
+                             % VideoReader object is faster at reading the
+                             % "next" frame rather than going backwards, for
+                             % whatever reason (it seems).
+pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" to keep writing
       
 [pars.VarsToScore,pars.VarType] = setScoringVars();
 

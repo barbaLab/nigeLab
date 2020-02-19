@@ -110,6 +110,7 @@ if isempty(behaviorData)
       iEventTimes = vPars.VarType <= 1;
       fname = sprintf(blockObj.Paths.(blockObj.ScoringField).file, 'Trial');
       data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
+      data(:,2) = 0;
       data(:,4) = trial_ts;
       eIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
       blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...

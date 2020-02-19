@@ -218,6 +218,10 @@ classdef DiskData < handle & ...
                lockData(obj);
             end
          end
+         
+         if nargout < 1
+            clear obj; % Remove DiskData from memory if just writing data
+         end
       end
       
       data = subsref(obj,S)  % Overloaded subscript reference method

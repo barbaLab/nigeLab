@@ -110,9 +110,14 @@ classdef VidGraphics < matlab.mixin.SetGet
    properties (Transient,GetAccess=public,...
          SetAccess={?nigeLab.libs.TimeScrollerAxes,?nigeLab.libs.behaviorInfo})
       AnimalNameLabel   % matlab.graphics.primitive.Text   Shows name of animal/block
-      DataLabel         % matlab.graphics.primitive.Text   Shows trial # or data such as offset (if applicable)
+      AssignROIMenu     % Menu item for assigning ROI
+      DataLabel         % matlab.graphics.primitive.Text   Shows trial #
+      GroupOffsetMenu   % Menu item for assigning offset to "group" of videos (all .Videos)
+      Menu              % uicontextmenu for interacting with current image frame
       NeuralTimeLabel   % matlab.graphics.primitive.Text   Shows Neural timestamp of displayed frame
       TimeDisp          % matlab.graphics.axis.Axes Axes   Holds NeuralTimeLabel and VidTimeLabel
+      TrialMaskMenu     % Menu item for assigning trial "mask" status
+      TrialOffsetLabel  % matlab.ui.control.UIControl      Shows offset for current trial
       VidImAx           % matlab.graphics.axis.Axes        Holds VidIm 
       VidIm             % matlab.graphics.primitive.Image  Image of current video frame
       VidMetaDisp       % matlab.graphics.axis.Axes        Holds  AnimalNameLabel and DataLabel
@@ -336,9 +341,10 @@ classdef VidGraphics < matlab.mixin.SetGet
          
          obj.GrossOffset = value+obj.VideoOffset;
          
-         % Since times are relative to the VIDEO record, any time a NEURAL
-         % or TRIAL offset is changed, then change the event times
-         obj.Block.Trial = obj.Block.Trial + value;
+         % % Since times are relative to the VIDEO record, any time NEURAL
+         % % or TRIAL offset is changed, then change the event times
+         % obj.Block.Trial = obj.Block.Trial + value;
+         % 2020-02-19: MM -- Decided to store all TS values as NEURAL times
          
          % Set the offset for any other videos in this camera series
          v = setdiff(obj.SeriesList_,obj.Video);
@@ -535,6 +541,19 @@ classdef VidGraphics < matlab.mixin.SetGet
          if (value > 0) && (value <= numel(obj.Block.Videos))
             obj.VideoIndex_ = value;
          end
+         % Ensure that the uicontextmenu for assignment is enabled
+         if ~isempty(obj.AssignROIMenu)
+            if isvalid(obj.AssignROIMenu)
+               if isempty(obj.Block.Videos(value).ROI)
+                  obj.AssignROIMenu.Enable = 'on';
+                  obj.AssignROIMenu.Checked = 'off';
+               else
+                  obj.AssignROIMenu.Enable = 'off';
+                  obj.AssignROIMenu.Checked = 'on';
+               end
+            end
+         end
+         
          % VideoSource is AbortSet; will not update if on same series
          vidSource = obj.Block.Videos(value).Source; 
          obj.VideoSource = vidSource; % Updates SeriesList, Image cropping
@@ -593,7 +612,10 @@ classdef VidGraphics < matlab.mixin.SetGet
          obj.SeriesList = FromSame(obj.Block.Videos,value);
          
          % Issue command as if "right-click" on video frame
-         obj.setROI(obj.VidIm,struct('Button',3));
+         setROI(obj,obj.VidIm,struct('Button',3));
+         
+         % Update TimeAxes "streams" XData if there is an alignment stream
+         resetStreamXData(obj.TimeAxes,obj.NeuOffset + obj.TrialOffset);
       end
       
       % [DEPENDENT]  Returns Index for Video Source from .ListBox
@@ -813,14 +835,22 @@ classdef VidGraphics < matlab.mixin.SetGet
          % Setting dependent property .VideoIndex updates obj.VideoSource
          % and then updates obj.SeriesList
          
-         if forceSelection
-            obj.NeuTime = obj.Block.Trial(obj.Block.TrialIndex);
+%          if forceSelection
+            obj.NeuTime = obj.Block.Trial(obj.Block.TrialIndex)+obj.NeuOffset+obj.TrialOffset;
             % If this is out of range, will select correct video:
-            obj.SeriesTime = obj.NeuTime-obj.NeuOffset-obj.TrialOffset; 
-            set(obj.TimeAxes,'XLim','far');
+            obj.SeriesTime = obj.Block.Trial(obj.Block.TrialIndex); 
+            if obj.TimeAxes.ZoomLevel == 0
+               set(obj.TimeAxes,'XLim','far');
+            else
+               set(obj.TimeAxes,'XLim','near');
+            end
             updateTimeLabelsCB(obj,obj.FrameTime,obj.NeuTime);
-         end
+%          end
          obj.AnimalNameLabel.String = getAnimalNameLabel(obj);
+         
+         % Reset focus to Video Figure
+         uicontrol(obj.TrialOffsetLabel);
+         
       end
       
       % Set the current video frame
@@ -865,6 +895,66 @@ classdef VidGraphics < matlab.mixin.SetGet
          tNeu = obj.FrameTime+obj.GrossOffset+obj.TrialOffset;
       end
       
+      % Set FrameIndex flags to know if we should update VFR FrameTime
+      function setFrameIndexFlag(obj)
+         %SETFRAMEINDEXFLAG  Listener callback to know if need VFR update
+         %
+         %  setFrameIndexFlag(obj)
+         %  --> PostSet listener callback for '.FrameIndex' property
+
+         feval(obj.FrameIndexFlagFcn_);
+      end
+      
+      % Frame Index updater Callback with buffer   
+      function setFrameIndexFlag_BufferMode(obj)
+         %SETFRAMEINDEXFLAG_BUFFERMODE  Sets .NeedUpdate_ based on buffsize
+         %
+         %  
+         
+         % Compute FrameIndex updated difference
+         delta = obj.FrameIndex - obj.FrameIndex_;
+         obj.iCur_ = obj.iCur_ + delta;
+         % If this puts at a point where we need update, then flag it.
+         obj.NeedsUpdate_ = (obj.iCur_ < 1) || (obj.iCur_ > obj.BuffSize_);
+      end
+      
+      % Frame Index updater Callback for no buffer
+      function setFrameIndexFlag_NormalMode(obj)
+         %SETFRAMEINDEXFLAG_NORMALMODE  Sets .NeedsUpdate_ based on ~= 1
+         %
+         %  setFrameIndexFlag_NormalMode(obj);
+         %  --> If obj.FrameIndex - obj.FrameIndex_ ~= 1, need to update
+         
+         % Compute FrameIndex updated difference
+         delta = obj.FrameIndex - obj.FrameIndex_;
+         % Reading sequentially without changing the .VFR.CurrentTime
+         % property allows the VideoReader to go faster, as the codecs
+         % rely on assumptions about temporal continuity regarding how
+         % the video would be watched (to go faster)
+         obj.NeedsUpdate_ = (delta~=1);
+      end
+      
+      % Set the "Masked" status for the current trial
+      function setMask(obj,src)
+         %SETMASK  Set the "Masked" status for the current trial
+         %
+         %  uimenuObj.Callback = @(src,~)obj.setMask;
+         %
+         %  obj : nigeLab.libs.VidGraphics object
+         %  src : matlab.ui.container.Menu
+         
+         status = src.UserData;
+         obj.Video.Masked = src.UserData;
+         src.Checked = 'on';
+         other = findobj(get(src.Parent,'Children'),'UserData',1-status);
+         other.Checked = 'off';
+         if status
+            set(src.Parent,'Checked','on');
+         else
+            set(src.Parent,'Checked','off');
+         end
+      end
+      
       % Define ROI to make video loading faster
       function setROI(obj,src,evt)
          %SETROI  Define ROI to allow video to "buffer" into memory
@@ -878,10 +968,9 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  src (s, in callback) : Source (same as obj.VidIm)
          %  evt (e, in callback) : Event.EventData (from ButtonDownFcn)
          
-         flag = src.UserData;
          switch evt.Button
             case 1 % Left-click to create bounding box and enable buffer
-               if flag
+               if src.UserData
                   return;
                end
                rect_pos = rbbox;
@@ -896,6 +985,7 @@ classdef VidGraphics < matlab.mixin.SetGet
                minCol = max(1,round(x*obj.Video.Width));
                maxCol = min(round((x+w)*obj.Video.Width),obj.Video.Width);
                obj.iCol_ = minCol:maxCol;
+               
                % Since image has to be "flipped" (lowest row indices are at
                % top-left of the image), we need to invert and start from
                % lowest to highest rows
@@ -913,60 +1003,106 @@ classdef VidGraphics < matlab.mixin.SetGet
                
                x = uint8([0 1]);
                y = uint8([0 1]);
-               delete(src);
+               delete(obj.VidIm); % Delete old image handle
                obj.VidIm = imagesc(obj.VidImAx,...
                   x,y,squeeze(obj.C_(obj.iCur_,:,:,:)),...
-                  'UserData',true,'ButtonDownFcn',@obj.setROI);
+                  'PickableParts','none');
+               src.UserData = true;
                obj.FrameIndexFlagFcn_ = @(x)setFrameIndexFlag_BufferMode(obj);
+               delete(obj.Menu);
+               obj.Menu = uicontextmenu('HandleVisibility','off');
+               uimenu(obj.Menu,'Label','Assign Trial Offset','Callback',...
+                  @(~,~)obj.setTrialOffset);
+               uimenu(obj.Menu,'Label','Reset ROI',...
+                  'Callback',@(~,~)obj.setROI_reset);
+               obj.AssignROIMenu = ...
+                  uimenu(obj.Menu,'Label','Assign Current ROI',...
+                  'Callback',@(~,~)obj.setROI_assign,...
+                  'Separator','on','Checked','off');
+               addMaskMenu(obj);
+
+               obj.VidImAx.UIContextMenu = obj.Menu;
             case 3 % Right-click to cancel
-               if ~flag
-                  return;
-               end
-               nigeLab.sounds.play('pop');
-               obj.BuffSize_ = 1;
-               obj.iCur_ = 1;
-               obj.iCol_ = [];
-               obj.iRow_ = [];
-               obj.C_ = [];
-               
-               x = [0 1];
-               y = [0 1];
-               delete(src);
-               obj.VidIm = imagesc(obj.VidImAx,x,y,...
-                  readFrame(obj.VFR,'native'),'UserData',false,...
-                  'ButtonDownFcn',@obj.setROI); 
-               obj.FrameTime = get(obj.VFR,'CurrentTime');
-               obj.FrameIndexFlagFcn_ = @(x)setFrameIndexFlag_NormalMode(obj);
+               % Move this to uicontextmenu
          end
          obj.AnimalNameLabel.String = getAnimalNameLabel(obj);
       end
       
-      % Set FrameIndex flags to know if we should update VFR FrameTime
-      function setFrameIndexFlag(obj)
-         %SETFRAMEINDEXFLAG  Listener callback to know if need VFR update
+      % Assigns ROI of curent video frame image
+      function setROI_assign(obj)
+         %SETROI_ASSIGN  Assigns ROI of current video frame image to Video
          %
-         %  setFrameIndexFlag(obj)
-         %  --> PostSet listener callback for '.FrameIndex' property
+         %  setROI_assign(obj);
+         
+         if obj.VidImAx.UserData
+            for i = 1:numel(obj.SeriesList_)
+               obj.SeriesList_(i).ROI = {obj.iRow_,obj.iCol_};
+            end
+         else
+            for i = 1:numel(obj.SeriesList_)
+               obj.SeriesList_(i).ROI = {':',':'};
+            end
+         end
+         obj.AssignROIMenu.Enable = 'off';
+         obj.AssignROIMenu.Checked = 'on';
+         if obj.Block.HasROI
+            str = questdlg('Run `doTrialVidExtraction`?',...
+               'All Source ROIs Set','Yes','No','Yes');
+            if strcmp(str,'Yes')
+               obj.Block.HasVideoTrials = doTrialVidExtraction(obj.Block);
+               if obj.Block.HasVideoTrials
+                  save(obj.Block); % Save after extracting
+               end
+            end
+         end
+      end
+      
+      % Resets ROI on video frame image
+      function setROI_reset(obj)
+         %SETROI_RESET  Reset ROI to full image
+         
+         if ~obj.VidImAx.UserData
+            return;
+         end
+         nigeLab.sounds.play('pop');
+         obj.BuffSize_ = 1;
+         obj.iCur_ = 1;
+         obj.iCol_ = [];
+         obj.iRow_ = [];
+         obj.C_ = [];
 
-         feval(obj.FrameIndexFlagFcn_);
+         x = [0 1];
+         y = [0 1];
+         delete(obj.VidIm); % Delete old obj.VidIm handle
+         for i = 1:numel(obj.SeriesList_)
+            obj.SeriesList_(i).ROI = {};
+         end
+         obj.VidIm = imagesc(obj.VidImAx,x,y,...
+            readFrame(obj.VFR,'native'),'PickableParts','none'); 
+         obj.VidImAx.UserData = false;
+         obj.FrameTime = get(obj.VFR,'CurrentTime');
+         obj.FrameIndexFlagFcn_ = @(x)setFrameIndexFlag_NormalMode(obj);
+         delete(obj.Menu); % Delete old uicontextmenu
+         
+         obj.Menu = uicontextmenu('HandleVisibility','off');
+         uimenu(obj.Menu,'Label','Assign Trial Offset','Callback',...
+            @(~,~)obj.setTrialOffset);
+         obj.AssignROIMenu = ...
+            uimenu(obj.Menu,'Label','Assign Current ROI',...
+            'Callback',@(~,~)obj.setROI_assign,...
+            'Separator','on','Checked','off');
+         addMaskMenu(obj);
+         obj.VidImAx.UIContextMenu = obj.Menu;
+            
       end
       
-      function setFrameIndexFlag_BufferMode(obj)
-         % Compute FrameIndex updated difference
-         delta = obj.FrameIndex - obj.FrameIndex_;
-         obj.iCur_ = obj.iCur_ + delta;
-         % If this puts at a point where we need update, then flag it.
-         obj.NeedsUpdate_ = (obj.iCur_ < 1) || (obj.iCur_ > obj.N_BUFFER_FRAMES);
-      end
-      
-      function setFrameIndexFlag_NormalMode(obj)
-         % Compute FrameIndex updated difference
-         delta = obj.FrameIndex - obj.FrameIndex_;
-         % Reading sequentially without changing the .VFR.CurrentTime
-         % property allows the VideoReader to go faster, as the codecs
-         % rely on assumptions about temporal continuity regarding how
-         % the video would be watched (to go faster)
-         obj.NeedsUpdate_ = (delta~=1);
+      % Set offset for current trial start (for current camera)
+      function setTrialOffset(obj)
+         %SETTRIALOFFSET  Sets offset for current trial
+         obj.TrialOffset = obj.Block.Trial(obj.Block.TrialIndex) - ...
+            obj.FrameTime;
+         obj.TrialOffsetLabel.String = sprintf('Trial Offset: %6.3f sec',...
+            obj.TrialOffset);
       end
       
       % Updates .C_ Buffer for video frames
@@ -1071,7 +1207,29 @@ classdef VidGraphics < matlab.mixin.SetGet
    end
    
    % PROTECTED 
-   methods (Access=protected)      
+   methods (Access=protected)    
+      % Add "Trial Mask" context menu item with submenu
+      function addMaskMenu(obj)
+         %ADDMASKMENU  Add "Trial Mask" context menu item with submenu
+         %
+         %  addMaskMenu(obj);
+         
+         if obj.Video.Masked
+            enable_chk = 'on';
+            disable_chk = 'off';
+         else
+            enable_chk = 'off';
+            disable_chk = 'off';
+         end
+%          if obj.Block.
+         obj.TrialMaskMenu = ...
+            uimenu(obj.Menu,'Label','Video Status','Checked',enable_chk);
+         uimenu(obj.TrialMaskMenu,'Label','Use',...
+            'UserData',1,'Callback',@(s,~)obj.setMask,'Checked',enable_chk);
+         uimenu(obj.TrialMaskMenu,'Label','Exclude',...
+            'UserData',0,'Callback',@(s,~)obj.setMask,'Checked',disable_chk);
+      end
+      
       % Build "Heads Up Display" (HUD)
       function buildHeadsUpDisplay(obj)
          % BUILDHEADSUPDISPLAY  Builds the "Heads-Up-Display" (HUD) that
@@ -1124,6 +1282,18 @@ classdef VidGraphics < matlab.mixin.SetGet
             'HorizontalAlignment','right',...
             'Clipping','off',...
             'Color',nigeLab.defaults.nigelColors('onsurface'));
+         
+         obj.TrialOffsetLabel = uicontrol(obj.Panel.Panel,...
+            'Style','text',... 
+            'Units','Normalized',...
+            'Position',[0.2375 0.765 0.15 0.035],...
+            'String', sprintf('Trial Offset: %6.3f sec',0),...
+            'FontName','DroidSans',...
+            'FontSize',14,...
+            'FontWeight','normal',...
+            'BackgroundColor',nigeLab.defaults.nigelColors('surface'),...
+            'HorizontalAlignment','center',...
+            'ForegroundColor',nigeLab.defaults.nigelColors('onsurface'));
          
          % Build "Time Display" axes container for showing time displays
          obj.TimeDisp = axes(obj.Panel.Panel,...
@@ -1206,7 +1376,8 @@ classdef VidGraphics < matlab.mixin.SetGet
             'YTick',[],...
             'XTick',[],...
             'YLim',[0 1],...
-            'YDir','reverse');
+            'YDir','reverse',...
+            'ButtonDownFcn',@obj.setROI);
          nestObj(obj.Panel,obj.VidImAx,'VidImAx');
          
          % Make image object
@@ -1214,8 +1385,21 @@ classdef VidGraphics < matlab.mixin.SetGet
          y = uint8([0 1]);
          obj.iCur_ = nan;
          obj.VidIm = imagesc(obj.VidImAx,x,y,readFrame(obj.VFR,'native'),...
-            'UserData',false,'ButtonDownFcn',@obj.setROI); 
+            'UserData',false,'PickableParts','none'); 
          obj.FrameTime = get(obj.VFR,'CurrentTime');
+         
+         % Create ui context menus for interacting with object
+         obj.Menu = uicontextmenu('HandleVisibility','off');
+         uimenu(obj.Menu,'Label','Assign Trial Offset','Callback',...
+            @(~,~)obj.setTrialOffset);
+         uimenu(obj.Menu,'Label','Reset ROI',...
+            'Callback',@(~,~)obj.setROI_reset);
+         obj.AssignROIMenu = ...
+            uimenu(obj.Menu,'Label','Assign Current ROI',...
+            'Callback',@(~,~)obj.setROI_assign,...
+            'Separator','on','Checked','off');
+         addMaskMenu(obj);
+         obj.VidImAx.UIContextMenu = obj.Menu;
       end
       
       % Returns string for .AnimalNameLabel
@@ -1232,11 +1416,12 @@ classdef VidGraphics < matlab.mixin.SetGet
          end
       end
       
-      % Get names of unique video "Sources"
+      % Set .VideoName_, .VideoSourceList_, .VideoSource_
       function initVidSource(obj)
-         % INITVIDSOURCE  Get names for listbox for video selection
+         % INITVIDSOURCE  Set .VideoName_, .VideoSourceList_, .VideoSource_
          %
-         %  obj.buildVidSelectionList;
+         %  initVidSource(obj);
+         %  --> Organizes properties using data in obj.Block.Videos
          
          % Get list of video names        
          vidNames = cell(numel(obj.Block.Videos),1);

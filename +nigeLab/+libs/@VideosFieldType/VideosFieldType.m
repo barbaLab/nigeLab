@@ -13,25 +13,27 @@ classdef VideosFieldType < handle ...
    % % % PROPERTIES % % % % % % % % % %   
    % DEPENDENT,TRANSIENT,PUBLIC (no default values)
    properties (Dependent,Transient,Access=public)
-      Duration  double     % Duration of video (seconds)      
-      GrossOffset (1,1) double  % Start-time with respect to neural data
-      Height    double     % Height of video frame (pixels)
-      Index       char     % Index of this video (for GoPro multi-videos)
-      Key         char     % "Key" that corresponds to Block object
-      Masked      (1,1)    % Is this video "masked" (true: enabled)?
-      Name        char     % Name of video file
-      NeuOffset   (1,1) double  % Generic start-time offset beyond the Video offset
-      NumFrames double     % Total number of frames
-      Source      char     % Camera "view" (e.g. Door, Top, etc...)
-      TrialOffset (1,1) double  % Trial/camera-specific offset
-      Width     double     % Width of video frame (pixels)
-      VideoIndex  (1,1) double  % Index of this video within array
-      fs        double     % Sample rate
+      Duration          double   % Duration of video (seconds)      
+      GrossOffset (1,1) double   % Start-time with respect to neural data
+      Height            double   % Height of video frame (pixels)
+      Index             char     % Index of this video (for GoPro multi-videos)
+      Key               char     % "Key" that corresponds to Block object
+      Masked      (1,1)          % Is this video "masked" (true: enabled)?
+      Name              char     % Name of video file
+      NeuOffset   (1,1) double   % Generic start-time offset beyond the Video offset
+      NumFrames         double   % Total number of frames
+      Source            char     % Camera "view" (e.g. Door, Top, etc...)
+      TrialOffset (1,1) double   % Trial/camera-specific offset
+      Width             double   % Width of video frame (pixels)
+      VarType           double   % 'Type' for each metadata variable
+      VideoIndex  (1,1) double   % Index of this video within array
+      fs                double   % Sample rate
    end
    
    % HIDDEN,DEPENDENT,TRANSIENT,PUBLIC
    properties (Hidden,Dependent,Transient,Access=public)
       IsIdle   logical     % Returns flag indicating whether object is Idle
+      HasVideoTrials (1,1) logical = false
       Meta       table     % Row of Block.Meta.Video corresponding to this video
       Parent               % Handle to "parent" nigeLab.Block object
       Pars      struct     % Parameters struct
@@ -44,9 +46,11 @@ classdef VideosFieldType < handle ...
    
    % HIDDEN,TRANSIENT,PROTECTED
    properties (Hidden,Transient,Access=protected)
-      V_                          % VideoReader object
-      VideoIndex_    double       % Stored index
-      store_   (1,1) struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
+      HasVideoTrials_   logical
+      TrialIndex_       double       % Trial index
+      V_                             % VideoReader object
+      VideoIndex_       double       % Stored index
+      store_   (1,1)    struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
    end
    
    % HIDDEN,PUBLIC/PROTECTED
@@ -57,6 +61,7 @@ classdef VideosFieldType < handle ...
    
    % HIDDEN,PUBLIC
    properties (Hidden,Access=public)
+      Exported    (1,1) logical = false  % Has it been exported to Trials?
       ROI cell = {}  % Region of interest ({iRow, iCol})
    end
    
@@ -123,16 +128,36 @@ classdef VideosFieldType < handle ...
          % Here, address alternative constructor uses:
          if isa(loadedObj_,'nigeLab.libs.VideosFieldType') % From Load
             obj = loadedObj_; % Then just load it directly
-            for i = 1:numel(obj) % In case it is an array
-               % .Block is Transient, so must be re-assigned from loadobj
-               % method of nigeLab.Block when a _Block.mat file is loaded
-               obj(i).Block = blockObj; 
+            if numel(obj) > 1
+               for i = 1:numel(obj) % In case it is an array
+                  % .Block is Transient, so must be re-assigned from loadobj
+                  % method of nigeLab.Block when a _Block.mat file is loaded
+                  obj(i).Block = blockObj; 
+                  obj(i).mIndex = parseVidFileName(blockObj,obj(i).fname,i);
+               end
+            else
+               obj.Block = blockObj;
             end
             % Similarly, streams must be re-connected
             initStreams(obj);
             return;
          elseif isstruct(loadedObj_) % Construct from loaded struct
+            if numel(loadedObj_) > 1
+               obj = repmat(obj,size(loadedObj_));
+               for i = 1:numel(loadedObj_)
+                  loadedObj_(i).mIndex = parseVidFileName(blockObj,...
+                     loadedObj_(i).fname,i);
+                  obj(i) = nigeLab.libs.VideosFieldType(...
+                     blockObj,loadedObj_(i));
+               end
+               return;
+            end
             obj=nigeLab.utils.assignParentStruct(obj,loadedObj_,blockObj);
+            if ~isempty(obj.VideoIndex)
+               
+            else
+               obj.mIndex = parseVidFileName(blockObj,obj.fname);
+            end
             initStreams(obj);
             return; 
          elseif ischar(loadedObj_)
@@ -678,6 +703,47 @@ classdef VideosFieldType < handle ...
          end
       end
       
+      % [DEPENDENT]  Returns .VarType property
+      function value = get.VarType(obj)
+         %GET.VARTYPE  References "Header" diskfile (column 5: 'Snippet')
+         
+         f = obj.Block.ScoringField;
+         nMeta = getEventData(obj.Block,f,'value','Header');
+         nMeta = nMeta(obj.VideoIndex);
+         
+         value = getEventData(obj.Block,f,'snippet','Header');
+         value = value(obj.VideoIndex,1:nMeta);
+      end
+      function set.VarType(obj,value)
+         %SET.VARTYPE  References "Header" diskfile (column 5: 'Snippet')
+         
+         f = obj.Block.ScoringField;
+         nMeta = numel(value);
+         setEventData(obj.Block,f,'value','Header',nMeta,obj.VideoIndex);
+         
+         data = getEventData(obj.Block,f,'data','Header');
+         nTrial = size(data,1);
+         N = nTrial + 4 + nMeta;
+         dSz = N-size(data,2);
+         nColPrev = size(data,2);
+         if nColPrev <  N % Then take old data and overwrite
+            data = horzcat(data,nan(nTrial,dSz));
+            % Slide old "row" of trial offsets over
+            data(obj.VideoIndex,(5+dSz):N) = data(obj.VideoIndex,5:nColPrev);
+            hIdx = getEventsIndex(obj.Block,f,'Header');
+            
+            % Overwrite old diskfile
+            obj.Block.Events.(f)(hIdx).data = ...
+               nigeLab.libs.DiskData('Event',...
+               obj.Block.Events.(f)(hIdx).data.File,data,...
+               'overwrite',true,'access','w','size',size(data),...
+               'class',class(data));
+         else % Otherwise just update old diskfile
+            setEventData(obj.Block,f,'snippet','Header',value,...
+               obj.VideoIndex,1:nMeta);
+         end
+      end
+      
       % [DEPENDENT]  Returns .VideoIndex property 
       function value = get.VideoIndex(obj)
          %GET.VIDEOINDEX  Returns .VideoIndex property (index to this obj)
@@ -744,8 +810,32 @@ classdef VideosFieldType < handle ...
             return;
          end
          expr = strrep(obj.Block.Paths.Video.file,'\','/');
-         sName = sprintf('Time-%s',obj.Index);
-         value = sprintf(expr,obj.Source,sName,'mat');
+         if obj.HasVideoTrials
+            [p,tmp,~] = fileparts(obj.fname);
+            value = fullfile(p,sprintf('%s.mat',tmp));
+         else
+            sName = sprintf('Time-%s',obj.Index);
+            value = sprintf(expr,obj.Source,sName,'mat');
+         end
+      end
+      function value = get.HasVideoTrials(obj)
+         value = false;
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         elseif ~isempty(obj.HasVideoTrials_)
+            value = obj.HasVideoTrials_;
+            return;
+         elseif isempty(obj.Block)
+            return;
+         end
+         if isfield(obj.Block.IDInfo,'HasVideoTrials')
+            value = logical(str2double(obj.Block.IDInfo.HasVideoTrials));
+         else
+            value = obj.Block.HasVideoTrials;
+         end
+         obj.HasVideoTrials_ = value;
       end
       
       % [DEPENDENT]  Returns .fs property
@@ -875,7 +965,21 @@ classdef VideosFieldType < handle ...
          %  --> Returns all VideosFieldType objects from an array that have
          %      .Source of 'Left-A'
          
-         obj = objArray(strcmpi({objArray.Source},sourceName));
+         if nargin < 2
+            sourceName = objArray.Source;
+            objArray = objArray.Block.Videos;
+         end
+         
+         if isa(sourceName,'nigeLab.libs.VideosFieldType')
+            obj = objArray(strcmpi({objArray.Source},sourceName.Source));
+         elseif ischar(sourceName)
+            obj = objArray(strcmpi({objArray.Source},sourceName));
+         else
+            error(['nigeLab:' mfilename ':BadClass'],...
+               ['\t\t->\t[VIDEOSFIELDTYPE]: ' ...
+               'Invalid sourceName class (''%s'')\n'],...
+               class(sourceName));
+         end
       end
       
       % "Idles" the VideosFieldType object (removes VideoReader)
@@ -1000,6 +1104,39 @@ classdef VideosFieldType < handle ...
          stream.fs = obj.at(idx).fs;
          stream.t  = obj.tNeu;
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
+         
+      end
+      
+      % Updates .fname by replacing the "path" portion of the file name
+      function updateVideoFileLocation(obj,newFolderPath)
+         %UPDATEVIDEOFILELOCATION  Updates .fname by replacing "path"
+         %
+         %  updateVideoFileLocation(obj,newFolderPath);
+         %  
+         %  obj : nigeLab.libs.VideosFieldType object or array
+         %  newFolderPath : New path to video files
+         
+         if nargin < 2
+            error(['nigeLab:' mfilename ':TooFewInputs'],...
+               ['\t\t->\t<strong>[VIDEOSFIELDTYPE]:</strong> ' ...
+               '`updateVideoFileLocation` requires 2 inputs.\n']);
+         end
+         
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               updateVideoFileLocation(obj(i),newFolderPath);
+            end
+            return;
+         end
+         
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         end
+         
+         [~,f,e] = fileparts(obj.fname);
+         obj.fname = strrep(fullfile(newFolderPath,[f e]),'\','/');
          
       end
    end
@@ -1192,7 +1329,7 @@ classdef VideosFieldType < handle ...
          %INITPRIMARYTEMPPROPS
          
          % obj.store_ is initialized to have the correct fields
-         sto = obj.store_;
+         sto_ = obj.store_;
          
          % Derived from `Block` --> `Meta`/`Pars`
          if isempty(obj.Block)
@@ -1268,7 +1405,8 @@ classdef VideosFieldType < handle ...
          else % Otherwise, create the file
             data = linspace(0,obj.Duration,obj.NumFrames);
             obj.Time = nigeLab.libs.DiskData('MatFile',obj.fname_t,data,...
-               'access','w','size',size(data),'class',class(data));
+               'access','w','size',size(data),'class',class(data),...
+               'overwrite',true);
          end
          if isempty(obj.Time.Complete)  % If `Complete` not initialized
             if obj.Time.Locked

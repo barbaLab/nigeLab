@@ -45,7 +45,7 @@ for iCh = blockObj.Mask
          case 'Event' % If it's a 'spikes' file
             try % Channels can also have channel events
                blockObj.Channels(iCh).(field) = ...
-                  nigeLab.libs.DiskData(fileType,fName);
+                  nigeLab.libs.DiskData('Event',fName);
             catch % If spikes exist but in "bad format", fix that
                updateFlag(curCh) = blockObj.checkSpikeFile(fName);
             end
@@ -53,7 +53,7 @@ for iCh = blockObj.Mask
             % Each element of Channels will have different kinds of data
             % (e.g. 'Raw', 'Filt', etc...)
             blockObj.Channels(iCh).(field) = ...
-               nigeLab.libs.DiskData(fileType,fName);
+               nigeLab.libs.DiskData('MatFile',fName);
       end
    end
    
