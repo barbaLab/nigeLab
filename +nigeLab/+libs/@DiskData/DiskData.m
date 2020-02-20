@@ -169,11 +169,11 @@ classdef DiskData < handle & ...
          obj.writable_ = strcmpi(obj.access_,'w');
          
          % Depending on number of inputs, varargin means different things
-         switch nargin
-            case 1 % Only 1 "default" input provided 
+         switch nargin % Can be 1, 2, or 3
+            case 1 % DiskData(matfile('filename')); 
                % This case is specifically for dealing with MatFiles.
                obj.initMatFile(varargin{1});
-            case 2 % 2 "default" inputs provided: file type and file name
+            case 2 % DiskData('Type', 'filename'); 
                switch lower(varargin{1}) % First arg is the file type
                   case 'matfile' % Can deal with MatFiles
                      obj.type_ = 'MatFile'; % Formatting
@@ -188,7 +188,7 @@ classdef DiskData < handle & ...
                      error(['nigeLab:' mfilename ':BadType'],...
                         '[DISKDATA]: Unknown data format'); 
                end
-            case 3 %(All) 3 "default" inputs: data was included as well               
+            case 3 % DiskData('Type', 'filename', data);
                % Since the DiskData object was provided with data in the
                % constructor, then it must be writable; however, do not use
                % `unlockData` because if the file exists and we didn't
@@ -199,7 +199,7 @@ classdef DiskData < handle & ...
                obj.access_ = 'w';
                
                % Second arg is fName, third arg is data
-               obj.saveFile(varargin{2},varargin{3},varargin{1}); 
+               saveFile(obj,varargin{2},varargin{3},varargin{1}); 
             otherwise % Throw error (wrong # inputs)
                error(['nigeLab:' mfilename ':BadNumInput'],...
                   '[DISKDATA]: Wrong number of input parameters');
@@ -881,7 +881,7 @@ classdef DiskData < handle & ...
    
    % NO ATTRIBUTES (overloaded get, set methods)
    methods 
-      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      % % % [DEPENDENT] GET/SET.PROPERTY METHODS % % % % % % % % % % % %
       % [DEPENDENT]  Returns .Animal property: char name of animal
       function value = get.Animal(obj)
          %GET.ANIMAL  Returns .Animal property (char name of animal)
@@ -894,6 +894,30 @@ classdef DiskData < handle & ...
             return;
          end
          value = getAttr(obj,'Animal');
+      end
+      function set.Animal(obj,value)
+         %GET.ANIMAL  Assigns .Animal property (char name of animal)
+         %
+         %  set(obj,'Animal',value); 
+         %  --> Value is char array or empty '' if attribute not set
+         
+         if isempty(obj.diskfile_)
+            return;
+         end
+         if setAttr(obj,'Animal',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Animal''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str); 
+         end
       end
       
       % [DEPENDENT]  Returns .Block property: char name of recording block
@@ -908,6 +932,30 @@ classdef DiskData < handle & ...
             return;
          end
          value = getAttr(obj,'Block');
+      end
+      function set.Block(obj,value)
+         %GET.BLOCK  Assigns .Block property (char name of recording)
+         %
+         %  set(obj,'Block',value); 
+         %  --> Value is char array or empty '' if attribute not set
+         
+         if isempty(obj.diskfile_)
+            return;
+         end
+         if setAttr(obj,'Block',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Block''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str); 
+         end
       end
       
       % [DEPENDENT]  Returns .Complete property: if true, file has all data
@@ -946,6 +994,39 @@ classdef DiskData < handle & ...
             end
          end
       end
+      function set.Complete(obj,value)
+         %SET.COMPLETE  Assigns .Complete property (is data in file good?)
+         %
+         %  set(obj,'Complete',value); 
+         %  --> Value is logical true or false (scalar)
+         %  --> false indicates that either:
+         %     * No data is present in the file, or
+         %     * The file in general is missing actual (experimental) data
+         %        + For example, a file may be initialized to have the
+         %        correct number of samples, but as an "all-zeroes"
+         %        place-holder MatFile; this would still result in a 'True'
+         %        value for Empty.
+         %  --> Note: This must be set manually by the user.
+
+         if isempty(obj.diskfile_)
+            return;
+         end
+         
+         if setAttr(obj,'Complete',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Complete''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str); 
+         end
+      end
       
       % [DEPENDENT]  Returns .Empty property: if true, file has no data
       function value = get.Empty(obj)
@@ -964,21 +1045,33 @@ classdef DiskData < handle & ...
          value = getAttr(obj,'Empty');
          value = logical(value);
       end
-      
-      % [DEPENDENT]  Returns .Locked property: if true, file has no data
-      function value = get.Locked(obj)
-         %GET.EMPTY  Returns .Locked property (is file read-only?)
+      function set.Empty(obj,value)
+         %SET.EMPTY  Sets .Empty property (is file blank?)
          %
-         %  value = get(obj,'Locked'); 
-         %  --> Value set to true on call of `lockData`
-         %  --> Value set to false on call of `unlockData`
+         %  value = set(obj,'Empty',value); 
+         %  --> Value is logical true or false (scalar)
+         %  --> true indicates that either:
+         %     * No data is present in the file
+         %  --> Note: This must be set manually by the user.
          
-         value = false;
          if isempty(obj.diskfile_)
             return;
          end
-         value = getAttr(obj,'Locked');
-         value = logical(value);
+         
+         if setAttr(obj,'Empty',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Empty''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str);    
+         end
       end
       
       % [DEPENDENT]  Returns .File property
@@ -995,7 +1088,18 @@ classdef DiskData < handle & ...
          end
          value = nigeLab.utils.getUNCPath(obj.diskfile_);
       end
-      
+      function set.File(obj,~)
+         %SET.FILE  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: File\n');
+            fprintf(1,'\n');
+         end
+      end
+
       % [DEPENDENT]  Returns .Index property (current "data cursor")
       function value = get.Index(obj)
          %GET.INDEX  Returns .Index property (current "data cursor")
@@ -1014,6 +1118,79 @@ classdef DiskData < handle & ...
          end
          value = getAttr(obj,'Index');
       end
+      function set.Index(obj,value)
+         %SET.INDEX  Assigns .Index property (current "data cursor")
+         %
+         %  vset(obj,'Index');
+         %
+         %  --> Default value is 1. Returns value stored in obj.index_
+         %  --> Automatically updated if .append() method is used
+         %  --> Probably useful for indexing into the DiskData files when
+         %        assigning streams that are sampled asynchronously and you
+         %        are going through "hyperslabs" of time/sample indices
+         
+         if isempty(obj.diskfile_)
+            return;
+         end
+         
+         if setAttr(obj,'Index',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Index''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str); 
+         end
+      end
+      
+      % [DEPENDENT]  Returns .Locked property: if true, file has no data
+      function value = get.Locked(obj)
+         %GET.EMPTY  Returns .Locked property (is file read-only?)
+         %
+         %  value = get(obj,'Locked'); 
+         %  --> Value set to true on call of `lockData`
+         %  --> Value set to false on call of `unlockData`
+         
+         value = false;
+         if isempty(obj.diskfile_)
+            return;
+         end
+         value = getAttr(obj,'Locked');
+         value = logical(value);
+      end
+      function set.Locked(obj,value)
+         %SET.EMPTY  Sets .Locked property (is file read-only?)
+         %
+         %  value = set(obj,'Locked',value); 
+         %  --> Value is logical true or false (scalar)
+         %  --> true indicates that file is read-only (lockData)
+         %  --> false indicates that file has write-access (unlockData)
+         
+         if ~islogical(value)
+            error(['nigeLab:' mfilename ':BadClass'],...
+               '[DISKDATA/SET.LOCKED]: value must be logical');
+         elseif isempty(obj.diskfile_)
+            return;
+         end
+         
+         % Mediate this via "lockData"/"unlockData"
+         % Note: this is OK because property value not stored in the class,
+         % it is stored as the attribute; therefore, this will not lead to
+         % a recursive call since none of the attribute setting or
+         % lock/unlock methods set .Locked property
+         if value
+            lockData(obj); 
+         else
+            unlockData(obj);
+         end
+                 
+      end
       
       % [DEPENDENT]  Returns .Tank property: char name of "grouping" tank
       function value = get.Tank(obj)
@@ -1027,6 +1204,30 @@ classdef DiskData < handle & ...
             return;
          end
          value = getAttr(obj,'Tank');
+      end
+      function set.Tank(obj,value)
+         %GET.TANK  Assigns .Tank property (char name of animal "grouping")
+         %
+         %  set(obj,'Tank',value); 
+         %  --> Value is char array or empty '' if attribute not set
+         
+         if isempty(obj.diskfile_)
+            return;
+         end
+         if setAttr(obj,'Tank',value)
+            col = 'Keywords*';
+            str = 'Successful';
+         else
+            col = 'Errors*';
+            str = 'Unsuccessful';
+         end
+         
+         if obj.verbose_
+            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
+            nigeLab.utils.cprintf('Keywords*','''Tank''');
+            nigeLab.utils.cprintf('Text',' property set--');
+            nigeLab.utils.cprintf(col,'%s\n',str); 
+         end
       end
       
       % [DEPENDENT] Returns .chunks_h5 property
@@ -1048,47 +1249,23 @@ classdef DiskData < handle & ...
             case 'Event'
                if isempty(obj.size_)
                   return;
+               elseif ~isempty(obj.chunks_)
+                  value = obj.chunks_;
+                  return;
                end
                value = [1 obj.size_(2)]; 
          end
                
       end
-      
-      % [DEPENDENT] Returns .const_dim_ext property
-      function value = get.const_dim_ext(obj)
-         %GET.CONST_DIM_EXT  Returns .const_dim_ext property
-         %
-         %  value = get(obj,'const_dim_ext');
-         %  --> Returns value of "constant" dimension. Depends on obj.type_
-         
-         value = [];
-         if isempty(obj.const_dim_idx)
-            return;
-         elseif isempty(obj.size_)
-            return;
-         end
-         value = obj.size_(obj.const_dim_idx);
-               
-      end
-      
-      % [DEPENDENT] Returns .const_dim_idx property
-      function value = get.const_dim_idx(obj)
-         %GET.CONST_DIM_IDX  Returns .const_dim_idx property
-         %
-         %  value = get(obj,'const_dim_idx');
-         %  --> Returns index of "constant" dimension. Depends on obj.type_
-         
-         value = [];
-         if isempty(obj.type_)
-            return;
-         end
-         switch obj.type_
-            case 'MatFile'
-               value = [1,2]; % Both are constant
-            case 'Hybrid'
-               value = 1;
-            case 'Event'
-               value = 2;
+      function set.chunks_h5(obj,~)
+         %SET.CHUNKS_H5  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: chunks_h5\n');
+            fprintf(1,'\n');
          end
       end
       
@@ -1127,6 +1304,77 @@ classdef DiskData < handle & ...
                   obj.class_);
          end
       end
+      function set.class_h5(obj,~)
+         %SET.CLASS_H5  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: class_h5\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT] Returns .const_dim_ext property
+      function value = get.const_dim_ext(obj)
+         %GET.CONST_DIM_EXT  Returns .const_dim_ext property
+         %
+         %  value = get(obj,'const_dim_ext');
+         %  --> Returns value of "constant" dimension. Depends on obj.type_
+         
+         value = [];
+         if isempty(obj.const_dim_idx)
+            return;
+         elseif isempty(obj.size_)
+            return;
+         end
+         value = obj.size_(obj.const_dim_idx);
+               
+      end
+      function set.const_dim_ext(obj,~)
+         %SET.CONST_DIM_EXT  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: const_dim_ext\n');
+            fprintf(1,'\n');
+         end
+      end
+      
+      % [DEPENDENT] Returns index of dimension that does not "grow" 
+      function value = get.const_dim_idx(obj)
+         %GET.CONST_DIM_IDX  Returns .const_dim_idx property
+         %
+         %  value = get(obj,'const_dim_idx');
+         %  --> Returns index of "constant" dimension. Depends on obj.type_
+         
+         value = [];
+         if isempty(obj.type_)
+            return;
+         end
+         switch obj.type_
+            case 'MatFile'
+               value = [1,2]; % Both are constant
+            case 'Hybrid'
+               value = 1;
+            case 'Event'
+               value = 2;
+         end
+      end
+      function set.const_dim_idx(obj,~)
+         %SET.CONST_DIM_IDX  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: const_dim_idx\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT] Returns .data property (all .type_)
       function value = get.data(obj)
@@ -1143,6 +1391,13 @@ classdef DiskData < handle & ...
          varname_ = ['/' obj.name_];
          value = h5read(obj.diskfile_,varname_,[1 1],obj.size_);
       end
+      function set.data(obj,value)
+         %SET.DATA  Assign full data array
+         %
+         %  set(obj,'data',value)
+         
+         obj(:,:) = value;         
+      end
       
       % [DEPENDENT]  Returns .dims_h5 property (fliplr(obj.size_))
       function value = get.dims_h5(obj)
@@ -1157,6 +1412,17 @@ classdef DiskData < handle & ...
          end
          % Otherwise, it is just obj.size_ transposed
          value = fliplr(obj.size_);
+      end
+      function set.dims_h5(obj,~)
+         %SET.DIMS_H5  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: dims_h5\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT] Returns .inf_dim_idx property
@@ -1179,6 +1445,17 @@ classdef DiskData < handle & ...
                value = 1; % Append along rows
          end
       end
+      function set.inf_dim_idx(obj,~)
+         %SET.INF_DIM_IDX  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property:inf_dim_idx\n');
+            fprintf(1,'\n');
+         end
+      end
       
       % [DEPENDENT]  Returns .maxdims_h5 property
       function value = get.maxdims_h5(obj)
@@ -1196,6 +1473,17 @@ classdef DiskData < handle & ...
          % Value depends on obj.type_
          value = obj.size_;
          value(obj.inf_dim_idx) = inf; 
+      end
+      function set.maxdims_h5(obj,~)
+         %SET.MAXDIMS_H5  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: maxdims_h5\n');
+            fprintf(1,'\n');
+         end
       end
       
       % [DEPENDENT]  Returns .rank_h5 property
@@ -1225,6 +1513,17 @@ classdef DiskData < handle & ...
 
             otherwise
                return;
+         end
+      end
+      function set.rank_h5(obj,~)
+         %SET.RANK_H5  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property: rank_h5\n');
+            fprintf(1,'\n');
          end
       end
       
@@ -1261,6 +1560,15 @@ classdef DiskData < handle & ...
                value = h5read(obj.diskfile_,varname_,[1,5],[N,nCol]);
          end
       end
+      function set.snippet(obj,value)
+         %SET.SNIPPET  Assign data to `snippet` (column 5+)
+         %
+         %  set(obj,'snippet',value)
+         
+         if strcmp(obj.type_,'Event')
+            obj(:,5:(5+size(value,2))) = value; 
+         end
+      end
       
       % [DEPENDENT] Returns .tag property
       function value = get.tag(obj)
@@ -1292,6 +1600,15 @@ classdef DiskData < handle & ...
                N = obj.size_(1);
                varname_ = ['/' obj.name_];
                value = h5read(obj.diskfile_,varname_,[1,3],[N,1]);
+         end
+      end
+      function set.tag(obj,value)
+         %SET.TAG Assign data to `tag` (column 3)
+         %
+         %  set(obj,'tag',value)
+         
+         if strcmp(obj.type_,'Event')
+            obj(:,3) = value; 
          end
       end
       
@@ -1327,6 +1644,15 @@ classdef DiskData < handle & ...
                value = h5read(obj.diskfile_,varname_,[1,4],[N,1]);
          end
       end
+      function set.ts(obj,value)
+         %SET.TS Assign data to `ts` (column 4)
+         %
+         %  set(obj,'ts',value)
+         
+         if strcmp(obj.type_,'Event')
+            obj(:,4) = value; 
+         end
+      end
       
       % [DEPENDENT] Returns .type property
       function value = get.type(obj)
@@ -1360,6 +1686,15 @@ classdef DiskData < handle & ...
                value = h5read(obj.diskfile_,varname_,[1,1],[N,1]);
          end
       end
+      function set.type(obj,value)
+         %SET.TYPE Assign data to `type` (column 1)
+         %
+         %  set(obj,'type',value)
+         
+         if strcmp(obj.type_,'Event')
+            obj(:,1) = value; 
+         end
+      end
       
       % [DEPENDENT] Returns .var_dim_idx property
       function value = get.var_dim_idx(obj)
@@ -1379,6 +1714,17 @@ classdef DiskData < handle & ...
                value = 2; % Append along columns
             case 'Event'
                value = 1; % Append along rows
+         end
+      end
+      function set.var_dim_idx(obj,~)
+         %SET.VAR_DIM_IDX  (does nothing)
+         if obj.verbose_
+            nigeLab.sounds.play('pop',2.7);
+            dbstack();
+            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
+            nigeLab.utils.cprintf('Errors',...
+               'Failed attempt to set DEPENDENT property:var_dim_idx\n');
+            fprintf(1,'\n');
          end
       end
       
@@ -1414,384 +1760,6 @@ classdef DiskData < handle & ...
                value = h5read(obj.diskfile_,varname_,[1,2],[N,1]);
          end
       end
-      % % % % % % % % % % END GET.PROPERTY METHODS % % %
-      
-      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT]  Assigns .Animal property: char name of animal
-      function set.Animal(obj,value)
-         %GET.ANIMAL  Assigns .Animal property (char name of animal)
-         %
-         %  set(obj,'Animal',value); 
-         %  --> Value is char array or empty '' if attribute not set
-         
-         if isempty(obj.diskfile_)
-            return;
-         end
-         if setAttr(obj,'Animal',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Animal''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str); 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Block property: char name of recording block
-      function set.Block(obj,value)
-         %GET.BLOCK  Assigns .Block property (char name of recording)
-         %
-         %  set(obj,'Block',value); 
-         %  --> Value is char array or empty '' if attribute not set
-         
-         if isempty(obj.diskfile_)
-            return;
-         end
-         if setAttr(obj,'Block',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Block''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str); 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Complete property: if true, file has all data
-      function set.Complete(obj,value)
-         %SET.COMPLETE  Assigns .Complete property (is data in file good?)
-         %
-         %  set(obj,'Complete',value); 
-         %  --> Value is logical true or false (scalar)
-         %  --> false indicates that either:
-         %     * No data is present in the file, or
-         %     * The file in general is missing actual (experimental) data
-         %        + For example, a file may be initialized to have the
-         %        correct number of samples, but as an "all-zeroes"
-         %        place-holder MatFile; this would still result in a 'True'
-         %        value for Empty.
-         %  --> Note: This must be set manually by the user.
-
-         if isempty(obj.diskfile_)
-            return;
-         end
-         
-         if setAttr(obj,'Complete',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Complete''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str); 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Empty property: if true, file has no data
-      function set.Empty(obj,value)
-         %SET.EMPTY  Sets .Empty property (is file blank?)
-         %
-         %  value = set(obj,'Empty',value); 
-         %  --> Value is logical true or false (scalar)
-         %  --> true indicates that either:
-         %     * No data is present in the file
-         %  --> Note: This must be set manually by the user.
-         
-         if isempty(obj.diskfile_)
-            return;
-         end
-         
-         if setAttr(obj,'Empty',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Empty''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str);    
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .File property (does nothing)
-      function set.File(obj,~)
-         %SET.FILE  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: File\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Locked property: if true, file is read-only
-      function set.Locked(obj,value)
-         %SET.EMPTY  Sets .Locked property (is file read-only?)
-         %
-         %  value = set(obj,'Locked',value); 
-         %  --> Value is logical true or false (scalar)
-         %  --> true indicates that file is read-only (lockData)
-         %  --> false indicates that file has write-access (unlockData)
-         
-         if ~islogical(value)
-            error(['nigeLab:' mfilename ':BadClass'],...
-               '[DISKDATA/SET.LOCKED]: value must be logical');
-         elseif isempty(obj.diskfile_)
-            return;
-         end
-         
-         % Mediate this via "lockData"/"unlockData"
-         % Note: this is OK because property value not stored in the class,
-         % it is stored as the attribute; therefore, this will not lead to
-         % a recursive call since none of the attribute setting or
-         % lock/unlock methods set .Locked property
-         if value
-            lockData(obj); 
-         else
-            unlockData(obj);
-         end
-                 
-      end
-      
-      % [DEPENDENT]  Assigns .Index property (current "data cursor")
-      function set.Index(obj,value)
-         %SET.INDEX  Assigns .Index property (current "data cursor")
-         %
-         %  vset(obj,'Index');
-         %
-         %  --> Default value is 1. Returns value stored in obj.index_
-         %  --> Automatically updated if .append() method is used
-         %  --> Probably useful for indexing into the DiskData files when
-         %        assigning streams that are sampled asynchronously and you
-         %        are going through "hyperslabs" of time/sample indices
-         
-         if isempty(obj.diskfile_)
-            return;
-         end
-         
-         if setAttr(obj,'Index',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Index''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str); 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .Tank property: char name of animal "grouping"
-      function set.Tank(obj,value)
-         %GET.TANK  Assigns .Tank property (char name of animal "grouping")
-         %
-         %  set(obj,'Tank',value); 
-         %  --> Value is char array or empty '' if attribute not set
-         
-         if isempty(obj.diskfile_)
-            return;
-         end
-         if setAttr(obj,'Tank',value)
-            col = 'Keywords*';
-            str = 'Successful';
-         else
-            col = 'Errors*';
-            str = 'Unsuccessful';
-         end
-         
-         if obj.verbose_
-            nigeLab.utils.cprintf('Text*','\t\t\t->\t[DISKDATA]: ');
-            nigeLab.utils.cprintf('Keywords*','''Tank''');
-            nigeLab.utils.cprintf('Text',' property set--');
-            nigeLab.utils.cprintf(col,'%s\n',str); 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .chunks_h5 property (does nothing)
-      function set.chunks_h5(obj,~)
-         %SET.CHUNKS_H5  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: chunks_h5\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .class_h5 property (does nothing)
-      function set.class_h5(obj,~)
-         %SET.CLASS_H5  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: class_h5\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .const_dim_ext property (does nothing)
-      function set.const_dim_ext(obj,~)
-         %SET.CONST_DIM_EXT  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: const_dim_ext\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .const_dim_idx property (does nothing)
-      function set.const_dim_idx(obj,~)
-         %SET.CONST_DIM_IDX  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: const_dim_idx\n');
-            fprintf(1,'\n');
-         end
-      end
-
-      % [DEPENDENT]  Assigns .data property (assign full data array)
-      function set.data(obj,value)
-         %SET.DATA  Assign full data array
-         %
-         %  set(obj,'data',value)
-         
-         obj(:,:) = value;         
-      end
-      
-      % [DEPENDENT]  Assigns .dims_h5 property (does nothing)
-      function set.dims_h5(obj,~)
-         %SET.DIMS_H5  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: dims_h5\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .inf_dim_idx property (does nothing)
-      function set.inf_dim_idx(obj,~)
-         %SET.INF_DIM_IDX  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property:inf_dim_idx\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .maxdims_h5 property (does nothing)
-      function set.maxdims_h5(obj,~)
-         %SET.MAXDIMS_H5  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: maxdims_h5\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .snippet property ('Event' type only)
-      function set.snippet(obj,value)
-         %SET.SNIPPET  Assign data to `snippet` (column 5+)
-         %
-         %  set(obj,'snippet',value)
-         
-         if strcmp(obj.type_,'Event')
-            obj(:,5:(5+size(value,2))) = value; 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .tag property ('Event' type only)
-      function set.tag(obj,value)
-         %SET.TAG Assign data to `tag` (column 3)
-         %
-         %  set(obj,'tag',value)
-         
-         if strcmp(obj.type_,'Event')
-            obj(:,3) = value; 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .ts property ('Event' type only)
-      function set.ts(obj,value)
-         %SET.TS Assign data to `ts` (column 4)
-         %
-         %  set(obj,'ts',value)
-         
-         if strcmp(obj.type_,'Event')
-            obj(:,4) = value; 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .type property ('Event' type only)
-      function set.type(obj,value)
-         %SET.TYPE Assign data to `type` (column 1)
-         %
-         %  set(obj,'type',value)
-         
-         if strcmp(obj.type_,'Event')
-            obj(:,1) = value; 
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .rank_h5 property (does nothing)
-      function set.rank_h5(obj,~)
-         %SET.RANK_H5  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: rank_h5\n');
-            fprintf(1,'\n');
-         end
-      end
-      
-      % [DEPENDENT]  Assigns .value property ('Event' type only)
       function set.value(obj,value)
          %SET.VALUE  Assign data to to `value`
          %
@@ -1801,20 +1769,7 @@ classdef DiskData < handle & ...
             obj(:,2) = value; 
          end
       end
-      
-      % [DEPENDENT]  Assigns .var_dim_idx property (does nothing)
-      function set.var_dim_idx(obj,~)
-         %SET.VAR_DIM_IDX  (does nothing)
-         if obj.verbose_
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property:var_dim_idx\n');
-            fprintf(1,'\n');
-         end
-      end
-      % % % % % % % % % % END SET.PROPERTY METHODS % % %
+      % % % % % % % % % % END [DEPENDENT] GET/SET.PROPERTY METHODS % % %
    end
    
    % PROTECTED
@@ -2125,11 +2080,26 @@ classdef DiskData < handle & ...
          obj.size_ = s;
          
          if flag % It exists, so overwrite and correct format
-            if isempty(obj.Block)
+            if isempty(obj.Block) % Then this is an "old format" file
                % Get dataset name (varname_)
                varname_ = ['/' obj.name_]; 
                obj.overwrite_ = true; % (overwrite file to correct format)
-               saveFile(obj,fName,h5read(fName,varname_));
+               % saveFile(obj,fName,h5read(fName,varname_)); % old; slow
+               varname_ = ['/' obj.name_];
+               if isunix
+                  fileattrib(fName,'+w -h -a','a');
+               else
+                  fileattrib(fName,'+w -h -a','','s');
+               end
+               obj.diskfile_ = fName;
+               % Add attributes denoting that data file is non-empty
+               obj.Empty = zeros(1,1,'int8');
+               % Add attributes relating to nigeLab structure (for this file)
+               addFileNameAttributes(obj,fName);
+               fInfo = h5info(fName,varname_);
+               if ~isempty(fInfo.ChunkSize)
+                  obj.chunks_ = fInfo.ChunkSize;
+               end
             end
          end
       end

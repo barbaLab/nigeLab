@@ -27,7 +27,8 @@ pars.DynamicVarExp={'$SurgYear','$SurgNumber'}; % (MM)
 pars.NamingConvention={'AnimalID'}; % (FB,MM)
 
 pars.SpecialMeta = struct;
-pars.SpecialMeta.SpecialVars = {};
+% pars.SpecialMeta.SpecialVars = {}; % (FB)
+pars.SpecialMeta.SpecialVars = {'AnimalID'}; % (MM)
 pars.SpecialMeta.AnimalID.cat = '-'; % Concatenater (if used) for names
 pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'}; % KUMC "standard"
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
