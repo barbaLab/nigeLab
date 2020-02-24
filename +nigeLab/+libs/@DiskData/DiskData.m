@@ -137,7 +137,8 @@ classdef DiskData < handle & ...
          %PARSE INPUTS
          keyProps=...
             {'name','size','class','access','verbose',...
-             'overwrite','chunks','writable','compress'};
+             'overwrite','chunks','writable','compress',...
+             'Tank','Animal','Block','Complete','Empty','Index','Locked','Data'};
          nargin=numel(varargin);
          
          % Get the index where to start parsing "variable" part of varargin
@@ -171,9 +172,12 @@ classdef DiskData < handle & ...
          % Depending on number of inputs, varargin means different things
          switch nargin % Can be 1, 2, or 3
             case 1 % DiskData(matfile('filename')); 
+               obj.type_ = varargin{1};
                % This case is specifically for dealing with MatFiles.
                obj.initMatFile(varargin{1});
             case 2 % DiskData('Type', 'filename'); 
+               obj.type_ = varargin{1};
+               obj.diskfile_ = varargin{2};
                switch lower(varargin{1}) % First arg is the file type
                   case 'matfile' % Can deal with MatFiles
                      obj.type_ = 'MatFile'; % Formatting
@@ -189,6 +193,9 @@ classdef DiskData < handle & ...
                         '[DISKDATA]: Unknown data format'); 
                end
             case 3 % DiskData('Type', 'filename', data);
+               obj.type_ = varargin{1};
+               obj.diskfile_ = varargin{2};
+               
                % Since the DiskData object was provided with data in the
                % constructor, then it must be writable; however, do not use
                % `unlockData` because if the file exists and we didn't
@@ -197,6 +204,13 @@ classdef DiskData < handle & ...
                % throw an error and not overwrite by accident
                obj.writable_ = true;
                obj.access_ = 'w';
+               obj.size_ = size(varargin{3});
+               obj.class_ = class(varargin{3});
+               
+               % Make sure if 'Event' it has a valid chunk size
+               if strcmpi(obj.type_,'Event')
+                  obj.chunks_ = [1 obj.size_(2)];
+               end
                
                % Second arg is fName, third arg is data
                saveFile(obj,varargin{2},varargin{3},varargin{1}); 
@@ -216,6 +230,17 @@ classdef DiskData < handle & ...
                unlockData(obj);
             else
                lockData(obj);
+            end
+         end
+         
+         % Allow <'Name',value> syntax to set 'Attribute' properties
+         for iV = jj:2:numel(varargin)
+            propName = varargin{iV};
+            if ~strcmp(propName(1),upper(propName(1)))
+               continue;
+            end
+            if ismember(propName,p)
+               obj.(propName) = varargin{iV+1};
             end
          end
          
@@ -390,7 +415,11 @@ classdef DiskData < handle & ...
          %  --> Returns TRUE if all values returned by size(obj) are zero
          
          if ~builtin('isempty',obj)
-            b = all(size(obj)==0);
+            if isvalid(obj)
+               b = ~logical(prod(obj.size_));
+            else % Deleted object should be checked for `isvalid`
+               b = false;
+            end
          else
             b = true;
          end
@@ -502,10 +531,30 @@ classdef DiskData < handle & ...
          %  dim = obj.size(n);
          %  --> Returns obj.size_(n)
          
+         if builtin('isempty',obj)
+            dim = [0 0];
+            if nargin == 2
+               dim = dim(n);
+            end
+            return;
+         elseif isempty(obj)
+            dim = obj.size_;
+            if nargin == 2
+               dim = dim(n);
+            end
+            return;
+         elseif ~isvalid(obj)
+            dim = builtin('size',obj);
+            if nargin == 2
+               dim = dim(n);
+            end
+            return;
+         end
+         
          if nargin<2
             n=1:length(obj.size_);
          end
-         if obj.checkSize()
+         if checkSize(obj)
             sz_ = obj.size_;
          else
             sz_ = zeros(1,numel(obj.size_));
@@ -590,13 +639,41 @@ classdef DiskData < handle & ...
          %  Note: If DISKFILE <strong>does not exist</strong>, then
          %        checkSize returns false.
          
-         if exist(obj.diskfile_,'file')==0
+         if builtin('isempty',obj)
+            flag = false;
+            return;        
+         elseif exist(obj.diskfile_,'file')==0
             flag = false;
             return;
          end
          info = h5info(obj.diskfile_);
-         obj.size_ = info.Datasets.Dataspace.Size;
-         flag = ~any(obj.size_ == 0);
+         if isempty(info.Datasets)
+            flag = false;
+            return;
+         end
+         
+         sz_ = info.Datasets.Dataspace.Size;
+         if numel(sz_) > 1
+            % Then it is probably non-empty
+            flag = all(sz_ ~= 0);
+            if ~flag
+               obj.size_ = sz_;
+            end
+         elseif numel(sz_) == 1
+            % Then it is empty; assign "extensible" dimension zero value
+            
+            if isempty(obj.size_)
+               obj.size_ = [sz_ sz_];
+            else
+               obj.size_(obj.var_dim_idx) = 0;
+            end
+            flag = false;
+         else
+            % Then it is definitely empty
+            obj.size_ = [0 0];
+            flag = false;
+         end
+         
       end
       
       % Return an attribute of the H5 Diskfile
@@ -1095,7 +1172,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: File\n');
+               'Failed attempt to set READ-ONLY property: File\n');
             fprintf(1,'\n');
          end
       end
@@ -1248,6 +1325,7 @@ classdef DiskData < handle & ...
                value = obj.chunks_;
             case 'Event'
                if isempty(obj.size_)
+                  value = obj.chunks_;
                   return;
                elseif ~isempty(obj.chunks_)
                   value = obj.chunks_;
@@ -1264,7 +1342,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: chunks_h5\n');
+               'Failed attempt to set READ-ONLY property: chunks_h5\n');
             fprintf(1,'\n');
          end
       end
@@ -1311,14 +1389,14 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: class_h5\n');
+               'Failed attempt to set READ-ONLY property: class_h5\n');
             fprintf(1,'\n');
          end
       end
       
-      % [DEPENDENT] Returns .const_dim_ext property
+      % [DEPENDENT] Returns size value of "constant" dimension
       function value = get.const_dim_ext(obj)
-         %GET.CONST_DIM_EXT  Returns .const_dim_ext property
+         %GET.CONST_DIM_EXT  Returns value of "constant" size dimension
          %
          %  value = get(obj,'const_dim_ext');
          %  --> Returns value of "constant" dimension. Depends on obj.type_
@@ -1339,7 +1417,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: const_dim_ext\n');
+               'Failed attempt to set READ-ONLY property: const_dim_ext\n');
             fprintf(1,'\n');
          end
       end
@@ -1371,7 +1449,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: const_dim_idx\n');
+               'Failed attempt to set READ-ONLY property: const_dim_idx\n');
             fprintf(1,'\n');
          end
       end
@@ -1420,7 +1498,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: dims_h5\n');
+               'Failed attempt to set READ-ONLY property: dims_h5\n');
             fprintf(1,'\n');
          end
       end
@@ -1452,7 +1530,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property:inf_dim_idx\n');
+               'Failed attempt to set READ-ONLY property:inf_dim_idx\n');
             fprintf(1,'\n');
          end
       end
@@ -1481,7 +1559,7 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: maxdims_h5\n');
+               'Failed attempt to set READ-ONLY property: maxdims_h5\n');
             fprintf(1,'\n');
          end
       end
@@ -1522,12 +1600,12 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: rank_h5\n');
+               'Failed attempt to set READ-ONLY property: rank_h5\n');
             fprintf(1,'\n');
          end
       end
       
-      % [DEPENDENT] Returns .snippet property
+      % [DEPENDENT] Returns .snippet property (5th+ columns of 'Event')
       function value = get.snippet(obj)
          %GET.SNIPPET  Returns .snippet prop (column 5+ if .type_ == Event)
          %
@@ -1570,7 +1648,7 @@ classdef DiskData < handle & ...
          end
       end
       
-      % [DEPENDENT] Returns .tag property
+      % [DEPENDENT] Returns .tag property (3rd column of 'Event' type)
       function value = get.tag(obj)
          %GET.TAG  Returns .tag property (column 3 for .type_ == Event)
          %
@@ -1612,7 +1690,7 @@ classdef DiskData < handle & ...
          end
       end
       
-      % [DEPENDENT] Returns .ts property
+      % [DEPENDENT] Returns .ts property (4th column of 'Event' type)
       function value = get.ts(obj)
          %GET.TS  Returns .type property (column 4 for .type_ == Event)
          %
@@ -1654,7 +1732,7 @@ classdef DiskData < handle & ...
          end
       end
       
-      % [DEPENDENT] Returns .type property
+      % [DEPENDENT] Returns .type property (1st column of 'Event' type)
       function value = get.type(obj)
          %GET.TYPE  Returns .type property (column 1 for .type_ == Event)
          %
@@ -1696,7 +1774,7 @@ classdef DiskData < handle & ...
          end
       end
       
-      % [DEPENDENT] Returns .var_dim_idx property
+      % [DEPENDENT] Returns index of "extensible" dimension
       function value = get.var_dim_idx(obj)
          %GET.VAR_DIM_IDX  Returns .var_dim_idx property
          %
@@ -1723,12 +1801,12 @@ classdef DiskData < handle & ...
             dbstack();
             nigeLab.utils.cprintf('Errors*','[DISKDATA]: ');
             nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property:var_dim_idx\n');
+               'Failed attempt to set READ-ONLY property:var_dim_idx\n');
             fprintf(1,'\n');
          end
       end
       
-      % [DEPENDENT] Returns .value property
+      % [DEPENDENT] Returns .value (2nd column of 'Event' type)
       function value = get.value(obj)
          %GET.VALUE  Returns .value property (column 2 for .type_ == Event)
          %
@@ -1793,56 +1871,112 @@ classdef DiskData < handle & ...
          obj.Tank = tank;
       end
       
+      % Overloaded method for empty object display
+      function displayEmptyObject(obj)
+         s = getHeader(obj);
+         disp(s);
+         
+         groups = getPropertyGroups(obj);
+         matlab.mixin.CustomDisplay.displayPropertyGroups(obj,groups);
+         
+         disp('   --    Data    --');
+         fprintf(1,  '\tSize:     [%g  %g]\n',obj.size_(1),obj.size_(2));
+         
+         s = getFooter(obj);
+         disp(s);
+         
+         if nargout == 0
+            clear Out;
+         end
+      end
+      
+      % Overloaded method for nonscalar object display
+      function displayNonScalarObject(obj)
+         %DISPLAYNONSCALAROBJECT  Same as displayScalarObject
+         displayScalarObject(obj);
+      end
+      
+      % Overloaded method for deleted object display
+      function displayScalarHandleToDeletedObject(obj)
+         s = getHeader(obj);
+         disp(s);
+         s = getFooter(obj);
+         disp(s);
+      end
+      
       % Overloaded method for displaying object to the command window
       function Out = displayScalarObject(obj)
          %DISPLAYSCALAROBJECT  Overloaded function for printing DiskData 
          %                       elements to command window
          
-         if isempty(obj)
-            nigeLab.sounds.play('pop',0.35);
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: '); 
-            nigeLab.utils.cprintf('Errors','Empty object.\n'); 
-            Out = [];
-            return;
-         elseif ~isvalid(obj)
-            nigeLab.sounds.play('pop',0.35);
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: '); 
-            nigeLab.utils.cprintf('Errors','Object is invalid.\n'); 
-            Out = [];
-            return;
+         Out = [];
+         if nargout == 0
+            clear Out;
          end
          
-         if exist(obj.diskfile_,'file')==0
-            nigeLab.sounds.play('pop',0.35);
-            nigeLab.utils.cprintf('Errors*','[DISKDATA]: '); 
-            nigeLab.utils.cprintf('Errors','No such file--'); 
-            nigeLab.utils.cprintf('Keywords*','%s\n',obj.diskfile_);
-            Out = [];
-            return;
-         end
+         s = getHeader(obj);
+         disp(s);
+         
+         groups = getPropertyGroups(obj);
+         matlab.mixin.CustomDisplay.displayPropertyGroups(obj,groups);
+         
          varname_ = [ '/' obj.name_];
+         disp('   --    Data    --');
          switch obj.type_
             case 'Hybrid'
-               if nargout>0
-                  Out=[];
-               end
                a = h5read(obj.getPath,varname_,[1 1],[1 inf]);
-               disp(a);
+               if numel(a) > 5
+                  fprintf(1,  '\tN:     %g (samples)',numel(a));
+                  fprintf(1,'\n\tRange: [%g  %g]',min(a),max(a));
+                  fprintf(1,'\n\tData:  [%g %g %g  ...  %g]\n',...
+                     a(1),a(2),a(3),a(end));
+               else
+                  disp(a);
+               end
             case 'MatFile'
-               if nargout>0
-                  Out=[];
-               end
                a = h5read(obj.getPath,varname_,[1 1],[1 inf]);
-               disp(a);
+               if numel(a) > 5
+                  fprintf(1,  '\tN:     %g (samples)',numel(a));
+                  fprintf(1,'\n\tRange: [%g  %g]',min(a),max(a));
+                  fprintf(1,'\n\tData:  [%g %g %g  ...  %g]\n',...
+                     a(1),a(2),a(3),a(end));
+               else
+                  disp(a);
+               end
             case 'Event'
                a = h5read(obj.getPath,varname_,[1 1],[inf inf]);
-               disp(a);
-               if nargout > 0
-                  Out = [];    
+               if size(a,1) > 3
+                  disp(a(1,:));
+                  fprintf(1,'\t\t\t.\n\t\t\t.\n\t\t\t.\n\n');
+                  disp(a(end,:));
+               else
+                  disp(a);
                end
             otherwise
                error(['nigeLab:' mfilename ':BadType'],...
                   'Unknown type: %s',obj.type_);
+         end
+         s = getFooter(obj);
+         disp(s);
+         
+         return;
+      end
+      
+      % Returns string to print link to DiskData file
+      function linkStr = getDiskFileLink(obj)
+         %GETDISKFILELINK  Returns string to print link to DiskData file
+         %
+         %  linkStr = getDiskFileLink(obj);
+         [p,f,e] = fileparts(obj.diskfile_);
+         if isempty(p)
+            p = pwd;
+         end
+         ps = nigeLab.utils.shortenedPath(p);
+         f = nigeLab.utils.shortenedName([f e]);
+         if ~isunix
+            linkStr = ['<a href="matlab: winopen(''' p ''');">' ps f '</a>'];
+         else
+            linkStr = ['<a href="matlab: addpath(pwd); cd(''' p ''');">' ps f '</a>'];
          end
       end
       
@@ -1866,21 +2000,101 @@ classdef DiskData < handle & ...
             end
          elseif numel(info.Datasets) < 1
             fsize = 0;
-            dname = '';
+            dname = 'data';
             dclass = 'unknown';
-            sz = [0 0];
+            sz = nan;
             return;
          else
             idx = 1;            
          end
          sz = info.Datasets(idx).Dataspace.Size;
+         % This part is true regardless of MATLAB_empty status:
          fsize = prod([sz,info.Datasets.Datatype.Size]);
+         % Now determine if an "empty" variable was written:
+         if numel(info.Datasets(idx).Attributes) > 1
+            attrname = {info.Datasets(idx).Attributes.Name};
+            if ismember('MATLAB_empty',attrname)    
+               m = matfile(obj.diskfile_);
+               switch obj.type_
+                  case 'Event'
+                     if ~isprop(m,'data')
+                        if isempty(obj.size_)
+                           sz = [0 sz];
+                        else
+                           sz = [0 obj.size_(2)];
+                        end
+                     else
+                        sz = [0 size(m.data,2)];
+                     end
+                  case 'Hybrid'
+                     if ~isprop(m,'data')
+                        if isempty(obj.size_)
+                           sz = [1 0];
+                        else
+                           sz = [obj.size_(1) 0];
+                        end
+                     else
+                        sz = [size(m.data,1) 0];
+                     end
+                  otherwise
+                     sz = [0 0];
+               end
+               
+            end
+         end
          dname = info.Datasets(idx).Name;
          if isempty(info.Datasets(idx).Attributes)
             dclass = 'double';
          else
-            dclass = info.Datasets(idx).Attributes.Value;
+            attrname = {info.Datasets(idx).Attributes.Name};
+            cIdx = ismember(attrname,'MATLAB_class');
+            if sum(cIdx) == 1
+               dclass = info.Datasets(idx).Attributes(cIdx).Value;
+            else
+               dclass = 'double';
+            end
          end
+      end
+      
+      % Returns "Header" text describing object
+      function s = getHeader(obj)
+         name = matlab.mixin.CustomDisplay.getClassNameForHeader(obj);
+         if isempty(obj)
+            handleText = matlab.mixin.CustomDisplay.getHandleText;
+            if exist(obj.diskfile_,'file')==0
+               s = sprintf('%s to <strong>missing</strong> %s (%s)\n',...
+                  handleText,name,getDiskFileLink(obj));
+            else
+               s = sprintf('%s to <strong>empty</strong> %s (%s)\n',...
+                  handleText,name,getDiskFileLink(obj));
+            end
+            return;
+         elseif ~isvalid(obj)
+            handleText = matlab.mixin.CustomDisplay.getHandleText;
+            s = sprintf('%s to <strong>deleted</strong> %s\n',...
+               handleText,name);
+            return;
+         else
+            linkStr = getDiskFileLink(obj);
+            s = sprintf('%gx%g <strong>%s</strong>-type %s (%s',...
+               obj.size_(1),obj.size_(2),obj.type_,name,linkStr);
+            switch obj.type_
+               case 'Event'
+                  s = [s ': '];
+                  str = {'type','value','tag','ts','snippet'};
+                  for ii = 1:numel(str)
+                     if any(any(obj.(str{ii})~=0))
+                        s = [s sprintf('<strong>%s</strong>, ',str{ii})]; %#ok<AGROW>
+                     else
+                        s = [s sprintf('%s, ',str{ii})]; %#ok<AGROW>
+                     end
+                  end 
+                  s = [s(1:(end-2)) '):' newline];
+               otherwise
+                  % Do nothing
+                  s = [s '):' newline];
+            end
+         end         
       end
       
       % Returns "Footer" text describing object
@@ -1888,36 +2102,51 @@ classdef DiskData < handle & ...
          %GETFOOTER  Returns "footer" text describing object
          %
          %  s = obj.getFooter();
-         
+
          s = '';
-         if builtin('isempty',obj)
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
             return;
          end
+         
          switch obj.type_
             case 'Event'
-               [~,f,~] = fileparts(obj.diskfile_);
-               f = strsplit(f,'_');
-               f = f{1};
-               fprintf(1,'\n\t');
-               nigeLab.utils.cprintf('_Strings',...
-                  '%s with %g events\n',...
-                  f,obj.size_(1));
-               str = {'type','value','tag','ts','snippet'};
-               for ii = 1:numel(str)
-                  if any(obj.(str{ii})~=0)
-                     nigeLab.utils.cprintf('Keywords*',...
-                        '--->\t\t %s ',str{ii});...
-                     nigeLab.utils.cprintf('Text',...
-                     'contains data.\n');
-                  else
-                     nigeLab.utils.cprintf('[0.4 0.4 0.4]',...
-                        '->\t %s contains only zeros.\n',str{ii});
-                  end
-               end 
-               fprintf(1,'\n');
+               s = sprintf('\t->\tContains %g events\n',obj.size_(1));
             otherwise
-               
+               s = getFooter@matlab.mixin.CustomDisplay(obj);
          end
+      end
+      
+      % Returns property groups
+      function groups = getPropertyGroups(obj)
+         if isempty(obj)
+            if builtin('isempty',obj)
+               groups = getPropertyGroups@matlab.mixin.CustomDisplay.empty;
+               return;
+            else
+               % Continue if "empty"
+            end
+         elseif ~isvalid(obj)
+            groups = getPropertyGroups@matlab.mixin.CustomDisplay.empty;
+            return;
+         end
+         
+         propList = struct(...
+            'Tank',obj.Tank,...
+            'Animal',obj.Animal,...
+            'Block',obj.Block,...
+            'Complete',obj.Complete,...
+            'Empty',obj.Empty,...
+            'Index',obj.Index,...
+            'Locked',obj.Locked);
+         
+         groups = matlab.mixin.util.PropertyGroup(...
+            propList,'-- Attributes --');
+         
+%          groups = [groups, ...
+%             matlab.mixin.util.PropertyGroup
+
       end
       
       % Returns index to correct array element of info struct
@@ -2074,10 +2303,12 @@ classdef DiskData < handle & ...
          obj.diskfile_ = fName;
           % And parse information about the file itself
          [b,n,c,s] = getFileSize(obj);
-         obj.bytes_ = b;
-         obj.name_ = n;
-         obj.class_ = c;
-         obj.size_ = s;
+         if ~isnan(s(1))
+            obj.bytes_ = b;
+            obj.name_ = n;
+            obj.class_ = c;
+            obj.size_ = s;
+         end
          
          if flag % It exists, so overwrite and correct format
             if isempty(obj.Block) % Then this is an "old format" file
@@ -2093,7 +2324,11 @@ classdef DiskData < handle & ...
                end
                obj.diskfile_ = fName;
                % Add attributes denoting that data file is non-empty
-               obj.Empty = zeros(1,1,'int8');
+               if prod(obj.size_) > 0
+                  obj.Empty = zeros(1,1,'int8');
+               else
+                  obj.Empty = ones(1,1,'int8');
+               end
                % Add attributes relating to nigeLab structure (for this file)
                addFileNameAttributes(obj,fName);
                fInfo = h5info(fName,varname_);

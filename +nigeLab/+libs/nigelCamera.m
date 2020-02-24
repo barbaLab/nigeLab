@@ -16,11 +16,13 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties (Dependent,Transient,Access=public)
       Index    (1,1) double = 1     % Index to current object within obj.Series
       Parent                        % Parent nigeLab.libs.TimeScrollerAxes object
+      SeriesTime_ (1,1) double = 0  % "Dependent" container for .Time
    end
    
    % TRANSIENT,HIDDEN,PUBLIC
    properties(Transient,Hidden,Access=public)
       Block_                           % nigeLab.Block "Parent" of parent
+      NeuTime_       (1,1) double = 0  % Current neural time
       Time_                            % Matrix bounding different videos' time vectors
       TimeAxesObj_                     % Container of .Parent
    end
@@ -29,9 +31,9 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties(AbortSet,Hidden,Transient,Access=public)
       SeriesIndex_   (1,1) double = 1  % Container of .Index property
       SeriesList_                      % Container of .Series
-      SeriesTime_    (1,1) double = 0  % Container of .Time property
+      SeriesTime__   (1,1) double = 0  % Container of .SeriesTime_ property
       Source_              char        % Container of .Source property
-      VideoIndex_    (1,1) double = 1  % Index of current video from obj.Block.Videos
+      VideoIndex_    (1,1) double = 1  % Index of current video from obj.Block_.Videos
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -46,15 +48,50 @@ classdef nigelCamera < matlab.mixin.SetGet
       end
       function set.Index(obj,value)
          %SET.INDEX  Assigns .SeriesIndex_
+         
+         
+         % Set Neural Time using index for offset etc. from old video
+
          obj.SeriesIndex_ = value;
+         
+         % Get offsets for current video
+         trialOffset = obj.SeriesList_(value).TrialOffset;
+         videoOffset = obj.SeriesList_(value).VideoOffset;
+         neuOffset = obj.SeriesList_(value).NeuOffset;
+         
+         % Get sample rate
+         fs = obj.SeriesList_(value).fs;
+         
+         % Compute frame time
+         frameTime = max(obj.NeuTime_-videoOffset+neuOffset+trialOffset,0);
+         
+         % Compute frame index
+         frameIndex = max(round(frameTime * fs)+1,1);
+         
+         % Compute series time
+         seriesTime = frameTime + videoOffset;
+         
+         obj.SeriesTime_ = seriesTime;
          obj.VideoIndex_ = obj.SeriesList_(value).VideoIndex;
-         obj.TimeAxesObj_.VidGraphicsObj.SeriesIndex_ = value;
-         obj.TimeAxesObj_.VidGraphicsObj.VideoIndex_ = obj.VideoIndex_;
-         obj.TimeAxesObj_.VidGraphicsObj.FrameTime = ...
-            obj.SeriesTime_ - obj.Block_.Videos(obj.VideoIndex_).VideoOffset;
-         obj.TimeAxesObj_.VidGraphicsObj.NeuTime = ...
-            obj.SeriesTime_ + obj.TimeAxesObj_.VidGraphicsObj.NeuOffset + ...
-            obj.TimeAxesObj_.VidGraphicsObj.TrialOffset;
+         obj.Block_.VideoIndex = obj.VideoIndex_;
+         
+         VG = obj.TimeAxesObj_.VidGraphicsObj; 
+         VG.SeriesIndex_ = value;
+         
+         obj.SeriesList_(value).V.CurrentTime = frameTime; % Update frame time
+         
+         % Set FrameIndex, which will cause some flags to be computed about
+         % whether buffer needs to be updated etc.
+         obj.TimeAxesObj_.VidGraphicsObj.FrameIndex = frameIndex;
+         neuTimeNew = setFrame(obj.TimeAxesObj_.VidGraphicsObj);
+
+         updateTimeLabelsCB(obj.TimeAxesObj_.VidGraphicsObj,...
+            seriesTime,neuTimeNew);
+         if ~isempty(obj.SeriesList_(value).ROI)
+            updateBuffer(VG);
+            setFrame(VG);
+         end
+         drawnow;
       end
       
       % [DEPENDENT]  .Parent property references .TimeAxesObj_
@@ -76,10 +113,36 @@ classdef nigelCamera < matlab.mixin.SetGet
          newTimeInfo = obj.Time_; % Updated by set.SeriesList_
          idx = nigeLab.libs.nigelCamera.getSeriesIndex(...
             obj.SeriesTime_,newTimeInfo);
+         VG = obj.TimeAxesObj_.VidGraphicsObj;  
+         VG.SeriesIndex_ = idx;
          if isempty(idx)
             return;
          end
-         obj.Index = idx;
+         obj.SeriesIndex_ = idx;
+         VG.FrameIndex_ = -inf;
+         VG.NewVideo_ = true;
+      end
+      
+      % [DEPENDENT]  .SeriesTime_ is an intermediate dependent property
+      function value = get.SeriesTime_(obj)
+         %GET.SERIESTIME_  Intermediate to .Time and .SeriesTime__
+         %
+         %  value = get(obj,'SeriesTime_');
+         %  --> Doesn't trigger all the cascades of .Time
+         value = obj.SeriesTime__;
+      end
+      function set.SeriesTime_(obj,value)
+         %SET.SERIESTIME_  Intermediate for .Time and .SeriesTime__
+         %
+         %  set(obj,'SeriesTime_',value);
+         
+         % Set value
+         obj.SeriesTime__ = value;
+         
+         % Compute neural time
+         neuOffset = obj.SeriesList_(obj.SeriesIndex_).NeuOffset;
+         trialOffset = obj.SeriesList_(obj.SeriesIndex_).TrialOffset;
+         obj.NeuTime_ = value - neuOffset - trialOffset;
       end
       
       % [DEPENDENT]  .Source references .TimeAxesObj_.VidGraphicsObj
@@ -102,10 +165,12 @@ classdef nigelCamera < matlab.mixin.SetGet
          %SET.TIME  Assign new .Time (updates .Index based on .Time_)
          
          idx = nigeLab.libs.nigelCamera.getSeriesIndex(value,obj.Time_);
-         if isempty(idx)
+         if isempty(idx) % Returns empty if "out of bounds"
             return;
          end
          obj.SeriesTime_ = value;
+         
+         % Set Index (dependent property that updates the rest)
          obj.Index = idx;
       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
@@ -216,7 +281,13 @@ classdef nigelCamera < matlab.mixin.SetGet
             return;
          end
          
-         idx = find(seriesTimeInfo(:,1) & ...
+         % Uses mask:
+         % idx = find(seriesTimeInfo(:,1) & ...
+         %           (seriesTime >= seriesTimeInfo(:,2)) & ...
+         %           (seriesTime <  seriesTimeInfo(:,3)),1,'first');
+         
+         % Disregards mask:
+         idx = find( ...
                    (seriesTime >= seriesTimeInfo(:,2)) & ...
                    (seriesTime <  seriesTimeInfo(:,3)),1,'first');
       end

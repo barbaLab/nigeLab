@@ -68,8 +68,8 @@ if exist(blockObj.Paths.Spikes.dir,'dir')==0
 end
 blockObj.Channels(ch).Spikes = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameSpikes),...
-   spk,'access','w','overwrite',true);
-lockData(blockObj.Channels(ch).Spikes);
+   spk,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('Spikes',true,ch);
 % Save Features using DiskData pointer to the file:
 if exist(fullfile(fNameFeats),'file')~=0
@@ -80,8 +80,8 @@ if exist(blockObj.Paths.SpikeFeatures.dir,'dir')==0
 end
 blockObj.Channels(ch).SpikeFeatures = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameFeats),...
-   feat,'access','w','overwrite',true);
-lockData(blockObj.Channels(ch).SpikeFeatures);
+   feat,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('SpikeFeatures',true,ch);
 % Save Artifact using DiskData pointer to the file:
 if exist(fullfile(fNameArt),'file')~=0
@@ -92,8 +92,8 @@ if exist(blockObj.Paths.Artifact.dir,'dir')==0
 end
 blockObj.Channels(ch).Artifact = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameArt),...
-   art,'access','w','overwrite',true);
-lockData(blockObj.Channels(ch).Artifact);
+   art,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('Artifact',true,ch);
 flag = true;
 end

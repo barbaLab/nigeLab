@@ -50,8 +50,8 @@ ePars = blockObj.Pars.Event;
 if isempty(behaviorData)
    if ~isempty(blockObj.ScoringField)
       detPars = ePars.TrialDetectionInfo;
-      ft = blockObj.getFieldType(detPars.Field);
-      switch ft
+      fieldType = blockObj.getFieldType(detPars.Field);
+      switch fieldType
          case 'Videos'
             camOpts = nigeLab.utils.initCamOpts(...
                'cview',detPars.Source);
@@ -63,7 +63,7 @@ if isempty(behaviorData)
                ['Event FieldType should be either:\n' ...
                '-->''Videos'' or\n' ...
                '-->''Streams''\n'
-               '\t-->(not %s)\n'],ft);
+               '\t-->(not %s)\n'],fieldType);
       end
       % Get 'Trial' times
       trial_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
@@ -104,92 +104,7 @@ if forceHeaderExtraction
    end
 end
 
-if isempty(behaviorData)
-   if ~isempty(blockObj.ScoringField)
-      % Save 'Trial' times
-      iEventTimes = vPars.VarType <= 1;
-      fname = sprintf(blockObj.Paths.(blockObj.ScoringField).file, 'Trial');
-      data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
-      data(:,2) = 0;
-      data(:,4) = trial_ts;
-      eIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
-      blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
-         nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
-      blockObj.Events.(blockObj.ScoringField)(eIdx).signal.Samples = nEvent;
-
-      % Check for the rest of "iEventTimes" files
-      v = vPars.VarsToScore(iEventTimes);
-      for iV = 1:numel(v)
-         fname = sprintf(blockObj.Paths.(blockObj.ScoringField).file, v{iV});
-         eIdx = getEventsIndex(blockObj,blockObj.ScoringField,v{iV});
-         if exist(fname,'file')==0 % Only overwrite if nothing there
-            data = nigeLab.utils.initEventData(nEvent,0,1);
-            blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
-               nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
-
-         else
-            blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
-               nigeLab.libs.DiskData('Event',fname); % Make link
-            sz_ = size(blockObj.Events.(blockObj.ScoringField)(eIdx).data);
-            if sz_(2) ~= 5
-               name = blockObj.Events.(blockObj.ScoringField)(eIdx).name;
-               nigeLab.utils.cprintf('Errors*',blockObj.Verbose,...
-                  '%s[DOEVENTDETECTION]: ',idt);
-               nigeLab.utils.cprintf(fmt,blockObj.Verbose,...
-                  '''%s'' EventData is wrong size.\n',name);
-               nigeLab.utils.cprintf('[0.55 0.55 0.55]',blockObj.Verbose,...
-                  '\t%s(Re-initializing EventData)\n',idt);
-               data = nigeLab.utils.initEventData(nEvent,0,1);
-               blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
-                  nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
-            end
-         end
-         blockObj.Events.(blockObj.ScoringField)(eIdx).signal.Samples = nEvent;
-      end
-   end
-   % Find 'EventType' == 'auto' and create corresponding disk file
-   % that is a list of times based on the 'Type' of transition
-   for iE = 1:numel(ePars.Name)
-      curField = ePars.Fields{iE};
-      if ~strcmpi(ePars.EventType.(curField),'auto')
-         continue; % Don't do this for 'manual' fields
-      end         
-      ft = ePars.EventSource{iE};
-      switch ft
-         case 'Streams'
-            stream = blockObj.getStream(ePars.Name{iE});
-         otherwise
-            if blockObj.Verbose
-               dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
-               nigeLab.utils.cprintf('Errors*','%s[DOEVENTDETECTION]: ');
-               nigeLab.utils.cprintf(fmt,...
-                  'Parsing for %s (%s fieldType) not yet implemented (sorry -MM)\n',...
-                  ePars.Name{iE},upper(ft));
-            end
-            stream = [];
-      end
-      if isempty(stream)
-         continue;
-      end
-      ts = nigeLab.utils.binaryStream2ts(stream.data,stream.fs,...
-            detPars.Threshold,...
-            ePars.EventDetectionType{iE},...
-            detPars.Debounce);
-      nEvent = numel(ts);
-
-      fname = sprintf(blockObj.Paths.(curField).file, ePars.Name{iE});
-
-      data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
-      data(:,4) = ts;
-      eIdx = getEventsIndex(blockObj,curField,ePars.Name{iE});
-      % These are parsed automatically, so it is okay to overwrite by
-      % default.
-      blockObj.Events.(curField)(eIdx).data = ...
-         nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
-      blockObj.Events.(curField)(eIdx).signal.Samples = nEvent;
-   end      
-else % Otherwise, behaviorData provided as Table
-
+if ~isempty(behaviorData) && istable(behaviorData)% Then use the provided `behaviorData` table
    iEventTimes = behaviorData.Properties.UserData <= 1;
    v = behaviorData.Properties.VariableNames(iEventTimes);
    meta = behaviorData.Properties.VariableNames(~iEventTimes);
@@ -208,8 +123,148 @@ else % Otherwise, behaviorData provided as Table
       data(:,4) = behaviorData.(v{iV});
       eIdx = getEventsIndex(blockObj,blockObj.ScoringField,v{iV});
       blockObj.Events.(blockObj.ScoringField)(eIdx).data = ...
-         nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
-   end      
+         nigeLab.libs.DiskData('Event',fname,data,'overwrite',true,...
+         'Complete',zeros(1,1,'int8'));
+   end   
+   return; % Does not use the rest of the configured Block parsing
+else
+   % Otherwise, attempt to use the configured `ScoringField`
+   scoringField = blockObj.ScoringField;
+   if isempty(scoringField)
+      if blockObj.Verbose
+         fprintf(1,['\n\t\t->\t<strong>[DOEVENTDETECTION]:</strong> ' ...
+            'No ScoringField configured, but `behaviorData` not given either.\n' ...
+            '\t\t\t->\t(See: ~/+nigeLab/+defaults/Event.m; ' ...
+            'pars.Fields and pars.EventType)\n']);
+      end
+      trial_ts = []; % No "Trials"
+   else
+      % Save 'Trial' times
+      iEventTimes = vPars.VarType <= 1;
+      fname = sprintf(blockObj.Paths.(scoringField).file, 'Trial');
+      data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
+      data(:,2) = 0;
+      data(:,4) = trial_ts;
+      eIdx = getEventsIndex(blockObj,scoringField,'Trial');
+      blockObj.Events.(scoringField)(eIdx).data = ...
+         nigeLab.libs.DiskData('Event',fname,data,'overwrite',true,...
+         'chunks',[1 size(data,2)],'access','w',...
+         'Complete',zeros(1,1,'int8'),...
+         'Index',1);
+      blockObj.Events.(scoringField)(eIdx).signal.Samples = nEvent;
+
+      % Check for the rest of "iEventTimes" files
+      v = vPars.VarsToScore(iEventTimes);
+      for iV = 1:numel(v)
+         fname = sprintf(blockObj.Paths.(scoringField).file, v{iV});
+         eIdx = getEventsIndex(blockObj,scoringField,v{iV});
+         if exist(fname,'file')==0 % Only overwrite if nothing there
+            data = nigeLab.utils.initEventData(nEvent,0,1);
+            blockObj.Events.(scoringField)(eIdx).data = ...
+               nigeLab.libs.DiskData('Event',fname,data,...
+               'overwrite',true,'access','w',...
+               'Complete',zeros(1,1,'int8'),'Index',1);
+
+         else
+            blockObj.Events.(scoringField)(eIdx).data = ...
+               nigeLab.libs.DiskData('Event',fname,...
+               'Complete',zeros(1,1,'int8')); % Make link
+            sz_ = size(blockObj.Events.(scoringField)(eIdx).data);
+            if sz_(2) ~= 5
+               name = blockObj.Events.(scoringField)(eIdx).name;
+               nigeLab.utils.cprintf('Errors*',blockObj.Verbose,...
+                  '%s[DOEVENTDETECTION]: ',idt);
+               nigeLab.utils.cprintf(fmt,blockObj.Verbose,...
+                  '''%s'' EventData is wrong size.\n',name);
+               nigeLab.utils.cprintf('[0.55 0.55 0.55]',blockObj.Verbose,...
+                  '\t%s(Re-initializing EventData)\n',idt);
+               data = nigeLab.utils.initEventData(nEvent,0,1);
+               blockObj.Events.(scoringField)(eIdx).data = ...
+                  nigeLab.libs.DiskData('Event',fname,data,...
+                  'overwrite',true,'Complete',zeros(1,1,'int8'),...
+                  'access','w');
+            end
+         end
+         blockObj.Events.(scoringField)(eIdx).signal.Samples = nEvent;
+      end
+   end
 end
+
+% Find 'EventType' == 'auto' and create corresponding disk file
+% that is a list of times based on the 'Type' of transition
+for iE = 1:numel(ePars.Name)
+   curField = ePars.Fields{iE};
+   if ~strcmpi(ePars.EventType.(curField),'auto')
+      continue; % Don't do this for 'manual' fields
+   end         
+   fieldType = ePars.EventSource{iE};
+   switch fieldType
+      case 'Streams'
+         stream = blockObj.getStream(ePars.Name{iE});
+      otherwise
+         if blockObj.Verbose
+            dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
+            nigeLab.utils.cprintf('Errors*','%s[DOEVENTDETECTION]: ');
+            nigeLab.utils.cprintf(fmt,...
+               'Parsing for %s (%s fieldType) not yet implemented (sorry -MM)\n',...
+               ePars.Name{iE},upper(fieldType));
+         end
+         stream = [];
+   end
+   if isempty(stream)
+      continue;
+   end
+   ts = nigeLab.utils.binaryStream2ts(stream.data,stream.fs,...
+         detPars.Threshold,...
+         ePars.EventDetectionType{iE},...
+         detPars.Debounce);
+   
+
+   fname = sprintf(blockObj.Paths.(curField).file, ePars.Name{iE});
+   eIdx = getEventsIndex(blockObj,curField,ePars.Name{iE});
+   
+   % If this "auto" Event is to be used as a Default for a "manual" event,
+   % then for each `Trial` use the timestamp closest to the `Trial`
+   % timestamp as the default for the "manual" scored time.
+   targetManualEvent = ePars.UseAutoAsDefaultScoredEvent{iE};
+   
+   % If not configured or there are no trial times, then assign ts and
+   % write data automatically; otherwise, we should pare down this list of
+   % event times and use it for the `targetManualEvent` Event
+   if ~isempty(targetManualEvent) && ~isempty(trial_ts)
+      tmp = ts;
+      ts = nan(size(trial_ts));
+      nEvent = numel(ts);
+      for iTrial = 1:nEvent
+         % In event of ties, this syntax takes the first element:
+         [~,tmpidx] = min(abs(tmp - trial_ts(iTrial)));
+         ts(iTrial) = tmp(tmpidx);
+      end     
+      % Find the manual events index and assign these as initial times:
+      mIdx = getEventsIndex(blockObj,scoringField,targetManualEvent);
+      % Make sure file is unlocked for writing
+      lockFlag = blockObj.Events.(scoringField)(mIdx).data.Locked;
+      if lockFlag
+         unlockData(blockObj.Events.(scoringField)(mIdx).data);
+      end
+      blockObj.Events.(scoringField)(mIdx).data.ts = ts;
+      if lockFlag
+         lockData(blockObj.Events.(scoringField)(mIdx).data);
+      end
+   else
+      nEvent = numel(ts);
+   end
+   
+   data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
+   data(:,4) = ts;
+   % These are parsed automatically, so it is okay to overwrite by
+   % default.
+   blockObj.Events.(curField)(eIdx).data = ...
+      nigeLab.libs.DiskData('Event',fname,data,'overwrite',true,...
+      'Complete',ones(1,1,'int8'));
+   blockObj.Events.(curField)(eIdx).signal.Samples = nEvent;
+   
+end         
+
 
 end

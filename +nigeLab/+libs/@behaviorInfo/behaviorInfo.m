@@ -20,9 +20,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    
    % DEPENDENT,TRANSIENT,HIDDEN,PUBLIC (flags)
    properties (Dependent,Transient,Hidden,Access=public)
+      Defaults             double            % Default values for Events
       EventTimes           double            % All "Event" Event-type DiskData variables (for all trials)
       EventNames           char              % Names of all "Event" Event-type DiskData variables
-      FieldName            char              % Name corresponding to "manual" scored events
       Header               double            % Header data associated with videos/events
       Mask                 logical           % "Mask" for included/excluded trials
       Meta                 double            % All "Meta" Event-Type DiskData variables (for all trials)
@@ -66,6 +66,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    % PROTECTED
    properties(Access=protected)
       ScoringID           % hash string to track progress in metadata table
+      ScoringField
    end
    
    % TRANSIENT,PUBLIC/PROTECTED (graphics objects)
@@ -80,9 +81,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
       TrialButtonAxes            % Axes for indicator button array 
       TrialLabel                 % Label to keep track of current trial index
       TrialPopupMenu             % Popupmenu for selecting trial
-      ValuesEditBoxArray         % Array of handles to edit boxes
+      ValuesDisplayArray         % Array of handles to edit boxes
       ValuesPanel             	% Panel for holding controls
       VidGraphics                % Object for handling video graphics
+   end
+   
+   % TRANSIENT,HIDDEN,PUBLIC
+   properties(Transient,Hidden,Access=public)
+      ValueLabels       % uicontrol array
    end
    
    % TRANSIENT,HIDDEN,PROTECTED
@@ -131,6 +137,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
                'First input argument must be class nigeLab.Block');
          end
          obj.Block = blockObj;
+         obj.ScoringField = blockObj.ScoringField;
          
          % If no "container" given, then make it in its own figure
          % (modular)
@@ -169,12 +176,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          buildProgressTracker(obj);
          
          if nargin > 2
+            tOff = obj.Block.TrialVideoOffset(obj.Block.VideoIndex,:).';
             if obj.TimeAxes.ZoomLevel == 0
-               ts = obj.Trial;
+               ts = obj.Trial - tOff + obj.VidGraphics.NeuOffset;
                setTimeStamps(obj.TimeAxes,ts,'off');
                obj.NeedsLabels = true;
             else
-               ts = obj.EventTimes(obj.TrialIndex,:);
+               ts = obj.EventTimes(obj.TrialIndex,:) - ...
+                  obj.VidGraphics.TrialOffset + obj.VidGraphics.NeuOffset;
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;
             end
@@ -214,6 +223,29 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    
    % NO ATTRIBUTES (overloaded methods)
    methods 
+      % [DEPENDENT]  Default values for Events
+      function value = get.Defaults(obj)
+         %GET.DEFAULTS  Returns default values for Events
+         %
+         %  get(obj,'Default');
+         %  --> Returns values configured in +defaults/Video.m `defPars`
+         
+         value = obj.Block.Pars.Video.VarDefs;
+      end
+      function set.Defaults(obj,value)
+         %SET.DEFAULTS  Sets default values for Events
+         %
+         %  set(obj,'Defaults',value);
+         
+         if numel(value) == numel(obj.Block.Pars.Video.VarDefs)
+            obj.Block.Pars.Video.VarDefs = value;
+         else
+            warning(['nigeLab:' mfilename ':BadSize'],...
+               'Tried to set VarDefs (%g elements) with value of wrong size (%g elements)',...
+               numel(obj.Block.Pars.Video.VarDefs),numel(value));
+         end
+      end
+      
       % [DEPENDENT]  Handles .EventTimes (from DiskData; wrt NEURAL rec)
       function value = get.EventTimes(obj)
          %GET.EVENTTIMES  Returns .EventTimes property
@@ -222,7 +254,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          v = obj.Variable(obj.Type == 1);
          value = nan(numel(obj.Trial),numel(v));
-         f = obj.FieldName;
+         f = obj.ScoringField;
          for iV = 1:numel(v)
             value(:,iV) = getEventData(obj.Block,f,'ts',v{iV});
          end
@@ -236,13 +268,18 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          idx = obj.Type == 1;
          v = obj.Variable(idx);         
          val = obj.Value(idx);
-         f = obj.FieldName;
+         f = obj.ScoringField;
          for iV = 1:numel(v)
             setEventData(obj.Block,f,...
                'ts',v{iV},val(iV),obj.TrialIndex);
             useTimestamp = double((~isnan(val(iV))) && (~isinf(val(iV))));
-            setEventData(obj.Block,f,...
+            [flag,idx] = setEventData(obj.Block,f,...
                'tag',v{iV},useTimestamp,obj.TrialIndex);
+            if flag
+               % Update files to reflect "last-scored" element
+               obj.Block.Events.(f)(idx).data.Index = obj.TrialIndex;
+               updateEventTimeCompletionStatus(obj,idx);               
+            end
          end
       end
       
@@ -263,19 +300,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          idx = obj.Type == 1;
          obj.Variable(idx) = value;
       end
-      
-      % [DEPENDENT]  Returns .FieldName property (name of Block "scoring" Field)
-      function value = get.FieldName(obj)
-         % GET.FIELDNAME  Returns .FieldName property (name of Block Field)
-         %
-         %  value = get(obj,'FieldName');
-         %  --> Returns char array (default: 'ScoredEvents')
-         value = obj.Block.ScoringField;
-      end
-      function set.FieldName(~,~)
-         %SET.FIELDNAME (Does nothing)
-      end 
-      
+
       % [DEPENDENT]  Returns .Header property
       function value = get.Header(obj)
          %GET.HEADER  Returns .EventTimes property
@@ -295,18 +320,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %
          %  value = get(obj,'Mask');
          
-         mask = getEventData(obj.Block,obj.FieldName,'mask','Trial');
-         mask(isnan(mask)) = true; % "NaN" masked trials are included
-         value = logical(mask);
+         value = obj.Block.TrialMask;
       end
       function set.Mask(obj,value)
          %SET.Mask  Assigns .Mask property
          %
          %  set(obj,'Mask',value);
          
-         value(isnan(value)) = 1; % Update "NaN" mask to true
-         setEventData(obj.Block,obj.FieldName,'Trial','mask',value);
-         updateObjColors(obj);
+         obj.Block.TrialMask = value;
       end
       
       % [DEPENDENT]  Returns .Meta property
@@ -315,7 +336,8 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %
          %  value = get(obj,'Meta');
          
-         value = getEventData(obj.Block,obj.FieldName,'snippet','Trial');
+         f = obj.ScoringField;
+         value = getEventData(obj.Block,f,'snippet','Trial');
       end
       function set.Meta(obj,~)
          %SET.META  Assigns .Meta property
@@ -325,9 +347,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          idx = obj.Type > 1;       
          val = obj.Value(idx);
-         setEventData(obj.Block,obj.FieldName,...
-            'snippet','Trial',val,...
+         f = obj.ScoringField;
+         flag = setEventData(obj.Block,f,'snippet','Trial',val,...
             obj.TrialIndex,1:numel(val));
+         % Do not update .Index because it is already associated with
+         % obj.Block, which is what generates obj.TrialIndex
+         
+         if flag
+            updateMetaCompletionStatus(obj);
+         end
       end
       
       % [DEPENDENT]  Returns .MetaNames property
@@ -391,11 +419,11 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %
          %  value = get(obj,'OutcomeVarName');
          
-         value = obj.Block.Pars.Event.OutcomeVarName;
+         value = obj.Block.Pars.Video.OutcomeEvent;
       end
       function set.OutcomeVarName(obj,value)
          %SET.OutcomeVarName  Updates obj.Block.Pars.Event.OutcomeVarName
-         obj.Block.Pars.Event.OutcomeVarName = value;
+         obj.Block.Pars.Video.OutcomeEvent = value;
       end
       
       % [DEPENDENT]  Returns .NScored property (number of trials scored)
@@ -404,7 +432,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %
          %  value = get(obj,'NScored');
          
-         value = sum(obj.State);
+         value = sum(obj.State | (~obj.Mask));
       end
       function set.NScored(~,~)
          % SET.NSCORED  Does nothing
@@ -462,7 +490,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  --> Returns equivalent to ~isnan(obj.Value)
          
          value = ~any(isnan(getFullDataArray(obj)),2);
-         value(~obj.Mask) = true; % If Masked, consider "State" complete
       end
       function set.State(~,~)
          %SET.STATE  Does nothing
@@ -643,7 +670,31 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
    end
    
    % PUBLIC
-   methods (Access=public)      
+   methods (Access=public)  
+      % Assigns value to a particular variable (does not use .SetValueFcn)
+      function assignValue(obj,name,value)
+         %ASSIGNVALUE  Assigns value to a particular variable
+         %
+         %  assignValue(obj,name,value);
+         %
+         %  obj : nigeLab.libs.behaviorInfo object
+         %  name : Char array, name of variable to assign
+         %  value : Value (numeric) to assign
+         
+         idx = findVariable(obj,name);
+         if isempty(idx)
+            return;
+         end
+         obj.Value(idx) = value;
+         iTS = obj.Type(idx)==1;
+         v = obj.Variable(iTS);
+         if ~isempty(obj.TimeAxes) && ~isempty(v)
+            val = value(iTS) + obj.VidGraphics.NeuOffset ...
+               - obj.VidGraphics.VideoOffset - obj.VidGraphics.TrialOffset;
+            updateEventTime(obj.TimeAxes,v,val);
+         end
+      end
+      
       % Returns data for current trial AND updates obj.Value
       function data = getTrialData(obj,curTrial)
          % GETCURRENTTRIALDATA  Return single-trial data from DiskData 
@@ -692,6 +743,25 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          data = [obj.EventTimes, obj.Meta];
       end
       
+      % Get the associated value in the .Value buffer
+      function value = getValue(obj,variableName)
+         %GETVALUE  Returns value associated with `variableName`
+         %
+         %  value = getValue(obj,variableName);
+         idx = strcmpi(obj.Variable,variableName);
+         if sum(idx) == 1
+            value = obj.Value(idx);
+         elseif sum(idx) > 1
+            value = [];
+            warning(['nigeLab:' mfilename ':BadName'],...
+               'Variable name ''%s'' is case-ambiguous\n',variableName);
+         else
+            value = [];
+            warning(['nigeLab:' mfilename ':BadName'],...
+               'Could not find variable named ''%s''\n',variableName);
+         end
+      end
+         
       % Gets the index for a particular variable or array from .Variable
       function index = findVariable(obj,variableName)
          % FINDVARIABLE  Matches Variable to elements of obj.Variable
@@ -729,36 +799,45 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          end
          if ~isempty(obj.VidGraphics)
             set(obj.VidGraphics.TrialOffsetLabel,'String',...
-               sprintf('Trial Offset: %6.3f sec',...
-               obj.VidGraphics.TrialOffset));
+               sprintf('Trial Offset: %6.3f sec ||  FPS: %6.2 Hz',...
+               obj.VidGraphics.TrialOffset,obj.VidGraphics.FPS));
          end
       end
       
       % Toggle mask status for this trial
-      function toggleTrialMask(obj)
+      function toggleTrialMask(obj,state)
          % TOGGLETRIALMASK  Remove a trial entry
          %
          %  removeTrial(obj); Removes current trial from the array
          
+         if nargin < 2
+            state = 1 - obj.Mask(obj.TrialIndex);
+         end
+         
          % Toggle Mask based on current state
-         if obj.Mask(obj.TrialIndex)==1
-            obj.Mask(obj.TrialIndex) = 0;
+         obj.Mask(obj.TrialIndex) = state;
+         if state==0
             obj.TrialButtonArray(obj.TrialIndex).Enable = 'off';
          else
-            obj.Mask(obj.TrialIndex) = 1;
             obj.TrialButtonArray(obj.TrialIndex).Enable = 'on';
          end
          
-         % Increment trial if possible without going over
-         iCapped = min(obj.TrialIndex+1,obj.NTotal);         
+         updateMetaCompletionStatus(obj);
+         updateEventTimeCompletionStatus(obj);
          
-         if obj.TrialIndex == iCapped   % Then we didn't move
-            refreshGraphics(obj,iCapped); % Update colors etc. at least
-         else % Otherwise, update TrialIndex and get new data
-            obj.TrialIndex = iCapped;
-            setTrial(obj,obj.VidGraphics,obj.TrialIndex);
-         end
+         % Update graphics of this trial
+         refreshGraphics(obj,obj.TrialIndex);
+         
+         if state == 0 % If trial was removed, go to next
+            % Increment trial if possible without going over
+            iCapped = min(obj.TrialIndex+1,obj.NTotal);         
 
+            if obj.TrialIndex == iCapped   % Then we didn't move
+               return;
+            else % Otherwise, update TrialIndex and get new data
+               setTrial(obj,obj.VidGraphics,iCapped);
+            end
+         end % Otherwise trial was enabled: stay on this trial
       end
       
       % Save blockObj with scoring
@@ -856,7 +935,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             return;
          end
             
-         % 2020-02-19: MM -- Begin Removed Feature
          %  % Update "Trials" to reflect the earliest timestamp in Trial
          %  tsIdx = (obj.Type==1) & ~isnan(obj.Value) & ~isinf(obj.Value);
          %  curTrial = obj.TrialIndex;
@@ -864,7 +942,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %     t = min(obj.Value(tsIdx));
          %     obj.Trial(curTrial) = t; % Update to reflect new time
          %  end
-         % 2020-02-19: MM -- End Removed Feature
 
          % Write "buffered" data to diskfile before advancing
          setCurrentTrialData(obj);
@@ -884,13 +961,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          % Update video time if needed
          if isa(src,'nigeLab.libs.VidGraphics')
-            src.SeriesTime = obj.Trial(newTrialIndex);
+            src.SeriesTime = obj.Trial(newTrialIndex) + ...
+               src.NeuOffset + src.TrialOffset;
             src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
             src.DataLabel.Color = ...
                obj.TrialButtonArray(newTrialIndex).EdgeColor;
             obj.NeedsLabels = true;
          elseif ~isempty(obj.VidGraphics)
-            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex);
+            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) + ...
+               obj.VidGraphics.NeuOffset + obj.VidGraphics.TrialOffset;
             obj.VidGraphics.DataLabel.String =...
                sprintf('Trial: %g',newTrialIndex);
             obj.VidGraphics.DataLabel.Color = ...
@@ -916,6 +995,16 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             curTrial = obj.TrialIndex;
          end
          varIdx = findVariable(obj,variableName);
+         if isempty(varIdx)
+            if iscell(variableName)
+               warning(['nigeLab:' mfilename ':BadVarName'],...
+                  'No valid variable: %s\n',variableName{:});
+            else
+               warning(['nigeLab:' mfilename ':BadVarName'],...
+                  'No valid variable: %s\n',variableName);
+            end
+            return;
+         end
          % Note that instead of making a direct assignment here, the
          % ValueShortcutFcn is used instead so that it is possible to set
          % up flexible "shortcut" scoring heuristics. 
@@ -957,8 +1046,8 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          var = obj.Variable(obj.Type > 1);
          colIdx = find(strcmp(var,variableName),1,'first');
          newValue = repmat(newValue,obj.NTotal,1);
-         setEventData(obj.Block,obj.FieldName,...
-            'snippet','Trial',newValue,':',colIdx);
+         f = obj.ScoringField;
+         setEventData(obj.Block,f,'snippet','Trial',newValue,':',colIdx);
 
          refreshGraphics(obj,obj.TrialIndex);
          obj.NeedsSave = true;
@@ -977,6 +1066,39 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.misc.(miscFieldName) = value;
       end
       
+      % Updates 'EventTimes' DiskFile .Complete attribute
+      function updateEventTimeCompletionStatus(obj,idx)
+         %UPDATEEVENTTIMECOMPLETIONSTATUS  Updates 'EventTimes' DiskFile 
+         %
+         %  updateEventTimeCompletionStatus(obj,idx);
+         
+         f = obj.ScoringField;
+         
+         if nargin < 2
+            idx = 3:numel(obj.Block.Events.(f));
+         end
+         
+         mask = obj.Block.TrialMask;
+         for ii = 1:numel(idx)
+            isComplete = ~isnan(obj.Block.Events.(f)(idx(ii)).data.ts(mask));
+            obj.Block.Events.(f)(idx(ii)).data.Complete = all(isComplete);
+         end
+         
+      end
+      
+      % Updates 'Meta' completion status
+      function updateMetaCompletionStatus(obj)
+         %UPDATEMETACOMPLETIONSTATUS  Updates 'Meta' completion status
+         %
+         %  updateMetaCompletionStatus(obj);
+         
+         f = obj.ScoringField;
+         m = obj.Mask;
+         varsComplete = all(~isnan(obj.Meta(m>0,:)),1);
+         idx = getEventsIndex(obj.Block,f,'Trial');
+         obj.Block.Events.(f)(idx).data.Complete = all(varsComplete);
+      end
+      
       % Update indicators on TimeAxes
       function updateTimeAxesIndicators(obj)
          %UPDATETIMEAXESINDICATORS  Update indicators on TimeAxes
@@ -990,12 +1112,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  This updates the locations of 'Grasp', 'Reach', etc. indicators
          %  on the 'TimeScroller' Axes
          
+         tOff = obj.Block.TrialVideoOffset(obj.Block.VideoIndex,:).';
          if obj.TimeAxes.ZoomLevel == 0
-            ts = obj.Trial;
+            ts = obj.Trial - tOff + obj.VidGraphics.NeuOffset;
             setTimeStamps(obj.TimeAxes,ts,'off');
             obj.NeedsLabels = true;
          else
-            ts = obj.Value(obj.Type==1);
+            ts = obj.Value(obj.Type==1) + ...
+               obj.VidGraphics.NeuOffset - obj.VidGraphics.TrialOffset;
             if obj.NeedsLabels
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;
@@ -1041,7 +1165,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             obj.NScored,obj.NTotal);
          obj.ProgressLabel = text(obj.IndicatorAxes, ...
             0.025, 0.125, str,... 
-            'FontName','DroidSans',...
+            'FontName','Droid Sans',...
             'FontSize',15,...
             'FontWeight','bold',...
             'Color','w');
@@ -1050,7 +1174,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          str = sprintf('Current Trial: %g',obj.TrialIndex);
          obj.TrialLabel = text(obj.IndicatorAxes, ...
             0.025, 0.425, str,...
-            'FontName','DroidSans',...
+            'FontName','Droid Sans',...
             'FontSize',15,...
             'FontWeight','bold',...
             'Color','w');
@@ -1059,7 +1183,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          str = sprintf('%g Successful Trials',nansum(obj.Outcome(obj.Mask)));
          obj.SuccessIndicatorLabel = text(obj.IndicatorAxes, ...
             0.025, 0.725, str,...
-            'FontName','DroidSans',...
+            'FontName','Droid Sans',...
             'FontSize',15,...
             'FontWeight','bold',...
             'Color','w');
@@ -1084,6 +1208,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          for i = 1:obj.NTotal
             col = getAltColor(obj,'b','r',obj.Outcome(i));
             col = getAltColor(obj,col,'light',obj.State(i));
+            col = getAltColor(obj,col,'med',obj.Mask(i));
             pos = [i+o o s s]; 
             obj.TrialButtonArray = horzcat(obj.TrialButtonArray,...
                nigeLab.libs.nigelButton(obj.TrialButtonAxes,...
@@ -1126,33 +1251,67 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             'Position',[0 0 1 0.75]);
          
          % Make text labels for controls
-         labs = reshape(obj.Variable,numel(obj.Variable),1);
-         [~,yPos,~,H] = nigeLab.utils.uiMakeLabels(...
-            obj.ValuesPanel.Panel,['Trials'; labs]);
-            
+         eIdx = obj.Type==1;
+         mIdx = obj.Type>1;
+         n = [sum(eIdx) sum(mIdx)]; 
+         [nRow,moreLabels] = max(n);
+         nRow = nRow + 1;
+         % "EventTimes" labels get one column and "Meta" labels get second
+         Labs = cell(nRow,2);
+         Labs{1,1} = 'Trials';
+         if moreLabels == 1
+            Labs(2:nRow,1) = obj.Variable(eIdx);
+            startIdx = nRow-n(2)+1; % Offset by 1 for 'Trials'
+            Labs(startIdx:nRow,2) = obj.Variable(mIdx);
+         else
+            startIdx = nRow-n(1)+1; % Offset by 1 for 'Trials'
+            Labs(startIdx:nRow,1) = obj.Variable(eIdx);
+            Labs(2:nRow,2) = obj.Variable(mIdx);
+         end
+         Labs(cellfun(@isempty,Labs)) = {''};
+         [obj.ValueLabels,xPos,yPos,W,H,ax] = nigeLab.utils.uiMakeLabels(...
+            obj.ValuesPanel.Panel,Labs,...
+            'Left',0.0250,'Right',0.5750);
+         
+         % Make "disabled" edit boxes to display trial scoring data
+         ValueLabs = Labs;         
+         ValueLabs{1,1} = '';
+         idx = cellfun(@isempty,ValueLabs);
+         ValueLabs(~idx) = {'???'};
+         obj.ValuesDisplayArray = nigeLab.utils.uiMakeLabels(ax,ValueLabs,...
+            'Color',nigeLab.defaults.nigelColors('disabletext'),...
+            'BackgroundColor',nigeLab.defaults.nigelColors('light'),...
+            'EdgeColor',nigeLab.defaults.nigelColors('secondary'),...
+            'Left',0.5750,'Right',0.0250,...
+            'HorizontalAlignment','left');
+         obj.ValuesDisplayArray = obj.ValuesDisplayArray(:);
+         % Remove empty labels
+         delete(obj.ValuesDisplayArray(idx(:)));
+         obj.ValuesDisplayArray(idx(:)) = [];
+         
+         % Format Trial times to make them look nicer in popupbox
          str = nigeLab.libs.behaviorInfo.ts2str(obj.Trial);
          
+         % Add separator
+         yH = yPos(1,1) + H;
+         ySep = yH + (yH - yPos(1,2))*3/4; % Put between 
+         annotation(obj.ValuesPanel.Panel,'line',...
+            [0.025 0.975],[ySep ySep],...
+            'Color',nigeLab.defaults.nigelColors('onsurface'),...
+            'LineStyle','-',...
+            'LineWidth',3);
+         
          % Make box for selecting current trial
+         xLB = xPos(1,1)+0.05;
+         wLB = 0.975 - xLB;
          obj.TrialPopupMenu = uicontrol(obj.ValuesPanel.Panel,'Style','popupmenu',...
             'Units','Normalized',...
-            'Position',[0.5 yPos(1)-H/2 0.475 H],... % div by 2 to center
-            'FontName','Arial',...
+            'Position',[xLB yPos(1,1)+(H/4) wLB H],...
+            'FontName','Droid Sans',...
             'FontSize',14,...
             'String',str,...
             'UserData',obj.Trial,...
             'Callback',@obj.setTrial);
-         
-         % Add separator
-         annotation(obj.ValuesPanel.Panel,'line',...
-            [0.025 0.975],[yPos(1) yPos(1)]+H,...
-            'Color',[0.75 0.75 0.75],...
-            'LineStyle','-',...
-            'LineWidth',3);
-         
-         % Make "disabled" edit boxes to display trial scoring data
-         obj.ValuesEditBoxArray = nigeLab.utils.uiMakeEditArray(...
-            obj.ValuesPanel.Panel,yPos(2:end),...
-            'H',H,'TAG',obj.Variable);
       end
       
       % Check to see if scoring is complete and return either 'Complete' or
@@ -1162,13 +1321,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %
          %  status = checkProgress(obj); 
          
-         idx = getEventsIndex(obj.Block,obj.FieldName,'Header');
+         f = obj.ScoringField;
+         idx = getEventsIndex(obj.Block,f,'Header');
          if sum(obj.NScored)==obj.NTotal
             status = 'Complete';
-            SetCompletedStatus(obj.Block.Events.(obj.FieldName)(idx).data,true);
+            SetCompletedStatus(obj.Block.Events.(f)(idx).data,true);
          else
             status = 'In Progress';
-            SetCompletedStatus(obj.Block.Events.(obj.FieldName)(idx).data,false);
+            SetCompletedStatus(obj.Block.Events.(f)(idx).data,false);
          end  
       end
       
@@ -1178,7 +1338,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %     to the next necessary file to score. Designed to facilitate
          %     continued scoring of a file that was partially scored.
          
-         nextTrial = find(obj.State,1,'first');
+         nextTrial = find(obj.State & obj.Mask,1,'first');
          
          %          % If it can't find any NaN entries, its already been fully scored.
          %          % Default to final trial to indicate that.
@@ -1250,14 +1410,18 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          end
          
          flag = obj.Mask(curTrial);
-         pCol = getAltColor(obj,'surface','k',flag);
+         pCol = getAltColor(obj,'surface','med',flag);
          
          % Check if it is Masked or if All Variables Scored
          stateFlag = ~any(isnan(obj.Value)) || (~flag);
          
          if stateFlag
             varIdx = findVariable(obj,'Outcome');
-            tCol = getAltColor(obj,'b','r',obj.Value(varIdx));
+            if isnan(obj.Value(varIdx))
+               tCol = pCol;
+            else
+               tCol = getAltColor(obj,'b','r',obj.Value(varIdx));
+            end
          else
             tCol = nigeLab.defaults.nigelColors('light');
          end
@@ -1269,11 +1433,18 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          if flag
             obj.TrialButtonArray(curTrial).Enable = 'on';
             obj.TrialButtonArray(curTrial).FaceColor = tCol;
+            c = tCol;
          else
             obj.TrialButtonArray(curTrial).Enable = 'off';
-            obj.TrialButtonArray(curTrial).FaceColor = tCol * 0.75;
+            obj.TrialButtonArray(curTrial).FaceColor = tCol*0.75;
+            c = pCol;
          end
-         
+         if ~isempty(obj.VidGraphics)
+            if obj.VidGraphics.TimeAxes.ZoomLevel == 0
+               obj.VidGraphics.TimeAxes.TimeStamps(curTrial).MarkerFaceColor = c;
+               obj.VidGraphics.TimeAxes.TimeStamps(curTrial).MarkerEdgeColor = c;
+            end
+         end
          
          % Update labels and colors based on total number scored etc.
          obj.ProgressLabel.String = sprintf(...
@@ -1290,7 +1461,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.TrialLabel.String = sprintf('Current Trial: %g',curTrial);
          if ~isempty(obj.VidGraphics)
             updateTimeLabelsCB(obj.VidGraphics,...
-               obj.VidGraphics.FrameTime,obj.VidGraphics.NeuTime);
+               obj.VidGraphics.SeriesTime,obj.VidGraphics.NeuTime);
          end
          
          if obj.NScored == obj.NTotal
@@ -1347,7 +1518,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             %  sense (for example matching 0 or 1 to "Unsuccessful or
             %  "Successful" respectively for VarType == 4 in the Default
             %  function)
-            obj.ValuesEditBoxArray(newVarIndex).String = ...
+            obj.ValuesDisplayArray(newVarIndex).String = ...
                obj.StringFcn(obj.Type(newVarIndex),val);
          end
       end

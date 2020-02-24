@@ -195,7 +195,7 @@ pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
                              % whatever reason (it seems).
 pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" to keep writing
       
-[pars.VarsToScore,pars.VarType] = setScoringVars();
+[pars.VarsToScore,pars.VarType,pars.VarDefs] = setScoringVars();
 
 % % % -- For Video Alignment -- % % %
 pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
@@ -342,31 +342,37 @@ end
 
 %%
    % Helper function to isolate this part of parameters
-   function [VarsToScore,VarType] = setScoringVars()
+   function [VarsToScore,VarType,VarDefs] = setScoringVars()
       % SETSCORINGVARS  Variables for video scoring are set here
       %
       %  [VarsToScore,VarType] = setScoringVars();
       
       % varsToScore = []; % Must be left empty if no videos to score
       varsToScore = {... % KUMC: "RC" project (MM)
-         'Pellets';           % 1)
-         'PelletPresent';     % 2)
-         'Stereotyped';       % 3)
-         'Outcome';           % 4)
-         'Forelimb';          % 5)
+         'Pellets';           % 1) [0,1,2,3,4,5,6,7,8,9+]
+         'PelletPresent';     % 2) Yes / No
+         'Stereotyped';       % 3) Yes / No
+         'Outcome';           % 4) Successful / Unsuccessful
+         'Door';              % 5) L / R
+         'Forelimb';          % 6) L / R
       };
 
       % varType = []; % Must be left empty if no videos to score
-      varType = [2 3 3 4 5];      % Should have same number as VarsToScore
+      varType = [2 3 3 4 5 5];    % Should have same number as VarsToScore
                                   % NOTE: VarType will be added to by any
                                   %       Event variable that is 
-                                  
-      [VarsToScore,VarType] = prependEventVars(varsToScore,varType);
+      % Default values; again, should correspond 1-to-1 with elements of
+      % varType and varsToScore. Set value to nan so that the shortcut will
+      % not update its value when this is called even if the value is
+      % unset.
+      varDefs = [1, 1, 0, 0, nan, nan]; 
+      
+      [VarsToScore,VarType,VarDefs] = prependEventVars(varsToScore,varType,varDefs);
       
    end
 
    % Helper function that does the prepending
-   function [toScore,type] = prependEventVars(vToScore,vType)
+   function [toScore,type,def] = prependEventVars(vToScore,vType,vDefs)
       % PREPENDEVENTVARS Pre-append VarType and VarsToScore based on values
       %     in nigeLab.defaults.Event('Name'); and
       %     nigeLab.defaults.Event('Fields').
@@ -381,12 +387,14 @@ end
             vn = vName(ismember(lower(vField),lower(fnames{ii})));
             vToScore = [vn; vToScore]; %#ok<*AGROW>
             vType = [ones(1,numel(vn)), vType];
+            vDefs = [inf(1,numel(vn)), vDefs];
          end
       end
       
       % Assign output
       toScore = vToScore;
       type = vType;
+      def = vDefs;
    end
    
                               

@@ -63,7 +63,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
       FaceColor                                    % 'Button' face color
       EdgeColor                                    % 'Button' edge color
       FontColor                                    % 'Label' Font color
-      FontName             char = 'DroidSans'      % 'Label' font name
+      FontName             char = 'Droid Sans'     % 'Label' font name
       FontSize       (1,1) double = 0.35           % 'Label' font size
       FontUnits            char = 'normalized'     % 'Label' font units
       FontWeight           char = 'normal'         % 'Label' font weight

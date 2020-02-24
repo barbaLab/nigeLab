@@ -32,14 +32,16 @@ pars = struct;
 %    'Support';         % 15)
 %    'Complete';        % 16)
 %    };        
-pars.Name = {...    % Example B (RHD)
-   'trial-running';    % 1) Trial running "HIGH" events
-   'beam-break';       % 2) Beam break events
-   'nose-poke';        % 3) Nose-poke beam break
-   'Reach';           % 4) Reach scored onset
-   'Grasp';           % 5) Grasp scored onset
-   'Support';         % 6) Support scored onset
-   'Complete';        % 7) Complete scored onset
+pars.Name = {...        % Example B (RHD)
+   'trial-running';     % 1) Trial running "HIGH" events
+   'beam-break';        % 2) Beam break events
+   'nose-poke';         % 3) Nose-poke beam break
+   'Init';              % 4) "Initialize" trial (e.g. tone cue or whatever)
+   'Nose';              % 5) Nose poke through reach slot scored onset
+   'Reach';             % 6) Reach scored onset
+   'Grasp';             % 7) Grasp scored onset
+   'Support';           % 8) Support scored onset
+   'Complete';          % 9) Complete scored onset
    };    
 % pars.Name = {... % Example B (KUMC: "RC" project -- MM) Note: each 'Event' with different timestamps needs its own 'Events' element
 %    'Reach';       % 1)
@@ -76,6 +78,8 @@ pars.Fields = {...    % Example B (RHD) -- Audio task
    'ScoredEvents';    % 5)
    'ScoredEvents';    % 6)
    'ScoredEvents';    % 7)
+   'ScoredEvents';    % 8)
+   'ScoredEvents';    % 9)
    };
 
 % pars.Fields = {...   % KUMC: "RC" project (MM)
@@ -169,6 +173,11 @@ pars.EventSource = {...
    'Streams';    % 2) 
    'Streams';    % 3) (skip 4-7 because not 'auto' fields)
    };
+pars.UseAutoAsDefaultScoredEvent = {... % Example B (RHD)
+   ''; ...      % 1) trial-running already related to special "Trial" field
+   'Reach'; ... % 2) beam-break
+   'Init'       % 3) nose-poke: should be essentially same as trial-running
+};
 
 %% Error parsing (do not change)
 % Check that number of elements of Name matches that of Fields

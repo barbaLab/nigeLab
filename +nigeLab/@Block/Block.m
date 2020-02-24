@@ -90,6 +90,7 @@ classdef Block < nigeLab.nigelObj
       Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
       TrialField           char   = 'trial-running'  % blockObj.Pars.Event.TrialDetectionInfo.Name
+      TrialMask                     % Logical vector of masking for trials (if applicable)
       TrialVideoOffset     double   % Matrix where rows are video cameras and columns are trials. Each value is a trial/camera-specific offset.
       VideoHeader          double   % "Header" for Video/Event data
    end
@@ -97,7 +98,19 @@ classdef Block < nigeLab.nigelObj
    % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC
    properties (AbortSet,Hidden,SetObservable,Access=public)
       CurNeuralTime  (1,1) double = 0  % Current "Neural Time" for analyses
+   end
+   
+   % HIDDEN,ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
+   properties (AbortSet,Hidden,Dependent,Transient,Access=public)
       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
+      VideoIndex     (1,1) double = 1  % Current "Video Index" for analyses
+   end
+   
+   % HIDDEN,TRANSIENT,PROTECTED
+   properties (Hidden,Access=protected)
+      TrialIndex_          double = 1  % Initialized as empty container
+      TrialMask_           logical     % Initialized as empty container
+      VideoIndex_          double = 1  % Initialized as empty container
    end
    
    % HIDDEN,PUBLIC (flags)
@@ -381,6 +394,11 @@ classdef Block < nigeLab.nigelObj
          %
          %  value = get(blockObj,'Trial');
          %  --> Returns vector of time stamps of trial onsets
+         
+         if isempty(blockObj.Events)
+            value = [];
+            return;
+         end
          value = getEventData(blockObj,blockObj.ScoringField,'ts','Trial');
       end
       function set.Trial(blockObj,value)
@@ -405,6 +423,81 @@ classdef Block < nigeLab.nigelObj
       function set.TrialField(blockObj,value)
          %SET.TRIALFIELD  Assigns .TrialField property
          blockObj.TrialField_ = value;
+      end
+      
+      % [DEPENDENT]  Interact with "Trial" Event file to get "Index" attr
+      function value = get.TrialIndex(blockObj)
+         %GET.TRIALINDEX  Interact with "Trial" file to get "Index" attr
+         %
+         %  value = get(blockObj,'TrialIndex');
+         %  --> Returns 'Trials' attribute: Index
+         
+         if isempty(blockObj.TrialIndex_)
+            if isempty(blockObj.Events)
+               value = 1;
+               blockObj.TrialIndex_ = 1;
+               return;
+            end
+            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+            value = getAttr(...
+               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+               'Index');
+            blockObj.TrialIndex_ = value;
+         else
+            value = blockObj.TrialIndex_;
+         end
+      end
+      function set.TrialIndex(blockObj,value)
+         %SET.TRIALINDEX  Interact with "Trial" file to set "Index" attr
+         %
+         %  set(blockObj,'TrialIndex',value);
+         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+            'Index',int8(value));
+         if s
+            blockObj.TrialIndex_ = value;
+         end
+      end
+      
+      % [DEPENDENT]  Interact with "Trial" event file to get "Mask"
+      function value = get.TrialMask(blockObj)
+         %GET.TRIALMASK  Returns "Trial" event file Mask vector
+         %
+         %  get(blockObj,'TrialMask');
+         
+         if isempty(blockObj.TrialMask_)
+            if isempty(blockObj.Events)
+               value = [];
+               return;
+            end
+            f = blockObj.ScoringField;
+            mask = getEventData(blockObj,f,'tag','Trial');
+            mask(isnan(mask)) = true; % "NaN" masked trials are included
+            value = logical(mask);
+            blockObj.TrialMask_ = value;
+         else
+            value = blockObj.TrialMask_;
+         end
+      end
+      function set.TrialMask(blockObj,value)
+         %SET.TRIALMASK  Assign "Trial" event file Mask vector
+         %
+         %  set(blockObj,'TrialMask',value);
+         
+         value(isnan(value)) = 1; % Update "NaN" mask to true
+         f = blockObj.ScoringField;
+         setEventData(blockObj,f,'tag','Trial',value);
+         blockObj.TrialMask_ = value;
+         
+         % If "Trial-Segmented Videos" have been extracted
+         if blockObj.HasVideoTrials
+            % If there are equivalent # of videos to # of trials
+            if numel(blockObj.Videos) == numel(blockObj.TrialMask_)
+               % Then assign "Trial" Mask to Videos as well
+               blockObj.Videos(blockObj.TrialIndex).Masked = ...
+                  blockObj.TrialMask_(blockObj.TrialIndex);
+            end
+         end
       end
       
       % [DEPENDENT] Returns .TrialVideoOffset property
@@ -508,6 +601,10 @@ classdef Block < nigeLab.nigelObj
          %            depending on framerate jitter etc.
          
          if isempty(blockObj.VideoHeader_)
+            if isempty(blockObj.Events)
+               value = [];
+               return;
+            end
             value = getEventData(blockObj,blockObj.ScoringField,...
                'data','Header');
             blockObj.VideoHeader_ = value;
@@ -524,6 +621,35 @@ classdef Block < nigeLab.nigelObj
          
          blockObj.VideoHeader_ = value;
          setEventData(blockObj,blockObj.ScoringField,'data','Header',value);
+      end
+      
+      % [DEPENDENT]  Interact with "Header" Event file to get "Index" attr
+      function value = get.VideoIndex(blockObj)
+         %GET.VIDEOINDEX  Interact with "Header" file to get "Index" attr
+         %
+         %  value = get(blockObj,'VideoIndex');
+         %  --> Returns 'Trials' attribute: Index
+         
+         if isempty(blockObj.VideoIndex_)
+            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
+            value = getAttr(...
+               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+               'Index');
+            blockObj.VideoIndex_ = value;
+         else
+            value = blockObj.VideoIndex_;
+         end
+      end
+      function set.VideoIndex(blockObj,value)
+         %SET.VIDEOINDEX  Interact with "Header" file to set "Index" attr
+         %
+         %  set(blockObj,'VideoIndex',value);
+         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
+         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+            'Index',int8(value));
+         if s
+            blockObj.VideoIndex_ = value;
+         end
       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
@@ -877,7 +1003,7 @@ classdef Block < nigeLab.nigelObj
       % Method for accessing event info:
       [idx,field] = getEventsIndex(blockObj,field,eventName); % Returns index to Events field as well as name of Events.(field)
       [data,blockIdx] = getEventData(blockObj,field,prop,ch,matchValue,matchField) % Retrieve event data
-      flag = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
+      [flag,idx] = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
       
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)

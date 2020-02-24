@@ -26,7 +26,7 @@ classdef nigelBackground < matlab.mixin.SetGet & matlab.mixin.Copyable
       Curvature            (1,2) double = [0.2 0.2]
       EdgeColor                         = 'none'
       FaceColor                         = [0.9 0.9 0.9]
-      FontName                   char   = 'DroidSans'
+      FontName                   char   = 'Droid Sans'
       FontSize                   double = 13
       FontWeight                 char   = 'bold'
       LineStyle                  char   = 'none'
@@ -81,7 +81,7 @@ classdef nigelBackground < matlab.mixin.SetGet & matlab.mixin.Copyable
       Curvature_            (1,2) double = [0.2 0.2]
       EdgeColor_                         = 'none'
       FaceColor_                         = [0.9 0.9 0.9]
-      FontName_                   char   = 'DroidSans'
+      FontName_                   char   = 'Droid Sans'
       FontSize_                   double = 13
       FontWeight_                 char   = 'bold'
       IsEmpty_              (1,1) logical = true

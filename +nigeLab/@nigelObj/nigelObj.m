@@ -3883,7 +3883,11 @@ classdef nigelObj < handle & ...
                obj.HasParsSaved.(f{i}) = true;
             end
          else
-            out = load(fname_params,userName);
+            % Don't just load single-user, load all uesrs, then select.
+            out = load(fname_params);
+            if ~isfield(out,userName)
+               out.userName = struct;
+            end
             switch parsField
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
@@ -5103,7 +5107,7 @@ classdef nigelObj < handle & ...
          groups = getPropertyGroups(obj,'nonscalar');
          matlab.mixin.CustomDisplay.displayPropertyGroups(obj,groups);
          
-         footer = getFooter;
+         footer = getFooter(obj,'simple');
          disp(footer);
       end
       
@@ -6620,7 +6624,10 @@ classdef nigelObj < handle & ...
          %     a : struct (from loadobj)
          
          if ~isfield(a,'Type')
-            if ~isfield(a,'IDFile')
+            if isfield(a,'Params')
+               type = a.Params.Type;
+               return;
+            elseif ~isfield(a,'IDFile')
                if ~isfield(a,'FolderIdentifier')
                   type = inputdlg(...
                      ['Please input nigelObj.Type (must be: ' ...
@@ -6641,7 +6648,9 @@ classdef nigelObj < handle & ...
                type = type{end};
             end
          elseif isempty(a.Type)
-            if ~isfield(a,'IDFile')
+            if isfield(a,'Params')
+               type = a.Params.Type;
+            elseif ~isfield(a,'IDFile')
                if ~isfield(a,'FolderIdentifier')
                   type = inputdlg(...
                      ['Please input nigelObj.Type (must be: ' ...

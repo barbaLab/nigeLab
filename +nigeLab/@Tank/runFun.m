@@ -11,7 +11,7 @@ function runFun(tankObj,f,varargin)
 % Check if it is a valid method
 clc;
 fprintf(1,' \n');
-nigeLab.utils.cprintf('*Blue','%s: ',tankObj.Name);
+nigeLab.utils.cprintf('*Blue',tankObj.Verbose,'%s: ',tankObj.Name);
 mc = ?nigeLab.Block;
 m = {mc.MethodList.Name};
 if ismember(f,m)
@@ -25,10 +25,10 @@ end
 
 % Iterate on all Blocks, of all Animals
 for iA = 1:numel(tankObj.Children)
-   nigeLab.utils.cprintf('Comment-','->\t%s\n',tankObj.Verbose,...
+   nigeLab.utils.cprintf('Comment-',tankObj.Verbose,'->\t%s\n',...
       tankObj.Children(iA).Name);
    for iB = 1:numel(tankObj.Children(iA).Children)
-      nigeLab.utils.cprintf('Text','\t->\t%s\n',tankObj.Verbose,...
+      nigeLab.utils.cprintf('Text',tankObj.Verbose,'\t->\t%s\n',...
          tankObj.Children(iA).Children(iB).Name);
       try
          tankObj.Children(iA).Children(iB).(f)(varargin{:});

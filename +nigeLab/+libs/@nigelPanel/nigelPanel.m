@@ -67,7 +67,7 @@ classdef nigelPanel < handle
       Color                                        % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
       String                                       % Char array for string in obj.textBox.ann
       Units                    char = 'Normalized' % 'Normalized' or 'Pixels'
-      FontName                 char = 'DroidSans'  % Default: 'DroidSans'
+      FontName                 char = 'Droid Sans' % Default: 'Droid Sans'
       MinTitleBarHeightPixels  double = 20         % Default: 20
       TitleFontSize            double = 13         % Default: 13
       TitleFontWeight          char = 'bold'       % Default: 'bold'
@@ -581,7 +581,7 @@ classdef nigelPanel < handle
          p.Tag = 'nigelPanel';
          p.Units = 'normalized';
          p.Scrollable = 'off';
-         p.FontName = 'DroidSans';
+         p.FontName = 'Droid Sans';
          p.MinTitleBarHeightPixels = 20;
          p.TitleFontSize = 13;
          p.TitleFontWeight = 'bold';

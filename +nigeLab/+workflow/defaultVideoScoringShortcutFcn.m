@@ -37,22 +37,15 @@ switch obj.Variable{curVarIndex}
       obj.Value(curVarIndex) = updatedValue;
       
       if isinf(updatedValue) % Must be unsuccessful if no grasp
-         curVarIndex = findVariable(obj,'Outcome');
-         
-         if ~isempty(curVarIndex)
-            obj.VariableIndex = curVarIndex;
-            obj.Value(curVarIndex) = 0;
-         end
+         assignValue(obj,'Outcome',0);
          
          % Check that support not entered; if not, default it to
          % inf at this point.
-         curVarIndex = findVariable(obj,'Support');
-         if ~isempty(curVarIndex)
-            if isnan(obj.Value(curVarIndex))
-               obj.VariableIndex = curVarIndex;
-               obj.Value(curVarIndex) = inf;
-            end
+         value = getValue(obj,'Support');
+         if isnan(value)
+            assignValue(obj,'Support',inf);
          end
+
       end
    case 'Pellets' % if 0 pellets are present, must be no pellet
       storeMiscData(obj,'PrevPelletValue',updatedValue); % Update log of previous pellet
@@ -99,10 +92,13 @@ switch obj.Variable{curVarIndex}
       obj.VariableIndex = curVarIndex;
       obj.Value(curVarIndex) = updatedValue;
       obj.Outcome(obj.TrialIndex) = updatedValue;
+      if ~isempty(obj.TimeAxes.BehaviorInfoObj)
+         refreshGraphics(obj.TimeAxes.BehaviorInfoObj);
+      end
    otherwise
       % Default behavior is to set the value and notify of update
       obj.VariableIndex = curVarIndex;
-      obj.Value(curVarIndex) = updatedValue;
+      assignValue(obj,obj.Variable(curVarIndex),updatedValue);
 end
 
 end

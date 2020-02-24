@@ -4,9 +4,29 @@ function varargout = testbench(blockObj,varargin)
 %  varargout = testbench(blockObj,varargin);
 
 varargout = cell(1,nargout);
+if numel(blockObj) > 1
+   for i = 1:size(blockObj,1)
+      for j = 1:size(blockObj,2)
+         tmp = cell(1,nargout);
+         [tmp{:}] = testbench(blockObj(i,j),varargin{:});
+         for k = 1:nargout
+            varargout{k}{i,j} = tmp{k};
+         end
+      end
+   end
+   return;
+end
 
-blockObj.initVideos;
+% initFlag =  initVideos(blockObj);
 
+initFlag = initEvents(blockObj);
+linkFlag = linkEventsField(blockObj,{'ScoredEvents','DigEvents'});
 
+if nargout > 0
+   varargout{1} = initFlag;
+   if nargout > 1
+      varargout{2} = linkFlag;
+   end
+end
 
 end

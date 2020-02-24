@@ -99,7 +99,8 @@ else
       end
       hIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
       blockObj.Events.(blockObj.ScoringField)(hIdx).data = ...
-         nigeLab.libs.DiskData('Event',fname);
+         nigeLab.libs.DiskData('Event',fname,'Index',1,...
+         'Complete',zeros(1,1,'int8'));
       return;
    end
 end
@@ -150,7 +151,8 @@ if nEvent > 0
 end
 hIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
 blockObj.Events.(blockObj.ScoringField)(hIdx).data = ...
-   nigeLab.libs.DiskData('Event',fname,data,'overwrite',true);
+   nigeLab.libs.DiskData('Event',fname,data,'overwrite',true,...
+   'Index',1,'Complete',zeros(1,1,'int8'));
 
 flag = true;
 

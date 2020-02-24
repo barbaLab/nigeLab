@@ -48,6 +48,7 @@ classdef VideosFieldType < handle ...
    properties (Hidden,Transient,Access=protected)
       HasVideoTrials_   logical
       TrialIndex_       double       % Trial index
+      ScoringField_     char 
       V_                             % VideoReader object
       VideoIndex_       double       % Stored index
       store_   (1,1)    struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
@@ -122,6 +123,7 @@ classdef VideosFieldType < handle ...
          end
          
          obj.Block = blockObj;  % Make sure to assign the pointer to Block
+         obj.ScoringField_ = blockObj.ScoringField; 
          fname = ''; % Initialize this as empty, but it may be overwritten:
                      % --> This depends on the class of loadObj_
                      
@@ -133,28 +135,32 @@ classdef VideosFieldType < handle ...
                   % .Block is Transient, so must be re-assigned from loadobj
                   % method of nigeLab.Block when a _Block.mat file is loaded
                   obj(i).Block = blockObj; 
+                  obj(i).ScoringField_ = blockObj.ScoringField;
                   obj(i).mIndex = parseVidFileName(blockObj,obj(i).fname,i);
                end
-            else
-               obj.Block = blockObj;
             end
             % Similarly, streams must be re-connected
             initStreams(obj);
             return;
          elseif isstruct(loadedObj_) % Construct from loaded struct
             if numel(loadedObj_) > 1
-               obj = repmat(obj,size(loadedObj_));
+               h = obj(1);
+               obj = repmat(h,size(loadedObj_));
                for i = 1:numel(loadedObj_)
+                  obj(i) = copy(h);
                   loadedObj_(i).mIndex = parseVidFileName(blockObj,...
                      loadedObj_(i).fname,i);
                   obj(i) = nigeLab.libs.VideosFieldType(...
                      blockObj,loadedObj_(i));
                end
+               if isvalid(h)
+                  delete(h);
+               end
                return;
             end
             obj=nigeLab.utils.assignParentStruct(obj,loadedObj_,blockObj);
             if ~isempty(obj.VideoIndex)
-               
+               obj.mIndex = parseVidFileName(blockObj,obj.fname,obj.VideoIndex);
             else
                obj.mIndex = parseVidFileName(blockObj,obj.fname);
             end
@@ -277,7 +283,7 @@ classdef VideosFieldType < handle ...
          %
          % Returns scalar offset for this video relative to neural data 
          
-         value = getEventData(obj.Block,obj.Block.ScoringField,...
+         value = getEventData(obj.Block,obj.ScoringField_,...
             'ts','Header');
          value = value(obj.VideoIndex);
       end
@@ -291,7 +297,7 @@ classdef VideosFieldType < handle ...
          %  offset component that can be set based on individual trial
          %  jitter.
 
-         setEventData(obj.Block,obj.Block.ScoringField,...
+         setEventData(obj.Block,obj.ScoringField_,...
             'ts','Header',value,obj.VideoIndex);
       end
       
@@ -416,14 +422,14 @@ classdef VideosFieldType < handle ...
       % [DEPENDENT]  Returns .Masked property
       function value = get.Masked(obj)
          %GET.MASKED  References "Header" diskfile (column 3: 'Tag')
-         value = getEventData(obj.Block,obj.Block.ScoringField,...
+         value = getEventData(obj.Block,obj.ScoringField_,...
             'tag','Header');
          value = logical(value(obj.VideoIndex));
       end
       function set.Masked(obj,value)
          %SET.MASKED  References "Header" diskfile (column 3: 'Tag')
-         setEventData(obj.Block,obj.Block.ScoringField,...
-            'ts','Header',value,obj.VideoIndex);
+         setEventData(obj.Block,obj.ScoringField_,...
+            'tag','Header',value,obj.VideoIndex);
       end
       
       % [DEPENDENT]  Returns .Meta property
@@ -554,6 +560,7 @@ classdef VideosFieldType < handle ...
          
          if ismember(class(value),{'nigeLab.Block','nigeLab.nigelObj'})
             obj.Block = value;
+            obj.ScoringField_ = value;
          end
       end
       
@@ -707,7 +714,7 @@ classdef VideosFieldType < handle ...
       function value = get.VarType(obj)
          %GET.VARTYPE  References "Header" diskfile (column 5: 'Snippet')
          
-         f = obj.Block.ScoringField;
+         f = obj.ScoringField_;
          nMeta = getEventData(obj.Block,f,'value','Header');
          nMeta = nMeta(obj.VideoIndex);
          
@@ -717,7 +724,7 @@ classdef VideosFieldType < handle ...
       function set.VarType(obj,value)
          %SET.VARTYPE  References "Header" diskfile (column 5: 'Snippet')
          
-         f = obj.Block.ScoringField;
+         f = obj.ScoringField_;
          nMeta = numel(value);
          setEventData(obj.Block,f,'value','Header',nMeta,obj.VideoIndex);
          
@@ -737,7 +744,9 @@ classdef VideosFieldType < handle ...
                nigeLab.libs.DiskData('Event',...
                obj.Block.Events.(f)(hIdx).data.File,data,...
                'overwrite',true,'access','w','size',size(data),...
-               'class',class(data));
+               'class',class(data),...
+               'Complete',zeros(1,1,'int8'),...
+               'Index',1);
          else % Otherwise just update old diskfile
             setEventData(obj.Block,f,'snippet','Header',value,...
                obj.VideoIndex,1:nMeta);
@@ -956,7 +965,7 @@ classdef VideosFieldType < handle ...
    
    % PUBLIC
    % Common methods
-   methods (Access = public)   
+   methods (Access=public)   
       % Return all videos from the same "Source"
       function obj = FromSame(objArray,sourceName)
          %FROMSAME  Return all videos from the same "source"
@@ -1138,6 +1147,18 @@ classdef VideosFieldType < handle ...
          [~,f,e] = fileparts(obj.fname);
          obj.fname = strrep(fullfile(newFolderPath,[f e]),'\','/');
          
+      end
+   end
+   
+   % HIDDEN,PUBLIC
+   methods (Hidden,Access=public)
+      function updateScoringField(obj)
+         %UPDATESCORINGFIELD  To update .ScoringField_ on Block change
+         %
+         %  updateScoringField(obj);
+         for i = 1:numel(obj)
+            obj(i).ScoringField_ = obj(i).Block.ScoringField;
+         end
       end
    end
    

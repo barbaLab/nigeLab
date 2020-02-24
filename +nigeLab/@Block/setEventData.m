@@ -1,4 +1,4 @@
-function flag = setEventData(blockObj,fieldName,propName,eventName,value,rowIdx,colIdx)
+function [flag,idx] = setEventData(blockObj,fieldName,propName,eventName,value,rowIdx,colIdx)
 %SETEVENTDATA  Set 'Event' file data (on disk file)
 %
 %  blockObj = nigeLab.Block();
@@ -22,6 +22,7 @@ function flag = setEventData(blockObj,fieldName,propName,eventName,value,rowIdx,
 %  Output-
 %  flag : Returns true if data was set successfully. Returns false if the
 %           file does not exist, for example.
+%  idx  : Events field struct array index (corresponds to eventName)
 
 % Parse input
 if nargin < 7
@@ -42,6 +43,8 @@ if numel(blockObj) > 1
       flag(i) = setEventData(blockObj(i),fieldName,propName,eventName,value,rowIdx,colIdx);
    end
    return;
+else
+   flag = false;
 end
 
 checkCompatibility(blockObj,fieldName);
@@ -90,12 +93,18 @@ if ~strcmp(class_,class(value))
    value = cast(value,class_);
 end
 
-unlockData(blockObj.Events.(fieldName)(idx).data);
+if blockObj.Events.(fieldName)(idx).data.Locked
+   doLock = true;
+   unlockData(blockObj.Events.(fieldName)(idx).data);
+else
+   doLock = false;
+end
 blockObj.Events.(fieldName)(idx).data = subsasgn(...
    blockObj.Events.(fieldName)(idx).data,...
    S,...       % substruct (for indexing)
    value);     % values to assign
-lockData(blockObj.Events.(fieldName)(idx).data);
-
-
+if doLock
+   lockData(blockObj.Events.(fieldName)(idx).data);
+end
+flag = true;
 end

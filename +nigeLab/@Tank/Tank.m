@@ -105,6 +105,21 @@ classdef Tank < nigeLab.nigelObj
          tankObj.Key = nigeLab.nigelObj.InitKey;
       end
       
+      % Modify save method for non-verbose "long" saves
+      function flag = save(tankObj)
+         %SAVE  Modifies inherited save method to notify on "long" saves
+         %
+         %  flag = save(tankObj);
+         
+         flag = save@nigeLab.nigelObj(tankObj);
+         if ~tankObj.Verbose % Then it might run for a while without notifying
+            [fmt,idt,~] = getDescriptiveFormatting(tankObj);
+            nigeLab.utils.cprintf(fmt,true,'%s[TANK]: ',idt);
+            nigeLab.utils.cprintf(fmt(1:(end-1)),...
+               '%s saved successfully\n',tankObj.Name);
+            nigeLab.sounds.play('bell',2,-50);
+         end
+      end
    end
    
    % HIDDEN,PUBLIC
