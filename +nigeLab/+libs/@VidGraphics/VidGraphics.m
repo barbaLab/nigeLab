@@ -1038,27 +1038,34 @@ classdef VidGraphics < matlab.mixin.SetGet
                if src.UserData
                   return;
                end
-               rect_pos = rbbox;
-               nigeLab.sounds.play('pop',1.9);
+               fcn = makeConstrainToRectFcn('imrect',src.XLim,src.YLim);
+               w = 512 / obj.Video.Width;
+               h = 512 / obj.Video.Height;
                
-               w = rect_pos(3) / obj.XImScale;
-               x = (rect_pos(1) - obj.XImOffset) / obj.XImScale;
+               rect_drag = imrect(src,...
+                  [src.CurrentPoint(1,1),src.CurrentPoint(1,2),w,h],...
+                  'PositionConstraintFcn',fcn);
+               setColor(rect_drag,'k');
+               nigeLab.sounds.play('pop',1.25);
                
-               h = rect_pos(4) / obj.YImScale;
-               y = 1-((rect_pos(2)-obj.YImOffset) / obj.YImScale);
+               rect_pos = wait(rect_drag);
+               setColor(rect_drag,'b');
+               nigeLab.sounds.play('pop',1.90);
                
-               minCol = max(1,round(x*obj.Video.Width));
-               maxCol = min(round((x+w)*obj.Video.Width),obj.Video.Width);
-               obj.iCol_ = minCol:maxCol;
+               minCol = max(round(rect_pos(1)*obj.Video.Width),1);
+               minRow = max(round(rect_pos(2)*obj.Video.Height),1);
                
-               % Since image has to be "flipped" (lowest row indices are at
-               % top-left of the image), we need to invert and start from
-               % lowest to highest rows
-               minRow = max(1,round((y-h)*obj.Video.Height));
-               maxRow = min(round(y*obj.Video.Height),obj.Video.Height);
+               maxCol = min(minCol+511,obj.Video.Width);
+               maxRow = min(minRow+511,obj.Video.Height);
+               
+               obj.iCol_ = minCol:maxCol;               
                obj.iRow_ = minRow:maxRow;
+               for i = 1:numel(obj.SeriesList)
+                  obj.SeriesList(i).ROI = {obj.iRow_,obj.iCol_};
+               end
+               
                updateBuffer(obj);
-               if (numel(obj.iCol_)<2) || (numel(obj.iRow_)<2) || (obj.iCur_==0)
+               if (numel(obj.iCol_)<2) || (numel(obj.iRow_)<2)
                   obj.iCol_ = [];
                   obj.iRow_ = [];
                   obj.C_ = [];
@@ -1069,8 +1076,7 @@ classdef VidGraphics < matlab.mixin.SetGet
                x = uint8([0 1]);
                y = uint8([0 1]);
                delete(obj.VidIm); % Delete old image handle
-               obj.VidIm = imagesc(obj.VidImAx,...
-                  x,y,squeeze(obj.C_(obj.iCur_,:,:,:)),...
+               obj.VidIm = imagesc(obj.VidImAx,x,y,obj.C_,...
                   'PickableParts','none');
                src.UserData = true;
                obj.FrameIndexFlagFcn_ = @(x)setFrameIndexFlag_BufferMode(obj);
@@ -1087,6 +1093,7 @@ classdef VidGraphics < matlab.mixin.SetGet
                addMaskMenu(obj);
                uistack(obj.VidIm,'bottom');
                obj.VidImAx.UIContextMenu = obj.Menu;
+               delete(rect_drag);
             case 3 % Right-click to cancel
                % Move this to uicontextmenu
          end
@@ -1108,7 +1115,6 @@ classdef VidGraphics < matlab.mixin.SetGet
                obj.SeriesList_(i).ROI = {':',':'};
             end
          end
-         obj.AssignROIMenu.Enable = 'off';
          obj.AssignROIMenu.Checked = 'on';
          if obj.Block.HasROI
             str = questdlg('Run `doTrialVidExtraction`?',...
@@ -1119,6 +1125,9 @@ classdef VidGraphics < matlab.mixin.SetGet
                   save(obj.Block); % Save after extracting
                end
             end
+         end
+         if obj.Block.HasVideoTrials
+            obj.AssignROIMenu.Enable = 'off';
          end
       end
       

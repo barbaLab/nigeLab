@@ -298,7 +298,8 @@ classdef Block < nigeLab.nigelObj
          elseif isempty(blockObj.Videos)
             return;
          end
-         value = all(cellfun(@isempty,{blockObj.Videos.ROI}));
+         hasROI = ~cellfun(@isempty,{blockObj.Videos.ROI});
+         value = all(hasROI([blockObj.Videos.Masked]));
       end
       function set.HasROI(~,~)
          %SET.HASROI  Cannot set READ-ONLY property
@@ -1071,6 +1072,80 @@ classdef Block < nigeLab.nigelObj
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
+   
+      function lockData(blockObj,fieldType)
+         %LOCKDATA  Lock all data of a given fieldType
+         %
+         %  lockData(blockObj,fieldType);
+         %
+         %  --> default `fieldType` (if not specified) is 'Events'
+         
+         if nargin < 2
+            fieldType = 'Events';
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               lockData(blockObj(i),fieldType);
+            end
+            return;
+         end
+         
+         idx = getFieldTypeIndex(blockObj,fieldType);
+         idx = find(idx);
+         if isempty(idx)
+            return;
+         end
+         for i = 1:numel(idx)
+            f = blockObj.Fields{idx(i)};
+            if ~isfield(blockObj.(fieldType),f)
+               continue;
+            end
+            for j = 1:numel(blockObj.(fieldType).(f))
+               if isempty(blockObj.(fieldType).(f)(j).data)
+                  continue;
+               end
+               lockData(blockObj.(fieldType).(f)(j).data);
+            end
+         end
+      end
+      
+      function unlockData(blockObj,fieldType)
+         %UNLOCKDATA  Unlock all data of a given fieldType
+         %
+         %  unlockData(blockObj,fieldType)
+         %
+         %  --> default `fieldType` (if not specified) is 'Events'
+         
+         if nargin < 2
+            fieldType = 'Events';
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               unlockData(blockObj(i),fieldType);
+            end
+            return;
+         end
+         
+         idx = getFieldTypeIndex(blockObj,fieldType);
+         idx = find(idx);
+         if isempty(idx)
+            return;
+         end
+         for i = 1:numel(idx)
+            f = blockObj.Fields{idx(i)};
+            if ~isfield(blockObj.(fieldType),f)
+               continue;
+            end
+            for j = 1:numel(blockObj.(fieldType).(f))
+               if isempty(blockObj.(fieldType).(f)(j).data)
+                  continue;
+               end
+               unlockData(blockObj.(fieldType).(f)(j).data);
+            end
+         end
+      end
    end
    
    % HIDDEN,PRIVATE

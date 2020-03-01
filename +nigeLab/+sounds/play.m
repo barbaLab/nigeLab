@@ -58,8 +58,7 @@ try
    in = load(soundName,'sfx','fs');
    out = in.sfx - median(in.sfx);
    out = in.sfx./max(abs(in.sfx)).*db2mag(dbAttenuation);
-   
-   sound(out,min(in.fs * speedFactor,48000));
+   sound(out,min(in.fs * speedFactor,192000));
 catch
    % do nothing
 end

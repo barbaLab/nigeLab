@@ -22,6 +22,7 @@ classdef VideosFieldType < handle ...
       Name              char     % Name of video file
       NeuOffset   (1,1) double   % Generic start-time offset beyond the Video offset
       NumFrames         double   % Total number of frames
+      ROI               cell     % Region of interest ({iRow, iCol})
       Source            char     % Camera "view" (e.g. Door, Top, etc...)
       TrialOffset (1,1) double   % Trial/camera-specific offset
       Width             double   % Width of video frame (pixels)
@@ -63,11 +64,12 @@ classdef VideosFieldType < handle ...
    % HIDDEN,PUBLIC
    properties (Hidden,Access=public)
       Exported    (1,1) logical = false  % Has it been exported to Trials?
-      ROI cell = {}  % Region of interest ({iRow, iCol})
+      
    end
    
    % HIDDEN,PROTECTED
    properties (Hidden,Access=protected)
+      ROI_           cell = {}
       Time           nigeLab.libs.DiskData % disk-file for actual `Time` data
       fname          char                  % Full filename of video
       mIndex         double                % Index into Block.Meta.Videos table for this object
@@ -590,6 +592,55 @@ classdef VideosFieldType < handle ...
          end
       end
       
+      % [DEPENDENT]  Get/Set region of interest (ROI; pixel mask)
+      function value = get.ROI(obj)
+         %GET.ROI Returns formatted .ROI_ property (pixel mask)
+         %
+         %  value = get(obj,'ROI');
+         %  --> Should always return as cell array with 3 elements, so that
+         %      video tensors (images with x,y, and color data) can be
+         %      indexed using notation `im = imagedata(obj.ROI{:});`
+         
+         if numel(obj.ROI_) < 3
+            for i = (numel(obj.ROI_)+1):3
+               obj.ROI_ = [obj.ROI_, ':'];
+            end
+         end
+         
+         value = obj.ROI_;
+      end
+      function set.ROI(obj,value)
+         % Assigns value to obj.ROI_
+         %
+         %  set(obj,'ROI',value);
+         %  --> Assigns value to protected obj.ROI_
+         
+         if iscell(value)
+            if numel(value) < 3
+               for i = (numel(value)+1):3
+                  value = [value, ':']; %#ok<AGROW>
+               end
+            end
+            obj.ROI_ = value;
+         elseif isnumeric(value)
+            switch sum(size(value) > 1)
+               case 1
+                  [I,J] = ind2sub([obj.Height,obj.Width],value);
+                  obj.ROI_ = {I,J,':'};
+               case 2
+                  obj.ROI_ = {value(:,1).',value(:,2).',':'};
+               case 3
+                  obj.ROI_ = {value(:,1).',value(:,2).',value(:,3).'};
+               otherwise
+                  fprintf(1,['<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
+                     'Could not assign ROI for %s\n'],obj.Name);
+            end
+         else
+            fprintf(1,['<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
+               'Could not assign ROI for %s\n'],obj.Name);
+         end
+      end
+      
       % [DEPENDENT]  Returns .Source property (Camera angle or view)
       function value = get.Source(obj)
          %GET.SOURCE Returns .Source property (Cam angle or view)
@@ -1025,6 +1076,17 @@ classdef VideosFieldType < handle ...
          %
          %  Ready(obj);
          %  v = Ready(obj);  Return handle to "readied" VideoReader object
+         
+         if numel(obj) > 1
+            if nargout > 0
+               error(['nigeLab:' mfilename ':BadSyntax'],...
+                  'Cannot call `Ready` on array with output syntax');
+            end
+            for i = 1:numel(obj)
+               Ready(obj(i)); 
+            end
+            return;
+         end
          
          if isempty(obj.V_)
             nigeLab.utils.cprintf('[0.45 0.45 0.45]',obj.Block.Verbose,...

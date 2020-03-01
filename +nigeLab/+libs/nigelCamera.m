@@ -83,15 +83,16 @@ classdef nigelCamera < matlab.mixin.SetGet
          % Set FrameIndex, which will cause some flags to be computed about
          % whether buffer needs to be updated etc.
          obj.TimeAxesObj_.VidGraphicsObj.FrameIndex = frameIndex;
-         neuTimeNew = setFrame(obj.TimeAxesObj_.VidGraphicsObj);
-
-         updateTimeLabelsCB(obj.TimeAxesObj_.VidGraphicsObj,...
-            seriesTime,neuTimeNew);
-         if ~isempty(obj.SeriesList_(value).ROI)
-            updateBuffer(VG);
-            setFrame(VG);
+         if ~isstruct(obj.TimeAxesObj_)
+            neuTimeNew = setFrame(obj.TimeAxesObj_.VidGraphicsObj);
+            updateTimeLabelsCB(obj.TimeAxesObj_.VidGraphicsObj,...
+               seriesTime,neuTimeNew);
+            if ~isempty(obj.SeriesList_(value).ROI)
+               updateBuffer(VG);
+               setFrame(VG);
+            end
+            drawnow;
          end
-         drawnow;
       end
       
       % [DEPENDENT]  .Parent property references .TimeAxesObj_
@@ -113,14 +114,18 @@ classdef nigelCamera < matlab.mixin.SetGet
          newTimeInfo = obj.Time_; % Updated by set.SeriesList_
          idx = nigeLab.libs.nigelCamera.getSeriesIndex(...
             obj.SeriesTime_,newTimeInfo);
-         VG = obj.TimeAxesObj_.VidGraphicsObj;  
-         VG.SeriesIndex_ = idx;
-         if isempty(idx)
-            return;
+         if ~isempty(obj.TimeAxesObj_)
+            VG = obj.TimeAxesObj_.VidGraphicsObj;  
+            VG.SeriesIndex_ = idx;
+            if isempty(idx)
+               return;
+            end
+            obj.SeriesIndex_ = idx;
+            VG.FrameIndex_ = -inf;
+            VG.NewVideo_ = true;
+         elseif ~isempty(idx)
+            obj.SeriesIndex_ = idx;
          end
-         obj.SeriesIndex_ = idx;
-         VG.FrameIndex_ = -inf;
-         VG.NewVideo_ = true;
       end
       
       % [DEPENDENT]  .SeriesTime_ is an intermediate dependent property

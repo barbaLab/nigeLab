@@ -848,7 +848,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %                    the Block object, the Events files should be
          %                    updated when a change is made. This part
          %                    basically updates the Scoring metadata and 
-         
+         if ~obj.Verbose
+            fprintf(1,'saving...\n');
+         end
          setCurrentTrialData(obj);
          info = getScoringMetadata(obj.Block,'Video',obj.ScoringID);
          info.Toc(1) = info.Toc(1) + toc(info.Tic(1));
@@ -857,6 +859,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          setScoringMetadata(obj,info);
          save(obj.Block);    
          nigeLab.sounds.play('camera',2.25,-50);
+         if ~obj.Verbose
+            fprintf(1,'\b\b\b\b\b\b\b\b\b\b');
+         end
       end
       
       % Save the trial timestamp data from the current trial
