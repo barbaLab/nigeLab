@@ -17,6 +17,7 @@ classdef nigelCamera < matlab.mixin.SetGet
       Index    (1,1) double = 1     % Index to current object within obj.Series
       Parent                        % Parent nigeLab.libs.TimeScrollerAxes object
       SeriesTime_ (1,1) double = 0  % "Dependent" container for .Time
+      VideoOffset (1,1) double = 0  % Video offset of current video 
    end
    
    % TRANSIENT,HIDDEN,PUBLIC
@@ -178,6 +179,14 @@ classdef nigelCamera < matlab.mixin.SetGet
          % Set Index (dependent property that updates the rest)
          obj.Index = idx;
       end
+      
+      % [DEPENDENT]  .VideoOffset  offset time relative to series start
+      function value = get.VideoOffset(obj)
+         value = obj.SeriesList_(obj.SeriesIndex_).VideoOffset;
+      end
+      function set.VideoOffset(obj,value)
+         obj.SeriesList_(obj.SeriesIndex_).VideoOffset = value;
+      end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
       
       % % % (NON-DEPENDENT) SET.PROPERTY METHODS % % % % % % % % % % % % 
@@ -294,7 +303,8 @@ classdef nigelCamera < matlab.mixin.SetGet
          % Disregards mask:
          idx = find( ...
                    (seriesTime >= seriesTimeInfo(:,2)) & ...
-                   (seriesTime <  seriesTimeInfo(:,3)),1,'first');
+                   (seriesTime <  seriesTimeInfo(:,3)),1,'last');
+                % Note: in case of overlap in times, use "later" video.
       end
    end
    % % % % % % % % % % END METHODS% % %

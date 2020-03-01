@@ -56,7 +56,7 @@ classdef VideosFieldType < handle ...
    end
    
    % HIDDEN,PUBLIC/PROTECTED
-   properties (Hidden,GetAccess=public,SetAccess=protected)
+   properties (Hidden,GetAccess=public,SetAccess=?nigeLab.libs.nigelCamera)
       Streams           nigeLab.libs.VidStreamsType % nigeLab.libs.VidStreamsType video parsed streams
       VideoOffset (1,1) double = 0   % Start-time with respect to full video
    end

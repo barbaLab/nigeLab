@@ -90,7 +90,7 @@ for i = 1:nSource
          data = [data, camObj.Time]; %#ok<AGROW>
          C = readFrame(VFR); % Reads in current frame
          writeVideo(vidWriter,C(Series(camObj.Index).ROI{:})); % Writes to vidWriter with `fname` @ `outpath`
-         camObj.Time = VFR.CurrentTime;
+         camObj.Time = VFR.CurrentTime + camObj.VideoOffset;
          if camObj.Index ~= iCur
             VFR = Series(camObj.Index).V;
             VFR.CurrentTime = camObj.Time-Series(camObj.Index).VideoOffset;
