@@ -10,7 +10,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
       BackgroundColor   (1,3) double = [0.00,0.00,0.00] % Panel face color
       FaceColor         (1,3) double = [0.26,0.51,0.76] % Button face color
       FontColor         (1,3) double = [1.00,0.81,0.27] % Font color
-      FontName                char = 'DroidSans'
+      FontName                char = 'Droid Sans'
       Position          (1,4) double = [.01,.93,.98,.06]
       String                  char = ''
       Substr                  char = ''
@@ -268,7 +268,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             'XLim',[-0.1 3],...
             'YLimMode','manual',...
             'YLim',[0 1],...
-            'FontName','DroidSans');
+            'FontName','Droid Sans');
          nestObj(obj.Parent,obj.Children{1},'LeftButtonAxes');
          obj.Children{2} = axes('Units','normalized', ...
             'Tag','ButtonAxes',...
@@ -281,7 +281,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             'XLim',[-2.1 1],...
             'YLimMode','manual',...
             'YLim',[0 1],...
-            'FontName','DroidSans');
+            'FontName','Droid Sans');
          nestObj(obj.Parent,obj.Children{2},'RightButtonAxes');
       end
       

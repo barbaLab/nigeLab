@@ -16,11 +16,14 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties (Dependent,Transient,Access=public)
       Index    (1,1) double = 1     % Index to current object within obj.Series
       Parent                        % Parent nigeLab.libs.TimeScrollerAxes object
+      SeriesTime_ (1,1) double = 0  % "Dependent" container for .Time
+      VideoOffset (1,1) double = 0  % Video offset of current video 
    end
    
    % TRANSIENT,HIDDEN,PUBLIC
    properties(Transient,Hidden,Access=public)
       Block_                           % nigeLab.Block "Parent" of parent
+      NeuTime_       (1,1) double = 0  % Current neural time
       Time_                            % Matrix bounding different videos' time vectors
       TimeAxesObj_                     % Container of .Parent
    end
@@ -29,9 +32,9 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties(AbortSet,Hidden,Transient,Access=public)
       SeriesIndex_   (1,1) double = 1  % Container of .Index property
       SeriesList_                      % Container of .Series
-      SeriesTime_    (1,1) double = 0  % Container of .Time property
+      SeriesTime__   (1,1) double = 0  % Container of .SeriesTime_ property
       Source_              char        % Container of .Source property
-      VideoIndex_    (1,1) double = 1  % Index of current video from obj.Block.Videos
+      VideoIndex_    (1,1) double = 1  % Index of current video from obj.Block_.Videos
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -46,15 +49,51 @@ classdef nigelCamera < matlab.mixin.SetGet
       end
       function set.Index(obj,value)
          %SET.INDEX  Assigns .SeriesIndex_
+         
+         
+         % Set Neural Time using index for offset etc. from old video
+
          obj.SeriesIndex_ = value;
+         
+         % Get offsets for current video
+         trialOffset = obj.SeriesList_(value).TrialOffset;
+         videoOffset = obj.SeriesList_(value).VideoOffset;
+         neuOffset = obj.SeriesList_(value).NeuOffset;
+         
+         % Get sample rate
+         fs = obj.SeriesList_(value).fs;
+         
+         % Compute frame time
+         frameTime = max(obj.NeuTime_-videoOffset+neuOffset+trialOffset,0);
+         
+         % Compute frame index
+         frameIndex = max(round(frameTime * fs)+1,1);
+         
+         % Compute series time
+         seriesTime = frameTime + videoOffset;
+         
+         obj.SeriesTime_ = seriesTime;
          obj.VideoIndex_ = obj.SeriesList_(value).VideoIndex;
-         obj.TimeAxesObj_.VidGraphicsObj.SeriesIndex_ = value;
-         obj.TimeAxesObj_.VidGraphicsObj.VideoIndex_ = obj.VideoIndex_;
-         obj.TimeAxesObj_.VidGraphicsObj.FrameTime = ...
-            obj.SeriesTime_ - obj.Block_.Videos(obj.VideoIndex_).VideoOffset;
-         obj.TimeAxesObj_.VidGraphicsObj.NeuTime = ...
-            obj.SeriesTime_ + obj.TimeAxesObj_.VidGraphicsObj.NeuOffset + ...
-            obj.TimeAxesObj_.VidGraphicsObj.TrialOffset;
+         obj.Block_.VideoIndex = obj.VideoIndex_;
+         
+         VG = obj.TimeAxesObj_.VidGraphicsObj; 
+         VG.SeriesIndex_ = value;
+         
+         obj.SeriesList_(value).V.CurrentTime = frameTime; % Update frame time
+         
+         % Set FrameIndex, which will cause some flags to be computed about
+         % whether buffer needs to be updated etc.
+         obj.TimeAxesObj_.VidGraphicsObj.FrameIndex = frameIndex;
+         if ~isstruct(obj.TimeAxesObj_)
+            neuTimeNew = setFrame(obj.TimeAxesObj_.VidGraphicsObj);
+            updateTimeLabelsCB(obj.TimeAxesObj_.VidGraphicsObj,...
+               seriesTime,neuTimeNew);
+            if ~isempty(obj.SeriesList_(value).ROI)
+               updateBuffer(VG);
+               setFrame(VG);
+            end
+            drawnow;
+         end
       end
       
       % [DEPENDENT]  .Parent property references .TimeAxesObj_
@@ -76,10 +115,40 @@ classdef nigelCamera < matlab.mixin.SetGet
          newTimeInfo = obj.Time_; % Updated by set.SeriesList_
          idx = nigeLab.libs.nigelCamera.getSeriesIndex(...
             obj.SeriesTime_,newTimeInfo);
-         if isempty(idx)
-            return;
+         if ~isempty(obj.TimeAxesObj_)
+            VG = obj.TimeAxesObj_.VidGraphicsObj;  
+            VG.SeriesIndex_ = idx;
+            if isempty(idx)
+               return;
+            end
+            obj.SeriesIndex_ = idx;
+            VG.FrameIndex_ = -inf;
+            VG.NewVideo_ = true;
+         elseif ~isempty(idx)
+            obj.SeriesIndex_ = idx;
          end
-         obj.Index = idx;
+      end
+      
+      % [DEPENDENT]  .SeriesTime_ is an intermediate dependent property
+      function value = get.SeriesTime_(obj)
+         %GET.SERIESTIME_  Intermediate to .Time and .SeriesTime__
+         %
+         %  value = get(obj,'SeriesTime_');
+         %  --> Doesn't trigger all the cascades of .Time
+         value = obj.SeriesTime__;
+      end
+      function set.SeriesTime_(obj,value)
+         %SET.SERIESTIME_  Intermediate for .Time and .SeriesTime__
+         %
+         %  set(obj,'SeriesTime_',value);
+         
+         % Set value
+         obj.SeriesTime__ = value;
+         
+         % Compute neural time
+         neuOffset = obj.SeriesList_(obj.SeriesIndex_).NeuOffset;
+         trialOffset = obj.SeriesList_(obj.SeriesIndex_).TrialOffset;
+         obj.NeuTime_ = value - neuOffset - trialOffset;
       end
       
       % [DEPENDENT]  .Source references .TimeAxesObj_.VidGraphicsObj
@@ -102,11 +171,21 @@ classdef nigelCamera < matlab.mixin.SetGet
          %SET.TIME  Assign new .Time (updates .Index based on .Time_)
          
          idx = nigeLab.libs.nigelCamera.getSeriesIndex(value,obj.Time_);
-         if isempty(idx)
+         if isempty(idx) % Returns empty if "out of bounds"
             return;
          end
          obj.SeriesTime_ = value;
+         
+         % Set Index (dependent property that updates the rest)
          obj.Index = idx;
+      end
+      
+      % [DEPENDENT]  .VideoOffset  offset time relative to series start
+      function value = get.VideoOffset(obj)
+         value = obj.SeriesList_(obj.SeriesIndex_).VideoOffset;
+      end
+      function set.VideoOffset(obj,value)
+         obj.SeriesList_(obj.SeriesIndex_).VideoOffset = value;
       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
       
@@ -120,7 +199,7 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
    
    % RESTRICTED:nigeLab.libs.TimeScrollerAxes (constructor)
-   methods (Access=?nigeLab.libs.TimeScrollerAxes)
+   methods (Access={?nigeLab.libs.TimeScrollerAxes,?nigeLab.Block,?nigeLab.nigelObj})
       % Class constructor
       function obj = nigelCamera(timeAxesObj,varargin)
          %NIGELCAMERA  Constructor for object to reference video series
@@ -130,9 +209,45 @@ classdef nigelCamera < matlab.mixin.SetGet
          %
          %  cameraObj = nigeLab.libs.nigelCamera(timeAxesObj,varargin);
          
-         obj.Parent = timeAxesObj;
-         obj.Block_ = timeAxesObj.Block;
-         obj.Series = timeAxesObj.VidGraphicsObj.SeriesList;
+         if isa(timeAxesObj,'nigeLab.libs.TimeScrollerAxes')
+            obj.Parent = timeAxesObj;
+            obj.Block_ = timeAxesObj.Block;
+            obj.Series = timeAxesObj.VidGraphicsObj.SeriesList;
+         elseif isa(timeAxesObj,'nigeLab.Block')
+            blockObj = timeAxesObj;
+            if nargin < 2
+               error(['nigeLab:' mfilename ':TooFewInputs'],...
+                  ['[NIGELCAMERA]: If first input is Block, ' ...
+                  'at least two inputs are required.']);
+            end            
+            
+            s = varargin{1};
+            varargin(1) = [];
+            if isa(s,'nigeLab.libs.VideosFieldType')
+               obj.Series = s;
+               src = s(1).Source;
+            elseif isa(s,'char')
+               obj.Series = FromSame(blockObj.Videos,s);
+               src = s;
+            else
+               error(['nigeLab:' mfilename ':BadClass'],...
+                  ['\t\t->\t<strong>[NIGELCAMERA]</strong>: ' ...
+                  'When first input is `nigeLab.Block`, second '...
+                  'argument should be member of one of the following:\n' ...
+                  '\t\t\t->\t<strong>nigeLab.libs.VideosFieldType</strong>\n' ...
+                  '\t\t\t->\t<strong>char</strong>\n']);
+            end
+            obj.Parent = struct('VidGraphicsObj',struct(...
+               'SeriesIndex_',1,...
+               'VideoIndex_',1,...
+               'VideoSource_',src,...
+               'FrameTime',0,...
+               'NeuTime',0));
+         else
+            error(['nigeLab:' mfilename ':BadClass'],...
+               '[NIGELCAMERA]: Invalid input class (''%s'')\n',...
+               class(timeAxesObj));
+         end
          
          % No error-checking here
          for iV = 1:2:numel(varargin)
@@ -180,9 +295,16 @@ classdef nigelCamera < matlab.mixin.SetGet
             return;
          end
          
-         idx = find(seriesTimeInfo(:,1) & ...
+         % Uses mask:
+         % idx = find(seriesTimeInfo(:,1) & ...
+         %           (seriesTime >= seriesTimeInfo(:,2)) & ...
+         %           (seriesTime <  seriesTimeInfo(:,3)),1,'first');
+         
+         % Disregards mask:
+         idx = find( ...
                    (seriesTime >= seriesTimeInfo(:,2)) & ...
-                   (seriesTime <  seriesTimeInfo(:,3)),1,'first');
+                   (seriesTime <  seriesTimeInfo(:,3)),1,'last');
+                % Note: in case of overlap in times, use "later" video.
       end
    end
    % % % % % % % % % % END METHODS% % %

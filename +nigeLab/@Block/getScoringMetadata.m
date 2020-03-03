@@ -48,6 +48,15 @@ if nargin < 3
    end
 end
 
-info = blockObj.Scoring.(fieldName)(scoringID,:);
+if ismember(scoringID,blockObj.Scoring.(fieldName).Properties.RowNames)
+   info = blockObj.Scoring.(fieldName)(scoringID,:);
+else
+   Tic = tic;
+   User = {blockObj.User};
+   Date = {nigeLab.utils.getNigelDate()};
+   Status = {'Unknown'};
+   Toc = toc(Tic);
+   info = table(User, Date, Status, Tic, Toc,'RowNames',scoringID);
+end
 
 end

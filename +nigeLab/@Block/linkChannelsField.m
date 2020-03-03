@@ -15,6 +15,10 @@ function flag = linkChannelsField(blockObj,field,fileType)
 flag = false;
 % updateFlag is for the total number of channels
 updateFlag = false(size(blockObj.Mask));
+if ~isfield(blockObj.Status,field)
+   blockObj.Status.(field) = updateFlag;
+end
+
 str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 blockObj.reportProgress(str,0);
 
@@ -40,12 +44,18 @@ for iCh = blockObj.Mask
    if ~exist(fullfile(fName),'file')
       flag = true;
    else
-      updateFlag(curCh) = true;
       switch fileType
          case 'Event' % If it's a 'spikes' file
             try % Channels can also have channel events
                blockObj.Channels(iCh).(field) = ...
-                  nigeLab.libs.DiskData(fileType,fName);
+                  nigeLab.libs.DiskData('Event',fName);
+               status = blockObj.Channels(iCh).(field).Complete;
+               if isempty(status)
+                  setAttr(blockObj.Channels(iCh).(field),'Complete',...
+                     int8(blockObj.Status.(field)(iCh)));
+               else
+                  updateFlag(curCh) = logical(status);
+               end
             catch % If spikes exist but in "bad format", fix that
                updateFlag(curCh) = blockObj.checkSpikeFile(fName);
             end
@@ -53,7 +63,15 @@ for iCh = blockObj.Mask
             % Each element of Channels will have different kinds of data
             % (e.g. 'Raw', 'Filt', etc...)
             blockObj.Channels(iCh).(field) = ...
-               nigeLab.libs.DiskData(fileType,fName);
+               nigeLab.libs.DiskData('MatFile',fName);
+            
+            status = blockObj.Channels(iCh).(field).Complete;
+            if isempty(status)
+               setAttr(blockObj.Channels(iCh).(field),'Complete',...
+                  int8(blockObj.Status.(field)(iCh)));
+            else
+               updateFlag(curCh) = logical(status);
+            end
       end
    end
    

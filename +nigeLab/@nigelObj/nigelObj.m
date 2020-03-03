@@ -2637,6 +2637,11 @@ classdef nigelObj < handle & ...
          flag = nigeLab.nigelObj.doMethod(obj,@doSD);
       end
       
+      % Does trial video extraction
+      function flag = doTrialVidExtraction(obj)
+         flag = nigeLab.nigelObj.doMethod(obj,@doTrialVidExtraction);
+      end
+      
       % Apply spike unit bandpass (300 - 5000 Hz) filter
       function flag = doUnitFilter(obj)
          %DOSD  Apply spike unit bandpass (300 to 5000 Hz) filter
@@ -3878,7 +3883,11 @@ classdef nigelObj < handle & ...
                obj.HasParsSaved.(f{i}) = true;
             end
          else
-            out = load(fname_params,userName);
+            % Don't just load single-user, load all uesrs, then select.
+            out = load(fname_params);
+            if ~isfield(out,userName)
+               out.userName = struct;
+            end
             switch parsField
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
@@ -5098,7 +5107,7 @@ classdef nigelObj < handle & ...
          groups = getPropertyGroups(obj,'nonscalar');
          matlab.mixin.CustomDisplay.displayPropertyGroups(obj,groups);
          
-         footer = getFooter;
+         footer = getFooter(obj,'simple');
          disp(footer);
       end
       
@@ -5554,9 +5563,7 @@ classdef nigelObj < handle & ...
                '[%s/LOADIDFILE]: Attempt to load non-%s from %s folder.',...
                upper(obj.Type),obj.Type,obj.Type);
          end
-         
-         mc = metaclass(obj);
-         mcp = {mc.PropertyList.Name};
+
          obj.IDInfo = struct;
          obj.IDInfo.(upper(propName{1})) = propVal{1};
          for i = 2:numel(propName)
@@ -5941,13 +5948,28 @@ classdef nigelObj < handle & ...
       end
       
       % Save small folder identifier file
-      function flag = saveIDFile(obj)
+      function flag = saveIDFile(obj,propList)
          %SAVEIDFILE  Save small folder identifier file
          %
          %  flag = obj.saveIDFile();
          %  --> Returns true if save was successful
+         %  * Default "propList" depends on .Type
+         %
+         %  flag = obj.saveIDFile(propList);
+         %  --> Adds properties in `propList` to the defaults saved:
+         %     * 'Key.Public'
+         %     * All fields of 'Out'
+         %     * 'RecDir'
+         %     * 'User'
+         %
+         %  propList : Cell array of char vectors that are names of
+         %             properties of nigelObj to save in .nigelFile
          
          flag = false;
+         if nargin < 2
+            propList = {};
+         end
+         
          if strcmp(obj.Type,'Block')
             if isempty(obj.RecFile)
                return;
@@ -5991,13 +6013,12 @@ classdef nigelObj < handle & ...
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            if strcmp(obj.Type,'Block')
-               fprintf(fid,'FileExt|%s\n',obj.FileExt);
-               fprintf(fid,'RecType|%s\n',obj.RecType);
-               fprintf(fid,'RecFile|%s\n',obj.RecFile);
-            end
             fprintf(fid,'RecDir|%s\n',obj.RecDir);
-            fprintf(fid,'User|%s', obj.User);
+            fprintf(fid,'User|%s\n', obj.User);
+            for i = 1:numel(propList)
+               fprintf(fid,'%s|%s\n',...
+                  propList{i},num2str(obj.(propList{i})));
+            end
             fclose(fid);
             flag = true;
          else
@@ -6603,43 +6624,50 @@ classdef nigelObj < handle & ...
          %     a : struct (from loadobj)
          
          if ~isfield(a,'Type')
-            if ~isfield(a,'IDFile')
+            if isfield(a,'Params')
+               type = a.Params.Type;
+               return;
+            elseif ~isfield(a,'IDFile')
                if ~isfield(a,'FolderIdentifier')
                   type = inputdlg(...
                      ['Please input nigelObj.Type (must be: ' ...
                      'Tank, Animal, or Block)'],...
                      'Insufficient Load Info',...
-                     1,'Tank');
+                     1,{'Tank'});
                   if ~ismember(type,{'Tank','Animal','Block'})
                      error(['nigeLab:' mfilename ':BadType'],...
                         'Invalid .Type: %s\n',type);
                   end
+                  type = type{:};
                else
-                  type = strsplit(a.FolderIdentifier,'.');
+                  type = strsplit(a.FolderIdentifier,'.nigel');
                   type = type{end};
                end
             else
-               type = strsplit(a.IDFile,'.');
+               type = strsplit(a.IDFile,'.nigel');
                type = type{end};
             end
          elseif isempty(a.Type)
-            if ~isfield(a,'IDFile')
+            if isfield(a,'Params')
+               type = a.Params.Type;
+            elseif ~isfield(a,'IDFile')
                if ~isfield(a,'FolderIdentifier')
                   type = inputdlg(...
                      ['Please input nigelObj.Type (must be: ' ...
                      'Tank, Animal, or Block)'],...
                      'Insufficient Load Info',...
-                     1,'Tank');
+                     1,{'Tank'});
                   if ~ismember(type,{'Tank','Animal','Block'})
                      error(['nigeLab:' mfilename ':BadType'],...
                         'Invalid .Type: %s\n',type);
                   end
+                  type = type{:};
                else
-                  type = strsplit(a.FolderIdentifier,'.');
+                  type = strsplit(a.FolderIdentifier,'.nigel');
                   type = type{end};
                end
             else
-               type = strsplit(a.IDFile,'.');
+               type = strsplit(a.IDFile,'.nigel');
                type = type{end};
             end
          else

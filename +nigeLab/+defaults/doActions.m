@@ -25,6 +25,7 @@ pars.doLFPExtraction = doAction({'Raw'},true);
 pars.doRawExtraction = doAction({},true);
 pars.doReReference = doAction({'Filt'},true);
 pars.doSD = doAction({'CAR'},true);
+pars.doTrialVidExtraction = doAction({},false,{'Raw','Video'});
 pars.doUnitFilter = doAction({'Raw'},true);
 pars.doVidInfoExtraction = doAction({},true,{});
 pars.doVidSyncExtraction = doAction({},false,{'Raw','Video'});

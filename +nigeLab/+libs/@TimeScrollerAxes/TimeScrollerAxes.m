@@ -64,6 +64,11 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       ScrollRightBtn                % Patch to scroll right
    end
    
+   % TRANSIENT,HIDDEN,PUBLIC
+   properties (Transient,Hidden,Access=public)
+      BoundsIndicator  % Array of patches indicating valid boundaries
+   end
+   
    % TRANSIENT,PROTECTED
    properties (Transient,Access=protected)
       Axes_                         % "Stored" matlab.graphics.axis.Axes container
@@ -72,12 +77,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       Panel_                        % "Stored" matlab.ui.container.Panel
       Position_  (1,4) double = [0 0.15 0.6 0.8]  % "Stored" Axes .Position value
       XLim_      (1,2) double = [0 1]  % "Stored" axes limits
-      Zoom_      (1,1) double = 4      % "Stored" Current "zoom" offset     
+      Zoom_      (1,1) double = 30     % "Stored" Current "zoom" offset     
       ZoomLevel_ (1,1) double = 0      % "Stored" Zoom Level
    end
    
    % PROTECTED
    properties (Access=protected)
+      colors
       icons       (1,1)struct = struct('leftarrow',[],'rightarrow',[],'circle',[]);
       dig                              % nigeLab.libs.nigelStreams object or array of digital streams
       flags       (1,1)struct          % "flags" struct of logical values
@@ -88,7 +94,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
    
    % CONSTANT,PROTECTED
    properties (Constant,Access=protected)
-      ZoomedOffset = [4 1 2e-2]
+      ZoomedOffset = [30 10 4 1 2e-2]
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -303,13 +309,14 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          value = obj.VidGraphicsObj.VideoOffset;
       end
-      function set.VideoOffset(obj,value)
+      function set.VideoOffset(~,~)
          %SET.VideoOffset  Assigns to parent VideoGraphics object
          %
          %  set(obj,'VideoOffset',value);
          %  --> Updates parent VideoGraphics object .VideoOffset property
          
-         obj.VidGraphicsObj.VideoOffset = value;
+%          obj.VidGraphicsObj.VideoOffset = value;
+         warning('Cannot set READ-ONLY property: <strong>VideoOffset</strong>');
       end
       
       % [DEPENDENT]  Returns .XLim (from "parent" VidGraphics object)
@@ -431,6 +438,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          obj.DX_ = diff(obj.XLim_);
          obj.ZoomLevel = 0; % Initialize CMap and Zoom
          
+         initColors(obj);
+         
          % Initialize different property structs
          obj.flags = struct('BeingDragged',false);
          obj.x = struct('new',0,'orig',0,...
@@ -477,6 +486,39 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
    
    % PUBLIC
    methods (Access=public)
+      
+      % Add Boundary Indicators
+      function addBoundaryIndicators(obj)
+         %ADDBOUNDARYINDICATORS  Adds "boundary indicator" patches
+         %
+         %  addBoundaryIndicators(obj);
+         
+         % Add "segments" indicating timing from different vids
+         tmp = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
+         c = linspace(0.75,0.95,numel(tmp)-1);
+         if ~isempty(obj.BoundsIndicator)
+            if isvalid(obj.BoundsIndicator)
+               delete(obj.BoundsIndicator);
+            end
+         end
+         obj.BoundsIndicator = gobjects(numel(tmp)-1);
+         for i = 1:(numel(tmp)-1)
+            if tmp(i).Masked
+               rX = max(tmp(i).tVid);
+            else
+               rX = min(tmp(i).tVid);
+            end
+            rW = max(rX - min(tmp(i+1).tVid),0.005);
+            obj.BoundsIndicator(i) = rectangle(obj.Axes,...
+               'Position',[rX,-0.15,rW,1.15],...
+               'Curvature',[0.2 0.2],...
+               'EdgeColor','none',...
+               'FaceColor',nigeLab.defaults.nigelColors('light'),...
+               'Tag','Video Boundary',...
+               'Clipping','on',...
+               'PickableParts','none');
+         end
+      end
       
       % Add Digital Streams
       function addDigStreams(obj,varargin)
@@ -641,16 +683,41 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       end
       
       % Update time for indicator "marker" associated with current frame
-      function indicateTime(obj)
+      function indicateTime(obj,X)
          %INDICATETIME  Updates the time "marker"
          %
-         %  indicateTime(obj);
+         %  indicateTime(obj,X);
+         %
+         %  obj : nigeLab.libs.TimeScrollerAxes object
+         %  X   : [x x] 2-element vector of x-coordinates of time indicator
+         %              line that tracks current frame time on the
+         %              "TimeScroller" part
          
          % Obj.VideoOffset == "Series Offset" for GoPro series videos
-         obj.Now.XData = ones(1,2)*(obj.VidGraphicsObj.SeriesTime);
+         obj.Now.XData = X;
          
          % Fix axis limits
          checkAxesLimits(obj);
+      end
+      
+      % Reset stream XData
+      function resetStreamXData(obj,offset)
+         % RESETSTREAMXDATA  Update xData of "alignment" streams
+         %
+         %  resetStreamXData(obj,offset);
+         %
+         %  obj : nigeLab.libs.TimeScrollerAxes object
+         %  offset : Some scalar alignment offset to change ORIGINAL
+         %           (neural) stream time by, assuming the x-axis times
+         %           denote the current video (series) time.
+         
+         if isempty(obj)
+            return;
+         end
+         
+         for i = 1:numel(obj.dig)
+            obj.dig(i).h.XData = obj.dig(i).obj.t + offset;
+         end
       end
       
       % Set timestamps (make new objects)
@@ -685,14 +752,31 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             end
             obj.TimeStampNames = varargin(1:numel(ts));
          else
+            mask = obj.Block.TrialMask;
+            outcome = obj.BehaviorInfoObj.Outcome;
+            state = obj.BehaviorInfoObj.State;
+            
             for i = 1:numel(ts)
+               if mask(i)
+                  if state(i)
+                     if outcome(i)
+                        col = obj.colors.success;
+                     else
+                        col = obj.colors.fail;
+                     end                     
+                  else
+                     col = obj.colors.unscored;
+                  end                  
+               else
+                  col = obj.colors.excluded;
+               end
                obj.TimeStamps(i) = ...
                   line(obj.Axes,ones(1,2).*ts(i),[0.2 0.8],...
                   'LineWidth',3,...
                   'Marker','v',...
                   'MarkerIndices',2,...
-                  'MarkerEdgeColor','w',...
-                  'MarkerFaceColor','none',...
+                  'MarkerEdgeColor',col,...
+                  'MarkerFaceColor',col,...
                   'Color',obj.CMap(i,:),...
                   'ButtonDownFcn',@obj.axesClickedCB);
                obj.TimeStamps(i).Annotation.LegendInformation.IconDisplayStyle = style;
@@ -701,6 +785,41 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          end
          setLegend(obj,obj.TimeStampNames{:});
 
+      end
+      
+      % Update time for a specific "timestamps" marker
+      function updateEventTime(obj,name,ts)
+         %UPDATEEVENTTIME  Sets time for a specific "timestamps" marker
+         %
+         %  updateEventTime(obj,name,ts);
+         %  obj  : nigeLab.libs.TimeScrollerAxes object
+         %  name : Char array (name of timing event)
+         %  ts   : Time (seconds) of event
+         
+         if iscell(name)
+            if numel(ts) ~= numel(name)
+               if isscalar(ts)
+                  ts = repmat(ts,size(name));
+               else
+                  error(['nigeLab:' mfilename ':BadSize'],...
+                     ['\t\t->\t<strong>[TIMESCROLLER]:</strong> ' ...
+                     'Number of ts (%g) elements did not match ' ...
+                     'number of name elements (%g)\n'],...
+                     numel(ts),numel(name));
+               end
+            end
+            for i = 1:numel(name)
+               updateEventTime(obj,name{i},ts(i));
+            end
+            return;
+         end
+         
+         idx = strcmpi(obj.TimeStampNames,name);
+         if sum(idx)~=1
+            return;
+         end
+         obj.TimeStampValues(idx) = ts;
+         obj.TimeStamps(idx).XData = ones(1,2).*ts;
       end
       
       % Update timestamps (only set times)
@@ -715,15 +834,22 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       end
       
       % Update Zoom based on "ZoomLevel" and current location of cursor
-      function updateZoom(obj)
+      function updateZoom(obj,xl)
          %UPDATEZOOM  Update Zoom based on "Zoom Level" and current cursor
          %
          %  updateZoom(obj);
+         %
+         %  updateZoom(obj,xl);
+         %  --> Manually sets new axes limits
          
-         obj.XLim_ = obj.XLim;
+         if nargin < 2
+            xl = obj.XLim;
+         end
+         
+         obj.XLim_ = xl;
          obj.DX_ = diff(obj.XLim_);
-         obj.Axes.XLim = obj.XLim;
-         [tLabel,tVec] = nigeLab.libs.TimeScrollerAxes.parseXAxes(obj.XLim);
+         obj.Axes.XLim = xl;
+         [tLabel,tVec] = nigeLab.libs.TimeScrollerAxes.parseXAxes(xl);
          obj.Axes.XTick=tVec;
          obj.Axes.XTickLabels=tLabel;
          
@@ -807,13 +933,14 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
                   % value, since neural recording is started AFTER the
                   % video. Therefore, we ADD the value of delta_offset
                   obj.NeuOffset = obj.NeuOffset + obj.x.delta_offset;
-                  
+                  obj.NeuTime = obj.NeuTime + obj.x.delta_offset;
                   obj.x.delta_offset = 0; % Return delta to zero
-
+                  updateTimeLabelsCB(obj.VidGraphicsObj);
+                  
+                  % The XData does not need to be updated, since it was
+                  % actively updated during "dragging"
                case 3 % For right-click, cancel, and reset other axes
-                  for i = 1:numel(obj.dig)
-                     obj.dig(i).h.XData = obj.dig(i).obj.t;
-                  end
+                  resetStreamXData(obj,obj.NeuOffset+obj.TrialOffset);
             end
             
             % Place the (dragged) neural streams with cursor
@@ -843,8 +970,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             
             % Camera object manages time changes
             obj.CameraObj.Time = tUpdate;
-            % Update labels (seconds)
-            updateTimeLabelsCB(obj.VidGraphicsObj);
+            obj.Block.CurNeuralTime = obj.CameraObj.NeuTime_;
          end
       end
       
@@ -879,9 +1005,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          src.UserData.down = false;
       end
       
-      % Update the current cursor X-position in figure frame, taking into
-      % account: Width of any parent panels, width of axes relative to
-      % panels.
+      % Update the current cursor X-position in figure frame
       function cursorMotionCB(obj,~,~)
          % CURSORMOTIONCB  Update the current cursor X-position based on
          %               mouse cursor movement in current figure frame.
@@ -1035,6 +1159,15 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          end
       end
       
+      % Initialize colors
+      function initColors(obj)
+         obj.colors = struct;
+         obj.colors.excluded = nigeLab.defaults.nigelColors('med')*0.75;
+         obj.colors.unscored = nigeLab.defaults.nigelColors('light');
+         obj.colors.success = nigeLab.defaults.nigelColors('b');
+         obj.colors.fail = nigeLab.defaults.nigelColors('r');
+      end
+      
       % Initialize CData struct containing icon images
       function initIconCData(obj)
          %INITICONCDATA  Initialize CData struct with icon images
@@ -1103,25 +1236,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       function plotAllStreams(obj)
          % Plot video stream (if it's present)                 
          cla(obj.Axes);
-         % Add "segments" indicating timing from different vids
-         tmp = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
-         c = linspace(0.75,0.95,numel(tmp)-1);
-         for i = 1:(numel(tmp)-1)
-            if tmp(i).Masked
-               rX = max(tmp(i).tVid);
-            else
-               rX = min(tmp(i).tVid);
-            end
-            rW = max(rX - min(tmp(i+1).tVid),0.005);
-            sep = rectangle(obj.Axes,...
-               'Position',[rX,-0.15,rW,1.15],...
-               'Curvature',[0.2 0.2],...
-               'EdgeColor','none',...
-               'FaceColor',nigeLab.defaults.nigelColors('light'),...
-               'Tag','Video Boundary',...
-               'Clipping','on',...
-               'PickableParts','none');
-         end
+         addBoundaryIndicators(obj);
          
          % Add indicator for current times
          addTimeMarker(obj);
@@ -1194,7 +1309,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          labs = ['Frame', vname, dname, varargin];
          obj.Legend = legend(obj.Axes,labs{:});
          obj.Legend.Orientation = 'horizontal';
-         obj.Legend.FontName = 'DroidSans';
+         obj.Legend.FontName = 'Droid Sans';
          obj.Legend.FontSize = 10;
          obj.Legend.Location = 'northoutside';
          obj.Legend.Color = nigeLab.defaults.nigelColors('bg');

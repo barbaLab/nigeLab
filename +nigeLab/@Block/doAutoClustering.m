@@ -225,11 +225,13 @@ end
 if isempty(classes)
    data = zeros(0,5);
    blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
-      fNameC,data,'access','w','overwrite',true);
+      fNameC,data,'access','w','overwrite',true,...
+      'Complete',ones(1,1,'int8'));
    % only intitialize a `Sorted` file if there is no existing file
    if exist(fNameS,'file')==0
       blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData('Event',...
-       fNameS,data,'access','w','overwrite',true);
+       fNameS,data,'access','w','overwrite',true,...
+       'Complete',zeros(1,1,'int8'));
    end
    return;
 end
@@ -242,12 +244,14 @@ data = [zeros(n,1) classes temperature*ones(n,1) ts zeros(n,1)];
 
 % save the 'Clusters' DiskData file and potentially initialize `Sorted`
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
-   fNameC,data,'access','w','overwrite',true);
+   fNameC,data,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 
 % only intitialize a `Sorted` file if there is no existing file
 if exist(fNameS,'file')==0
    blockObj.Channels(iCh).Sorted = nigeLab.libs.DiskData('Event',...
-    fNameS,data,'access','w','overwrite',true);
+    fNameS,data,'access','w','overwrite',true,...
+    'Complete',zeros(1,1,'int8'));
 end
 
 

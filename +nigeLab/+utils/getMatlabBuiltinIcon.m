@@ -33,6 +33,9 @@ function [icon,alpha] = getMatlabBuiltinIcon(iconName,varargin)
 %           * Note that if 'Map' is used, then 'Background' and
 %             'BackgroundIndex' are ignored.
 %
+%     + 'Type': 'double' (def) Returns values as double scaled from 0 to 1
+%               'uint8'        Returns values as uint8        
+%
 %     + 'ValidIconFileTypes': {'.gif', '.PNG'} Supported icon file types
 
 % Defaults
@@ -42,14 +45,17 @@ p.BackgroundIndex = [];
 p.IconPath = fullfile(matlabroot,'toolbox','matlab','icons');
 p.IconExtension = '.gif';
 p.Map = [];
+p.Type = 'double';
 p.ValidIconFileTypes = {'.gif','.PNG'};
 
 if ismember(lower(iconName),{'help','opts','opt','options','list'})
+   nigeLab.sounds.play('pop',1.5,-40);
    for i = 1:numel(p.ValidIconFileTypes)
       fprintf(1,'\n<strong>%s Icons:</strong>\n\n',p.ValidIconFileTypes{i});
       dir(fullfile(p.IconPath,['*' p.ValidIconFileTypes{i}]));
       
    end
+   return;
 end
 
 % Parse input
@@ -89,6 +95,17 @@ else % Otherwise use user-provided map
 end
 if ~isempty(map)
    icon = ind2rgb(img,map);
+end
+
+if ~strcmpi(pars.Type,'double')
+   switch lower(pars.Type)
+      case 'uint8'
+         icon = uint8(round(icon .* 255));
+      otherwise
+         error(['nigeLab:' mfilename ':BadParam'],...
+            '[GET_ICON]: Not configured for Type == ''%s''\n',...
+            pars.Type);
+   end
 end
 
 end

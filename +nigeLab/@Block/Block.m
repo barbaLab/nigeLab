@@ -83,12 +83,14 @@ classdef Block < nigeLab.nigelObj
    properties (Hidden,Transient,Dependent,Access=public)
       ChannelID            double   % [NumChannels x 2] array of channel and probe numbers
       EventTimes           double   % Timestamps of different scored events
+      HasROI      (1,1)    logical = false   % Do all the video cameras have ROI set?
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
       ScoringField         char   = 'ScoredEvents'   % blockObj.Pars.Video.ScoringEventFieldName
       Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
       TrialField           char   = 'trial-running'  % blockObj.Pars.Event.TrialDetectionInfo.Name
+      TrialMask                     % Logical vector of masking for trials (if applicable)
       TrialVideoOffset     double   % Matrix where rows are video cameras and columns are trials. Each value is a trial/camera-specific offset.
       VideoHeader          double   % "Header" for Video/Event data
    end
@@ -96,7 +98,24 @@ classdef Block < nigeLab.nigelObj
    % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC
    properties (AbortSet,Hidden,SetObservable,Access=public)
       CurNeuralTime  (1,1) double = 0  % Current "Neural Time" for analyses
+   end
+   
+   % HIDDEN,ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
+   properties (AbortSet,Hidden,Dependent,Transient,Access=public)
       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
+      VideoIndex     (1,1) double = 1  % Current "Video Index" for analyses
+   end
+   
+   % HIDDEN,TRANSIENT,PROTECTED
+   properties (Hidden,Access=protected)
+      TrialIndex_          double = 1  % Initialized as empty container
+      TrialMask_           logical     % Initialized as empty container
+      VideoIndex_          double = 1  % Initialized as empty container
+   end
+   
+   % HIDDEN,PUBLIC (flags)
+   properties (Hidden,Access=public)
+      HasVideoTrials   (1,1) logical = false   % Does the Block have extracted trials?
    end
    
    % PUBLIC
@@ -270,6 +289,23 @@ classdef Block < nigeLab.nigelObj
          end
       end
       
+      % [DEPENDENT]  Returns .HasROI property: are all Videos ROI set?
+      function value = get.HasROI(blockObj)
+         %GET.HASROI  Returns .HasROI property: are all Videos ROI set?
+         value = false;
+         if isempty(blockObj)
+            return;
+         elseif isempty(blockObj.Videos)
+            return;
+         end
+         hasROI = ~cellfun(@isempty,{blockObj.Videos.ROI});
+         value = all(hasROI([blockObj.Videos.Masked]));
+      end
+      function set.HasROI(~,~)
+         %SET.HASROI  Cannot set READ-ONLY property
+         warning('Cannot set READ-ONLY property: <strong>HASROI</strong>');
+      end
+      
       % [DEPENDENT] Returns .NumChannels property
       function value = get.NumChannels(blockObj)
          %GET.NUMCHANNELS  Returns total number of Channels
@@ -359,6 +395,11 @@ classdef Block < nigeLab.nigelObj
          %
          %  value = get(blockObj,'Trial');
          %  --> Returns vector of time stamps of trial onsets
+         
+         if isempty(blockObj.Events)
+            value = [];
+            return;
+         end
          value = getEventData(blockObj,blockObj.ScoringField,'ts','Trial');
       end
       function set.Trial(blockObj,value)
@@ -383,6 +424,81 @@ classdef Block < nigeLab.nigelObj
       function set.TrialField(blockObj,value)
          %SET.TRIALFIELD  Assigns .TrialField property
          blockObj.TrialField_ = value;
+      end
+      
+      % [DEPENDENT]  Interact with "Trial" Event file to get "Index" attr
+      function value = get.TrialIndex(blockObj)
+         %GET.TRIALINDEX  Interact with "Trial" file to get "Index" attr
+         %
+         %  value = get(blockObj,'TrialIndex');
+         %  --> Returns 'Trials' attribute: Index
+         
+         if isempty(blockObj.TrialIndex_)
+            if isempty(blockObj.Events)
+               value = 1;
+               blockObj.TrialIndex_ = 1;
+               return;
+            end
+            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+            value = getAttr(...
+               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+               'Index');
+            blockObj.TrialIndex_ = value;
+         else
+            value = blockObj.TrialIndex_;
+         end
+      end
+      function set.TrialIndex(blockObj,value)
+         %SET.TRIALINDEX  Interact with "Trial" file to set "Index" attr
+         %
+         %  set(blockObj,'TrialIndex',value);
+         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+            'Index',int8(value));
+         if s
+            blockObj.TrialIndex_ = value;
+         end
+      end
+      
+      % [DEPENDENT]  Interact with "Trial" event file to get "Mask"
+      function value = get.TrialMask(blockObj)
+         %GET.TRIALMASK  Returns "Trial" event file Mask vector
+         %
+         %  get(blockObj,'TrialMask');
+         
+         if isempty(blockObj.TrialMask_)
+            if isempty(blockObj.Events)
+               value = [];
+               return;
+            end
+            f = blockObj.ScoringField;
+            mask = getEventData(blockObj,f,'tag','Trial');
+            mask(isnan(mask)) = true; % "NaN" masked trials are included
+            value = logical(mask);
+            blockObj.TrialMask_ = value;
+         else
+            value = blockObj.TrialMask_;
+         end
+      end
+      function set.TrialMask(blockObj,value)
+         %SET.TRIALMASK  Assign "Trial" event file Mask vector
+         %
+         %  set(blockObj,'TrialMask',value);
+         
+         value(isnan(value)) = 1; % Update "NaN" mask to true
+         f = blockObj.ScoringField;
+         setEventData(blockObj,f,'tag','Trial',value);
+         blockObj.TrialMask_ = value;
+         
+         % If "Trial-Segmented Videos" have been extracted
+         if blockObj.HasVideoTrials
+            % If there are equivalent # of videos to # of trials
+            if numel(blockObj.Videos) == numel(blockObj.TrialMask_)
+               % Then assign "Trial" Mask to Videos as well
+               blockObj.Videos(blockObj.TrialIndex).Masked = ...
+                  blockObj.TrialMask_(blockObj.TrialIndex);
+            end
+         end
       end
       
       % [DEPENDENT] Returns .TrialVideoOffset property
@@ -486,6 +602,10 @@ classdef Block < nigeLab.nigelObj
          %            depending on framerate jitter etc.
          
          if isempty(blockObj.VideoHeader_)
+            if isempty(blockObj.Events)
+               value = [];
+               return;
+            end
             value = getEventData(blockObj,blockObj.ScoringField,...
                'data','Header');
             blockObj.VideoHeader_ = value;
@@ -502,6 +622,35 @@ classdef Block < nigeLab.nigelObj
          
          blockObj.VideoHeader_ = value;
          setEventData(blockObj,blockObj.ScoringField,'data','Header',value);
+      end
+      
+      % [DEPENDENT]  Interact with "Header" Event file to get "Index" attr
+      function value = get.VideoIndex(blockObj)
+         %GET.VIDEOINDEX  Interact with "Header" file to get "Index" attr
+         %
+         %  value = get(blockObj,'VideoIndex');
+         %  --> Returns 'Trials' attribute: Index
+         
+         if isempty(blockObj.VideoIndex_)
+            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
+            value = getAttr(...
+               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+               'Index');
+            blockObj.VideoIndex_ = value;
+         else
+            value = blockObj.VideoIndex_;
+         end
+      end
+      function set.VideoIndex(blockObj,value)
+         %SET.VIDEOINDEX  Interact with "Header" file to set "Index" attr
+         %
+         %  set(blockObj,'VideoIndex',value);
+         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
+         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+            'Index',int8(value));
+         if s
+            blockObj.VideoIndex_ = value;
+         end
       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
@@ -594,7 +743,7 @@ classdef Block < nigeLab.nigelObj
    
    % PROTECTED
    methods (Access=protected)
-      % Modify inherited superclass name parsing method
+      % Modify inherited name parsing method
       function [name,meta] = parseNamingMetadata(blockObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
@@ -708,11 +857,80 @@ classdef Block < nigeLab.nigelObj
          blockObj.FileExt = meta.FileExt;
          blockObj.Meta = nigeLab.nigelObj.MergeStructs(blockObj.Meta,meta);
       end
+      
+      % Modify inherited ID file saving method
+      function flag = saveIDFile(blockObj)
+         %SAVEIDFILE  Save small folder identifier file
+         %
+         %  flag = blockObj.saveIDFile();
+         %  --> Returns true if save was successful
+         %
+         %  Adds the following fields to .nigelBlock file via `propList`:
+         %     * 'FileExt'
+         %     * 'RecType'
+         %     * 'RecFile'
+         %     * 'HasVideoTrials'
+         
+         BLOCK_PROPS = {'FileExt', 'RecType', 'RecFile', 'HasVideoTrials'};
+         flag = saveIDFile@nigeLab.nigelObj(blockObj,BLOCK_PROPS);
+         if ~flag
+            % Missing RecFile or IDFile
+            return;
+         end
+         
+      end
+   end
+   
+   % RESTRICTED:{?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal}
+   methods (Access={?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal})
+      function updateVideosFolder(blockObj,newFolderPath)
+         %UPDATEVIDEOSFOLDER  Updates all Videos.fname with newFolderPath
+         %
+         %  updateVideosFolder(blockObj);
+         %  blockObj : nigeLab.Block object
+         %
+         %  * When only given one input argument, it automatically directly
+         %     uses the value in ~/+nigeLab/+defaults/Video.m as the value
+         %     of `newFolderPath` (pars.VidFilePath)
+         %     --> If there are more than one element, it automatically
+         %         chooses the first cell array element.
+         %
+         %  updateVideosFolder(blockObj,newFolderPath);
+         %  
+         %  newFolderPath : Char array of new video folder path.
+         %  * This path should contain all the "full" videos that had been
+         %     associated with .Videos elements. Use this method if you
+         %     moved the folder containing Videos for some reason.
+         %
+         %  * To update all Videos in a Tank, call as:
+         %    `runFun(tankObj,'updateVideosFolder',newFolderPath);`
+         %
+         %     e.g.
+         %     >> runFun(tankObj,'updateVideosFolder','new/videos/folder');
+         
+         if nargin < 2
+            newFolderPath = [];
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               updateVideosFolder(blockObj(i),newFolderPath);
+            end
+            return;
+         end
+         
+         if isempty(newFolderPath)
+            updateParams(blockObj,'Video','Direct');
+            newFolderPath = blockObj.Pars.Video.VidFilePath{1};
+         end
+         
+         updateVideoFileLocation(blockObj.Videos,newFolderPath);
+      end
    end
    
    % RESTRICTED:nigeLab.libs.VideosFieldType
    methods (Access=?nigeLab.libs.VideosFieldType)
-      index = parseVidFileName(blockObj,fName)  % Add to Block.Meta.Video table and return corresponding index
+      index = parseVidFileName(blockObj,fName,keyIndex)  % Add to Block.Meta.Video table and return corresponding index
       s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
    end
    
@@ -750,19 +968,20 @@ classdef Block < nigeLab.nigelObj
       info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
       
       % Methods for data extraction:
-      flag = checkActionIsValid(blockObj,nDBstackSkip);  % Throw error if appropriate processing not yet complete
-      flag = doRawExtraction(blockObj)  % Extract raw data to Matlab BLOCK
-      flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction) % Detect "Trials" for candidate behavioral Events
+      flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
+      flag = doAutoClustering(blockObj,chan,unit,useSort)   % Do automatic spike clustiring
+      flag = doBehaviorSync(blockObj)                       % Get sync from neural data for external triggers
+      flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction)         % Detect "Trials" for candidate behavioral Events
       flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset,forceHeaderExtraction)  % Create "Header" for behavioral Events
-      flag = doUnitFilter(blockObj)     % Apply multi-unit activity bandpass filter
-      flag = doReReference(blockObj)    % Do virtual common-average re-reference
-      flag = doSD(blockObj)             % Do spike detection for extracellular field
-      flag = doLFPExtraction(blockObj)  % Extract LFP decimated streams
+      flag = doLFPExtraction(blockObj)       % Extract LFP decimated streams
+      flag = doRawExtraction(blockObj)       % Extract raw data to Matlab BLOCK
+      flag = doReReference(blockObj)         % Do virtual common-average re-reference
+      flag = doSD(blockObj)                  % Do spike detection for extracellular field
+      flag = doTrialVidExtraction(blockObj)  % Extract "chunks" of video frames as trial videos
+      flag = doUnitFilter(blockObj)          % Apply multi-unit activity bandpass filter
       flag = doVidInfoExtraction(blockObj,vidFileName,forceParamsUpdate) % Get video information
-      flag = doBehaviorSync(blockObj)      % Get sync from neural data for external triggers
-      flag = doVidSyncExtraction(blockObj) % Get sync info from video
-      flag = doAutoClustering(blockObj,chan,unit,useSort) % Do automatic spike clustiring
-      
+      flag = doVidSyncExtraction(blockObj)   % Get sync info from video
+
       % Methods for streams info
       stream = getStream(blockObj,streamName,scaleOpts); % Returns stream data corresponding to streamName
       
@@ -785,7 +1004,7 @@ classdef Block < nigeLab.nigelObj
       % Method for accessing event info:
       [idx,field] = getEventsIndex(blockObj,field,eventName); % Returns index to Events field as well as name of Events.(field)
       [data,blockIdx] = getEventData(blockObj,field,prop,ch,matchValue,matchField) % Retrieve event data
-      flag = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
+      [flag,idx] = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
       
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
@@ -853,6 +1072,80 @@ classdef Block < nigeLab.nigelObj
       masterIdx = matchChannelID(blockObj,masterID); % Match unique channel ID
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
+   
+      function lockData(blockObj,fieldType)
+         %LOCKDATA  Lock all data of a given fieldType
+         %
+         %  lockData(blockObj,fieldType);
+         %
+         %  --> default `fieldType` (if not specified) is 'Events'
+         
+         if nargin < 2
+            fieldType = 'Events';
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               lockData(blockObj(i),fieldType);
+            end
+            return;
+         end
+         
+         idx = getFieldTypeIndex(blockObj,fieldType);
+         idx = find(idx);
+         if isempty(idx)
+            return;
+         end
+         for i = 1:numel(idx)
+            f = blockObj.Fields{idx(i)};
+            if ~isfield(blockObj.(fieldType),f)
+               continue;
+            end
+            for j = 1:numel(blockObj.(fieldType).(f))
+               if isempty(blockObj.(fieldType).(f)(j).data)
+                  continue;
+               end
+               lockData(blockObj.(fieldType).(f)(j).data);
+            end
+         end
+      end
+      
+      function unlockData(blockObj,fieldType)
+         %UNLOCKDATA  Unlock all data of a given fieldType
+         %
+         %  unlockData(blockObj,fieldType)
+         %
+         %  --> default `fieldType` (if not specified) is 'Events'
+         
+         if nargin < 2
+            fieldType = 'Events';
+         end
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               unlockData(blockObj(i),fieldType);
+            end
+            return;
+         end
+         
+         idx = getFieldTypeIndex(blockObj,fieldType);
+         idx = find(idx);
+         if isempty(idx)
+            return;
+         end
+         for i = 1:numel(idx)
+            f = blockObj.Fields{idx(i)};
+            if ~isfield(blockObj.(fieldType),f)
+               continue;
+            end
+            for j = 1:numel(blockObj.(fieldType).(f))
+               if isempty(blockObj.(fieldType).(f)(j).data)
+                  continue;
+               end
+               unlockData(blockObj.(fieldType).(f)(j).data);
+            end
+         end
+      end
    end
    
    % HIDDEN,PRIVATE

@@ -1,4 +1,4 @@
-function index = parseVidFileName(blockObj,fName)
+function index = parseVidFileName(blockObj,fName,keyIndex)
 %PARSEVIDFILENAME  Get video file info from video file
 %
 %  index = blockObj.parseVidFileName(fName);
@@ -8,15 +8,30 @@ function index = parseVidFileName(blockObj,fName)
 %  --> If no outputs are requested, then it uses the value in fName to add
 %      a row to the blockObj.Meta.Video table of video metadata.
 
+if nargin < 3
+   keyIndex = size(blockObj.Meta.Video,1);
+end
 [n,metaFields,parsedVars] = checkValidConfig(fName,blockObj.Pars.Video);
 meta = struct;
 for ii = 1:n
    meta.(metaFields{ii}) = parsedVars(ii);
 end
 % Match key to parent block
-meta.Key = {sprintf('%s-%03g',...
-   getKey(blockObj,'Public'),size(blockObj.Meta.Video,1))};
-blockObj.Meta.Video = [blockObj.Meta.Video; struct2table(meta)];
+meta.Key = {sprintf('%s-%03g',getKey(blockObj,'Public'),keyIndex)};
+if ~isfield(blockObj.Meta,'Video')
+   blockObj.Meta.Video = [];
+end
+
+if isempty(blockObj.Meta.Video)
+   blockObj.Meta.Video = [blockObj.Meta.Video; struct2table(meta)];
+else
+   idx = ismember(blockObj.Meta.Video.Key,meta.Key);
+   if any(idx)
+      blockObj.Meta.Video(find(idx,1,'first'),:) = struct2table(meta);
+   else
+      blockObj.Meta.Video = [blockObj.Meta.Video; struct2table(meta)];
+   end
+end
 index = size(blockObj.Meta.Video,1); % Allows tracking of "row"
 
    % Helper functions
