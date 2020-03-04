@@ -858,7 +858,8 @@ classdef VidGraphics < matlab.mixin.SetGet
             obj.Figure.Visible = 'off';
             drawnow;
             try
-               doTrialVidExtraction(obj.Block);
+               obj.Block.HasVideoTrials = doTrialVidExtraction(obj.Block);
+               obj.Figure.Visible = 'on';
                drawnow;
             catch me
                obj.Figure.Visible = 'on';
@@ -867,10 +868,6 @@ classdef VidGraphics < matlab.mixin.SetGet
             end
             if obj.Block.HasVideoTrials
                save(obj.Block); % Save after extracting
-               scoreVideo(obj.Block); % Open a new interface
-               delete(obj); % Delete this interface
-            else
-               obj.Figure.Visible = 'on';
             end
          end
       end

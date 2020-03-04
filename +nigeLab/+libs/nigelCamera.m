@@ -67,7 +67,7 @@ classdef nigelCamera < matlab.mixin.SetGet
          fs = obj.SeriesList_(value).fs;
          
          % Compute frame time
-         frameTime = max(obj.NeuTime_-videoOffset+neuOffset,0);
+         frameTime = max(obj.NeuTime_-videoOffset+neuOffset+trialOffset,0);
          frameTime = min(frameTime,obj.SeriesList_(value).Duration);
          
          % Compute frame index
