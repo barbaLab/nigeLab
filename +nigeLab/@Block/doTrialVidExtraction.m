@@ -24,26 +24,17 @@ if ~checkActionIsValid(blockObj)
    return;
 end
 
-% Detection stream parameters
-detPars = blockObj.Pars.Event.TrialDetectionInfo;
-
 % Get all the trial "start" times and "stop" times
 fprintf(1,'\t\t->\t<strong>[DOTRIALVIDEXTRACTION]</strong>::%s: ',...
    blockObj.Name);
 fprintf(1,'Formatting trial epochs...');
-trialStarts = blockObj.Trial - blockObj.Pars.Video.PreTrialBuffer;
-trial = getStream(blockObj,detPars.Name);
-trialStops = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
-   detPars.Threshold,'Falling',detPars.Debounce) + ...
-   blockObj.Pars.Video.PostTrialBuffer;
+[tStart,tStop] = getTrialStartStopTimes(blockObj);
 
-
-if numel(trialStarts) ~= numel(trialStops)
+if numel(tStart) ~= numel(tStop)
    error(['nigeLab:' mfilename ':BadTrialStructure'],...
-      ['\t\t->\t[DOTRIALVIDEXTRACTION]: ' ...
-      'Number of trialStarts (%g) does not ' ...
-      'equal number of trialStops (%g)'],...
-      numel(trialStarts),numel(trialStops));
+      ['\t\t->\t<strong>[DOTRIALVIDEXTRACTION]</strong>: ' ...
+      'Number of tStart (%g) does not equal number of tStop (%g)'],...
+      numel(tStart),numel(tStop));
 end
 
 % Get all unique camera sources
@@ -58,22 +49,37 @@ out_path = blockObj.Paths.Video.dir;
 expr = blockObj.Paths.Video.f_expr; %Video_%s_%s.%s
 fprintf(1,repmat('\b',1,26));
 
+VideoOffset = [];
+NeuOffset = [];
+
 nSource = numel(uSource);
 for i = 1:nSource
+   % Create "camera" object for each source, and iterate to export trials
+   
+   Series = FromSame(blockObj.Videos,uSource{i});
+   if ~Series(1).Masked
+      Idle(Series);
+      continue;
+   end
+   
    fprintf(1,'<strong>%s</strong>...000%%\n',uSource{i});
    
-   % Create "camera" object for each source, and iterate to export trials
-   camObj = nigeLab.libs.nigelCamera(blockObj,uSource{i});
-   
    % Get array of "series" trial times
-   Series = FromSame(blockObj.Videos,uSource{i});
-   Ready(Series);
-   ts_onset = trialStarts + Series(1).NeuOffset; % Neural offset is same for all
-   ts_offset = trialStops + Series(1).NeuOffset;
-   nTrial = numel(trialStarts);
+   camObj = nigeLab.libs.nigelCamera(blockObj,uSource{i});
+   Ready(Series,true);
+   neuOff = Series(1).NeuOffset;
+   ts_onset = tStart + neuOff; % Neural offset is same for all
+   ts_offset = tStop + neuOff;
+   nTrial = numel(tStart);
    for k = 1:nTrial
+      if isnan(ts_onset(k)) || isinf(ts_onset(k))
+         continue; % Then skip this trial (only can happen if 'Init' used)
+      end
       blockObj.TrialIndex = k; % Update block trial index
       camObj.Time = ts_onset(k);
+
+      VideoOffset = [VideoOffset, ts_onset(k)]; %#ok<AGROW>
+      NeuOffset = [NeuOffset, neuOff];  %#ok<AGROW>
       VFR = Series(camObj.Index).V;
       VFR.CurrentTime = camObj.Time - Series(camObj.Index).VideoOffset + ...
          Series(camObj.Index).TrialOffset;
@@ -87,7 +93,7 @@ for i = 1:nSource
       data = [];
       iCur = camObj.Index;
       while (camObj.Time < ts_offset(k))
-         data = [data, camObj.Time]; %#ok<AGROW>
+         data = [data, camObj.Time-ts_onset(k)]; %#ok<AGROW>
          C = readFrame(VFR); % Reads in current frame
          writeVideo(vidWriter,C(Series(camObj.Index).ROI{:})); % Writes to vidWriter with `fname` @ `outpath`
          camObj.Time = VFR.CurrentTime + camObj.VideoOffset;
@@ -105,22 +111,43 @@ for i = 1:nSource
       fprintf(1,'\b\b\b\b\b%03g%%\n',round(k/nTrial * 100));
    end
    for k = 1:numel(Series)
-      Series.Exported = true;
+      Series(k).Exported = true;
    end
    Idle(Series);
    delete(camObj);
-   fprintf(1,repmat('\b',numel(uSource{i})+8));
+   fprintf(1,repmat('\b',1,numel(uSource{i})+8));
 end
 
 
 % Update Videos to reference the extracted Trials
 blockObj.HasVideoTrials = true;
 [blockObj.Paths.V.Root,blockObj.Paths.V.Folder] = ...
-   fileparts(blockOb.Paths.Video.dir);
+   fileparts(blockObj.Paths.Video.dir);
 
 idx = regexp(blockObj.Paths.Video.f_expr,'\%s');
 wc = repmat({'*'},1,numel(idx)-1);
 blockObj.Paths.V.Match = sprintf(blockObj.Paths.Video.f_expr,wc{:},'MP4');
+f_search = fullfile(...
+   blockObj.Paths.V.Root,...
+   blockObj.Paths.V.Folder,...
+   blockObj.Paths.V.Match);
+blockObj.Paths.V.F = dir(f_search);
+% Make "Videos" fieldtype object or array
+blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+
+if isempty(blockObj.Video)
+   blockObj.VideoIndex = nan;      % Reset video index
+   blockObj.CurNeuralTime = 0;
+else
+   blockObj.VideoIndex = 1;      % Reset video index
+   blockObj.CurNeuralTime = blockObj.Videos(1).tNeu;   % Set current neural time to first video time
+end
+
+% Note: the following two steps are unnecessary--we extract frame times
+%       as each frame is put into the new video.
+% uView = unique({blockObj.Videos.Source});
+% initRelativeTimes(blockObj.Videos,uView);
+
 fprintf(1,'<strong>complete</strong>\n');
 flag = true;
 

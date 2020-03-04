@@ -3534,7 +3534,7 @@ classdef nigelObj < handle & ...
             elseif isempty(dir([pcur filesep '*.mat']))
                warningRef(ii) = true;
             else
-               warningRef(ii) = obj.linkField(fieldIndex);
+               warningRef(ii) = linkField(obj,fieldIndex);
             end
          end
          
@@ -3570,9 +3570,9 @@ classdef nigelObj < handle & ...
             end
          end
          if strcmp(obj.Type,'Block')
-            obj.updateStatus('notify'); % Just emits the event in case listeners
+            updateStatus(obj,'notify'); % Just emits the event in case listeners
          end
-         obj.save;
+         save(obj);
          flag = true;
          
          % Local function to return folder path
@@ -3671,6 +3671,86 @@ classdef nigelObj < handle & ...
                   '%sObj.Pars.%s loaded for %s (.User: %s)\n',...
                   lower(type),parsField,obj.Name,obj.User);
             flag = true; % Only 1 field: it was loaded, so returns true
+         end
+      end
+      
+      % Marks all files as complete
+      function markFilesAsComplete(obj,field)
+         %MARKFILESASCOMPLETE  Mark all files as complete
+         %
+         %  markFilesAsComplete(obj);
+         %  --> Iterates on all fields of nigelObj
+         %
+         %  markFilesAsComplete(obj,field);
+         %  --> Specify a specific field
+         
+         if nargin < 2
+            field = obj.Fields;
+         elseif isempty(field)
+            fprintf(1,...
+               ['\t\t->\t<strong>[MARKFILESASCOMPLETE]:</strong>\n' ...
+               '\t\t--\t\t(No fields to mark)\t\t--\n']);
+            return;
+         end
+         
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               if obj(i).Verbose && strcmp(obj(i).Type,'Block')
+                  fprintf(1,...
+                        '\t\t->\t<strong>[MARKFILESASCOMPLETE]::</strong>%s\n', ...
+                        obj(i).Name);
+                  if iscell(field)
+                     fprintf(1,...
+                        '\t\t\t->\tMarking <strong>%s</strong> as Complete.\n',...
+                        field{end:-1:1});
+                  else
+                     fprintf(1,...
+                        '\t\t\t->\tMarking <strong>%s</strong> as Complete.\n',...
+                        field);
+                  end
+               end
+               markFilesAsComplete(obj(i),field);
+               if obj(i).Verbose && strcmp(obj(i).Type,'Block')
+                  fprintf(1,'\b:<strong>complete</strong>\n');
+               end
+            end
+            return;
+         end
+         
+         if ismember(obj.Type,{'Tank','Animal'})
+            markFilesAsComplete(obj.Children,field);
+            return;
+         end
+         
+         if iscell(field)
+            for i = 1:numel(field)
+               markFilesAsComplete(obj,field{i});
+            end
+            return;
+         end
+         
+         if ismember(field,obj.Fields)
+            ft = getFieldType(obj,field);
+            if isfield(obj.(ft),field)
+               for iCh = 1:numel(obj.(ft))
+                  if isa(obj.(ft)(iCh).(field),'nigeLab.libs.DiskData')
+                     obj.(ft)(iCh).(field).Complete = ones(1,1,'int8');
+                     continue;
+                  end
+
+                  if isfield(obj.(ft)(iCh).(field),'data')
+                     for ii = 1:numel(obj.(ft)(iCh).(field))
+                        if isa(obj.(ft)(iCh).(field)(ii).data,'nigeLab.libs.DiskData')
+                           obj.(ft)(iCh).(field)(ii).data.Complete = ones(1,1,'int8');
+                        end
+                     end
+                  end
+               end
+            end
+         end
+         if obj.Verbose
+            nBackSpace = 28 + numel(field);
+            fprintf(1,repmat('\b',1,nBackSpace));
          end
       end
       

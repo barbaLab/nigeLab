@@ -352,14 +352,18 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
+         iStart = artifact([true, diff(artifact) > 1]);
+         iStop = artifact(fliplr([true, diff(fliplr(artifact)) > 1]));
+         
          artifact = reshape(artifact,numel(artifact),1);
 
-         type = zeros(size(artifact));
-         value = artifact;
-         tag = zeros(size(artifact));
-         ts = artifact./pars.FS;
+         value = reshape(iStart,numel(iStart),1);
+         tag = reshape(iStop,numel(iStop),1);
+         type = zeros(size(value));
+         ts = value./pars.FS;
+         snippet = tag./pars.FS;
 
-         art = [type,value,tag,ts,zeros(size(artifact))];
+         art = [type,value,tag,ts,snippet];
       end
       
    end

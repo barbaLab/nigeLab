@@ -183,10 +183,22 @@ pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$RecID','~View','~Movie
 % pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','~MovieID'}; % KUMC: "RC"
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 
+% Make a separate set of "DynamicVars" to be parsed from 'Trials' videos
+pars.DynamicVarsTrials = {'$Field','~View','$Type','~MovieID'};
+
 % Information about video scoring
 % pars.OutcomeEvent = [];
+pars.OriginalVideoListFile = 'VideoList.csv';
+pars.TrialVideoListFile = 'TrialVideoList.csv';
 pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
-% pars.User = 'MM'; % Who did the scoring? -- This is set elsewhere
+pars.StartExportVariable = 'Init';    % Can be '' to always use trial-running vector to parse
+pars.StopExportVariable = 'Complete'; % Can be '' to always use trial-running vector to parse
+
+% Information for "Trial Video" export
+pars.ROI.Width = 512;   % (Standardized) cropped frame width, in pixels
+pars.ROI.Height = 512;  % (Standardized) cropped frame height, in pixels
+% Note: KUMC Z620 workstation for running DeepLabCut seems to max out for
+%                 images of size 600 x 600.
 pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
                              % a given scoring "trial." It is useful to
                              % start at an earlier frame, because the
@@ -194,7 +206,7 @@ pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
                              % "next" frame rather than going backwards, for
                              % whatever reason (it seems).
 pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" to keep writing
-      
+
 [pars.VarsToScore,pars.VarType,pars.VarDefs] = setScoringVars();
 
 % % % -- For Video Alignment -- % % %

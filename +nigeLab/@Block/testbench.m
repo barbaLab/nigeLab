@@ -17,16 +17,28 @@ if numel(blockObj) > 1
    return;
 end
 
-% initFlag =  initVideos(blockObj);
+blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
 
-initFlag = initEvents(blockObj);
-linkFlag = linkEventsField(blockObj,{'ScoredEvents','DigEvents'});
+% if blockObj.HasVideoTrials
+%    if nargout > 0
+%       varargout{1} = true;
+%       if nargout > 1
+%          varargout{2} = true;
+%       end
+%    end
+%    return;
+% end
 
-if nargout > 0
-   varargout{1} = initFlag;
-   if nargout > 1
-      varargout{2} = linkFlag;
-   end
-end
+% initFlag = initVideos(blockObj);
+% initFlag = initFlag && initEvents(blockObj);
+% initFlag = initFlag && doEventDetection(blockObj);
+% linkFlag = linkEventsField(blockObj,{'ScoredEvents','DigEvents'});
+
+% if nargout > 0
+%    varargout{1} = initFlag;
+%    if nargout > 1
+%       varargout{2} = linkFlag;
+%    end
+% end
 
 end

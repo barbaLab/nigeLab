@@ -239,6 +239,8 @@ classdef nigelBackground < matlab.mixin.SetGet & matlab.mixin.Copyable
                end
          end
          
+         obj.Axes = ax;
+         
          % Move Rectangle to bottom if it is not already
          if strcmp(obj.Parent.NextPlot,'replace')
             obj.Parent.NextPlot = 'replacechildren';
@@ -396,6 +398,61 @@ classdef nigelBackground < matlab.mixin.SetGet & matlab.mixin.Copyable
       % Add rectangle to axes
       function h = rectangle(obj,varargin)
          h = rectangle(obj.Axes,varargin{:});
+      end
+      
+      % Make "simplePlot" with reduced # vertices using primitive lines
+      function [h,x_red,y_red] = simplePlot(obj,x,y,xTol,yTol,varargin)
+         %SIMPLEPLOT  Makes "reduced" plot with fewer vertices & primitives
+         %
+         %  [h,x_red,y_red] = simplePlot(obj,x,y,xTol,yTol);
+         %  [h,x_red,y_red] = simplePlot(obj,__,'Name',value,...);
+         %
+         %  -- inputs --
+         %  obj : nigeLab.libs.nigelBackground class object
+         %  x : Full XData to plot for line
+         %  y : Full YData to plot for line
+         %  xTol : Tolerance threshold (x-dim) to "ignore" for plotting 
+         %  yTol : Tolerance threshold (y-dim) to "ignore" for plotting
+         %  varargin : 'Name',value,... input pair syntax for
+         %              matlab.graphics.primitive.Line class properties
+         %  
+         %  -- outputs --
+         %  h : Handle to line graphics object
+         %  x_red : Reduced x series (h.XData)
+         %  y_red : Reduced y series (h.YData)
+         %
+         %  Note: calling this on nigeLab.libs.nigelBackground object
+         %  causes the UserData of h to be set to the updated (reduced) x-
+         %  and y-data as a struct with fields 'x' and 'y' unless
+         %  'UserData' is explicitly set using 'Name', value syntax.
+         %     * If 'UserData' is set as a struct, then 'x' and 'y' fields
+         %        will be added to this struct
+         %  
+         
+         if nargin < 3
+            error(['nigeLab:' mfilename ':TooFewInputs'],...
+               ['\t\t->\t<strong>[NIGELBACKGROUND:</strong> ' ...
+               'Expected at least an `x` and `y` input.']);
+         end
+         
+         if nargin < 4
+            xTol = [];
+         end
+         
+         if nargin < 5
+            yTol = [];
+         end
+         
+         [h,x_red,y_red] = nigeLab.utils.simplePlot(obj.Axes,x,y,...
+            'XTol',xTol,'YTol',yTol,varargin{:});
+         if isempty(h.UserData)
+            h.UserData = struct('x',x_red,'y',y_red);
+         elseif isstruct(h.UserData)
+            h.UserData.x = x_red;
+            h.UserData.y = y_red;
+         end
+         uistack(h,'top');
+         
       end
       
       % Add stem to axes

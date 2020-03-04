@@ -1869,6 +1869,9 @@ classdef DiskData < handle & ...
          obj.Animal = animal;
          [~,tank] = fileparts(p); % [Experiment path, Tank]
          obj.Tank = tank;
+         if strcmp(obj.type_,'MatFile')
+            obj.Complete = ones(1,1,'int8');
+         end
       end
       
       % Overloaded method for empty object display

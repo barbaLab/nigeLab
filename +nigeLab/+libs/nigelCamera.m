@@ -65,6 +65,7 @@ classdef nigelCamera < matlab.mixin.SetGet
          
          % Compute frame time
          frameTime = max(obj.NeuTime_-videoOffset+neuOffset+trialOffset,0);
+         frameTime = min(frameTime,obj.SeriesList_(value).Duration);
          
          % Compute frame index
          frameIndex = max(round(frameTime * fs)+1,1);
@@ -88,10 +89,7 @@ classdef nigelCamera < matlab.mixin.SetGet
             neuTimeNew = setFrame(obj.TimeAxesObj_.VidGraphicsObj);
             updateTimeLabelsCB(obj.TimeAxesObj_.VidGraphicsObj,...
                seriesTime,neuTimeNew);
-            if ~isempty(obj.SeriesList_(value).ROI)
-               updateBuffer(VG);
-               setFrame(VG);
-            end
+            setFrame(VG);
             drawnow;
          end
       end

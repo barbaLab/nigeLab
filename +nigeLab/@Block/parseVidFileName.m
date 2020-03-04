@@ -8,31 +8,61 @@ function index = parseVidFileName(blockObj,fName,keyIndex)
 %  --> If no outputs are requested, then it uses the value in fName to add
 %      a row to the blockObj.Meta.Video table of video metadata.
 
-if nargin < 3
-   keyIndex = size(blockObj.Meta.Video,1);
+
+[csvFullName,metaName] = getVideoFileList(blockObj);
+if ~isfield(blockObj.Meta,metaName)
+   if exist(csvFullName,'file')==0
+      blockObj.Meta.(metaName) = [];
+   else
+      blockObj.Meta.(metaName) = readtable(csvFullName);
+   end
 end
-[n,metaFields,parsedVars] = checkValidConfig(fName,blockObj.Pars.Video);
+
+if nargin < 3
+   keyIndex = size(blockObj.Meta.(metaName),1);
+end
+pars = blockObj.Pars.Video;
+if blockObj.HasVideoTrials
+   pars.DynamicVars = pars.DynamicVarsTrials;
+end
+[n,metaFields,parsedVars] = checkValidConfig(fName,pars);
 meta = struct;
 for ii = 1:n
    meta.(metaFields{ii}) = parsedVars(ii);
 end
 % Match key to parent block
 meta.Key = {sprintf('%s-%03g',getKey(blockObj,'Public'),keyIndex)};
-if ~isfield(blockObj.Meta,'Video')
-   blockObj.Meta.Video = [];
-end
-
-if isempty(blockObj.Meta.Video)
-   blockObj.Meta.Video = [blockObj.Meta.Video; struct2table(meta)];
-else
-   idx = ismember(blockObj.Meta.Video.Key,meta.Key);
-   if any(idx)
-      blockObj.Meta.Video(find(idx,1,'first'),:) = struct2table(meta);
-   else
-      blockObj.Meta.Video = [blockObj.Meta.Video; struct2table(meta)];
+meta.Scored = false;
+roi_rows = {':'};
+roi_cols = {':'};
+if blockObj.HasVideoTrials
+   if isfield(blockObj.Meta,'Video')
+      if ismember('ROI_rows',blockObj.Meta.Video.Properties.VariableNames) && ...
+            isfield(meta,'View')
+         iView = find(strcmp(meta.View,blockObj.Meta.Video.View),1,'first');
+         if ~isempty(iView) % Then use the ROI that was used to extract the trial videos to begin with
+            roi_rows = blockObj.Meta.Video.ROI_rows(iView);
+            roi_cols = blockObj.Meta.Video.ROI_cols(iView);
+         end
+      end
    end
 end
-index = size(blockObj.Meta.Video,1); % Allows tracking of "row"
+meta.ROI_rows = roi_rows;
+meta.ROI_cols = roi_cols;
+
+if isempty(blockObj.Meta.(metaName))
+   blockObj.Meta.(metaName) = [blockObj.Meta.(metaName); struct2table(meta)];
+   index = size(blockObj.Meta.(metaName),1);
+else
+   idx = ismember(blockObj.Meta.(metaName).Key,meta.Key);
+   if any(idx)
+%       blockObj.Meta.(metaName)(find(idx,1,'first'),:) = struct2table(meta);
+      index = find(idx,1,'first');
+   else
+      blockObj.Meta.(metaName) = [blockObj.Meta.(metaName); struct2table(meta)];
+      index = size(blockObj.Meta.(metaName),1); % Allows tracking of "row"
+   end
+end
 
    % Helper functions
    % Checks for valid configuration based on number & order of tokens/pars
@@ -77,10 +107,16 @@ index = size(blockObj.Meta.Video,1); % Allows tracking of "row"
          else
             % Make sure that indexing variable is a "numeric" token
             if isnan(str2double(pVar{midx}))
-               error(['nigeLab:' mfilename ':BadConfig'],...
-                  ['Block.Pars.Video.MovieIndexVar does not correspond ' ...
-                  'to an indexing token (%s)\n' ...
-                  '->\t(Should be a "numeric" token)\n'],pVar{midx});
+               % Use regexp to parse if there are non-numeric parts
+               % combined that we can "strip away" to get the numeric
+               % identifier still:
+               pVar{midx} = pVar{midx}(regexp(pVar{midx},'\d'));
+               if isempty(pVar{midx})               
+                  error(['nigeLab:' mfilename ':BadConfig'],...
+                     ['Block.Pars.Video.MovieIndexVar does not correspond ' ...
+                     'to an indexing token (%s)\n' ...
+                     '->\t(Should be a "numeric" token)\n'],pVar{midx});
+               end
             end
          end
          midx = find(midx,1,'first');
