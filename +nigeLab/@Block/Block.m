@@ -974,7 +974,7 @@ classdef Block < nigeLab.nigelObj
       clearScoringMetadata(blockObj,fieldName);  % Erase "empty" scoring metadata for a given tracking field
       info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
       [tStart,tStop] = getTrialStartStopTimes(blockObj,optStart,optStop); % Returns neural times of "trial" start and stop times
-      [csvFullName,metaName] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
+      [csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
       
       % Methods for data extraction:
       flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete

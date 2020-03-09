@@ -8,22 +8,31 @@ function index = parseVidFileName(blockObj,fName,keyIndex,forceTrials)
 %  --> If no outputs are requested, then it uses the value in fName to add
 %      a row to the blockObj.Meta.Video table of video metadata.
 
+if nargin < 4
+   forceTrials = false;
+end
 
-[csvFullName,metaName] = getVideoFileList(blockObj);
+useTrials = forceTrials || blockObj.HasVideoTrials;
+[csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,useTrials);
 if ~isfield(blockObj.Meta,metaName)
    if exist(csvFullName,'file')==0
       blockObj.Meta.(metaName) = [];
    else
-      blockObj.Meta.(metaName) = readtable(csvFullName);
+      blockObj.Meta.(metaName) = readtable(csvFullName,...
+         'Format',formatSpec,...
+         'HeaderLines',0,...
+         'Delimiter',',');
    end
 end
 
-if nargin < 3
-   keyIndex = size(blockObj.Meta.(metaName),1);
-end
 pars = blockObj.Pars.Video;
-if blockObj.HasVideoTrials
-   pars.DynamicVars = pars.DynamicVarsTrials;
+if useTrials
+%    try
+      pars.DynamicVars = pars.DynamicVarsTrials;
+%    catch
+%       updateParams(blockObj,'Video','direct');
+%       pars.DynamicVars = blockObj.Pars.Video.DynamicVarsTrials;
+%    end
 end
 [n,metaFields,parsedVars] = checkValidConfig(fName,pars);
 meta = struct;
@@ -54,23 +63,30 @@ end
 
 % Match key to parent block
 meta.Key = {sprintf('%s-%03g',getKey(blockObj,'Public'),keyIndex)};
-meta.Scored = false;
-roi_rows = {':'};
-roi_cols = {':'};
-if blockObj.HasVideoTrials
+meta.Scored = {'0'};
+roi_rows_start = {':'};
+roi_cols_start = {':'};
+roi_rows_stop = {':'};
+roi_cols_stop = {':'};
+% Make a special attempt to parse from previous ROI (if extracted trials):
+if useTrials
    if isfield(blockObj.Meta,'Video')
       if ismember('ROI_rows',blockObj.Meta.Video.Properties.VariableNames) && ...
             isfield(meta,'View')
          iView = find(strcmp(meta.View,blockObj.Meta.Video.View),1,'first');
          if ~isempty(iView) % Then use the ROI that was used to extract the trial videos to begin with
-            roi_rows = blockObj.Meta.Video.ROI_rows(iView);
-            roi_cols = blockObj.Meta.Video.ROI_cols(iView);
+            roi_rows_start = blockObj.Meta.Video.ROI_rows_start(iView);
+            roi_cols_start = blockObj.Meta.Video.ROI_cols_start(iView);
+            roi_rows_stop = blockObj.Meta.Video.ROI_rows_stop(iView);
+            roi_cols_stop = blockObj.Meta.Video.ROI_cols_stop(iView);
          end
       end
    end
 end
-meta.ROI_rows = roi_rows;
-meta.ROI_cols = roi_cols;
+meta.ROI_rows_start = roi_rows_start;
+meta.ROI_rows_stop = roi_rows_stop;
+meta.ROI_cols_start = roi_cols_start;
+meta.ROI_cols_stop = roi_cols_stop;
 
 if isempty(blockObj.Meta.(metaName))
    blockObj.Meta.(metaName) = [blockObj.Meta.(metaName); struct2table(meta)];

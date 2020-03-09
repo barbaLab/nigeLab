@@ -78,6 +78,7 @@ for i = 1:nSource
       if isnan(ts_onset(k)) || isinf(ts_onset(k))
          continue; % Then skip this trial (only can happen if 'Init' used)
       end
+      keyIndex = keyIndex + 1;
       blockObj.TrialIndex = k; % Update block trial index
       camObj.Time = ts_onset(k);
 
@@ -136,15 +137,20 @@ f_search = fullfile(...
    blockObj.Paths.V.Match);
 blockObj.Paths.V.F = dir(f_search);
 % Make "Videos" fieldtype object or array
+blockObj.Videos(:) = []; % Remove all previous videos.
 blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
 
-if isempty(blockObj.Video)
+if isempty(blockObj.Videos)
    blockObj.VideoIndex = nan;      % Reset video index
    blockObj.CurNeuralTime = 0;
 else
    blockObj.VideoIndex = 1;      % Reset video index
-   blockObj.CurNeuralTime = blockObj.Videos(1).tNeu;   % Set current neural time to first video time
+   blockObj.CurNeuralTime = blockObj.Videos(1).tNeu(1);   % Set current neural time to first video time
 end
+
+setVideoOffsets(blockObj.Videos,VideoOffset);
+NeuOffset = num2cell(NeuOffset);
+[blockObj.Videos.NeuOffset] = deal(NeuOffset{:});
 
 % Note: the following two steps are unnecessary--we extract frame times
 %       as each frame is put into the new video.

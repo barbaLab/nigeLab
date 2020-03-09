@@ -17,7 +17,15 @@ if numel(blockObj) > 1
    return;
 end
 
-blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+% blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+
+updateParams(blockObj,'Block','Direct');
+updateParams(blockObj,'Video','Direct');
+updateParams(blockObj,'Event','Direct');
+parseNamingMetadata(blockObj);
+for i = 1:numel(blockObj.Videos)
+   parseVidFileName(blockObj,blockObj.Videos(i).Name);
+end
 
 % if blockObj.HasVideoTrials
 %    if nargout > 0

@@ -460,30 +460,45 @@ classdef VideosFieldType < handle ...
             return;
          elseif ~isvalid(obj.Block)
             return;
-         elseif isempty(obj.mIndex)
-            return;
+         elseif isempty(obj.VideoIndex)
+            if isempty(obj.mIndex)
+               return;
+            else
+               obj.VideoIndex = obj.mIndex;
+            end
          end
          
-         [csvFullName,metaName] = getVideoFileList(obj.Block);         
+         [csvFullName,metaName,formatSpec] = getVideoFileList(obj.Block);         
          if ~isfield(obj.Block.Meta,metaName)
             if exist(csvFullName,'file')==0
                return;
             end
-            T = readtable(csvFullName);
+            T = readtable(csvFullName,...
+               'Format',formatSpec,...
+               'HeaderLines',0,...
+               'Delimiter',',');
             obj.Block.Meta.(metaName) = T;
          else
             T = obj.Block.Meta.(metaName);
+            if obj.VideoIndex > size(T,1)
+               return;
+            end
          end
          
-         value = T(obj.mIndex,:);
+         value = T(obj.VideoIndex,:);
       end
       function set.Meta(obj,value)
          %SET.META  Assigns .Meta property
          [csvFullName,metaName] = getVideoFileList(obj.Block);
          T = obj.Block.Meta.(metaName);
-         T(obj.mIndex,:) = value;
+         T(obj.VideoIndex,:) = value;
          obj.Block.Meta.(metaName) = T;
-         writetable(T,csvFullName);
+         try
+            writetable(T,csvFullName);
+         catch
+            fileattrib(csvFullName,'+w');
+            writetable(T,csvFullName);
+         end
       end
       
       % [DEPENDENT]  Returns .Name property
@@ -647,8 +662,24 @@ classdef VideosFieldType < handle ...
             end
             
             obj.ROI_ = cell(1,3);
-            obj.ROI_(1) = T.ROI_rows(1);
-            obj.ROI_(2) = T.ROI_cols(1);
+            if strcmp(T.ROI_rows_start{1},':')
+               obj.ROI_(1) = T.ROI_rows_start(1);
+            else
+               if ischar(T.ROI_rows_start{1})
+                  obj.ROI_{1} = str2double(T.ROI_rows_start{1}):str2double(T.ROI_rows_stop{1});
+               else
+                  obj.ROI_{1} = T.ROI_rows_start{1}:T.ROI_rows_stop{1};
+               end
+            end
+            if strcmp(T.ROI_cols_start{1},':')
+               obj.ROI_(2) = T.ROI_cols_start(1);
+            else
+               if ischar(T.ROI_cols_start{1})
+                  obj.ROI_{2} = str2double(T.ROI_cols_start{1}):str2double(T.ROI_cols_stop{1});
+               else
+                  obj.ROI_{2} = T.ROI_cols_start{1}:T.ROI_cols_stop{1};
+               end
+            end
             obj.ROI_{3} = ':';
          elseif numel(obj.ROI_) < 3            
             for i = (numel(obj.ROI_)+1):3
@@ -697,8 +728,20 @@ classdef VideosFieldType < handle ...
          
          % Update metadata table as well
          T = obj.Meta;
-         T.ROI_rows = obj.ROI_(1);
-         T.ROI_cols = obj.ROI_(2);
+         if ischar(obj.ROI_{1})
+            T.ROI_rows_start = obj.ROI_(1);
+            T.ROI_rows_stop = obj.ROI_(1);
+         else
+            T.ROI_rows_start = {obj.ROI_{1}(1)};
+            T.ROI_rows_stop = {obj.ROI_{1}(end)};
+         end
+         if ischar(obj.ROI_{2})
+            T.ROI_cols_start = obj.ROI_(2);
+            T.ROI_rows_stop = obj.ROI_(2);
+         else
+            T.ROI_cols_start = {obj.ROI_{2}(1)};
+            T.ROI_cols_stop = {obj.ROI_{2}(end)};
+         end
          obj.Meta = T;
       end
       
@@ -1207,7 +1250,11 @@ classdef VideosFieldType < handle ...
          end
          idx = find(objArray == obj,1,'first');
          if isempty(idx)
-            idx = numel(objArray)+1;
+            if isempty(obj.mIndex)
+               idx = numel(objArray)+1;
+            else
+               idx = obj.mIndex;
+            end
          end
       end
       
