@@ -176,14 +176,12 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          buildProgressTracker(obj);
          
          if nargin > 2
-            tOff = obj.Block.TrialVideoOffset(obj.Block.VideoIndex,:).';
             if obj.TimeAxes.ZoomLevel == 0
-               ts = obj.Trial - tOff + obj.VidGraphics.NeuOffset;
+               ts = obj.Trial + obj.VidGraphics.NeuOffset;
                setTimeStamps(obj.TimeAxes,ts,'off');
                obj.NeedsLabels = true;
             else
-               ts = obj.EventTimes(obj.TrialIndex,:) - ...
-                  obj.VidGraphics.TrialOffset + obj.VidGraphics.NeuOffset;
+               ts = obj.EventTimes(obj.TrialIndex,:) + obj.VidGraphics.NeuOffset;
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;
             end
@@ -966,15 +964,14 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          % Update video time if needed
          if isa(src,'nigeLab.libs.VidGraphics')
-            src.SeriesTime = obj.Trial(newTrialIndex) + ...
-               src.NeuOffset + src.TrialOffset;
+            src.SeriesTime = obj.Trial(newTrialIndex) + src.NeuOffset;
             src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
             src.DataLabel.Color = ...
                obj.TrialButtonArray(newTrialIndex).EdgeColor;
             obj.NeedsLabels = true;
          elseif ~isempty(obj.VidGraphics)
             obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) + ...
-               obj.VidGraphics.NeuOffset + obj.VidGraphics.TrialOffset;
+               obj.VidGraphics.NeuOffset;
             obj.VidGraphics.DataLabel.String =...
                sprintf('Trial: %g',newTrialIndex);
             obj.VidGraphics.DataLabel.Color = ...
@@ -1123,8 +1120,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             setTimeStamps(obj.TimeAxes,ts,'off');
             obj.NeedsLabels = true;
          else
-            ts = obj.Value(obj.Type==1) + ...
-               obj.VidGraphics.NeuOffset - obj.VidGraphics.TrialOffset;
+            ts = obj.Value(obj.Type==1) + obj.VidGraphics.NeuOffset;
             if obj.NeedsLabels
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;

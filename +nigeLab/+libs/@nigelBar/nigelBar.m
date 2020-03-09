@@ -325,6 +325,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             pos = [scl*nButton 0.05 0.85 0.9];
             b = nigeLab.libs.nigelButton(obj.Children{side},pos,...
                btn(i).String,btn(i).Callback);
+            b.FontSize = 2.5;
             obj.Button = b; 
          end
          

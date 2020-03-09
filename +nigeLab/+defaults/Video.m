@@ -184,7 +184,7 @@ pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$RecID','~View','~Movie
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
 
 % Make a separate set of "DynamicVars" to be parsed from 'Trials' videos
-pars.DynamicVarsTrials = {'$Field','~View','$Type','~MovieID'};
+pars.DynamicVarsTrials = {'$Field','~View','~MovieID'};
 
 % Information about video scoring
 % pars.OutcomeEvent = [];

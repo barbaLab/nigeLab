@@ -920,7 +920,7 @@ classdef nigelObj < handle & ...
                obj.In.FileExt = obj.IDInfo.FileExt;
                value = obj.In.FileExt;
             else
-               obj.loadIDFile();
+               loadIDFile(obj);
                if isfield(obj.IDInfo,'FileExt')
                   obj.In.FileExt = obj.IDInfo.FileExt;
                   value = obj.In.FileExt;
@@ -4156,6 +4156,8 @@ classdef nigelObj < handle & ...
                % extensive amount.
                if isnumeric(obj.(thisProp)) && ischar(propVal)
                   obj.(thisProp) = str2double(propVal);
+               elseif islogical(obj.(thisProp)) && ischar(propVal)
+                  obj.(thisProp) = logical(str2double(propVal));
                elseif iscell(obj.(thisProp)) && ischar(propVal)
                   obj.(thisProp) = {propVal};
                else
@@ -4167,6 +4169,8 @@ classdef nigelObj < handle & ...
                if isfield(obj.(thisProp),a)
                   if isnumeric(obj.(thisProp).(a)) && ischar(propVal)
                      obj.(thisProp).(a) = str2double(propVal);
+                  elseif islogical(obj.(thisProp).(a)) && ischar(propVal)
+                     obj.(thisProp).(a) = logical(str2double(propVal));
                   elseif iscell(obj.(thisProp).(a)) && ischar(propVal)
                      obj.(thisProp).(a) = {propVal};
                   else
@@ -4183,6 +4187,8 @@ classdef nigelObj < handle & ...
                   if isfield(obj.(thisProp).(a),b)
                      if isnumeric(obj.(thisProp).(a).(b)) && ischar(propVal)
                         obj.(thisProp).(a).(b) = str2double(propVal);
+                     elseif islogical(obj.(thisProp).(a).(b)) && ischar(propVal)
+                        obj.(thisProp).(a).(b) = logical(str2double(propVal));
                      elseif iscell(obj.(thisProp).(a).(b)) && ischar(propVal)
                         obj.(thisProp).(a).(b) = {propVal};
                      else
@@ -5657,8 +5663,8 @@ classdef nigelObj < handle & ...
                         warning(['nigeLab:' mfilename ':LOADIDFILE'],...
                            'Bad %s file. Retry load once.\n',...
                             obj.FolderIdentifier);
-                        obj.saveIDFile;
-                        obj.loadIDFile(false);
+                        saveIDFile(obj);
+                        loadIDFile(obj,false);
                      end
                      return;                     
                   otherwise

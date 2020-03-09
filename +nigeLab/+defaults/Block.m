@@ -86,16 +86,21 @@ pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuf
 %  used). The same goes for "AnimalID"
 
 pars.SpecialMeta = struct;
-% pars.SpecialMeta.SpecialVars = {};     % FB maybe?
-pars.SpecialMeta.SpecialVars = {'AnimalID'};
-pars.SpecialMeta.RecID.cat = '-';      % Concatenater (if used) for names
+
+% Note that RecTag (if created) replaces 'RecID' in DashBoard
+% pars.SpecialMeta.SpecialVars = {'RecTag'};     % FB ~!!
+pars.SpecialMeta.SpecialVars = {'AnimalID','RecTag'}; % MM
+pars.SpecialMeta.RecTag.cat = '-';
+% pars.SpecialMeta.RecID.cat = '-';      % Concatenater (if used) for names
 pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
 
 % pars.SpecialMeta.SpecialVars = {'AnimalID','RecID'}; % KUMC "RC"
 
 % (All must be included in DynamicVarExp):
-pars.SpecialMeta.RecID.vars = {}; % FB/KUMC-R03/MM
-% pars.SpecialMeta.RecID.vars = {'Year','Month','Day'}; % KUMC "RC"  
+% pars.SpecialMeta.RecTag.vars = {'RecID'}; % FB
+% pars.SpecialMeta.RecID.vars = {}; % FB/KUMC-R03/MM
+% pars.SpecialMeta.RecTag.vars = {'Year','Month','Day'}; % KUMC "RC"
+pars.SpecialMeta.RecTag.vars = {'Year','Month','Day','RecID'}; % KUMC "MM"
 % pars.SpecialMeta.AnimalID.vars = {}; % FB/KUMC-R03  Keep commented
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff

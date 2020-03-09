@@ -164,7 +164,7 @@ end
                if isnan(tNeu) || isinf(tNeu)
                   return;
                end
-               v.SeriesTime = tNeu + v.NeuOffset - v.TrialOffset;
+               v.SeriesTime = tNeu + v.NeuOffset;
          end
       end
    end

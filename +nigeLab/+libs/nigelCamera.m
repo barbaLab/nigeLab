@@ -56,15 +56,18 @@ classdef nigelCamera < matlab.mixin.SetGet
          obj.SeriesIndex_ = value;
          
          % Get offsets for current video
-         trialOffset = obj.SeriesList_(value).TrialOffset;
-         videoOffset = obj.SeriesList_(value).VideoOffset;
+         if obj.Block_.HasVideoTrials
+            videoOffset = obj.SeriesList_(value).TrialOffset;
+         else
+            videoOffset = obj.SeriesList_(value).VideoOffset;
+         end
          neuOffset = obj.SeriesList_(value).NeuOffset;
          
          % Get sample rate
          fs = obj.SeriesList_(value).fs;
          
          % Compute frame time
-         frameTime = max(obj.NeuTime_-videoOffset+neuOffset+trialOffset,0);
+         frameTime = max(obj.NeuTime_-videoOffset+neuOffset,0);
          frameTime = min(frameTime,obj.SeriesList_(value).Duration);
          
          % Compute frame index
@@ -145,8 +148,7 @@ classdef nigelCamera < matlab.mixin.SetGet
          
          % Compute neural time
          neuOffset = obj.SeriesList_(obj.SeriesIndex_).NeuOffset;
-         trialOffset = obj.SeriesList_(obj.SeriesIndex_).TrialOffset;
-         obj.NeuTime_ = value - neuOffset - trialOffset;
+         obj.NeuTime_ = value - neuOffset;
       end
       
       % [DEPENDENT]  .Source references .TimeAxesObj_.VidGraphicsObj
@@ -213,6 +215,7 @@ classdef nigelCamera < matlab.mixin.SetGet
             obj.Series = timeAxesObj.VidGraphicsObj.SeriesList;
          elseif isa(timeAxesObj,'nigeLab.Block')
             blockObj = timeAxesObj;
+            obj.Block_ = blockObj;
             if nargin < 2
                error(['nigeLab:' mfilename ':TooFewInputs'],...
                   ['[NIGELCAMERA]: If first input is Block, ' ...
@@ -300,8 +303,8 @@ classdef nigelCamera < matlab.mixin.SetGet
          
          % Disregards mask:
          idx = find( ...
-                   (seriesTime >= seriesTimeInfo(:,2)) & ...
-                   (seriesTime <  seriesTimeInfo(:,3)),1,'last');
+                   (seriesTimeInfo(:,2) <= seriesTime) & ...
+                   (seriesTimeInfo(:,3) > seriesTime),1,'last');
                 % Note: in case of overlap in times, use "later" video.
       end
    end

@@ -655,8 +655,18 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                          @obj.removeFromTree)];                     
                   end
 
-                  Metas = [nigelObj(ii).Children.Meta];
-                  BlNames = {Metas.RecID};
+                  nBlock = numel(nigelObj(ii).Children);
+                  BlNames = cell(1,nBlock);
+                  for iBlk = 1:nBlock
+                     cBlk = nigelObj(ii).Children(iBlk);
+                     if isfield(cBlk.Meta,'RecTag')
+                        BlNames{iBlk} = cBlk.Meta.RecTag;
+                     else
+                        BlNames{iBlk} = cBlk.Meta.RecID;
+                     end
+                     
+                  end
+                  
                   for jj=1:numel(BlNames)
                      BlNode = uiw.widget.CheckboxTreeNode(...
                         'Name',BlNames{jj},'Parent',AnNode);
@@ -672,22 +682,25 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   end
                end
             case 'nigeLab.Block'
-               Metas = [nigelObj.Meta];
-               AnNames = {Meta.AnimalID};
-               for ii =1:numel(AnNames)
-                  AnIndx = strcmp({obj.Tree.Root.Children.Name},AnNames(ii));
+               nBlock = numel(nigelObj);
+               for ii =1:nBlk
+                  AnIndx = strcmp({obj.Tree.Root.Children.Name},nigelObj(ii).Meta.AnimalID);
                   AnNode = obj.Tree.Root.Children(AnIndx);
-                  BlNames = {Metas.RecID};
-                  for jj=1:numel(BlNames)
-                     BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);                     
-                     set(BlNode,'UserData',{AnNode.UserData,nigelObj.Key.Public});
-                     obj.Listener = [obj.Listener, ...
-                         addlistener(nigelObj(jj),'ObjectBeingDestroyed',...
-                         @obj.removeFromTree)];  
+
+                  if isfield(nigelObj(ii).Meta,'RecTag')
+                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecTag,'Parent',AnNode);  
+                  else
+                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecID,'Parent',AnNode);   
                   end
+                  set(BlNode,'UserData',{AnNode.UserData,nigelObj.Key.Public});
+                  obj.Listener = [obj.Listener, ...
+                      addlistener(nigelObj(ii),'ObjectBeingDestroyed',...
+                      @obj.removeFromTree)];  
+
                   if addToTank
                       % actually add animals to block
-                      obj.Tank.Children(AnIndx).Children = [obj.Tank.Children(AnIndx).Children, nigelObj];
+                      obj.Tank.Children(AnIndx).Children = [obj.Tank.Children(AnIndx).Children, ...
+                         nigelObj(ii)];
                   end
                end
             otherwise

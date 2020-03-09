@@ -287,9 +287,13 @@ classdef VideosFieldType < handle ...
          %
          % Returns scalar offset for this video relative to neural data 
          
-         value = getEventData(obj.Block,obj.ScoringField_,...
-            'ts','Header');
-         value = value(obj.VideoIndex);
+         if obj.Block.HasVideoTrials
+            value = obj.TrialOffset;
+         else
+            value = getEventData(obj.Block,obj.ScoringField_,...
+               'ts','Header');
+            value = value(obj.VideoIndex);
+         end
       end
       function set.GrossOffset(obj,value)
          %SET.GROSSOFFSET  Assigns .GrossOffset property (to 'Header' diskdata)
@@ -301,8 +305,12 @@ classdef VideosFieldType < handle ...
          %  offset component that can be set based on individual trial
          %  jitter.
 
-         setEventData(obj.Block,obj.ScoringField_,...
-            'ts','Header',value,obj.VideoIndex);
+         if obj.Block.HasVideoTrials
+            obj.TrialOffset = value;
+         else
+            setEventData(obj.Block,obj.ScoringField_,...
+               'ts','Header',value,obj.VideoIndex);
+         end
       end
       
       % [DEPENDENT]  Returns .Height property
@@ -426,9 +434,14 @@ classdef VideosFieldType < handle ...
       % [DEPENDENT]  Returns .Masked property
       function value = get.Masked(obj)
          %GET.MASKED  References "Header" diskfile (column 3: 'Tag')
-         value = getEventData(obj.Block,obj.ScoringField_,...
-            'tag','Header');
-         value = logical(value(obj.VideoIndex));
+         value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
+         if isnan(value(obj.VideoIndex))
+            doEventDetection(obj.Block);
+            value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
+            value = logical(value(obj.VideoIndex));
+         else
+            value = logical(value(obj.VideoIndex));
+         end
       end
       function set.Masked(obj,value)
          %SET.MASKED  References "Header" diskfile (column 3: 'Tag')
@@ -447,30 +460,45 @@ classdef VideosFieldType < handle ...
             return;
          elseif ~isvalid(obj.Block)
             return;
-         elseif isempty(obj.mIndex)
-            return;
+         elseif isempty(obj.VideoIndex)
+            if isempty(obj.mIndex)
+               return;
+            else
+               obj.VideoIndex = obj.mIndex;
+            end
          end
          
-         [csvFullName,metaName] = getVideoFileList(obj.Block);         
+         [csvFullName,metaName,formatSpec] = getVideoFileList(obj.Block);         
          if ~isfield(obj.Block.Meta,metaName)
             if exist(csvFullName,'file')==0
                return;
             end
-            T = readtable(csvFullName);
+            T = readtable(csvFullName,...
+               'Format',formatSpec,...
+               'HeaderLines',0,...
+               'Delimiter',',');
             obj.Block.Meta.(metaName) = T;
          else
             T = obj.Block.Meta.(metaName);
+            if obj.VideoIndex > size(T,1)
+               return;
+            end
          end
          
-         value = T(obj.mIndex,:);
+         value = T(obj.VideoIndex,:);
       end
       function set.Meta(obj,value)
          %SET.META  Assigns .Meta property
          [csvFullName,metaName] = getVideoFileList(obj.Block);
          T = obj.Block.Meta.(metaName);
-         T(obj.mIndex,:) = value;
+         T(obj.VideoIndex,:) = value;
          obj.Block.Meta.(metaName) = T;
-         writetable(T,csvFullName);
+         try
+            writetable(T,csvFullName);
+         catch
+            fileattrib(csvFullName,'+w');
+            writetable(T,csvFullName);
+         end
       end
       
       % [DEPENDENT]  Returns .Name property
@@ -509,7 +537,11 @@ classdef VideosFieldType < handle ...
          %  --> Returns the offset that is obj.GrossOffset -
          %  obj.VideoOffset
          
-         value = obj.GrossOffset - obj.VideoOffset;
+         if obj.Block.HasVideoTrials
+            value = obj.GrossOffset;
+         else
+            value = obj.GrossOffset - obj.VideoOffset;
+         end
       end
       function set.NeuOffset(obj,value)
          %SET.NEUOFFSET  Assign corresponding video of linked Block   
@@ -520,7 +552,11 @@ classdef VideosFieldType < handle ...
          %  Where tSpecific is the "Trial-Specific" and "Camera-Specific"
          %  offset.
          
-         obj.GrossOffset = value+obj.VideoOffset;
+         if obj.Block.HasVideoTrials
+            obj.GrossOffset = value;
+         else
+            obj.GrossOffset = value + obj.VideoOffset;
+         end
 %          % Since times are relative to the VIDEO record, any time a NEURAL
 %          % or TRIAL offset is changed, then change the event times
 %          obj.Block.Trial = obj.Block.Trial - value;
@@ -626,8 +662,24 @@ classdef VideosFieldType < handle ...
             end
             
             obj.ROI_ = cell(1,3);
-            obj.ROI_(1) = T.ROI_rows(1);
-            obj.ROI_(2) = T.ROI_cols(1);
+            if strcmp(T.ROI_rows_start{1},':')
+               obj.ROI_(1) = T.ROI_rows_start(1);
+            else
+               if ischar(T.ROI_rows_start{1})
+                  obj.ROI_{1} = str2double(T.ROI_rows_start{1}):str2double(T.ROI_rows_stop{1});
+               else
+                  obj.ROI_{1} = T.ROI_rows_start{1}:T.ROI_rows_stop{1};
+               end
+            end
+            if strcmp(T.ROI_cols_start{1},':')
+               obj.ROI_(2) = T.ROI_cols_start(1);
+            else
+               if ischar(T.ROI_cols_start{1})
+                  obj.ROI_{2} = str2double(T.ROI_cols_start{1}):str2double(T.ROI_cols_stop{1});
+               else
+                  obj.ROI_{2} = T.ROI_cols_start{1}:T.ROI_cols_stop{1};
+               end
+            end
             obj.ROI_{3} = ':';
          elseif numel(obj.ROI_) < 3            
             for i = (numel(obj.ROI_)+1):3
@@ -676,8 +728,20 @@ classdef VideosFieldType < handle ...
          
          % Update metadata table as well
          T = obj.Meta;
-         T.ROI_rows = obj.ROI_(1);
-         T.ROI_cols = obj.ROI_(2);
+         if ischar(obj.ROI_{1})
+            T.ROI_rows_start = obj.ROI_(1);
+            T.ROI_rows_stop = obj.ROI_(1);
+         else
+            T.ROI_rows_start = {obj.ROI_{1}(1)};
+            T.ROI_rows_stop = {obj.ROI_{1}(end)};
+         end
+         if ischar(obj.ROI_{2})
+            T.ROI_cols_start = obj.ROI_(2);
+            T.ROI_rows_stop = obj.ROI_(2);
+         else
+            T.ROI_cols_start = {obj.ROI_{2}(1)};
+            T.ROI_cols_stop = {obj.ROI_{2}(end)};
+         end
          obj.Meta = T;
       end
       
@@ -700,16 +764,10 @@ classdef VideosFieldType < handle ...
          
          value = obj.store_.Source;
       end
-      function set.Source(obj,~)
+      function set.Source(obj,value)
          % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Source\n');
-            fprintf(1,'\n');
-         end
+         
+         obj.store_.Source = value;
       end
       
       % [DEPENDENT]  Returns .StreamNames property (from .Streams)
@@ -739,8 +797,17 @@ classdef VideosFieldType < handle ...
          %  value = get(obj,'TrialOffset');
          %  --> Returns Trial/Camera-specific offset for current trial
          
-         iRow = obj.VideoIndex;
-         iCol = obj.Block.TrialIndex;
+         if ~isfield(obj.Block.Meta,'Video')
+            value = nan;
+            return;
+         end
+         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         if obj.Block.HasVideoTrials
+            iCol = str2double(obj.Meta.MovieID{:});
+            obj.Block.TrialIndex = iCol;
+         else
+            iCol = obj.Block.TrialIndex;
+         end
          value = obj.Block.TrialVideoOffset(iRow,iCol);
       end
       function set.TrialOffset(obj,value)
@@ -753,9 +820,16 @@ classdef VideosFieldType < handle ...
          
          if isempty(obj.Block)
             return;
+         elseif ~isfield(obj.Block.Meta,'Video')
+            return;
          end
-         iRow = keyToIndex(obj);
-         iCol = obj.Block.TrialIndex;
+         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         if obj.Block.HasVideoTrials
+            iCol = str2double(obj.Meta.MovieID{:});
+            obj.Block.TrialIndex = iCol;
+         else
+            iCol = obj.Block.TrialIndex;
+         end
          obj.Block.TrialVideoOffset(iRow,iCol) = value;
       end
       
@@ -992,7 +1066,7 @@ classdef VideosFieldType < handle ...
          end
          
          tmp = obj.Time.data(:);
-         value = tmp+obj.GrossOffset+obj.TrialOffset;
+         value = tmp+obj.GrossOffset;
       end
       function set.tNeu(obj,~)
          %SET.TNEU  Assigns .tNeu property (cannot)
@@ -1176,7 +1250,11 @@ classdef VideosFieldType < handle ...
          end
          idx = find(objArray == obj,1,'first');
          if isempty(idx)
-            idx = numel(objArray)+1;
+            if isempty(obj.mIndex)
+               idx = numel(objArray)+1;
+            else
+               idx = obj.mIndex;
+            end
          end
       end
       
@@ -1228,6 +1306,24 @@ classdef VideosFieldType < handle ...
          stream.t  = obj.tNeu;
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
          
+      end
+      
+      % Assign video offsets to array of videosfieldtype objects
+      function setVideoOffsets(objArray,vidOffsets)
+         if numel(objArray) ~= numel(vidOffsets)
+            error(['nigeLab:' mfilename ':BadSize'],...
+               ['\t\t->\t<strong>[VIDEOSFIELDTYPE/SETVIDEOOOFFSETS]: ' ...
+               'Video array and offset array must be same size\n']);
+         end
+         
+         if numel(objArray) > 1
+            for i = 1:numel(objArray)
+               setVideoOffsets(objArray(i),vidOffsets(i));
+            end
+            return;
+         end
+         
+         objArray.VideoOffset = vidOffsets;         
       end
       
       % Updates .fname by replacing the "path" portion of the file name
@@ -1473,9 +1569,7 @@ classdef VideosFieldType < handle ...
          % Derived from `Block` --> `Meta`/`Pars`
          if isempty(obj.Block)
             return; % Nothing goes without obj.Block
-         elseif ~isfield(obj.Block.Meta,'Video')
-            return; % Then .Meta doesn't work
-         elseif isempty(obj.mIndex)
+         elseif isempty(obj.Meta)
             return; % Then "meta" index is missing
          elseif ~isfield(obj.Block.Pars,'Video')
             return; % Then .Pars doesn't work

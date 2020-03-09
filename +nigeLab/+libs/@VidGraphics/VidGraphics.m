@@ -858,8 +858,7 @@ classdef VidGraphics < matlab.mixin.SetGet
             obj.Figure.Visible = 'off';
             drawnow;
             try
-               obj.Block.HasVideoTrials = doTrialVidExtraction(obj.Block);
-               obj.Figure.Visible = 'on';
+               doTrialVidExtraction(obj.Block);
                drawnow;
             catch me
                obj.Figure.Visible = 'on';
@@ -868,6 +867,10 @@ classdef VidGraphics < matlab.mixin.SetGet
             end
             if obj.Block.HasVideoTrials
                save(obj.Block); % Save after extracting
+               scoreVideo(obj.Block); % Open a new interface
+               delete(obj); % Delete this interface
+            else
+               obj.Figure.Visible = 'on';
             end
          end
       end
@@ -917,8 +920,8 @@ classdef VidGraphics < matlab.mixin.SetGet
          % Reset focus to Video Figure
          uicontrol(obj.TrialOffsetLabel);
          obj.TrialOffsetLabel.String = ...
-            sprintf('Trial Offset: %6.3f sec  ||  FPS: %6.2f Hz',...
-            obj.TrialOffset,obj.FPS);
+            sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2f Hz',...
+            obj.GrossOffset,obj.FPS);
          
       end
       
@@ -966,7 +969,7 @@ classdef VidGraphics < matlab.mixin.SetGet
          indicateTime(obj.TimeAxes,[tSeries, tSeries]);
          
          % Return the "best-estimate" neural time
-         tNeu = tSeries-obj.NeuOffset-obj.TrialOffset;
+         tNeu = tSeries-obj.NeuOffset;
       end
       
       % Set FrameIndex flags to know if we should update VFR FrameTime
@@ -1155,8 +1158,8 @@ classdef VidGraphics < matlab.mixin.SetGet
          obj.TrialOffset = obj.Block.Trial(obj.Block.TrialIndex) - ...
             obj.FrameTime;
          obj.TrialOffsetLabel.String = ...
-            sprintf('Trial Offset: %6.3f sec  ||  FPS: %6.2 Hz',...
-            obj.TrialOffset,obj.FPS);
+            sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2 Hz',...
+            obj.GrossOffset,obj.FPS);
       end
       
       % Update .FrameIndex_ for comparator
@@ -1301,7 +1304,7 @@ classdef VidGraphics < matlab.mixin.SetGet
             'Style','text',...
             'Units','Normalized',...
             'Position',[0.185,  0.7515, 0.325, 0.035],...
-            'String', sprintf('Trial Offset: %6.3f sec  ||  FPS: %6.2 Hz',obj.TrialOffset,obj.FPS),...
+            'String', sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2 Hz',obj.GrossOffset,obj.FPS),...
             'FontName','Droid Sans',...
             'FontSize',14,...
             'FontWeight','normal',...

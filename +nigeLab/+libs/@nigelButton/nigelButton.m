@@ -298,7 +298,7 @@ classdef nigelButton < handle & matlab.mixin.SetGet
       end
       function set.FontSize(b,value)
          if strcmp(b.FontUnits,'normalized')
-            b.Label.FontSize = fixLabelSize(obj,value);
+            b.Label.FontSize = fixLabelSize(b,value);
          else
             b.Label.FontSize = value;
          end

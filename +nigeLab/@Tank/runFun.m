@@ -35,10 +35,14 @@ for iA = 1:numel(tankObj.Children)
          nigeLab.utils.cprintf('*Blue',tankObj.Verbose,...
             '\t\t\t\t\t\t\t->\tsuccessful\n');
       catch me
+         
          disp(me);
+         disp('<strong>ERROR BLOCK:</strong>');
+         disp(tankObj.Children(iA).Children(iB));
          for i = 1:numel(me.stack)
             disp(me.stack(i));
          end
+         
          nigeLab.utils.cprintf('*Red',tankObj.Verbose,...
             '\t\t\t\t\t\t\t->\tunsuccessful\n');
       end

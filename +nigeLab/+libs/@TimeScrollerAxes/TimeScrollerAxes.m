@@ -940,7 +940,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
                   % The XData does not need to be updated, since it was
                   % actively updated during "dragging"
                case 3 % For right-click, cancel, and reset other axes
-                  resetStreamXData(obj,obj.NeuOffset+obj.TrialOffset);
+                  resetStreamXData(obj,obj.NeuOffset);
             end
             
             % Place the (dragged) neural streams with cursor

@@ -45,6 +45,7 @@ if numel(uSource) < 1
    return;
 end
 
+
 out_path = blockObj.Paths.Video.dir;
 expr = blockObj.Paths.Video.f_expr; %Video_%s_%s.%s
 fprintf(1,repmat('\b',1,26));
@@ -53,6 +54,8 @@ VideoOffset = [];
 NeuOffset = [];
 
 nSource = numel(uSource);
+keyIndex = 0;
+
 for i = 1:nSource
    % Create "camera" object for each source, and iterate to export trials
    
@@ -75,14 +78,14 @@ for i = 1:nSource
       if isnan(ts_onset(k)) || isinf(ts_onset(k))
          continue; % Then skip this trial (only can happen if 'Init' used)
       end
+      keyIndex = keyIndex + 1;
       blockObj.TrialIndex = k; % Update block trial index
       camObj.Time = ts_onset(k);
 
       VideoOffset = [VideoOffset, ts_onset(k)]; %#ok<AGROW>
       NeuOffset = [NeuOffset, neuOff];  %#ok<AGROW>
       VFR = Series(camObj.Index).V;
-      VFR.CurrentTime = camObj.Time - Series(camObj.Index).VideoOffset + ...
-         Series(camObj.Index).TrialOffset;
+      VFR.CurrentTime = camObj.Time - Series(camObj.Index).VideoOffset;
       trialStr = sprintf('Trial-%03g',k);
       fname = fullfile(out_path,sprintf(expr,uSource{i},trialStr,'MP4'));
       % Create video writer object for a new file
@@ -102,6 +105,7 @@ for i = 1:nSource
             VFR.CurrentTime = camObj.Time-Series(camObj.Index).VideoOffset;
          end
       end 
+      parseVidFileName(blockObj,fname,keyIndex,true);
       fname_t = fullfile(out_path,sprintf(expr,uSource{i},trialStr,'mat'));
       nigeLab.libs.DiskData('MatFile',fname_t,data,...
          'access','w','size',size(data),'class',class(data),...
@@ -117,10 +121,10 @@ for i = 1:nSource
    delete(camObj);
    fprintf(1,repmat('\b',1,numel(uSource{i})+8));
 end
-
+blockObj.HasVideoTrials = true;
 
 % Update Videos to reference the extracted Trials
-blockObj.HasVideoTrials = true;
+blockObj.Paths.V.Orig = blockObj.Paths.V; % Save struct with "old" vid info
 [blockObj.Paths.V.Root,blockObj.Paths.V.Folder] = ...
    fileparts(blockObj.Paths.Video.dir);
 
@@ -133,15 +137,20 @@ f_search = fullfile(...
    blockObj.Paths.V.Match);
 blockObj.Paths.V.F = dir(f_search);
 % Make "Videos" fieldtype object or array
+blockObj.Videos(:) = []; % Remove all previous videos.
 blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
 
-if isempty(blockObj.Video)
+if isempty(blockObj.Videos)
    blockObj.VideoIndex = nan;      % Reset video index
    blockObj.CurNeuralTime = 0;
 else
    blockObj.VideoIndex = 1;      % Reset video index
-   blockObj.CurNeuralTime = blockObj.Videos(1).tNeu;   % Set current neural time to first video time
+   blockObj.CurNeuralTime = blockObj.Videos(1).tNeu(1);   % Set current neural time to first video time
 end
+
+setVideoOffsets(blockObj.Videos,VideoOffset);
+NeuOffset = num2cell(NeuOffset);
+[blockObj.Videos.NeuOffset] = deal(NeuOffset{:});
 
 % Note: the following two steps are unnecessary--we extract frame times
 %       as each frame is put into the new video.
