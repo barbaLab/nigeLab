@@ -19,10 +19,11 @@ function obj = subsasgn(obj,S,data)
 if strcmp(S(1).type,'.') % Check for '.'-indexed property assignment
    mc = ?nigeLab.libs.DiskData;
    diskProps = {mc.PropertyList.Name};
-   includedPropNames = setdiff(diskProps,...
-      {'type','value','tag','ts','snippet','data'});
+%    includedPropNames = setdiff(diskProps,...
+%       {'type','value','tag','ts','snippet','data'});
+   includedPropNames = setdiff(diskProps,{'snippet','data'});
    if any(strcmp(includedPropNames,S(1).subs))
-      obj = builtin('subsasgn',obj,S,data);
+      obj = builtin('subsasgn',obj,S,data(:));
       return;
    end
 end

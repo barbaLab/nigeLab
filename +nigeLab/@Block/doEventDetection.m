@@ -91,7 +91,6 @@ elseif isempty(forceHeaderExtraction)
    forceHeaderExtraction = ~any(getStatus(blockObj,blockObj.ScoringField));
 end
 
-
 if forceHeaderExtraction
    if isempty(behaviorData)
       arg2 = nEvent;
@@ -254,14 +253,12 @@ for iE = 1:numel(ePars.Name)
       % Find the manual events index and assign these as initial times:
       mIdx = getEventsIndex(blockObj,scoringField,targetManualEvent);
       % Make sure file is unlocked for writing
-      lockFlag = blockObj.Events.(scoringField)(mIdx).data.Locked;
-      if lockFlag
-         unlockData(blockObj.Events.(scoringField)(mIdx).data);
-      end
+      unlockData(blockObj.Events.(scoringField)(mIdx).data);
+      nRow = size(blockObj.Events.(scoringField)(mIdx).data,1);
+      rowIndex = min(blockObj.Events.(scoringField)(mIdx).data.Index,nRow);
+      rowVec = rowIndex:nRow;
       blockObj.Events.(scoringField)(mIdx).data.ts = ts;
-      if lockFlag
-         lockData(blockObj.Events.(scoringField)(mIdx).data);
-      end
+      
    else
       nEvent = numel(ts);
    end
