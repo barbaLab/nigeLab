@@ -964,21 +964,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.Value = getTrialData(obj,newTrialIndex);
          
          % Update video time if needed
-         if isa(src,'nigeLab.libs.VidGraphics')
-            src.SeriesTime = obj.Trial(newTrialIndex) + src.NeuOffset;
-            src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
-            src.DataLabel.Color = ...
-               obj.TrialButtonArray(newTrialIndex).EdgeColor;
-            obj.NeedsLabels = true;
-         elseif ~isempty(obj.VidGraphics)
-            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) + ...
-               obj.VidGraphics.NeuOffset;
-            obj.VidGraphics.DataLabel.String =...
-               sprintf('Trial: %g',newTrialIndex);
-            obj.VidGraphics.DataLabel.Color = ...
-               obj.TrialButtonArray(newTrialIndex).EdgeColor;
-            obj.NeedsLabels = true;
-         end
+         updateVidGraphicsTime(obj);
          
          % Update graphics to reflect new trials
          refreshGraphics(obj,newTrialIndex);
