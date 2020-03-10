@@ -4,13 +4,13 @@ function [idx,field] = getEventsIndex(blockObj,field,eventName)
 %  [idx,field] = blockObj.getEventsIndex('field','eventName');
 %  --> Searches blockObj.Events.('field') for first instance of 'eventName'
 %  --> If no such field of .Events, looks in ALL .Events fields, returning
-%  the new value of 'field' in the second output argument.
+%      the new value of 'field' in the second output argument.
 %
 %  [idx,field] = getEventsIndex(blockObj,'eventName');
 %  --> Searches all fields of .Events for first instance of sub-field
-%  'eventName'
+%      'eventName'
 %
-%  >> [idx,field] = getEventsIndex(blockObj,[],'eventName');
+%  [idx,field] = getEventsIndex(blockObj,[],'eventName');
 %  --> Searches all fields of .Events for the first instance of sub-field
 %     'eventName'
 %
@@ -23,6 +23,16 @@ function [idx,field] = getEventsIndex(blockObj,field,eventName)
 %
 %  eventName      :     Name of event type to return 
 %                       (blockObj.Events.(field)(idx).name == eventName)
+%
+%  --------
+%   OUTPUT
+%  --------
+%     idx         :     Index to blockObj.Events.(field)(idx) that
+%                          corresponds to 'eventName' .Name field value
+%
+%    field        :     Char array indicating the value that was ultimately
+%                          used to identify blockObj.Events.(field) for
+%                          'eventName'
 
 % Handle only 2 input args
 if nargin < 3

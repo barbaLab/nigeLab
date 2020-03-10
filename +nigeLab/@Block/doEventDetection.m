@@ -66,15 +66,12 @@ if isempty(behaviorData)
                '\t-->(not %s)\n'],fieldType);
       end
       % Get 'Trial' times
-      trial_onset_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
+      t_on = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
             detPars.Threshold,'Rising',detPars.Debounce);
-      trial_offset_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
+      t_off = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
             detPars.Threshold,'Falling',detPars.Debounce);
-      if numel(trial_offset_ts) < numel(trial_onset_ts)
-         trial_offset_ts(end) = inf;
-      elseif numel(trial_onset_ts) < numel(trial_offset_ts)
-         trial_offset_ts(1) = [];
-      end
+      [trial_onset_ts,trial_offset_ts] = ...
+         nigeLab.utils.matchEpochStartStopTimes(t_on,t_off);
       nEvent = numel(trial_onset_ts);
    end
 else
@@ -247,10 +244,11 @@ for iE = 1:numel(ePars.Name)
          % In event of ties, this syntax takes the first element:
          [~,tmpidx] = min(abs(tmp - trial_onset_ts(iTrial)));
          tCur = tmp(tmpidx);
-         if (tCur >= trial_onset_ts(iTrial)) && (tCur <= trial_offset_ts(iTrial))
+         if (tCur >= (trial_onset_ts(iTrial) - detPars.Debounce)) && ...
+            (tCur <= (trial_offset_ts(iTrial) + detPars.Debounce))
             ts(iTrial) = tCur; 
          else
-            ts(iTrial) = trial_onset_ts(iTrial);
+            ts(iTrial) = trial_offset_ts(iTrial) - detPars.Debounce;
          end
       end     
       % Find the manual events index and assign these as initial times:

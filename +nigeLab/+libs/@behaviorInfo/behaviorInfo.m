@@ -268,8 +268,11 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          val = obj.Value(idx);
          f = obj.ScoringField;
          for iV = 1:numel(v)
+            % Assign 'ts' the actual "EventTimes" values (seconds):
             setEventData(obj.Block,f,...
                'ts',v{iV},val(iV),obj.TrialIndex);
+            % Assign 'tag' as a "sub-mask" for the 'Event' DiskData, which
+            % indicates if the timestamp should be used:
             useTimestamp = double((~isnan(val(iV))) && (~isinf(val(iV))));
             [flag,idx] = setEventData(obj.Block,f,...
                'tag',v{iV},useTimestamp,obj.TrialIndex);
@@ -862,7 +865,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          info.Status{1} = checkProgress(obj);
          setScoringMetadata(obj,info);
          save(obj.Block);    
-         nigeLab.sounds.play('camera',2.25,-50);
+         nigeLab.sounds.play('camera',2.25,-40);
          if ~obj.Verbose
             fprintf(1,'\b\b\b\b\b\b\b\b\b\b');
          end

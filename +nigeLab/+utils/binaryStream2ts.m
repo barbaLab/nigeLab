@@ -3,26 +3,32 @@ function ts = binaryStream2ts(stream,fs,threshold,transition_type,debounce)
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream);
 %  --> Returns ts as sample indices. 
+%     * Note: `ts` is always returned as a column vector
+%     * Note: if no event times are detected, `ts` returns as empty double
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs);
 %  --> Converts ts based on sample rate of stream (fs)
 %  --> If fs is empty, returns sample indices instead.
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,threshold);
-%  --> Sets threshold where stream > threshold determines initial
-%      binarization of stream.
-%  --> If empty, takes default value from nigeLab.defaults.Event
+%  --> Sets threshold value
+%      * Stream is binarized as follows:
+%        + stream >  threshold -> 1
+%        + stream <= threshold -> 0
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %  
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,threshold,transition_type);
 %  --> Sets transition type: must be 'All', 'Rising', or 'Falling'.
 %      'Rising' limits to transitions from LOW to HIGH, while 'Falling'
 %      limits to transitions from HIGH to LOW.
-%  --> If empty, takes default value from nigeLab.defaults.Event
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,...,debounce);
-%  --> Sets debounce period.
+%  --> Sets debounce period (seconds)
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %
-%  stream should be a row vector. 
+%  `stream` should be a row vector, or a `nigeLab.libs.nigelStream` object
+%
 %  If stream is given as a matrix, then rows are treated as individual
 %  streams. For each row of stream, a cell array of ts is returned.
 
