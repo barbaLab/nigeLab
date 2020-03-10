@@ -771,10 +771,16 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             for i = 1:numel(variableName)
                % Make sure they are matched respectively to elements of
                % variableName
-               index(i) = find(ismember(obj.Variable,variableName),1,'first');
+               tmp = find(ismember(obj.Variable,variableName),1,'first');
+               if ~isempty(tmp)
+                  index(i) = tmp;
+               end
             end
          else
             index = find(ismember(obj.Variable,variableName),1,'first');
+            if isempty(index)
+               index = nan;
+            end
          end
       end
       
@@ -937,14 +943,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
                ~isa(src,'nigeLab.libs.VidGraphics')
             return;
          end
-            
-         %  % Update "Trials" to reflect the earliest timestamp in Trial
-         %  tsIdx = (obj.Type==1) & ~isnan(obj.Value) & ~isinf(obj.Value);
-         %  curTrial = obj.TrialIndex;
-         %  if sum(tsIdx) > 0
-         %     t = min(obj.Value(tsIdx));
-         %     obj.Trial(curTrial) = t; % Update to reflect new time
-         %  end
 
          % Write "buffered" data to diskfile before advancing
          setCurrentTrialData(obj);
@@ -963,21 +961,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.Value = getTrialData(obj,newTrialIndex);
          
          % Update video time if needed
-         if isa(src,'nigeLab.libs.VidGraphics')
-            src.SeriesTime = obj.Trial(newTrialIndex) + src.NeuOffset;
-            src.DataLabel.String = sprintf('Trial: %g',newTrialIndex);
-            src.DataLabel.Color = ...
-               obj.TrialButtonArray(newTrialIndex).EdgeColor;
-            obj.NeedsLabels = true;
-         elseif ~isempty(obj.VidGraphics)
-            obj.VidGraphics.SeriesTime = obj.Trial(newTrialIndex) + ...
-               obj.VidGraphics.NeuOffset;
-            obj.VidGraphics.DataLabel.String =...
-               sprintf('Trial: %g',newTrialIndex);
-            obj.VidGraphics.DataLabel.Color = ...
-               obj.TrialButtonArray(newTrialIndex).EdgeColor;
-            obj.NeedsLabels = true;
-         end
+         updateVidGraphicsTime(obj);
          
          % Update graphics to reflect new trials
          refreshGraphics(obj,newTrialIndex);
@@ -1129,6 +1113,37 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             end
          end
       end
+      
+      % Updates video graphics time
+      function updateVidGraphicsTime(obj)
+         %UPDATEVIDGRAPHICSTIME  Updates video graphics time
+         %
+         %  updateVidGraphicsTime(obj,v,trialIndex);
+         %
+         %  obj : nigeLab.libs.behaviorInfo object
+         
+         v = obj.VidGraphics;
+         if isempty(v)
+            return;
+         end
+         trialIndex = obj.TrialIndex;
+         startVarName = obj.Block.Pars.Video.StartExportVariable;
+         
+         varIdx = findVariable(obj,startVarName);
+         ts = obj.Trial(trialIndex);
+         if isnan(varIdx)
+            
+         else
+            ts = obj.Value(varIdx);
+            if isnan(ts) || isinf(ts)
+               ts = obj.Trial(trialIndex);
+            end
+         end
+         v.SeriesTime = ts + v.NeuOffset;
+         v.DataLabel.String = sprintf('Trial: %g',trialIndex);
+         v.DataLabel.Color = obj.TrialButtonArray(trialIndex).EdgeColor;
+         obj.NeedsLabels = true;
+      end
    end
    
    % PROTECTED
@@ -1270,7 +1285,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             Labs(2:nRow,2) = obj.Variable(mIdx);
          end
          Labs(cellfun(@isempty,Labs)) = {''};
-         [obj.ValueLabels,xPos,yPos,W,H,ax] = nigeLab.utils.uiMakeLabels(...
+         [obj.ValueLabels,xPos,yPos,~,H,ax] = nigeLab.utils.uiMakeLabels(...
             obj.ValuesPanel.Panel,Labs,...
             'Left',0.0250,'Right',0.5750);
          

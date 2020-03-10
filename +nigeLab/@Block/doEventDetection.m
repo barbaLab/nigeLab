@@ -66,9 +66,16 @@ if isempty(behaviorData)
                '\t-->(not %s)\n'],fieldType);
       end
       % Get 'Trial' times
-      trial_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
-            detPars.Threshold,detPars.Type,detPars.Debounce);
-      nEvent = numel(trial_ts);
+      trial_onset_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
+            detPars.Threshold,'Rising',detPars.Debounce);
+      trial_offset_ts = nigeLab.utils.binaryStream2ts(trial.data,trial.fs,...
+            detPars.Threshold,'Falling',detPars.Debounce);
+      if numel(trial_offset_ts) < numel(trial_onset_ts)
+         trial_offset_ts(end) = inf;
+      elseif numel(trial_onset_ts) < numel(trial_offset_ts)
+         trial_offset_ts(1) = [];
+      end
+      nEvent = numel(trial_onset_ts);
    end
 else
    nEvent = size(behaviorData,1);
@@ -137,14 +144,15 @@ else
             '\t\t\t->\t(See: ~/+nigeLab/+defaults/Event.m; ' ...
             'pars.Fields and pars.EventType)\n']);
       end
-      trial_ts = []; % No "Trials"
+      trial_onset_ts = []; % No "Trials"
+      trial_offset_ts = [];
    else
       % Save 'Trial' times
       iEventTimes = vPars.VarType <= 1;
       fname = sprintf(blockObj.Paths.(scoringField).file, 'Trial');
       data = nigeLab.utils.initEventData(nEvent,sum(~iEventTimes),1);
       data(:,2) = 0;
-      data(:,4) = trial_ts;
+      data(:,4) = trial_onset_ts;
       eIdx = getEventsIndex(blockObj,scoringField,'Trial');
       blockObj.Events.(scoringField)(eIdx).data = ...
          nigeLab.libs.DiskData('Event',fname,data,'overwrite',true,...
@@ -200,7 +208,7 @@ for iE = 1:numel(ePars.Name)
    fieldType = ePars.EventSource{iE};
    switch fieldType
       case 'Streams'
-         stream = blockObj.getStream(ePars.Name{iE});
+         stream = getStream(blockObj,ePars.Name{iE});
       otherwise
          if blockObj.Verbose
             dbstack(); % Warn that Stims (or VidStreams) is not yet parsed automatically yet
@@ -231,14 +239,19 @@ for iE = 1:numel(ePars.Name)
    % If not configured or there are no trial times, then assign ts and
    % write data automatically; otherwise, we should pare down this list of
    % event times and use it for the `targetManualEvent` Event
-   if ~isempty(targetManualEvent) && ~isempty(trial_ts)
+   if ~isempty(targetManualEvent) && ~isempty(trial_onset_ts)
       tmp = ts;
-      ts = nan(size(trial_ts));
+      ts = nan(size(trial_onset_ts));
       nEvent = numel(ts);
       for iTrial = 1:nEvent
          % In event of ties, this syntax takes the first element:
-         [~,tmpidx] = min(abs(tmp - trial_ts(iTrial)));
-         ts(iTrial) = tmp(tmpidx);
+         [~,tmpidx] = min(abs(tmp - trial_onset_ts(iTrial)));
+         tCur = tmp(tmpidx);
+         if (tCur >= trial_onset_ts(iTrial)) && (tCur <= trial_offset_ts(iTrial))
+            ts(iTrial) = tCur; 
+         else
+            ts(iTrial) = trial_onset_ts(iTrial);
+         end
       end     
       % Find the manual events index and assign these as initial times:
       mIdx = getEventsIndex(blockObj,scoringField,targetManualEvent);

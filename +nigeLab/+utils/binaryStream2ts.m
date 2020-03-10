@@ -44,18 +44,32 @@ elseif isempty(threshold)
    threshold = defPars.Threshold;
 end
 
-if nargin < 2
-   fs = [];
-end
-
-% If multiple streams, iterate on rows
-if size(stream,1) > 1
-   ts = cell(1,size(stream,1));
-   for i = 1:size(stream,1)
-      ts{i} = nigeLab.utils.binaryStream2ts(stream(i,:),fs,...
-         threshold,transition_type,debounce);
+if ~isa(stream,'nigeLab.libs.nigelStream')
+   if nargin < 2
+      fs = [];
    end
-   return;
+
+   % If multiple streams, iterate on rows
+   if size(stream,1) > 1
+      ts = cell(1,size(stream,1));
+      for i = 1:size(stream,1)
+         ts{i} = nigeLab.utils.binaryStream2ts(stream(i,:),fs,...
+            threshold,transition_type,debounce);
+      end
+      return;
+   end
+else
+   if numel(stream) > 1
+      ts = cell(1,numel(stream));
+      for i = 1:numel(stream)
+         ts{i} = nigeLab.utils.binaryStream2ts(stream(i).data,stream(i).fs,...
+            threshold,transition_type,debounce);
+      end
+      return;
+   else
+      fs = stream.fs;
+      stream = stream.data;
+   end
 end
  
 x = stream > threshold;

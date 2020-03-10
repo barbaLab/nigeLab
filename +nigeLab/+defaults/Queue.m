@@ -32,8 +32,13 @@ pars.WaitTimeSec = 1; % Time to wait between checking for new cluster
 pars.InitTimeSec = 5; % Time to wait when initializing cluster
 
 % pars.RemoteRepoPath = '';
+% pars.RemoteRepoPath = ...
+%    {'C:\Users\fbarban\Documents\MATLAB\ePhys_packages'}; % FB
 pars.RemoteRepoPath = ...
-   {'C:\Users\fbarban\Documents\MATLAB\ePhys_packages'};
+   {'T:\Communal_Code\nigeLab'}; % MM (KUMC Isilon)
+% Note: if using older versions (such as v1.1.0-alpha), you will need to
+% install the package on the remote repository as well, and set that path
+% here (in pars.RemoteRepoPath)
 
 %% Parse output
 if nargin < 1

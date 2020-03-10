@@ -1332,6 +1332,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  addlistener(nigelObj,...
          %     'ObjectBeingDestroyed',@obj.removeFromTree);
          
+         if isempty(obj)
+            Tree = gobjects(1);
+            delete(Tree);
+            return;
+         elseif ~isvalid(obj)
+            Tree = gobjects(1);
+            delete(Tree);
+            return;
+         end
          Tree = obj.Tree;
          switch class(src)
             case 'nigeLab.Tank'

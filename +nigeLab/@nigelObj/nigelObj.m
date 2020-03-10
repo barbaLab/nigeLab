@@ -2262,13 +2262,13 @@ classdef nigelObj < handle & ...
          obj.OnRemote = onRemote;
          obj.IsDashOpen = isDashOpen;
          obj.Children = C;
-         flag = flag && obj.saveIDFile(); % .nigelBlock file saver
+         flag = flag && saveIDFile(obj); % .nigelBlock file saver
          F = fieldnames(obj.HasParsInit);
          for iF = 1:numel(F)
             f = F{iF};
             if isfield(obj.HasParsSaved,f)
                if ~obj.HasParsSaved.(f)
-                  flag = flag && obj.saveParams(obj.User,f);
+                  flag = flag && saveParams(obj,obj.User,f);
                end
             end
          end
@@ -5899,7 +5899,10 @@ classdef nigelObj < handle & ...
             end
          end         
          
-         obj.Meta = meta; 
+         if isempty(obj.Meta)
+            obj.Meta = struct;
+         end
+         obj.Meta = nigeLab.utils.add2struct(obj.Meta,meta); 
          obj.Pars.(obj.Type).Parsing = pars;
          obj.Name = obj.genName();
          name = obj.Name;

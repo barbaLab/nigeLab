@@ -437,6 +437,14 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
             return;
          end
          
+         if isempty(B)
+            C = A;
+            return;
+         elseif ~isvalid(B)
+            C = A;
+            return;
+         end
+         
          cur = B.BarIndex;
          for barObj = A
             if barObj.BarIndex > cur
@@ -458,7 +466,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
       
       % Set child object property based on tag
       function h = setChild(bar,tag,varargin)
-         % SETCHILD  Set property of child object based on tag
+         % SETCHILD  Update property of child and return updated object
          %
          %  bar.setChild('tag','propName1',propVal1,...);
          %
@@ -471,6 +479,15 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          %           * progX_btn:        pushbutton uicontrol to cancel
          %           * progbar_anchor:   curved rectangle progress "anchor"
          
+         h = gobjects(1);
+         if isempty(bar)
+            delete(h);
+            return;
+         elseif ~isvalid(bar)
+            delete(h);
+            return;
+         end
+            
          switch lower(tag)
             case {'progbar_axes','prog_axes','axes',...
                   'a','ax','prog','container'}
@@ -491,14 +508,16 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                h = bar.Children{7};
             otherwise
                error(['nigeLab:' mfilename ':BadChildTag'],...
-                  'Could not find Child object for tag: %s',tag);
+                  ['\n\t\t->\t<strong>[NIGELPROGRESS]:</strong> ' ...
+                  'Could not find Child object for tag: %s\n'],tag);
          end
          for iV = 1:2:numel(varargin)
             if isprop(h,varargin{iV})
                h.(varargin{iV}) = varargin{iV+1};
             else
                error(['nigeLab:' mfilename ':BadPropertyName'],...
-                  'Could not find Property (%s) for %s Child Object.',...
+                  ['\n\t\t->\t<strong>[NIGELPROGRESS]:</strong> ' ...
+                  'Could not find Property (%s) for %s Child Object.\n'],...
                   varargin{iV},tag);
             end
          end
@@ -693,8 +712,8 @@ end
          
          bar.IsRunning = false;
          bar.IsComplete = false;
-         bar.indicateCompletion();
-         bar.clearBar();
+         indicateCompletion(bar);
+         clearBar(bar);
       end
       
       % LISTENER CALLBACK: Update "visual" position in queue from index
