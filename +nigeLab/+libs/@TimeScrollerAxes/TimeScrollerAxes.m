@@ -94,6 +94,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
    
    % CONSTANT,PROTECTED
    properties (Constant,Access=protected)
+      EdgeBufferPercent = 0.15         % Buffer range:(0,1) of XLim_ for skips
       ZoomedOffset = [30 10 4 1 2e-2]
    end
    % % % % % % % % % % END PROPERTIES %
@@ -116,8 +117,10 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %  set(obj,'Axes',value);
          %  --> value is stored in .Axes_ protected property
          
-         obj.XLim_ = get(value,'XLim');
-         obj.DX_ = diff(obj.XLim_);
+         xl = get(value,'XLim');
+         obj.DX_ = diff(xl);
+         o = obj.EdgeBufferPercent * obj.DX_;
+         obj.XLim_ = [xl(1)+o,xl(2)-o]; 
          obj.Axes_ = value;
          obj.Position_ = value.Position;
       end
@@ -351,7 +354,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             xLim = value;
          else
             error(['nigeLab:' mfilename ':InvalidValue'],...
-               ['[TIMESCROLLERAXES]: XLim must be either ''far'', '...
+               ['\n\t\t->\t[TIMESCROLLERAXES]: XLim must be either ''far'', '...
                '''close'', or [a b]']);
          end
          set(obj.Axes,'XLim',xLim);
@@ -434,8 +437,10 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          obj.VidGraphicsObj = VidGraphicsObj;
          obj.Parent = VidGraphicsObj.Panel;
-         obj.XLim_ = [0 Max(obj.VidGraphicsObj.Block.Videos)];
-         obj.DX_ = diff(obj.XLim_);
+         xl = [0 Max(obj.VidGraphicsObj.Block.Videos)];
+         obj.DX_ = diff(xl);
+         o = obj.EdgeBufferPercent * obj.DX_;
+         obj.XLim_ = [xl(1)+o,xl(2)-o]; 
          obj.ZoomLevel = 0; % Initialize CMap and Zoom
          
          initColors(obj);
@@ -466,7 +471,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          % Initialize x-scaling and x-offset (based on "Parents" of fig)
          parseXScaling(obj);
-         obj.CameraObj = nigeLab.libs.nigelCamera(obj);
+         obj.CameraObj = nigeLab.libs.nigelCamera(obj,...
+            'NeuTime_',obj.Block.CurNeuralTime,...
+            'Source_',obj.VidGraphicsObj.Video.Source,...
+            'SeriesTime__',obj.Block.CurNeuralTime + obj.NeuOffset,...
+            'SeriesIndex_',obj.VidGraphicsObj.SeriesIndex,...
+            'SeriesList_',obj.VidGraphicsObj.SeriesList...
+            );
          obj.Figure.WindowButtonMotionFcn = @obj.cursorMotionCB;
       end
    end
@@ -494,30 +505,39 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %  addBoundaryIndicators(obj);
          
          % Add "segments" indicating timing from different vids
-         tmp = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
-         c = linspace(0.75,0.95,numel(tmp)-1);
+         Series = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
+%          c = linspace(0.75,0.95,numel(tmp)-1);
          if ~isempty(obj.BoundsIndicator)
             if isvalid(obj.BoundsIndicator)
                delete(obj.BoundsIndicator);
             end
          end
-         obj.BoundsIndicator = gobjects(numel(tmp)-1);
-         for i = 1:(numel(tmp)-1)
-            if tmp(i).Masked
-               rX = max(tmp(i).tVid);
-            else
-               rX = min(tmp(i).tVid);
-            end
-            rW = max(rX - min(tmp(i+1).tVid),0.005);
-            obj.BoundsIndicator(i) = rectangle(obj.Axes,...
-               'Position',[rX,-0.15,rW,1.15],...
-               'Curvature',[0.2 0.2],...
-               'EdgeColor','none',...
-               'FaceColor',nigeLab.defaults.nigelColors('light'),...
-               'Tag','Video Boundary',...
-               'Clipping','on',...
-               'PickableParts','none');
+         k = numel(Series);
+         vY = get(gca,'YLim');
+         
+         nVert = 4; % # of Vertex points
+         F = nan(k,5);
+         V = nan(k*nVert,2);
+         curVert = 1:nVert; % Vector of current vertex indices
+         vX = [0,Min(Series)];
+         for i = 1:(k-1)
+            [F(i,:),V(curVert,:)] = nigeLab.libs.TimeScrollerAxes.addVert(vX,vY,curVert);
+            vX = [Series(i).tNeu(end),Series(i+1).tNeu(1)];
+            curVert = curVert + (nVert*i);
          end
+         [F(end,:),V(curVert,:)] = nigeLab.libs.TimeScrollerAxes.addVert(vX,vY,curVert);
+         obj.BoundsIndicator = patch(obj.Axes,...
+            'Faces',F,'Vertices',V,...
+            'LineStyle','none',...
+            'EdgeColor','none',...
+            'FaceAlpha',0.50,...
+            'FaceColor',nigeLab.defaults.nigelColors('light'),...
+            'Tag','Video Boundary',...
+            'Clipping','on',...
+            'PickableParts','none');
+         obj.BoundsIndicator.UserData = struct(...
+            'x',obj.BoundsIndicator.XData);
+         obj.BoundsIndicator.Annotation.LegendInformation.IconDisplayStyle = 'off';
       end
       
       % Add Digital Streams
@@ -661,8 +681,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          %
          %  checkAxesLimits(obj);
          
-         if (obj.CameraObj.Time > obj.XLim_(2)) || ...
-            (obj.CameraObj.Time < obj.XLim_(1))
+         if (obj.CameraObj.Time >= obj.XLim_(2)) || ...
+            (obj.CameraObj.Time <= obj.XLim_(1))
             updateZoom(obj);
          end
       end
@@ -716,7 +736,12 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          end
          
          for i = 1:numel(obj.dig)
-            obj.dig(i).h.XData = obj.dig(i).h.UserData.x + offset;
+            obj.dig(i).h.XData = obj.dig(i).h.UserData.x - offset;
+         end
+         obj.BoundaryIndicators.XData = ...
+            obj.BoundaryIndicators.UserData.x - offset;
+         if obj.ZoomLevel > 0
+            updateEventTime(obj,obj.TimeStampNames,obj.TimeStampValues - offset);
          end
       end
       
@@ -787,7 +812,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
 
       end
       
-      % Update time for a specific "timestamps" marker
+      % Update time for a specific "timestamps" marker: "EVENTTIMES" scored
       function updateEventTime(obj,name,ts)
          %UPDATEEVENTTIME  Sets time for a specific "timestamps" marker
          %
@@ -822,7 +847,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          obj.TimeStamps(idx).XData = ones(1,2).*ts;
       end
       
-      % Update timestamps (only set times)
+      % Update timestamps (only set times): TRIALS
       function updateTimeStamps(obj,ts)
          %UPDATETIMESTAMPS  Set times only (do not create new objects)
          %
@@ -846,8 +871,10 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             xl = obj.XLim;
          end
          
-         obj.XLim_ = xl;
-         obj.DX_ = diff(obj.XLim_);
+         obj.DX_ = diff(xl);
+         % Update XLim_ to have "cushion zone" on edges where it re-centers
+         o = obj.EdgeBufferPercent * obj.DX_;
+         obj.XLim_ = [xl(1)+o,xl(2)-o]; 
          obj.Axes.XLim = xl;
          [tLabel,tVec] = nigeLab.libs.TimeScrollerAxes.parseXAxes(xl);
          obj.Axes.XTick=tVec;
@@ -1028,9 +1055,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             % Moves the beam and press streams, relative to VIDEO
             for i = 1:numel(obj.dig)
                % Use obj.t: Original times, as well as the neural offset
-               obj.dig(i).h.XData = obj.dig(i).h.UserData.x + ...
-                  obj.x.delta_offset + obj.NeuOffset;
+               obj.dig(i).h.XData = ...
+                  obj.dig(i).h.UserData.x + obj.NeuOffset... % "Fixed" part
+                  + obj.x.delta_offset;                      % "Updated" part
             end
+            obj.BoundaryIndicator.XData = ...
+               obj.BoundaryIndicator.UserData.x + obj.NeuOffset ...
+                  + obj.x.delta_offset;
             drawnow;
          end
       end
@@ -1248,7 +1279,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          for i = 1:numel(obj.vid)
             obj.vid(i).h = ...
                simplePlot(obj.Axes,...
-               obj.vid(i).obj.t,...       % Time from diskfile_
+               obj.vid(i).obj.t,...       % Time from diskfile_ (`tVid`)
                obj.vid(i).obj.data,...    % Data from diskfile_
                'Color',obj.v(i).col,...
                'Displayname',obj.v(i).name,...
@@ -1263,8 +1294,8 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          for i = 1:numel(obj.dig)
             obj.dig(i).h = ...
                simplePlot(obj.Axes,...
-               obj.dig(i).obj.t,...       % Time from diskfile_
-               obj.dig(i).obj.data,...    % Data from diskfile_
+               obj.dig(i).obj.t+obj.NeuOffset,...  % Time from diskfile_
+               obj.dig(i).obj.data,...             % Data from diskfile_
                'Tag',obj.dig(i).name,...
                'DisplayName',obj.dig(i).name,...
                'LineWidth',1.5,...
@@ -1274,7 +1305,6 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
                'UserData',struct('index',1),...
                'XTol',1,...
                'YTol',0.25);
-            obj.dig(i).h.XData = obj.dig(i).h.XData + obj.NeuOffset;
             obj.dig(i).h.Annotation.LegendInformation.IconDisplayStyle = 'on';
          end
          
@@ -1388,6 +1418,28 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             tLabel = cellfun(@(s)sprintf('%s%s',s,tUnits),tLabel,...
                'UniformOutput',false);
          end
+      end
+      
+      function [F,V] = addVert(x,y,curVert)
+         %ADDVERT  Assign faces and vertices to corresponding arrays
+         %
+         %  [F,V] = nigeLab.libs.TimeScrollerAxes.addVert(x,y,curVert);
+         %
+         %  -- input --
+         %  x : 1x2 x-values of rectangle
+         %  y : 1x2 y-values of rectangle
+         %  curVert : 1x4 array of vertex indices to connect
+         %  --> Note: curVert is index into larger "F" and "V" arrays
+         %
+         %  -- output --
+         %  F : Index list of vertices to connect for THIS face (rectangle)
+         %  V : Array of vertex coordinates
+         
+         F = [curVert, curVert(1)];
+         V = [x(1),y(1); ...
+              x(1),y(2); ...
+              x(2),y(2); ...
+              x(2),y(1)];
       end
    end
    % % % % % % % % % % END METHODS% % %

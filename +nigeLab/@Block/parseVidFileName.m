@@ -55,7 +55,7 @@ if nargin < 3
       if isempty(idx)
          keyIndex = size(blockObj.Meta.(metaName),1);
       else
-         keyIndex = strsplit(blockObj.Meta.(metaName).Key{1},'-');
+         keyIndex = strsplit(blockObj.Meta.(metaName).Key{idx},'-');
          keyIndex = str2double(keyIndex{2});
       end
    end

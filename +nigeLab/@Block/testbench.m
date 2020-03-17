@@ -17,26 +17,28 @@ if numel(blockObj) > 1
    return;
 end
 
-% blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
-
-updateParams(blockObj,'Block','Direct');
-updateParams(blockObj,'Video','Direct');
-updateParams(blockObj,'Event','Direct');
-parseNamingMetadata(blockObj);
-for i = 1:numel(blockObj.Videos)
-   parseVidFileName(blockObj,blockObj.Videos(i).Name);
-end
-
-% if blockObj.HasVideoTrials
-%    if nargout > 0
-%       varargout{1} = true;
-%       if nargout > 1
-%          varargout{2} = true;
+% % % % Set all "snippet" values to zero for 'EventTimes' scoring % % % %
+% if isfield(blockObj.Events,'ScoredEvents')
+%    for i = 3:numel(blockObj.Events.ScoredEvents)
+%       if ~isempty(blockObj.Events.ScoredEvents(i).data)
+%          blockObj.Events.ScoredEvents(i).data.snippet(:) = 0;
 %       end
 %    end
-%    return;
 % end
 
+% % % % Re-initialize Videos property (for Trial Videos) % % % %
+blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+
+% % % % Re-parse Video metadata table % % % %
+% updateParams(blockObj,'Block','Direct');
+% updateParams(blockObj,'Video','Direct');
+% updateParams(blockObj,'Event','Direct');
+% parseNamingMetadata(blockObj);
+% for i = 1:numel(blockObj.Videos)
+%    parseVidFileName(blockObj,blockObj.Videos(i).Name);
+% end
+
+% % % % Re-initialize/link original Videos property % % % %
 % initFlag = initVideos(blockObj);
 % initFlag = initFlag && initEvents(blockObj);
 % initFlag = initFlag && doEventDetection(blockObj);

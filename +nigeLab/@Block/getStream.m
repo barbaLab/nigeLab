@@ -40,7 +40,7 @@ end
 if numel(blockObj) > 1
    stream = cell(size(blockObj));
    for i = 1:numel(blockObj)
-      stream{i} = blockObj(i).getStream(streamName,scaleOpts);
+      stream{i} = getStream(blockObj(i),streamName,scaleOpts);
    end
    return;
 end
@@ -52,7 +52,7 @@ if numel(streamName) > 1
    end
    for i = 1:numel(streamName)
       stream = horzcat(stream,...
-         blockObj.getStream(streamName(i),scaleOpts(i))); %#ok<AGROW>
+         getStream(blockObj,streamName(i),scaleOpts(i))); %#ok<AGROW>
    end
    return;
 end

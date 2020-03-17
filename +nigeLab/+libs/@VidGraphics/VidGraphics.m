@@ -200,6 +200,15 @@ classdef VidGraphics < matlab.mixin.SetGet
             initMode = 'score';
          end
          
+         obj.SeriesList_ = FromSame(obj.Block.Videos,...
+            obj.Block.Videos(obj.VideoIndex).Source);
+         if obj.Block.HasVideoTrials
+            obj.SeriesIndex_ = obj.Block.TrialIndex;
+         else
+            obj.SeriesIndex_ = find(obj.SeriesList_ == ...
+               obj.Block.Videos(obj.VideoIndex),1,'first');
+         end
+         
          % Construct video "display" interface
          buildVidDisplay(obj,initMode);
          
@@ -232,9 +241,9 @@ classdef VidGraphics < matlab.mixin.SetGet
             @(h,~,~)updateTimeLabelsCB(obj));
          
          % "Force" select the video (for init)
-         obj.SeriesList = FromSame(obj.Block.Videos,...
-            obj.Block.Videos(obj.VideoIndex).Source);
-         curX = ones(1,2).*(obj.TimeAxes.CameraObj.Time);
+%          obj.SeriesList = FromSame(obj.Block.Videos,...
+%             obj.Block.Videos(obj.VideoIndex).Source);
+         curX = ones(1,2).*(obj.TimeAxes.CameraObj.Time + obj.NeuOffset);
          indicateTime(obj.TimeAxes,curX);
       end
       
@@ -251,7 +260,6 @@ classdef VidGraphics < matlab.mixin.SetGet
          
          value = obj.Video.fs;
       end
-      % [DEPENDENT]  Sets .FPS (cannot)
       function set.FPS(obj,~)
          %SET.FPS  Does nothing
          if obj.Verbose
@@ -270,9 +278,8 @@ classdef VidGraphics < matlab.mixin.SetGet
          %
          %  value = get(obj,'FrameTime');
          
-         value = (obj.FrameIndex-1) / obj.FPS;
+         value = min(max((obj.FrameIndex-1)/obj.FPS,0),obj.Video.Duration);
       end
-      % [DEPENDENT]  Assigns .FrameTime property (sets .FrameIndex)
       function set.FrameTime(obj,value)
          %SET.FRAMETIME  Assigns .FrameTime property (sets .FrameIndex)
          %
@@ -296,10 +303,13 @@ classdef VidGraphics < matlab.mixin.SetGet
          %
          %  value = get(obj,'GrossOffset');
          
-         ts = getEventData(obj.Block,obj.ScoringField_,'ts','Header');
-         value = ts(obj.Block.VideoIndex);
+         if obj.Block.HasVideoTrials
+            value = obj.TrialOffset;
+         else
+            ts = getEventData(obj.Block,obj.ScoringField_,'ts','Header');
+            value = ts(obj.Block.VideoIndex);
+         end
       end
-      % [DEPENDENT] Assign .GrossOffset property
       function set.GrossOffset(obj,value)
          %SET.GROSSOFFSET  Assign corresponding video of linked Block
          %
@@ -309,8 +319,12 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  Where tSpecific is the "Trial-Specific" and "Camera-Specific"
          %  offset.
          
-         setEventData(obj.Block,obj.ScoringField_,...
-            'ts','Header',value,obj.Block.VideoIndex);
+         if obj.Block.HasVideoTrials
+            obj.TrialOffset = value;
+         else
+            setEventData(obj.Block,obj.ScoringField_,...
+               'ts','Header',value,obj.Block.VideoIndex);
+         end
       end
       
       % [DEPENDENT] Returns .NeuTime property
@@ -325,7 +339,6 @@ classdef VidGraphics < matlab.mixin.SetGet
             value = obj.TimeAxes.CameraObj.NeuTime_;
          end
       end
-      % [DEPENDENT] Assigns .NeuTime property
       function set.NeuTime(obj,value)
          %SET.FRAMETIME  Update Block
          
@@ -342,9 +355,8 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  --> Returns NaN or offset between video and neural time
          %  (positive value for neural data started before video record)
          
-         value = obj.GrossOffset - obj.VideoOffset;
+         value = obj.Video.NeuOffset;
       end
-      % [DEPENDENT] Assign .NeuOffset property
       function set.NeuOffset(obj,value)
          %SET.NEUOFFSET  Assign corresponding video of linked Block
          %
@@ -355,8 +367,8 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  offset, and tStart is the Video-Series offset
          
          % Set the offset for any other videos in this camera series
-         for iV = 1:numel(obj.SeriesList_)
-            obj.SeriesList_(iV).NeuOffset = value;
+         for iVid = obj.SeriesIndex_:numel(obj.SeriesList_)
+            obj.SeriesList_(iVid).NeuOffset = value;
          end
       end
       
@@ -369,7 +381,6 @@ classdef VidGraphics < matlab.mixin.SetGet
          
          value = obj.Video.NumFrames;
       end
-      % [DEPENDENT] Assigns .NumFrames property (cannot)
       function set.NumFrames(~,~)
          %SET.NUMFRAMES  Does nothing
          if obj.Verbose
@@ -462,7 +473,7 @@ classdef VidGraphics < matlab.mixin.SetGet
          %
          %  value = get(obj,'TrialOffset');
          %  --> Returns Trial/Camera-specific offset for current trial
-         iRow = obj.Block.VideoIndex;
+         iRow = obj.Block.VideoSourceIndex;
          iCol = obj.Block.TrialIndex;
          value = obj.Block.TrialVideoOffset(iRow,iCol);
       end
@@ -474,10 +485,10 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  value = (tNeu - tEvent) - GrossOffset;
          %  Where "GrossOffset" is the VideosFieldType.GrossOffset property
          
-         iRow = obj.VideoIndex;
+         iRow = obj.VideoSourceIndex;
          iCol = obj.Block.TrialIndex;
          obj.Block.TrialVideoOffset(iRow,iCol) = value;
-         obj.Block.Trial(obj.Block.TrialIndex) = obj.Block.Trial(obj.Block.TrialIndex) - value;
+
       end
       
       % [DEPENDENT]  .TimerPeriod property (from .FPS)
@@ -556,7 +567,12 @@ classdef VidGraphics < matlab.mixin.SetGet
          %SET.VIDEOINDEX  Assigns index of video, updating VideoSource
          
          if (value > 0) && (value <= numel(obj.Block.Videos))
+            direction = sign(value - obj.Block.VideoIndex);
             obj.Block.VideoIndex = value;
+         else
+            error(['nigeLab:' mfilename ':InvalidVideoIndex'],...
+               ['\n\t\t->\t<strong>[VIDGRAPHICS]:</strong> ' ...
+               'Value of .VideoIndex (%g) is out of range.\n'],value);
          end
          
          % VideoSource is AbortSet; will not update if on same series
@@ -564,6 +580,18 @@ classdef VidGraphics < matlab.mixin.SetGet
          obj.VideoSource_ = vidSource; % Updates SeriesList, Image cropping
          obj.AnimalNameLabel.String = getAnimalNameLabel(obj);
          obj.VideoMaskIndicator.AlphaData = 0.5 - (0.5 * obj.Video.Masked);
+         if ~isempty(obj.TimeAxes)
+            refreshGraphics(obj.TimeAxes.BehaviorInfoObj);
+            switch direction
+               case 1  % Then we "forwarded" trials
+                  
+               case -1 % Then we "reduced" trials
+                  
+               case 0  % Then we are on the same trial (shouldn't happen)
+               
+            end
+               
+         end
       end
       
       % [DEPENDENT]  Name of currently-displayed video
@@ -696,6 +724,7 @@ classdef VidGraphics < matlab.mixin.SetGet
          end
       end
       
+      % [DEPENDENT]  Returns `XImScale` (scaling of panel width)
       function value = get.XImScale(obj)
          % Video image axes (.VidImAx)
          %  * nested in Panel (.Panel)
@@ -790,7 +819,7 @@ classdef VidGraphics < matlab.mixin.SetGet
    end
    
    % PUBLIC
-   methods (Access = public)
+   methods (Access=public)
       % Function that runs while video is playing from timer object
       function advanceFrame(obj,n)
          % ADVANCEFRAME Increment the current frame by n frames
@@ -919,9 +948,15 @@ classdef VidGraphics < matlab.mixin.SetGet
          
          % Reset focus to Video Figure
          uicontrol(obj.TrialOffsetLabel);
-         obj.TrialOffsetLabel.String = ...
-            sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2f Hz',...
-            obj.GrossOffset,obj.FPS);
+         if obj.Block.HasVideoTrials
+            obj.TrialOffsetLabel.String = ...
+               sprintf('Trial Offset: %6.3f sec  ||  FPS: %6.2f Hz',...
+               obj.TrialOffset,obj.FPS);
+         else
+            obj.TrialOffsetLabel.String = ...
+               sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2f Hz',...
+               obj.GrossOffset,obj.FPS);
+         end
          
       end
       
@@ -1155,11 +1190,17 @@ classdef VidGraphics < matlab.mixin.SetGet
       % Set offset for current trial start (for current camera)
       function setTrialOffset(obj)
          %SETTRIALOFFSET  Sets offset for current trial
+         if obj.Block.HasVideoTrials
+            nigeLab.sounds.play('pop',0.5,-30);
+            warning(['nigeLab:' mfilename ':TrialVideosExtracted'],...
+               ['\n\t\t->\t<strong>[SCOREVIDEO]:</strong> ' ...
+               'Trial videos already extracted. Cannot modify Offsets.\n']);
+            return;
+         end
+         
          obj.TrialOffset = obj.Block.Trial(obj.Block.TrialIndex) - ...
             obj.FrameTime;
-         obj.TrialOffsetLabel.String = ...
-            sprintf('Gross Offset: %6.3f sec  ||  FPS: %6.2 Hz',...
-            obj.GrossOffset,obj.FPS);
+
       end
       
       % Update .FrameIndex_ for comparator
@@ -1180,21 +1221,22 @@ classdef VidGraphics < matlab.mixin.SetGet
          %  --> Depending on FrameIndex flags, load from buffer or read
          %  directly
          
-         % NeedsUpdate_ gets set on
-         % VidGraphics/setFrameIndexFlag(obj,forceUpdate), regardless of
-         % "normal" or "cropped" state. If forceUpdate is true,
-         % "NeedsUpdate_" changes to true regardless.
-         if obj.NeedsUpdate_
-            set(obj.VFR,'CurrentTime',obj.FrameTime);
-            obj.FrameIndex_ = max(round(obj.FrameTime * obj.FPS),1);
-            obj.FrameIndex = obj.FrameIndex_ + 1;
+         if obj.VFR.hasFrame
+            % NeedsUpdate_ gets set on
+            % VidGraphics/setFrameIndexFlag(obj,forceUpdate), regardless of
+            % "normal" or "cropped" state. If forceUpdate is true,
+            % "NeedsUpdate_" changes to true regardless.
+            if obj.NeedsUpdate_
+               set(obj.VFR,'CurrentTime',obj.FrameTime);
+               obj.FrameIndex_ = max(round(obj.FrameTime * obj.FPS),1);
+               obj.FrameIndex = obj.FrameIndex_ + 1;
+            end
+
+            C = readFrame(obj.VFR,'native');
+            set(obj.VidIm,'CData',C(obj.Video.ROI{:}));         
+            drawnow;
          end
-         
-         
-         C = readFrame(obj.VFR,'native');
-         set(obj.VidIm,'CData',C(obj.Video.ROI{:}));
-         
-         drawnow;
+
       end
       
       % [LISTENER CALLBACK]: obj.Figure.WindowKeyReleaseFcn
@@ -1217,6 +1259,57 @@ classdef VidGraphics < matlab.mixin.SetGet
             sprintf('Neural Time:  %s.%03g ',tStrNeu,tNeu_ms));
          
          set(obj.AnimalNameLabel,'String',getAnimalNameLabel(obj));
+      end
+   end
+   
+   % HIDDEN,PUBLIC
+   methods (Hidden,Access=public)
+      % Print formatted `Timing` data to command window for debugging
+      function printTimingData(obj,evt)
+         %PRINTTIMINGDATA  Prints timing offset and other data for debug
+         %
+         %  printTimingData(obj);
+         %  --> By default this is bound to 'f1' Window Key Button Press
+         
+         if nargin < 2
+            mod = '';
+         elseif isempty(evt.Modifier)
+            mod = '';
+         else
+            mod = evt.Modifier{1};
+         end
+         clc;
+         
+         nigeLab.libs.VidGraphics.printPropLine(obj.Block,...
+            {'TrialIndex','VideoIndex'});
+         if isempty(mod)
+            axObj = obj.TimeAxes;
+            behaviorObj = axObj.BehaviorInfoObj;
+            camObj = axObj.CameraObj;
+            labs = {'(sec)',''};
+            bData = [behaviorObj.Variable.'; ...
+               num2cell(behaviorObj.Value); ...
+               labs((behaviorObj.Type>1)+1)];
+            nigeLab.libs.VidGraphics.printPropLine(obj,...
+               {'VideoIndex','SeriesIndex','FrameTime','NeuTime','SeriesTime',...
+                'TrialOffset','VideoOffset','NeuOffset','GrossOffset'},...
+               [cell(1,2),repmat({'(sec)'},1,7)]);
+            nigeLab.libs.VidGraphics.printPropLine(axObj,...
+               {'FrameTime','NeuTime','TrialOffset','VideoOffset','NeuOffset'},...
+               '(sec)');
+            nigeLab.libs.VidGraphics.printPropLine(camObj,...
+               {'Index','Time','SeriesTime_','SeriesTime__','NeuTime_'},...
+               [{'(Series Index)'},repmat({'(sec)'},1,4)]);
+            fprintf(1,'\n  --  <strong>nigeLab.libs.behaviorInfo:</strong> --  \n');
+            nigeLab.libs.VidGraphics.printPropLine(bData);
+         else
+            T = obj.TimeAxes.CameraObj.Time_(:,2:3).';
+            T = [1:size(T,2); T];
+            fprintf(1,'\n  --  <strong>nigeLab.libs.nigelCamera:</strong> --  \n');
+            fprintf(1,'\t<strong>| %+4s | %+10s (vid) | %+10s (vid) |</strong>\n',...
+               'Row','tStart','tStop');
+            fprintf(1,'\t| %4g | %10g (sec) | %10g (sec) |\n',T);
+         end
       end
    end
    
@@ -1550,6 +1643,66 @@ classdef VidGraphics < matlab.mixin.SetGet
          end
          
          obj = nigeLab.libs.VidGraphics(dims);
+      end
+   end
+   
+   % STATIC,PROTECTED
+   methods (Static,Access=protected)
+      % Print a formatted "property value" line (for debug)
+      function printPropLine(propVal,propName,tag)
+         %PRINTPROPLINE  Prints a formatted "property value" line 
+         %
+         %  nigeLab.libs.VidGraphics.printPropLine(propVal,propName);
+         %  --> Print formatted string for a property name and value
+         %
+         %  nigeLab.libs.VidGraphics.printPropLine(propVal,propName,tag);
+         %  --> Print formatted string with tag at end
+         %
+         %  nigeLab.libs.VidGraphics.printPropLine(obj,propName);
+         %  --> Adds a line above with the name of the class
+         %  --> Print property value of a given object
+         %
+         %  nigeLab.libs.VidGraphics.printPropLine(obj,...
+         %     {prop1,prop2,...},tag);
+         %  --> Adds a line above with the name of the class
+         %  --> Print multiple properties with same tag
+         %        (Each one gets its own line)
+         %
+         %  nigeLab.libs.VidGraphics.printPropLine(obj,...
+         %     {prop1,prop2,...,tagk},...
+         %     {tag1,tag2,...,tagk});
+         %  --> Adds a line above with the name of the class
+         %  --> Print properties with unique tags
+         
+         STR_EXPR = '\t->\t[%+15s]: %13g %s\n';
+         
+         if nargin < 3
+            tag = '';
+         end
+         
+         if nargin < 2
+            fprintf(1,STR_EXPR,propVal{:});
+         else
+            if iscell(propName)
+               if ~iscell(tag)
+                  tag = repmat({tag},numel(propName),1);
+               end
+               c = class(propVal);
+               fprintf(1,'\n  --  <strong>%s:</strong> --  \n',c);
+               for i = 1:numel(propName)
+                  fprintf(1,STR_EXPR,...
+                     propName{i},propVal.(propName{i}),tag{i});
+               end               
+            else
+               if isnumeric(propVal)
+                  fprintf(1,STR_EXPR,propName,propVal,tag);
+               else
+                  c = class(propVal);
+                  fprintf(1,'\n  --  <strong>%s:</strong> --  \n',c);
+                  fprintf(1,STR_EXPR,propName,propVal.(propName),tag);
+               end
+            end
+         end
       end
    end
    % % % % % % % % % % END METHODS% % %

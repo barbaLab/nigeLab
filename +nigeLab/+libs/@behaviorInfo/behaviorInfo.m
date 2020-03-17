@@ -36,7 +36,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
       State                logical           % 1 x k vector of flags indicating that elements of Value are valid
       StringFcn                              % Function handle (from Block)
       Trial                double            % Trial timestamps
-      TrialBuffer    (1,1) double            % Buffer to add or subtract to 'Trials' guesses
       TrialIndex     (1,1) double            % Index of current trial for alignment
       Type                                   % 1 x k vector of scalar indicators of Value type
       Variable                               % 1 x k label vector
@@ -267,18 +266,20 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          v = obj.Variable(idx);         
          val = obj.Value(idx);
          f = obj.ScoringField;
+         trIdx = obj.TrialIndex;
          for iV = 1:numel(v)
             % Assign 'ts' the actual "EventTimes" values (seconds):
-            setEventData(obj.Block,f,...
-               'ts',v{iV},val(iV),obj.TrialIndex);
+            setEventData(obj.Block,f,'ts',v{iV},val(iV),trIdx);
+            % Assign 'snippet' value of 1, indicating that the value for
+            % this trial has been "touched"
+            setEventData(obj.Block,f,'snippet',v{iV},1,trIdx,1);
             % Assign 'tag' as a "sub-mask" for the 'Event' DiskData, which
             % indicates if the timestamp should be used:
-            useTimestamp = double((~isnan(val(iV))) && (~isinf(val(iV))));
-            [flag,idx] = setEventData(obj.Block,f,...
-               'tag',v{iV},useTimestamp,obj.TrialIndex);
+            mask = double((~isnan(val(iV))) && (~isinf(val(iV))));
+            [flag,idx] = setEventData(obj.Block,f,'tag',v{iV},mask,trIdx);
             if flag
                % Update files to reflect "last-scored" element
-               obj.Block.Events.(f)(idx).data.Index = obj.TrialIndex;
+               obj.Block.Events.(f)(idx).data.Index = trIdx;
                updateEventTimeCompletionStatus(obj,idx);               
             end
          end
@@ -570,20 +571,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          refreshGraphics(obj,value);
       end
       
-      % [DEPENDENT]  Returns .TrialBuffer property (from .Block.Pars)
-      function value = get.TrialBuffer(obj)
-         %GET.TRIALBUFFER  Returns value from .Block.Pars
-         %
-         %  value = get(obj,'TrialBuffer');
-         %  --> Simply return value of obj.Block.Pars.Video.TrialBuffer
-         
-         value = obj.Block.Pars.Video.PreTrialBuffer; 
-      end
-      function set.TrialBuffer(obj,value)
-         %SET.TRIALBUFFER  Assign to block parameter
-         obj.Block.Pars.Video.PreTrialBuffer = value;
-      end
-      
       % [DEPENDENT]  Returns .Type property (indexes "type" of .Variable)
       function value = get.Type(obj)
          % GET.TYPE  Returns column vector of putative trial times (seconds)
@@ -689,10 +676,9 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.Value(idx) = value;
          iTS = obj.Type(idx)==1;
          v = obj.Variable(iTS);
+%          tOff = 
          if ~isempty(obj.TimeAxes) && ~isempty(v)
-            val = value(iTS) + obj.VidGraphics.NeuOffset ...
-               - obj.VidGraphics.VideoOffset - obj.VidGraphics.TrialOffset;
-            updateEventTime(obj.TimeAxes,v,val);
+            updateEventTime(obj.TimeAxes,v,value(iTS)+obj.Block.NeuOffset);
          end
       end
       
@@ -859,6 +845,7 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             fprintf(1,'saving...\n');
          end
          setCurrentTrialData(obj);
+         refreshGraphics(obj);
          info = getScoringMetadata(obj.Block,'Video',obj.ScoringID);
          info.Toc(1) = info.Toc(1) + toc(info.Tic(1));
          info.Tic(1) = tic;
@@ -879,6 +866,10 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %                             'Event'-type DiskData associated
          %                             with obj.Block
          
+         % Set these to [] because obj.Value, obj.Variable, and obj.Type
+         % are all that is used to assign the values to the actual
+         % DiskFiles (so [] does not actually get assigned; however, set
+         % method behaves wierdly without having 3 input arguments).
          set(obj,'EventTimes',[]);
          set(obj,'Meta',[]);
          obj.NeedsSave = false;
@@ -953,6 +944,12 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          % Remove "selected" highlight from old button
          obj.TrialButtonArray(obj.TrialIndex).Selected = 'off';
          obj.TrialIndex = newTrialIndex;
+         
+         if obj.Block.HasVideoTrials
+            obj.Block.VideoIndex = newTrialIndex;
+            obj.Block.TrialIndex = newTrialIndex;
+%             obj.VidGraphicsObj.SeriesIndex = obj.Block.
+         end
          
          % Add "selected" highlight to new button
          if strcmp(obj.TrialButtonArray(newTrialIndex).Selected,'off')
@@ -1069,8 +1066,8 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          
          mask = obj.Block.TrialMask;
          for ii = 1:numel(idx)
-            isComplete = ~isnan(obj.Block.Events.(f)(idx(ii)).data.ts(mask));
-            obj.Block.Events.(f)(idx(ii)).data.Complete = all(isComplete);
+            scored = logical(obj.Block.Events.(f)(idx(ii)).data.snippet(mask,1));
+            obj.Block.Events.(f)(idx(ii)).data.Complete = all(scored);
          end
          
       end
@@ -1101,13 +1098,13 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          %  This updates the locations of 'Grasp', 'Reach', etc. indicators
          %  on the 'TimeScroller' Axes
          
-         tOff = obj.Block.TrialVideoOffset(obj.Block.VideoIndex,:).';
          if obj.TimeAxes.ZoomLevel == 0
-            ts = obj.Trial - tOff + obj.VidGraphics.NeuOffset;
+            tOff = obj.Block.TrialVideoOffset(obj.Block.VideoSourceIndex,:).';
+            ts = tOff;
             setTimeStamps(obj.TimeAxes,ts,'off');
             obj.NeedsLabels = true;
          else
-            ts = obj.Value(obj.Type==1) + obj.VidGraphics.NeuOffset;
+            ts = obj.Value(obj.Type==1) + obj.Block.NeuOffset;
             if obj.NeedsLabels
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;
@@ -1133,9 +1130,8 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          startVarName = obj.Block.Pars.Video.StartExportVariable;
          
          varIdx = findVariable(obj,startVarName);
-         ts = obj.Trial(trialIndex);
          if isnan(varIdx)
-            
+            ts = obj.Trial(trialIndex);
          else
             ts = obj.Value(varIdx);
             if isnan(ts) || isinf(ts)

@@ -254,10 +254,14 @@ for iE = 1:numel(ePars.Name)
       mIdx = getEventsIndex(blockObj,scoringField,targetManualEvent);
       % Make sure file is unlocked for writing
       unlockData(blockObj.Events.(scoringField)(mIdx).data);
-      nRow = size(blockObj.Events.(scoringField)(mIdx).data,1);
-      rowIndex = min(blockObj.Events.(scoringField)(mIdx).data.Index,nRow);
-      rowVec = rowIndex:nRow;
-      blockObj.Events.(scoringField)(mIdx).data.ts = ts;
+      
+      % Get indexing of "untouched" rows, based on "snippet" value of zero
+      % (which is "untouched") versus snippet value of one ("touched").
+%       nRow = size(blockObj.Events.(scoringField)(mIdx).data,1);
+%       rowIndex = min(blockObj.Events.(scoringField)(mIdx).data.Index,nRow);
+%       rowVec = rowIndex:nRow;
+      untouched = find(blockObj.Events.(scoringField)(mIdx).data.snippet < 1);
+      blockObj.Events.(scoringField)(mIdx).data.ts(untouched) = ts; %#ok<FNDSB>
       
    else
       nEvent = numel(ts);
