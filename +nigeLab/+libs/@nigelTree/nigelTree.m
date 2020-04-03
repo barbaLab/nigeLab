@@ -1,13 +1,41 @@
 classdef nigelTree < handle & matlab.mixin.SetGet
-    %NIGELTREE Summary of this class goes here
-    %   Detailed explanation goes here
-    
+%NIGELTREE Graphical object for representing NIGELAB file heiararchy
+%
+%    obj = nigeLab.libs.nigelTree(nigelObj,Panel);
+%    obj = nigeLab.libs.nigelTree(__,'Name',value,...);
+%
+%    NIGELTREE Properties
+%       tPanel - Graphics container for "tree" nigeLab.libs.nigelPanel
+%       Listener - Array of listener handles (to destroy on `delete`)
+%       Tank - nigeLab.Tank object related to this `nigelTree` object
+%       Tree - uiw.widget Tree object related to this `nigelTree`
+%       SelectionBackgroundColor - Background selection color of `Tree`
+%       Color - struct referencing colors of different `Tree` elements
+%       SelectionIndex - Indexing of currently-selected items
+%       SelectedNodes - uiw.widget.TreeNode objects selected on `Tree`
+%       SelectedItems - Array of nigeLab.nigelObj corresponding to nodes
+%       SelectedItemsType - `.Type` of `nigelObj` of selected nodes
+%       SelectedBlocks - Array of all `nigeLab.Block` objects from selected
+%
+%   NIGELTREE Events
+%       TreeSelectionChanged - Event issued when new tree node is clicked
+%
+%   NIGELTREE Methods
+%       nigelTree - Class constructor
+%       delete - Overloaded method to handle object and listener destruction
+%       buildTree - Makes the graphical parts of the tree
+%       addUIContextMenu - Adds UI context menu to Tree
+%       changeTreeSelection - Method invoked to change selection as callback
+%       addToTree - Method to add nodes to the tree
+%       getNodes - Returns currently-selected nodes
+
+    % % % PROPERTIES% % % % % % % % % % %
     properties
         tPanel  nigeLab.libs.nigelPanel % Graphics container for "tree" panel
-        Listener  event.listener  % Array of listener handles
-        Tank     nigeLab.Tank  % Tank object
-        Tree
-        SelectionBackgroundColor 
+        Listener  event.listener        % Array of listener handles
+        Tank     nigeLab.Tank           % Tank object
+        Tree                            % Tree widget
+        SelectionBackgroundColor        % Background selection color property
     end
     
     properties(Access=protected)
@@ -15,13 +43,13 @@ classdef nigelTree < handle & matlab.mixin.SetGet
     end
     
     properties(SetObservable,GetAccess = public,SetAccess = protected)
-        Color                struct               % Struct referencing colors
-        SelectionIndex       double = [1 0 0]           % indexing of currently-selected items
-        SelectedNodes        uiw.widget.TreeNode
-        SelectedItems        nigeLab.nigelObj
-        SelectedItemsType    char
-        SelectedBlocks       nigeLab.Block
-        Position             double = [.01 .01 .98 .98]
+        Color                struct                 % Struct referencing colors
+        SelectionIndex       double = [1 0 0]       % indexing of currently-selected items
+        SelectedNodes        uiw.widget.TreeNode    % Node objects of tree
+        SelectedItems        nigeLab.nigelObj       % Currently-selected nigel objects (nodes)
+        SelectedItemsType    char                   % 'Type' corresponding to objects
+        SelectedBlocks       nigeLab.Block          % Array of nigeLab.Block corresponding to obj
+        Position             double = [.01 .01 .98 .98]  % Normalized position of Tree
     end
     % % % % % % % % % % END PROPERTIES %
     
@@ -33,28 +61,46 @@ classdef nigelTree < handle & matlab.mixin.SetGet
     end
     % % % % % % % % % % END EVENTS % % %
     
+    % % % METHODS% % % % % % % % % % % %
     methods
+        % NIGELTREE Class constructor
         function obj = nigelTree(nigelObj,Panel, varargin)
-            % 'Parent' nigelPanel
-            % 'Color'  colorStrct
-            % Position
+           %NIGELTREE Graphical object for representing NIGELAB file heiararchy
+           %
+           %    obj = nigeLab.libs.nigelTree(nigelObj,Panel);
+           %    obj = nigeLab.libs.nigelTree(__,'Name',value,...);
+           %
+           %    -- Inputs --
+           %      nigelObj  :   nigeLab.nigelObj
+           %       Panel    :   nigeLab.libs.nigelPanel
+           %      varargin  :   (Optional) <'Name',value> syntax for setting
+           %                        property values in constructor
+           %
+           %        ## Properties ##
+           %            'Parent'   nigelPanel
+           %            'Color'    colorStrct
+           %            'Position' [1 x 4] double; normalized [0 1] graphical position
+           %
+           %    -- Output --
+           %       obj      :   nigeLab.libs.nigelTree object or array
+           %        --> If no input is provided, this is returned as an empty object
+           %        --> If input is a numeric scalar, returns an array of NigelTree obj
             
             if nargin < 1
-                obj = nigeLab.libs.DashBoard.empty(); % Empty DashBoard
+                obj = nigeLab.libs.NigelTree.empty(); % Empty NigelTree
                 return; % Should always be called from tankObj anyways
             elseif isnumeric(nigelObj)
                 dims = nigelObj;
                 if numel(dims) == 1
                     dims = [0,dims];
                 end
-                %             delete(obj.nigelGUI); %Just in case a figure is opened
                 obj = repmat(obj,dims);
                 return;
             end
             
             obj.tPanel = Panel;
             
-            % defualts prop assignement
+            % defaults prop assignement
             obj.Color = nigeLab.libs.nigelTree.initColors();
             obj.Position = obj.tPanel.InnerPosition;
             for jj=1:2:nargin-2
@@ -62,18 +108,18 @@ classdef nigelTree < handle & matlab.mixin.SetGet
                    obj.(varargin{jj}) = varargin{jj+1};
                end
             end
-             Type = unique({nigelObj.Type});
-         switch Type{:} 
-             case 'Tank'
-                 obj.Tank = nigelObj;
-                 animalObjs = obj.Tank.Children;
-             case 'Animal'
-                 if isempty(nigelObj.Parent)
-                 else
+            Type = unique({nigelObj.Type});
+            switch Type{:} 
+               case 'Tank'
+                  obj.Tank = nigelObj;
+                  animalObjs = obj.Tank.Children;
+               case 'Animal'
+                  if isempty(nigelObj.Parent)
+                  else
                      obj.Tank = nigelObj.Parent;
-                 end
-                 animalObjs = nigelObj;
-         end
+                  end
+                  animalObjs = nigelObj;
+            end
             obj.Tree = buildTree(obj,animalObjs);
             
             % Initialize the current selected node as "root"
