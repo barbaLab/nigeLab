@@ -1,12 +1,12 @@
 classdef  (ConstructOnLoad) childAdded < event.EventData
-   % SPLITCOMPLETED  Event class to notify the DashBoard and any other
+   % CHILDADDED  Event class to notify the DashBoard and any other
    %                 objects involved in splitting a "multi-animal" block.
    %
-   %  This event should be associated with the 'splitCompleted' Event that
+   %  This event should be associated with the 'childAdded' Event that
    %  is issued once the "split multi-animal blocks" procedure is completed
    %  using the `nigeLab.libs.splitMultiAnimalsUI` 
    %
-   %  SPLITCOMPLETED Properties:
+   %  CHILDADDED Properties:
    %     obj  --  An array of `nigelObjects` such as `Block`
    %        It should contain all the `Block` and `Animal` handles that
    %        will be split by separating the corresponding sub-elements
@@ -17,9 +17,9 @@ classdef  (ConstructOnLoad) childAdded < event.EventData
    %
    %     n  --  Number of nigelObjects in array
    %
-   %  SPLITCOMPLETED Methods:
+   %  CHILDADDED Methods:
    %     splitCompleted  --  Constructor for 'multiAnimals' split eventdata
-   %        evt = nigeLab.evt.splitCompleted(nigelObjArray);
+   %        evt = nigeLab.evt.childAdded(nigelObj);
     
    properties (GetAccess = public, SetAccess = immutable)
       nigelObj         % An array of `nigelObjects`
@@ -29,11 +29,11 @@ classdef  (ConstructOnLoad) childAdded < event.EventData
    
    methods (Access = public)
       function evt = childAdded(nigelObj)
-      % SPLITCOMPLETED Event class to notify the DashBoard and any other
+      % CHILDADDED Event class to notify the DashBoard and any other
       %                objects involved in splitting a "multi-animal" block
       %
-      %  evt = nigeLab.evt.splitCompleted(blockObjArray);
-      %  evt = nigeLab.evt.splitCompleted(animalObjArray);
+      %  evt = nigeLab.evt.childAdded(blockObjArray);
+      %  evt = nigeLab.evt.childAdded(animalObjArray);
       
          evt.nigelObj = nigelObj;
          clInfo = strsplit(class(nigelObj),'.');
