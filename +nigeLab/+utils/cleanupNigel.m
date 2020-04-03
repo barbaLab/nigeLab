@@ -1,8 +1,21 @@
-%% Clean up nigel's mess
 function cleanupNigel(tankPath)
-% CLEANUPNIGEL deletes all nigelFiles in the define tankFolder. 
-% ie deletes all _Pars.mat files, all Block, Animals and Tank files and all
-% .nigelObj files. 
+%CLEANUPNIGEL Deletes all nigelFiles at TOP-LEVEL of `tankPath` (input)
+%
+%   nigeLab.utils.cleanupNigel(tankPath);
+%   ```
+%       nigeLab.utils.cleanupNigel('/path/to/TANK');
+%   ```
+%       * The above would clear the following filetypes in /path/to/TANK:
+%           + *_Pars.mat
+%           + *_Block.mat
+%           + *_Animals.mat
+%           + *_Tank.mat
+%           + *.nigelBlock
+%           + *.nigelAnimal
+%           + *.nigelTank
+%
+% -- Input --
+%   tankPath    :       (char array) Path of TANK folder to clean
 
 d = dir(fullfile(tankPath));
 [tankPath,tankName] = fileparts(tankPath);
@@ -28,7 +41,7 @@ d = append(d,...
 d = append(d,...
     dir(fullfile(tankPath,'*','*','.nigelBlock')));
 
-
+% Iterates on elements of struct array `d`
 for ii=d'
    delete(fullfile(ii.folder,ii.name)) 
 end
