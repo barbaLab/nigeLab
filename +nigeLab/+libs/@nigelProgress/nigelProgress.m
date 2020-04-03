@@ -65,7 +65,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
                          ?nigeLab.evt.barStopped,...
                          ?nigeLab.evt.barCleared,...
                          ?nigeLab.libs.DashBoard})
-      BlockSelectionIndex  cell     % Key of the {animal block}
+      BlockKey  cell     % Key of the {animal block}
       Timer                timer    % Timer running "remote" monitor
    end
    
@@ -133,7 +133,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          bar.Name = name;
          bar.Parent = parent;
          bar.Position = parent.Position;
-         bar.BlockSelectionIndex = sel;
+         bar.BlockKey = sel;
          bar.Tank = monitorObj.tankObj;
          bar.Block = bar.Tank{sel(1,1),sel(1,2)};
          bar.Monitor = monitorObj;
@@ -321,7 +321,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
       % Returns bar based on sel from list of monitorObj bars
       function bar = getBar(barArray,sel)
          % GETBAR  Returns a single bar object based on selection from list
-         %         array barArray. References the 'BlockSelectionIndex'
+         %         array barArray. References the 'BlockKey'
          %         property.
          %
          %  bar = getBar(barArray,sel);
@@ -329,7 +329,7 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
          %  sel  --  [1 x 2] cell array {animalKey blockKey}
          
          for bar = barArray
-            if all(strcmp(bar.BlockSelectionIndex,sel))
+            if all(strcmp(bar.BlockKey,sel))
                return;
             end
          end
@@ -406,14 +406,16 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
             % Play the bell sound! Yay!
             bar.setState(100,bar.CompleteKey);
             nigeLab.sounds.play('bell',1.5);
-            if bar.IsRunning
-               sel = bar.BlockSelectionIndex;
+%             if bar.IsRunning
+% Can this statement be entered if the bar was not completed properly?
+               sel = bar.BlockKey;
                b = bar.Tank{sel(1,1),sel(1,2)};
                b.reload(); % Reload the block so it is linked properly
                evt = nigeLab.evt.jobCompleted(bar);
                notify(bar.Monitor,'JobCompleted',evt);
-               nigelab.utils.multiCallbackWrap(bar, evt, bar.FinishedFun);
-            end
+               nigeLab.utils.multiCallbackWrap(bar, evt, bar.FinishedFun);
+                             
+%             end
          else
             % I hate this sound! Boo! You should also hate it!
             nigeLab.sounds.play('alert',3);
@@ -604,68 +606,74 @@ classdef nigelProgress < handle & matlab.mixin.SetGet
       
       % Updates the progress bar with current job status
       function updateBar(bar)
-         % UPDATEREBAR  Update the bar to reflect status of current job
-         %
-         %  monitorObj.updateRemoteMonitor();  
-         %
-         %  --> This method should be periodically "pinged" by the TimerFcn
-         %      so that the state of the remote job can be updated.
-
-         if ~bar.IsParallel
-            str = bar.getChild('status','String');
-            if strcmpi(str,bar.CompleteKey)
-               pct = 100;
-            else
-               return;
-            end
-         else
-            [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,bar.TagDelim);
-         end
-         % Redraw the patch that colors in the progressbar
-         bar.setState(pct,str);
-         
-         % If on remote, wait for job to finish--it will do indicator
-%          if bar.IsRemote
-%             if strcmpi(str,bar.CompleteKey)
-%                % If the job is completed, then run the completion method
-%                bar.stopBar();
-%                if pct >= 100
-%                   bar.IsComplete = true;
-%                   % If `indicateCompletion()` runs with `bar.IsComplete`
-%                   % true, it does the "bell" ring; otherwise, it does the
-%                   % "alert" noise
-%                else
-%                   % If bar reached "Complete" at some point
-%                   bar.IsComplete = bar.IsComplete || false;
-%                end
-%             end
-%          else
-if bar.IsParallel
-    if strcmp(bar.job.State,'finished')
-        bar.stopBar();
-        
-        % If the job is completed, then run the completion method
-        
-        if pct >= 100 || strcmpi(str,bar.CompleteKey) || bar.IsComplete
-            bar.IsComplete = true;
-            % If `indicateCompletion()` runs with `bar.IsComplete`
-            % true, it does the "bell" ring; otherwise, it does the
-            % "alert" noise
-        else
-            bar.IsComplete = false;
-        end
-        bar.indicateCompletion();
-    end
-else
-    % Otherwise just wait until it hits 100% to indicate complete
-    if pct >= 100
-        bar.IsComplete = true; % So the "bell" will sound
-        bar.indicateCompletion();
-        bar.stopBar();
-    end
-end
-
-      end
+          % UPDATEREBAR  Update the bar to reflect status of current job
+          %
+          %  monitorObj.updateRemoteMonitor();
+          %
+          %  --> This method should be periodically "pinged" by the TimerFcn
+          %      so that the state of the remote job can be updated.
+          
+          try  % sometimes this goes wrong due to comunication issues between the matlab serer and the dashboard.
+                % when this happens we don't want the whole remoteMonitor
+                % to crash
+              
+          if ~bar.IsParallel
+              str = bar.getChild('status','String');
+              if strcmpi(str,bar.CompleteKey)
+                  pct = 100;
+              else
+                  return;
+              end
+          else
+              [pct,str] = nigeLab.utils.jobTag2Pct(bar.job,bar.TagDelim);
+          end
+          % Redraw the patch that colors in the progressbar
+          bar.setState(pct,str);
+          
+          % If on remote, wait for job to finish--it will do indicator
+          %          if bar.IsRemote
+          %             if strcmpi(str,bar.CompleteKey)
+          %                % If the job is completed, then run the completion method
+          %                bar.stopBar();
+          %                if pct >= 100
+          %                   bar.IsComplete = true;
+          %                   % If `indicateCompletion()` runs with `bar.IsComplete`
+          %                   % true, it does the "bell" ring; otherwise, it does the
+          %                   % "alert" noise
+          %                else
+          %                   % If bar reached "Complete" at some point
+          %                   bar.IsComplete = bar.IsComplete || false;
+          %                end
+          %             end
+          %          else
+          if bar.IsParallel
+              if any(strcmp(bar.job.State,{'finished','failed'}))
+                  bar.stopBar();
+                  
+                  % If the job is completed, then run the completion method
+                  
+                  if pct >= 100 || strcmpi(str,bar.CompleteKey) || bar.IsComplete
+                      bar.IsComplete = true;
+                      % If `indicateCompletion()` runs with `bar.IsComplete`
+                      % true, it does the "bell" ring; otherwise, it does the
+                      % "alert" noise
+                  else
+                      bar.IsComplete = false;
+                  end
+                  bar.indicateCompletion();
+              end
+          else
+              % Otherwise just wait until it hits 100% to indicate complete
+              if pct >= 100
+                  bar.IsComplete = true; % So the "bell" will sound
+                  bar.indicateCompletion();
+                  bar.stopBar();
+              end 
+          end %fi
+          catch er
+            ... nothing to see here
+          end
+      end % updateBar
    end
    
    methods (Access = private)

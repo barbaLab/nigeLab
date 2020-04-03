@@ -19,6 +19,8 @@ if ~isscalar(fcnList)
       nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{iFcn});
    end
    return;
+elseif iscell(fcnList{1})
+          nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{1});
 end
 
 if iscell(fcnList)

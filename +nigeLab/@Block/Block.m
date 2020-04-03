@@ -262,7 +262,7 @@ classdef Block < nigeLab.nigelObj
          % Does nothing
          obj.ChannelID_ = value;
       end
-      
+           
       % [DEPENDENT]  Returns .EventTimes property (write to DiskData)
       function value = get.EventTimes(blockObj)
          %GET.EVENTTIMES  Returns .EventTimes property
@@ -750,8 +750,8 @@ classdef Block < nigeLab.nigelObj
    
    % PROTECTED
    methods (Access=protected)
-      % Modify inherited name parsing method
-      function [name,meta] = parseNamingMetadata(blockObj,fName,pars)
+      % Modify inherited superclass name parsing method
+      function meta = parseNamingMetadata(blockObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(obj);
@@ -822,7 +822,7 @@ classdef Block < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             blockObj,fName,pars);
          
          % % % % Parse additional parameters for BLOCK % % % % 

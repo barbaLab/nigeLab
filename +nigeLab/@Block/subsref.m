@@ -24,7 +24,10 @@ function varargout = subsref(blockObj,S)
 %                                              of blockObjArray. Note that
 %                                              each block returns the array
 %                                              as a separate cell array.
-
+if all(size(blockObj)==[0,0])
+    varargout = {[]};
+   return; 
+end
 switch S(1).type
    case '.' % Handle '.' subscripted references
       % . means Block was referenced as __.Block.[method or property]

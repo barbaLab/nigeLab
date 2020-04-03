@@ -148,6 +148,7 @@ classdef nigelObj < handle & ...
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
       GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
+      TreeNodeContainer uiw.widget.TreeNode     % Container for handle to Tree nodes in the nigelTree obj
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
       SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
@@ -175,6 +176,7 @@ classdef nigelObj < handle & ...
       DashChanged      % Interactions with nigeLab.libs.DashBoard
       ProgressChanged  % Issued as `doMethod` proceeds
       StatusChanged    % Issued when a Field is updated
+      ChildAdded       % Issued when a child is added through the addchild method
    end
    % % % % % % % % % % END EVENTS % % %
    
@@ -1028,6 +1030,7 @@ classdef nigelObj < handle & ...
                if isvalid(value)
                   if isprop(value,'nigelGUI')
                      figure(value.nigelGUI); % Make sure figure is focused
+                     obj.GUIContainer = value; % Store association to handle object
                   else
                      [fmt,idt,type] = obj.getDescriptiveFormatting();
                      nigeLab.utils.cprintf(fmt,'%s[NIGELOBJ/SET.GUI]: ',...
@@ -1045,7 +1048,7 @@ classdef nigelObj < handle & ...
                obj.GUIContainer = value; 
                % Set .IsDashOpen AFTER setting obj.GUIContainer
                obj.IsDashOpen = flag;
-               return;
+%                return;
             end
          end
          
@@ -2486,6 +2489,8 @@ classdef nigelObj < handle & ...
          if strcmp(obj.Type,'Animal')
             obj.parseProbes();
          end
+         evt = nigeLab.evt.childAdded(childObj);
+         notify(obj,'ChildAdded',evt);
       end
       
       % Check compatibility with current `.Fields` configuration
@@ -3874,7 +3879,7 @@ classdef nigelObj < handle & ...
          switch class(ind)
              case 'double'
                  ...Nothing really to do here
-             case 'nigeLab.Block'
+             case {'nigeLab.Block','nigeLab.Animal','nigeLab.nigelObj'}
                     ind = find(ismember( obj.Children,ind));
              otherwise
          end
@@ -3893,6 +3898,7 @@ classdef nigelObj < handle & ...
             if exist(pname,'file')~=0
                delete(pname);
             end
+            delete(obj.Children(ii).TreeNodeContainer);
             delete(obj.Children(ii));
          end
          
@@ -5041,6 +5047,7 @@ classdef nigelObj < handle & ...
          comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
             eye(numel(cname))));
          rmvec = any(comparisons_mat,1);
+         correspondanceVec = any(comparisons_mat,2);
          if ~any(rmvec)
             return;
          end
@@ -6310,7 +6317,7 @@ classdef nigelObj < handle & ...
       end
       
       % Update Paths
-      function flag = updatePaths(obj,saveLoc)
+      function flag = updatePaths(obj,saveLoc,removeOld)
          %UPDATEPATHS  Update the path tree of the Block object
          %
          %  flag = obj.updatePaths();
@@ -6335,6 +6342,9 @@ classdef nigelObj < handle & ...
          flag = false;
          if nargin < 2
             saveLoc = obj.SaveLoc;
+            removeOld = false;
+         elseif nargin < 3
+             removeOld = false;
          end
          
          if isempty(saveLoc)
@@ -6350,7 +6360,7 @@ classdef nigelObj < handle & ...
          
          % Assign .Paths save location (container of object folder tree)
          obj.Params.Paths.SaveLoc = saveLoc;
-
+         obj.Output = fullfile(saveLoc,obj.Name);
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
             p = obj.Output;
@@ -6370,7 +6380,7 @@ classdef nigelObj < handle & ...
          
          % remove old block matfile
          objFile = obj.File;
-         if exist(objFile,'file')
+         if exist(objFile,'file') && removeOld
             delete(objFile);
          end
 
