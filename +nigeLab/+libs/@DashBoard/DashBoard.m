@@ -1414,9 +1414,18 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  mitem.Callback = @(~,~)obj.uiCMenuClick_Sort;
          %
          %  Runs the spike sorting interface.
-         
-         blockObj = obj.getSelectedItems('obj');
-         Sort(blockObj); % Invoke sorting interface
+         nigelObj = obj.Tree.SelectedItems;
+         switch nigelObj.Type
+             case 'Block'
+                  Sort(nigelObj);
+             case 'Animal'
+                 if numel(nigelObj)>1
+                     error('You can only sort one aniaml at a time!');
+                 end
+                 Sort(nigelObj);
+             case 'Tank'
+                 error('Sort operation is not possible on the whole tank at once.\nPlease select an Animal or a Block.');
+         end
       end
       
       % LISTENER CALLBACK: Menu item toggle child mask on "Enable" click
