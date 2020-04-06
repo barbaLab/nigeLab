@@ -6465,8 +6465,13 @@ classdef nigelObj < handle & ...
          end
       end
       
-            % Prompt the user with a diolog to look for the data
+      % Prompt the user with a dialog to look for the data
       function flag = lookForData(obj)
+          %LOOKFORDATA  Prompt user with a dialog to look for missing data
+          %
+          % flag = lookForData(obj);
+          % --> Called if an identifier file is not present in the expected location.
+          
           quest = sprintf('Looks like Nigel cannot find some data.\nDid you move your stuff recently?');
           btn1 = sprintf('Yes! Let me show you where it is.');
           btn2 = sprintf('No. Leave me alone I know what I''m doing.');
