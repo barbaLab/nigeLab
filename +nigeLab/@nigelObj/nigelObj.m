@@ -2450,7 +2450,7 @@ classdef nigelObj < handle & ...
          end % if isempty
          
          % assign parent to childObj
-         childObj.Parent = obj;
+         [childObj.Parent] = deal(obj);
          
          if nargin < 3
             obj.Children = [obj.Children childObj];
@@ -3918,29 +3918,41 @@ classdef nigelObj < handle & ...
          end
          
          switch class(obj)
+             % nigelObj specific operations
              case 'nigeLab.Tank'
-                 for ii=1:numel(obj.Children)
+                 MetaProperties = ?nigeLab.Tank;
+                 animals = obj.Children;
+                 for ii=1:numel(animals)
                      an = obj.Children(ii);
                      an.reload;
+                     an.Parent = obj;
                  end
+                 
              case 'nigeLab.Animal'
-                 for ii=1:numel(obj.Children)
+                 MetaProperties = ?nigeLab.Animal;
+                 blocks = obj.Children;
+                 for ii=1:numel(blocks)
                      bl = obj.Children(ii);
                      bl.reload;
+                     bl.Parent = obj;
                  end
              case 'nigeLab.Block'
-                 
-                 varName = sprintf('%sObj',lower(obj.Type));
-                 new = load(obj.File,varName);
-                 ff=fieldnames(new.(varName));
-                 if strcmpi(field,'all')
-                     field = ff;
-                 end
-                 indx = find(ismember(ff,field))';
-                 for f=indx
-                     obj.(ff{f}) = new.(varName).(ff{f});
-                 end
+                 MetaProperties = ?nigeLab.Block;
          end
+         transientIdx = [MetaProperties.PropertyList.Transient];
+         transientList = {MetaProperties.PropertyList(transientIdx).Name};
+         varName = sprintf('%sObj',lower(obj.Type));
+         new = load(obj.File,varName);
+         ff=fieldnames(new.(varName));
+         if strcmpi(field,'all')
+             field = ff;
+         end
+         field = setdiff(field,transientList);
+         indx = find(ismember(ff,field))';
+         for f=indx
+             obj.(ff{f}) = new.(varName).(ff{f});
+         end
+         
       end
       
       % Method to save any parameters as a .mat file for a given User
@@ -5055,45 +5067,15 @@ classdef nigelObj < handle & ...
          % cycle through each animal, removing animals and adding any
          % associated blocks to the "kept" animal Blocks property
          ii=1;
-         while ~isempty(comparisons_mat)
-            % Current row contains all comparisons to other Animals in
-            % obj.Children
-            animalIsSame = comparisons_mat(1,:);
-            comparisons_mat(1,:) = []; % ensure this row is dropped
-            
-            % ii indexes current "good" Animal
-            a = A(ii);
-            ii = ii + 1; % ensure it is incremented
-            
-            % If no redundancies, then continue.
-            if ~any(animalIsSame)
-               continue;
-            end
-            
-            % To prevent weird case where you have a 1x0 array
-            if isempty(animalIsSame)
-               continue;
-            end
-            
-            % Add child blocks from removed animals to this animal to
-            % ensure they aren't accidentally discarded
-            aidx = find(animalIsSame);
-            B = [A(aidx).Children]; %#ok<*FNDSB>
-            addChild(a,B);
-            
-            % Now, remove redundant animals from array and also remove them
-            % from the comparisons matrix since we don't need to redo them
-            mask = find(idx);
-            obj.Children(mask(animalIsSame)) = []; % Remove from property
-            A(animalIsSame) = []; % Remove them from consideration in the array
-            idx(animalIsSame) = []; % Remove corresponding indexes
-            
-            % Lastly, update the comparisons matrices
-            iRow = animalIsSame(2:end); % To account for previously-removed row of comparisons
-            comparisons_mat(iRow,:) = [];
-            % Columns are not removed, since the original animal is kept in
-            % the array and we should account for its index.
-            comparisons_mat(:,animalIsSame) = [];
+         while any(rmvec)             
+             idxToRemove = find(rmvec,1);
+             idxToKeep = find(correspondanceVec,1);
+             a = A(idxToKeep);
+             B = [A(idxToRemove).Children]; %#ok<*FNDSB>
+             addChild(a,B);
+             obj.Children(idxToRemove) = []; % Remove from property
+             rmvec(idxToRemove) = [];
+             correspondanceVec(idxToKeep) = [];
          end
       end
       
@@ -6482,6 +6464,26 @@ classdef nigelObj < handle & ...
             end %kk
          end
       end
+      
+            % Prompt the user with a diolog to look for the data
+      function flag = lookForData(obj)
+          quest = sprintf('Looks like Nigel cannot find some data.\nDid you move your stuff recently?');
+          btn1 = sprintf('Yes! Let me show you where it is.');
+          btn2 = sprintf('No. Leave me alone I know what I''m doing.');
+          dlgtitle = 'I''m confused';
+          answer = questdlg(quest,dlgtitle,btn1,btn2,btn1);
+          
+          switch answer
+              case btn1
+                  path = uigetdir(obj.Paths.SaveLoc);
+                  obj.updatePaths(path);
+                  flag = true;
+              case btn2
+                  flag = false;
+              otherwise
+                  flag = false;
+          end
+      end
    end
    
    % STATIC,PUBLIC
@@ -6535,6 +6537,10 @@ classdef nigelObj < handle & ...
          b.loadIDFile();
          b.checkParsInit();
          
+         % global variable to inform children if they need to refresh their
+         % paths
+         global DataMoved;
+                  
          switch b.Type
             case 'Block'
                % Be sure to re-assign transient .Block property to Videos
@@ -6544,10 +6550,57 @@ classdef nigelObj < handle & ...
                   b.Videos = nigeLab.libs.VideosFieldType.empty();
                else
                end
-            case {'Animal','Tank'}
-               b.PropListener(1).Enabled = false;
+               
+               if DataMoved
+                   % This means the load process deteermined the data was
+                   % moved from the saved path. Needs to update path using
+                   % Parent directory. If DataMoved is true, the loadfunc
+                   % was called during the loading process of animal.
+                   animalObj = evalin('caller','b'); % evaluates the variable b in the caller workspace
+                   path = animalObj.Output;
+                   b.updatePaths(path);
+               end
+               
+             case {'Animal'}
+                 b.PropListener(1).Enabled = false;
+                 % Adds Children if it finds them
+                 [C,varName] = b.searchForChildren();
+                 if isempty(C)
+                     st = dbstack;
+% here we use dbstack to determine if the fucntion was called by the top
+% workspace or by the tankObj loading function. In the forst case we prompt
+% the user to select the correct path, otherwise we use the tankObj path 
+                     if length(st) == 2
+                         tankObj = evalin('caller','b');
+                         path = tankObj.Output;
+                         b.updatePaths(path);
+                         flag = true;
+                     else
+                         flag = b.lookForData;
+                     end
+                     if flag
+                         [C,varName] = b.searchForChildren();
+                         DataMoved = true;
+                     end
+                 end
+                 for ii=1:numel(C)
+                     in = load(fullfile(C(ii).folder,C(ii).name),varName);
+                     b.addChild(in.(varName));
+                 end
+                 b.PropListener(1).Enabled = true;
+                 
+             case{'Tank'}
+                 b.PropListener(1).Enabled = false;
                % Adds Children if it finds them
-               [C,varName] = b.searchForChildren();
+                 [C,varName] = b.searchForChildren();
+                 DataMoved = false;
+               if isempty(C)                                      
+                   flag = b.lookForData;
+                   if flag
+                       [C,varName] = b.searchForChildren();                       
+                       DataMoved = true;
+                   end                       
+               end
                for ii=1:numel(C)
                   in = load(fullfile(C(ii).folder,C(ii).name),varName);
                   b.addChild(in.(varName));
