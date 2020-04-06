@@ -316,7 +316,7 @@ classdef SpikeImage < handle
             return;
          end
          
-         if ~isfield(obj.Parent,'FeaturesUI')
+         if ~isprop(obj.Parent.UI,'FeaturesUI')
             return;
          end
          
@@ -757,9 +757,29 @@ classdef SpikeImage < handle
       end
       
       % CALLBACK: Execute keyboard shortcut on keyboard button press
-      function WindowKeyPress(obj,~,evt)
+      function WindowKeyPress(obj,src,evt)
          %WINDOWKEYPRESS    Issue different events on keyboard presses
          switch evt.Key
+             case {'n','0'}
+                 if strcmpi(evt.Modifier,'control')
+                     thisClass =  obj.Spikes.CurClass;
+                     obj.Spikes.CurClass = 1;
+                     subsetIndex = find(obj.Spikes.Class == thisClass);
+                     evtData = nigeLab.evt.assignClus(subsetIndex,...
+                         obj.Spikes.CurClass,thisClass);
+                     obj.UpdateClusterAssignments(nan,evtData);
+                 else
+                 end
+             case {'1','2','3','4','5','6','7','8'}
+                 if strcmpi(evt.Modifier,'control')
+                     thisClass =  obj.Spikes.CurClass;
+                     obj.Spikes.CurClass = str2num(evt.Key)+1;
+                     subsetIndex = find(obj.Spikes.Class == thisClass);
+                     evtData = nigeLab.evt.assignClus(subsetIndex,...
+                         obj.Spikes.CurClass,thisClass);
+                     obj.UpdateClusterAssignments(nan,evtData);
+                 else
+                 end
             case 'space'
                obj.ConfirmChanges;
             case 'z'

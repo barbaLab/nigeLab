@@ -41,8 +41,9 @@ end
 
 % Perform clustering
 % Use PCA for reclustering, for the time-being
-[~,score,~,~,expl,~] = pca(spks);
-inspk=[inspk score(:,1:find(cumsum(expl)>95,1))];
+% [~,score,~,~,expl,~] = pca(spks);
+% inspk = score(:,1:find(cumsum(expl)>95,1));
+% inspk=spks;
 
 %     [classes,temp] = nigeLab.utils.SPC.DoSPC(par,inspk);
 try
