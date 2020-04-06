@@ -1,6 +1,14 @@
 function populateTree(Tree)
-for kk= 1:size(Tree,1)
+
+if iscell(Tree)
+   cellfun(@(x) populateTree(x),Tree);
+   return;
+end
+
+
+for kk = 1:size(Tree,1)
     for tt=1:size(Tree,2)
+        Tree(kk,tt).Position = [0.01+(tt-1)*0.5 0.01 0.45 0.95];
         bl = Tree(kk,tt).UserData;
         if ~isempty(Tree(kk,tt).Root.Children),delete(Tree(kk,tt).Root.Children);end
         %% channels

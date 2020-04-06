@@ -2494,7 +2494,7 @@ classdef nigelObj < handle & ...
                      @(~,~)obj.parseProbes)];
             end
          end % i
-         if strcmp(obj.Type,'Animal')
+         if strcmp(obj.Type,'Animal') && ~obj.MultiAnimals
             obj.parseProbes();
          end
          evt = nigeLab.evt.childAdded(childObj);

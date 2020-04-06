@@ -122,18 +122,17 @@ for ii = 1:numel(SplittedMeta)
       end
    end %kk
     an.Name =  str(1:(end-1));
-    
+    an.Children = [];
     an.MultiAnimals = 2;
     an.MultiAnimalsLinkedAnimals(:) = [];
     an.Output = fullfile(an.SaveLoc,an.Name);
-    an.Children = AllSplittedBlocks(strcmp(animalNames,an.Name));
+    an.addChild(AllSplittedBlocks(strcmp(animalNames,an.Name)));
     
     an.Key = an.InitKey();
-    an.save;
     splittedAnimals = [splittedAnimals, an];
 end
 animalObj.MultiAnimalsLinkedAnimals = splittedAnimals;
-animalObj.save;
+% animalObj.Parent.addChild(splittedAnimals);
 
 end
 
@@ -171,10 +170,6 @@ end % kk
 
 for ii = 1:numel(animalObj.MultiAnimalsLinkedAnimals)
    animalObj.MultiAnimalsLinkedAnimals(ii).updatePaths();
-end
-
-for bb = BToRemove
-    animalObj.removeChild(bb);
 end
 
 end
