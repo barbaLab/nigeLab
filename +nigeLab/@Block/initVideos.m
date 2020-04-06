@@ -33,18 +33,33 @@ elseif ~isfield(blockObj.Pars,'Video')
    blockObj.updateParams('Video','KeepPars');
 end
 % Initialize Videos version of Paths
-initKeyFile=[strrep(blockObj.Name,blockObj.Pars.Block.Concatenater,'*') ...
-   '*' blockObj.Pars.Video.FileExt];
-[initRoot,initFolder] = fileparts(blockObj.Pars.Video.DefaultSearchPath);
-blockObj.Paths.V = struct(...
-   'Root',initRoot,...
-   'Folder',initFolder,...
-   'KeyFile', initKeyFile,...
-   'FileExt',blockObj.Pars.Video.FileExt);
-[fmt,idt,~] = blockObj.getDescriptiveFormatting();
+if blockObj.HasVideoTrials
+   metaName = 'TrialVideo';
+   % In this case, 'V' should already be initialized, but in case something
+   % went funny here:
+   if ~isfield(blockObj.Paths,'V')
+      ext = blockObj.Pars.Video.FileExt;
+      blockObj.Paths.V = struct(...
+         'Root',blockObj.Paths.Output,...
+         'Folder',blockObj.Paths.Name,...
+         'KeyFile',sprintf(blockObj.Paths.Video.f_expr,'*','*',strrep(ext,'.','')),...
+         'FileExt',ext);
+   end
+else
+   metaName = 'Video';
+   initKeyFile=[strrep(blockObj.Name,blockObj.Pars.Block.Concatenater,'*') ...
+      '*' blockObj.Pars.Video.FileExt];
+   [initRoot,initFolder] = fileparts(blockObj.Pars.Video.DefaultSearchPath);
+   blockObj.Paths.V = struct(...
+      'Root',initRoot,...
+      'Folder',initFolder,...
+      'KeyFile', initKeyFile,...
+      'FileExt',blockObj.Pars.Video.FileExt);
+end
+[fmt,idt,~] = getDescriptiveFormatting(blockObj);
 
-if ~isfield(blockObj.Meta,'Video')
-   blockObj.Meta.Video = []; % Initialize 'Video' meta field
+if ~isfield(blockObj.Meta,metaName)
+   blockObj.Meta.(metaName) = []; % Initialize 'Video' meta field
 end
 
 if ~blockObj.Pars.Video.HasVideo
@@ -114,7 +129,9 @@ blockObj.Paths.V.Match = parseVidFileExpr(blockObj);
 
 % Make "Videos" fieldtype object or array
 blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
-uView = unique({blockObj.Videos.Source});
-initRelativeTimes(blockObj.Videos,uView);
+if ~blockObj.HasVideoTrials % Only do the relative offset if they don't have video trials
+   uView = unique({blockObj.Videos.Source});
+   initRelativeTimes(blockObj.Videos,uView);
+end
 flag = true;
 end

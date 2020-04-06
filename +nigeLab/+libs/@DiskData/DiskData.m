@@ -1474,7 +1474,9 @@ classdef DiskData < handle & ...
          %
          %  set(obj,'data',value)
          
-         obj(:,:) = value;         
+         S = substruct('.','data','()',{':',':'});
+         obj = subsasgn(obj,S,value);
+%          obj(:,:) = value;         
       end
       
       % [DEPENDENT]  Returns .dims_h5 property (fliplr(obj.size_))
@@ -1644,7 +1646,9 @@ classdef DiskData < handle & ...
          %  set(obj,'snippet',value)
          
          if strcmp(obj.type_,'Event')
-            obj(:,5:(5+size(value,2))) = value; 
+            S = substruct('.','snippet','()',{':',':'});
+            obj = subsasgn(obj,S,value);
+%             obj(:,5:(5+size(value,2))) = value; 
          end
       end
       
@@ -1686,7 +1690,7 @@ classdef DiskData < handle & ...
          %  set(obj,'tag',value)
          
          if strcmp(obj.type_,'Event')
-            obj(:,3) = value; 
+            obj.data(:,3) = value(:); 
          end
       end
       
@@ -1728,7 +1732,7 @@ classdef DiskData < handle & ...
          %  set(obj,'ts',value)
          
          if strcmp(obj.type_,'Event')
-            obj(:,4) = value; 
+            obj.data(:,4) = value(:); 
          end
       end
       
@@ -1770,7 +1774,7 @@ classdef DiskData < handle & ...
          %  set(obj,'type',value)
          
          if strcmp(obj.type_,'Event')
-            obj(:,1) = value; 
+            obj.data(:,1) = value(:); 
          end
       end
       
@@ -1844,7 +1848,7 @@ classdef DiskData < handle & ...
          %  set(obj,'value',value)
          
          if strcmp(obj.type_,'Event')
-            obj(:,2) = value; 
+            obj.data(:,2) = value(:); 
          end
       end
       % % % % % % % % % % END [DEPENDENT] GET/SET.PROPERTY METHODS % % %
@@ -1869,6 +1873,9 @@ classdef DiskData < handle & ...
          obj.Animal = animal;
          [~,tank] = fileparts(p); % [Experiment path, Tank]
          obj.Tank = tank;
+         if strcmp(obj.type_,'MatFile')
+            obj.Complete = ones(1,1,'int8');
+         end
       end
       
       % Overloaded method for empty object display

@@ -124,6 +124,7 @@ classdef nigelObj < handle & ...
    % DEPENDENT,TRANSIENT,SETOBSERVABLE,PUBLIC (Children Objects)
    properties (Dependent,Transient,SetObservable,Access=public)
       Children                % Array of "child" objects
+      Parent
    end
    
    % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC (Flags)
@@ -143,9 +144,11 @@ classdef nigelObj < handle & ...
    
    % HIDDEN,TRANSIENT,PUBLIC (Listeners and Object "Containers")
    properties (Hidden,Transient,Access=public)
+      ParentContainer                           % Container for .Parent Dependent property
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
       GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
+      TreeNodeContainer uiw.widget.TreeNode     % Container for handle to Tree nodes in the nigelTree obj
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
       SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
@@ -173,6 +176,7 @@ classdef nigelObj < handle & ...
       DashChanged      % Interactions with nigeLab.libs.DashBoard
       ProgressChanged  % Issued as `doMethod` proceeds
       StatusChanged    % Issued when a Field is updated
+      ChildAdded       % Issued when a child is added through the addchild method
    end
    % % % % % % % % % % END EVENTS % % %
    
@@ -752,6 +756,50 @@ classdef nigelObj < handle & ...
          obj.setChildIndex; % Sets Index based on Parent Index
       end
       
+            % [DEPENDENT]  .Children (handles Empty case)
+      function value = get.Parent(obj)
+         %GET.PARENT Get method for .Parent (handles Empty case)
+         %
+         %  value = get(obj,'Parent');
+         %  --> Returns appropriate Empty array of correct subclass if no 
+         %      Children in obj.C container array
+         
+         value = [];
+         if isempty(obj)
+            return;
+         end
+         if ~isvalid(obj)
+            return;
+         end
+         value = obj.ParentContainer;
+         if all(isempty(value))
+            switch obj.Type
+               case 'Block'
+                  value = nigeLab.Animal.Empty();
+               case 'Animal'
+                  value = nigeLab.Tank.Empty();
+               case 'Tank'
+                  value = [];
+               otherwise
+                  warning('Unrecognized obj.Type: ''%s''\n',obj.Type);
+                  value = []; 
+            end
+         end
+      end
+      function set.Parent(obj,value)
+         %SET.CHILDREN  Set method for .Children property (Index)
+         %
+         %  set(obj,'Children',value);
+         %  --> Updates value.Index for each handle in value
+         
+         if all(isempty(value))
+            obj.ParentContainer(:) = [];
+            return;
+         end
+         obj.ParentContainer = value;
+      end
+      
+      
       % [DEPENDENT]  .Duration
       function value = get.Duration(obj)
          %GET.DURATION  Returns a time string of the duration of recording
@@ -920,7 +968,7 @@ classdef nigelObj < handle & ...
                obj.In.FileExt = obj.IDInfo.FileExt;
                value = obj.In.FileExt;
             else
-               obj.loadIDFile();
+               loadIDFile(obj);
                if isfield(obj.IDInfo,'FileExt')
                   obj.In.FileExt = obj.IDInfo.FileExt;
                   value = obj.In.FileExt;
@@ -982,6 +1030,7 @@ classdef nigelObj < handle & ...
                if isvalid(value)
                   if isprop(value,'nigelGUI')
                      figure(value.nigelGUI); % Make sure figure is focused
+                     obj.GUIContainer = value; % Store association to handle object
                   else
                      [fmt,idt,type] = obj.getDescriptiveFormatting();
                      nigeLab.utils.cprintf(fmt,'%s[NIGELOBJ/SET.GUI]: ',...
@@ -999,7 +1048,7 @@ classdef nigelObj < handle & ...
                obj.GUIContainer = value; 
                % Set .IsDashOpen AFTER setting obj.GUIContainer
                obj.IsDashOpen = flag;
-               return;
+%                return;
             end
          end
          
@@ -1214,7 +1263,7 @@ classdef nigelObj < handle & ...
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
-         obj.parseNamingMetadata();
+         obj.Name = obj.genName();
       end
       
       % [DEPENDENT]  .KeyPair (backwards compatible)
@@ -2262,13 +2311,13 @@ classdef nigelObj < handle & ...
          obj.OnRemote = onRemote;
          obj.IsDashOpen = isDashOpen;
          obj.Children = C;
-         flag = flag && obj.saveIDFile(); % .nigelBlock file saver
+         flag = flag && saveIDFile(obj); % .nigelBlock file saver
          F = fieldnames(obj.HasParsInit);
          for iF = 1:numel(F)
             f = F{iF};
             if isfield(obj.HasParsSaved,f)
                if ~obj.HasParsSaved.(f)
-                  flag = flag && obj.saveParams(obj.User,f);
+                  flag = flag && saveParams(obj,obj.User,f);
                end
             end
          end
@@ -2400,6 +2449,9 @@ classdef nigelObj < handle & ...
             end % switch obj.Type
          end % if isempty
          
+         % assign parent to childObj
+         childObj.Parent = obj;
+         
          if nargin < 3
             obj.Children = [obj.Children childObj];
          else
@@ -2419,6 +2471,7 @@ classdef nigelObj < handle & ...
              
          end % if nargin < 3
          
+         
          for i = 1:numel(childObj)
             obj.ChildListener = [obj.ChildListener, ...
                addlistener(childObj(i),'ObjectBeingDestroyed',...
@@ -2436,6 +2489,8 @@ classdef nigelObj < handle & ...
          if strcmp(obj.Type,'Animal')
             obj.parseProbes();
          end
+         evt = nigeLab.evt.childAdded(childObj);
+         notify(obj,'ChildAdded',evt);
       end
       
       % Check compatibility with current `.Fields` configuration
@@ -3534,7 +3589,7 @@ classdef nigelObj < handle & ...
             elseif isempty(dir([pcur filesep '*.mat']))
                warningRef(ii) = true;
             else
-               warningRef(ii) = obj.linkField(fieldIndex);
+               warningRef(ii) = linkField(obj,fieldIndex);
             end
          end
          
@@ -3570,9 +3625,9 @@ classdef nigelObj < handle & ...
             end
          end
          if strcmp(obj.Type,'Block')
-            obj.updateStatus('notify'); % Just emits the event in case listeners
+            updateStatus(obj,'notify'); % Just emits the event in case listeners
          end
-         obj.save;
+         save(obj);
          flag = true;
          
          % Local function to return folder path
@@ -3674,6 +3729,86 @@ classdef nigelObj < handle & ...
          end
       end
       
+      % Marks all files as complete
+      function markFilesAsComplete(obj,field)
+         %MARKFILESASCOMPLETE  Mark all files as complete
+         %
+         %  markFilesAsComplete(obj);
+         %  --> Iterates on all fields of nigelObj
+         %
+         %  markFilesAsComplete(obj,field);
+         %  --> Specify a specific field
+         
+         if nargin < 2
+            field = obj.Fields;
+         elseif isempty(field)
+            fprintf(1,...
+               ['\t\t->\t<strong>[MARKFILESASCOMPLETE]:</strong>\n' ...
+               '\t\t--\t\t(No fields to mark)\t\t--\n']);
+            return;
+         end
+         
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               if obj(i).Verbose && strcmp(obj(i).Type,'Block')
+                  fprintf(1,...
+                        '\t\t->\t<strong>[MARKFILESASCOMPLETE]::</strong>%s\n', ...
+                        obj(i).Name);
+                  if iscell(field)
+                     fprintf(1,...
+                        '\t\t\t->\tMarking <strong>%s</strong> as Complete.\n',...
+                        field{end:-1:1});
+                  else
+                     fprintf(1,...
+                        '\t\t\t->\tMarking <strong>%s</strong> as Complete.\n',...
+                        field);
+                  end
+               end
+               markFilesAsComplete(obj(i),field);
+               if obj(i).Verbose && strcmp(obj(i).Type,'Block')
+                  fprintf(1,'\b:<strong>complete</strong>\n');
+               end
+            end
+            return;
+         end
+         
+         if ismember(obj.Type,{'Tank','Animal'})
+            markFilesAsComplete(obj.Children,field);
+            return;
+         end
+         
+         if iscell(field)
+            for i = 1:numel(field)
+               markFilesAsComplete(obj,field{i});
+            end
+            return;
+         end
+         
+         if ismember(field,obj.Fields)
+            ft = getFieldType(obj,field);
+            if isfield(obj.(ft),field)
+               for iCh = 1:numel(obj.(ft))
+                  if isa(obj.(ft)(iCh).(field),'nigeLab.libs.DiskData')
+                     obj.(ft)(iCh).(field).Complete = ones(1,1,'int8');
+                     continue;
+                  end
+
+                  if isfield(obj.(ft)(iCh).(field),'data')
+                     for ii = 1:numel(obj.(ft)(iCh).(field))
+                        if isa(obj.(ft)(iCh).(field)(ii).data,'nigeLab.libs.DiskData')
+                           obj.(ft)(iCh).(field)(ii).data.Complete = ones(1,1,'int8');
+                        end
+                     end
+                  end
+               end
+            end
+         end
+         if obj.Verbose
+            nBackSpace = 28 + numel(field);
+            fprintf(1,repmat('\b',1,nBackSpace));
+         end
+      end
+      
       % Method to MOVE files to new location
       function Move(obj,newLocation)
          %MOVE  Moves files to new location and updates paths
@@ -3744,14 +3879,14 @@ classdef nigelObj < handle & ...
          switch class(ind)
              case 'double'
                  ...Nothing really to do here
-             case 'nigeLab.Block'
+             case {'nigeLab.Block','nigeLab.Animal','nigeLab.nigelObj'}
                     ind = find(ismember( obj.Children,ind));
              otherwise
          end
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
-            p = obj.Children(ii).Paths.SaveLoc;
+            p = obj.Children(ii).Paths.Output;
             if exist(p,'dir')
                rmdir(p,'s');
             end
@@ -3759,6 +3894,11 @@ classdef nigelObj < handle & ...
             if exist(fname,'file')~=0
                delete(fname);
             end
+            pname = obj.getParsFilename;
+            if exist(pname,'file')~=0
+               delete(pname);
+            end
+            delete(obj.Children(ii).TreeNodeContainer);
             delete(obj.Children(ii));
          end
          
@@ -3777,15 +3917,29 @@ classdef nigelObj < handle & ...
             field = 'all';
          end
          
-         varName = sprintf('%sObj',lower(obj.Type));
-         new = load(obj.File,varName);
-         ff=fieldnames(new.(varName));
-         if strcmpi(field,'all')
-            field = ff;
-         end
-         indx = find(ismember(ff,field))';
-         for f=indx
-            obj.(ff{f}) = new.(varName).(ff{f});
+         switch class(obj)
+             case 'nigeLab.Tank'
+                 for ii=1:numel(obj.Children)
+                     an = obj.Children(ii);
+                     an.reload;
+                 end
+             case 'nigeLab.Animal'
+                 for ii=1:numel(obj.Children)
+                     bl = obj.Children(ii);
+                     bl.reload;
+                 end
+             case 'nigeLab.Block'
+                 
+                 varName = sprintf('%sObj',lower(obj.Type));
+                 new = load(obj.File,varName);
+                 ff=fieldnames(new.(varName));
+                 if strcmpi(field,'all')
+                     field = ff;
+                 end
+                 indx = find(ismember(ff,field))';
+                 for f=indx
+                     obj.(ff{f}) = new.(varName).(ff{f});
+                 end
          end
       end
       
@@ -4076,6 +4230,8 @@ classdef nigelObj < handle & ...
                % extensive amount.
                if isnumeric(obj.(thisProp)) && ischar(propVal)
                   obj.(thisProp) = str2double(propVal);
+               elseif islogical(obj.(thisProp)) && ischar(propVal)
+                  obj.(thisProp) = logical(str2double(propVal));
                elseif iscell(obj.(thisProp)) && ischar(propVal)
                   obj.(thisProp) = {propVal};
                else
@@ -4087,6 +4243,8 @@ classdef nigelObj < handle & ...
                if isfield(obj.(thisProp),a)
                   if isnumeric(obj.(thisProp).(a)) && ischar(propVal)
                      obj.(thisProp).(a) = str2double(propVal);
+                  elseif islogical(obj.(thisProp).(a)) && ischar(propVal)
+                     obj.(thisProp).(a) = logical(str2double(propVal));
                   elseif iscell(obj.(thisProp).(a)) && ischar(propVal)
                      obj.(thisProp).(a) = {propVal};
                   else
@@ -4103,6 +4261,8 @@ classdef nigelObj < handle & ...
                   if isfield(obj.(thisProp).(a),b)
                      if isnumeric(obj.(thisProp).(a).(b)) && ischar(propVal)
                         obj.(thisProp).(a).(b) = str2double(propVal);
+                     elseif islogical(obj.(thisProp).(a).(b)) && ischar(propVal)
+                        obj.(thisProp).(a).(b) = logical(str2double(propVal));
                      elseif iscell(obj.(thisProp).(a).(b)) && ischar(propVal)
                         obj.(thisProp).(a).(b) = {propVal};
                      else
@@ -4887,6 +5047,7 @@ classdef nigelObj < handle & ...
          comparisons_mat = logical(triu(cat(1,comparisons_cell{:}) - ...
             eye(numel(cname))));
          rmvec = any(comparisons_mat,1);
+         correspondanceVec = any(comparisons_mat,2);
          if ~any(rmvec)
             return;
          end
@@ -4917,7 +5078,7 @@ classdef nigelObj < handle & ...
             % Add child blocks from removed animals to this animal to
             % ensure they aren't accidentally discarded
             aidx = find(animalIsSame);
-            B = A{aidx,:}; %#ok<*FNDSB>
+            B = [A(aidx).Children]; %#ok<*FNDSB>
             addChild(a,B);
             
             % Now, remove redundant animals from array and also remove them
@@ -5470,6 +5631,9 @@ classdef nigelObj < handle & ...
                      for i = 1:numel(obj.Children)
                         name = strrep(obj.Children(i).Name,'-','_');
                         name = strrep(name,' ','_');
+                        name = strrep(name,'+','_');
+                        name = strrep(name,'&','_');
+                        name = strrep(name,'|','_');
                         if ~regexpi(name,'[a-z]')
                            name = ['Animal_' name];
                         end
@@ -5577,8 +5741,8 @@ classdef nigelObj < handle & ...
                         warning(['nigeLab:' mfilename ':LOADIDFILE'],...
                            'Bad %s file. Retry load once.\n',...
                             obj.FolderIdentifier);
-                        obj.saveIDFile;
-                        obj.loadIDFile(false);
+                        saveIDFile(obj);
+                        loadIDFile(obj,false);
                      end
                      return;                     
                   otherwise
@@ -5628,7 +5792,7 @@ classdef nigelObj < handle & ...
       end
       
       % Parse metadata from file or folder name of INPUT
-      function [name,meta] = parseNamingMetadata(obj,fName,pars)
+      function [meta] = parseNamingMetadata(obj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(obj);
@@ -5813,16 +5977,16 @@ classdef nigelObj < handle & ...
             end
          end         
          
-         obj.Meta = meta; 
+         if isempty(obj.Meta)
+            obj.Meta = struct;
+         end
+         obj.Meta = nigeLab.utils.add2struct(obj.Meta,meta); 
          obj.Pars.(obj.Type).Parsing = pars;
-         obj.Name = obj.genName();
-         name = obj.Name;
-      end
+       end
       
       function name = genName(obj)
           if ~isfield( obj.Pars.(obj.Type),'Parsing')
-                [name,obj.Meta] = obj.parseNamingMetadata;
-                return;
+                    obj.Meta = obj.parseNamingMetadata;
           end
           
           pars = obj.Pars.(obj.Type).Parsing;
@@ -6037,21 +6201,24 @@ classdef nigelObj < handle & ...
          
          switch obj.Type
             case 'Animal'
+                varName = 'blockObj';
                C = dir(nigeLab.utils.getUNCPath(...
                         obj.Output,'*_Block.mat'));
                if isempty(C)
                   return;
                end
-               varName = 'blockObj';
+               
             case 'Tank'
+                varName = 'animalObj';
                C = dir(nigeLab.utils.getUNCPath(...
                         obj.Output,'*_Animal.mat'));
                if isempty(C)
                   return;
                end
-               varName = 'animalObj';
+               
             otherwise % i.e. 'Block'
                C = [];
+               varName = '';
                return;
          end
       end
@@ -6150,7 +6317,7 @@ classdef nigelObj < handle & ...
       end
       
       % Update Paths
-      function flag = updatePaths(obj,saveLoc)
+      function flag = updatePaths(obj,saveLoc,removeOld)
          %UPDATEPATHS  Update the path tree of the Block object
          %
          %  flag = obj.updatePaths();
@@ -6175,6 +6342,9 @@ classdef nigelObj < handle & ...
          flag = false;
          if nargin < 2
             saveLoc = obj.SaveLoc;
+            removeOld = false;
+         elseif nargin < 3
+             removeOld = false;
          end
          
          if isempty(saveLoc)
@@ -6190,7 +6360,7 @@ classdef nigelObj < handle & ...
          
          % Assign .Paths save location (container of object folder tree)
          obj.Params.Paths.SaveLoc = saveLoc;
-
+         obj.Output = fullfile(saveLoc,obj.Name);
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
             p = obj.Output;
@@ -6204,12 +6374,13 @@ classdef nigelObj < handle & ...
                end
             end
             flag = flag && obj.save;
+            flag = flag && obj.saveParams;
             return;
          end
          
          % remove old block matfile
          objFile = obj.File;
-         if exist(objFile,'file')
+         if exist(objFile,'file') && removeOld
             delete(objFile);
          end
 
@@ -6222,6 +6393,7 @@ classdef nigelObj < handle & ...
          
          % generate new obj.Paths
          obj.Output = fullfile(saveLoc,obj.Name);
+         obj.genPaths;
          P = obj.Paths;
          
          uniqueTypes = unique(obj.FieldType);
@@ -6269,6 +6441,7 @@ classdef nigelObj < handle & ...
          flag = true;
          flag = flag && obj.linkToData;
          flag = flag && obj.save;
+         flag = flag && obj.saveParams;
          
          function moveFilesAround(oldPath,NewPath,str)
             %MOVEFILESAROUND  Actually moves the files after they are split

@@ -59,6 +59,7 @@ classdef nigelPanel < handle
       Substr            char = ''         % Char array that is a sub-string. currently unused ...?
       Scrollable        char = 'off'      % ('on' or 'off' (default))
       DeleteFcn                           % Function handle to execute on object deletion
+      UserData                            % user defined data
    end
    
    % SETOBSERVABLE,PUBLIC
@@ -592,6 +593,7 @@ classdef nigelPanel < handle
          p.TitleStringX = 0.1;
          p.TitleStringY = 0.5;
          p.DeleteFcn = @obj.deleteFcn;
+         p.UserData = [];
          Pars = nigeLab.utils.getopt(p,varargin{:});
          
          % Parse Color struct property
@@ -640,6 +642,7 @@ classdef nigelPanel < handle
          obj.TitleStringX = Pars.TitleStringX;
          obj.TitleStringY = Pars.TitleStringY;
          obj.DeleteFcn = Pars.DeleteFcn;
+         obj.UserData = Pars.UserData;
          
          % Create listeners for all setObservable properties
          obj.buildListeners;

@@ -93,18 +93,11 @@ if ~strcmp(class_,class(value))
    value = cast(value,class_);
 end
 
-if blockObj.Events.(fieldName)(idx).data.Locked
-   doLock = true;
-   unlockData(blockObj.Events.(fieldName)(idx).data);
-else
-   doLock = false;
-end
+
+unlockData(blockObj.Events.(fieldName)(idx).data);
 blockObj.Events.(fieldName)(idx).data = subsasgn(...
    blockObj.Events.(fieldName)(idx).data,...
    S,...       % substruct (for indexing)
    value);     % values to assign
-if doLock
-   lockData(blockObj.Events.(fieldName)(idx).data);
-end
 flag = true;
 end

@@ -111,7 +111,7 @@ classdef Animal < nigeLab.nigelObj
    % PROTECTED
    methods (Access=protected)
       % Modify inherited superclass name parsing method
-      function [name,meta] = parseNamingMetadata(animalObj,fName,pars)
+      function meta = parseNamingMetadata(animalObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(animalObj);
@@ -168,7 +168,7 @@ classdef Animal < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             animalObj,fName,pars);
          
          % % % % Parse additional parameters for ANIMAL % % % % 

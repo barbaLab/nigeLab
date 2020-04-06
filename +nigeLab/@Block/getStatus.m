@@ -226,6 +226,8 @@ end
                                      'Channels');
                if isfield(blockObj.Status,stage{ii})
                   flags = blockObj.Status.(stage{ii});
+               elseif channelStage
+                  flags = false(1,blockObj.NumChannels); 
                else
                   flags = false;
                end

@@ -29,7 +29,7 @@ classdef (ConstructOnLoad) jobCompleted < event.EventData
    properties (Access = public)
       Bar                 nigeLab.libs.nigelProgress  % nigelProgressObj
       BarIndex            double   % Index of bar into remote monitor 'bars' array
-      BlockSelectionIndex double   % Index of [animal block] from tank{} ref
+      BlockKey           cell     % Keys of the correspondent block. {Animalkey,Blcokkey}.
       IsComplete          logical  % Was the job completed
       IsRemote            logical  % Was job run remotely?
    end
@@ -46,7 +46,7 @@ classdef (ConstructOnLoad) jobCompleted < event.EventData
          
          evt.Bar = bar;
          evt.BarIndex = bar.BarIndex;
-         evt.BlockSelectionIndex = bar.BlockSelectionIndex;
+         evt.BlockKey = bar.BlockKey;
          evt.IsComplete = bar.IsComplete;
          evt.IsRemote = bar.IsRemote;
       end

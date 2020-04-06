@@ -31,6 +31,10 @@ switch evt.Key
       setValue(b,'Stereotyped',0);
    case 'period' % set as stereotyped trial
       setValue(b,'Stereotyped',1);
+   case 'i' % set "initial" trial frame
+      setTimeStampValue(b,v,evt,'Init',v.NeuTime);
+   case 'o' % clear "initial" trial frame
+      setTimeStampValue(b,v,evt,'Init',inf);
    case 't' % set reach frame
       setTimeStampValue(b,v,evt,'Reach',v.NeuTime);
    case 'r' % set no reach for trial
@@ -58,16 +62,32 @@ switch evt.Key
    case 'x' % set outcome as Unsuccessful
       setValue(b,'Outcome',0);
    case 'e' % set forelimb as 'Right' (1)
-      if strcmpi(evt.Modifier,'alt') % alt + e: all trials are 'right'
-         setValueAll(b,'Forelimb',1);
+      if ismember('alt',evt.Modifier) % alt + e: all trials are 'right'
+         if ismember('shift',evt.Modifier)
+            setValueAll(b,'Door',1);
+         else
+            setValueAll(b,'Forelimb',1);
+         end
       else
-         setValue(b,'Forelimb',1);
+         if ismember('shift',evt.Modifier)
+            setValue(b,'Door',1);
+         else
+            setValue(b,'Forelimb',1);
+         end
       end
    case 'q' % set forelimb as 'Left' (0)
-      if strcmpi(evt.Modifier,'alt') % alt + q: all trials are 'left'
-         setValueAll(b,'Forelimb',0);
+      if ismember('alt',evt.Modifier) % alt + q: all trials are 'left'
+         if ismember('shift',evt.Modifier)
+            setValueAll(b,'Door',0);
+         else
+            setValueAll(b,'Forelimb',0);
+         end
       else
-         setValue(b,'Forelimb',0);
+         if ismember('shift',evt.Modifier)
+            setValue(b,'Door',0);
+         else
+            setValue(b,'Forelimb',0);
+         end
       end
    case 'a' % previous frame
       advanceFrame(v,-1); 
@@ -144,7 +164,7 @@ end
                if isnan(tNeu) || isinf(tNeu)
                   return;
                end
-               v.SeriesTime = tNeu + v.NeuOffset - v.TrialOffset;
+               v.SeriesTime = tNeu + v.NeuOffset;
          end
       end
    end

@@ -203,6 +203,8 @@ classdef VideosFieldType < handle ...
                obj = [obj,...
                   nigeLab.libs.VideosFieldType(blockObj,fname)]; %#ok<AGROW>
             end
+            [csvFullName,metaName] = getVideoFileList(blockObj);
+            writetable(blockObj.Meta.(metaName),csvFullName);
             return;
          end
          obj.fname = fname;
@@ -285,9 +287,13 @@ classdef VideosFieldType < handle ...
          %
          % Returns scalar offset for this video relative to neural data 
          
-         value = getEventData(obj.Block,obj.ScoringField_,...
-            'ts','Header');
-         value = value(obj.VideoIndex);
+         if obj.Block.HasVideoTrials
+            value = obj.TrialOffset;
+         else
+            value = getEventData(obj.Block,obj.ScoringField_,...
+               'ts','Header');
+            value = value(obj.VideoIndex);
+         end
       end
       function set.GrossOffset(obj,value)
          %SET.GROSSOFFSET  Assigns .GrossOffset property (to 'Header' diskdata)
@@ -299,8 +305,12 @@ classdef VideosFieldType < handle ...
          %  offset component that can be set based on individual trial
          %  jitter.
 
-         setEventData(obj.Block,obj.ScoringField_,...
-            'ts','Header',value,obj.VideoIndex);
+         if obj.Block.HasVideoTrials
+            obj.TrialOffset = value;
+         else
+            setEventData(obj.Block,obj.ScoringField_,...
+               'ts','Header',value,obj.VideoIndex);
+         end
       end
       
       % [DEPENDENT]  Returns .Height property
@@ -424,9 +434,14 @@ classdef VideosFieldType < handle ...
       % [DEPENDENT]  Returns .Masked property
       function value = get.Masked(obj)
          %GET.MASKED  References "Header" diskfile (column 3: 'Tag')
-         value = getEventData(obj.Block,obj.ScoringField_,...
-            'tag','Header');
-         value = logical(value(obj.VideoIndex));
+         value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
+         if isnan(value(obj.VideoIndex))
+            doEventDetection(obj.Block);
+            value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
+            value = logical(value(obj.VideoIndex));
+         else
+            value = logical(value(obj.VideoIndex));
+         end
       end
       function set.Masked(obj,value)
          %SET.MASKED  References "Header" diskfile (column 3: 'Tag')
@@ -445,23 +460,44 @@ classdef VideosFieldType < handle ...
             return;
          elseif ~isvalid(obj.Block)
             return;
-         elseif ~isfield(obj.Block.Meta,'Video')
-            return;
-         elseif isempty(obj.mIndex)
-            return;
+         elseif isempty(obj.VideoIndex)
+            if isempty(obj.mIndex)
+               return;
+            else
+               obj.VideoIndex = obj.mIndex;
+            end
          end
          
-         value = obj.Block.Meta.Video(obj.mIndex,:);
+         [csvFullName,metaName,formatSpec] = getVideoFileList(obj.Block);         
+         if ~isfield(obj.Block.Meta,metaName)
+            if exist(csvFullName,'file')==0
+               return;
+            end
+            T = readtable(csvFullName,...
+               'Format',formatSpec,...
+               'HeaderLines',0,...
+               'Delimiter',',');
+            obj.Block.Meta.(metaName) = T;
+         else
+            T = obj.Block.Meta.(metaName);
+            if obj.VideoIndex > size(T,1)
+               return;
+            end
+         end
+         
+         value = T(obj.VideoIndex,:);
       end
-      function set.Meta(obj,~)
-         %SET.META  Assigns .Meta property (cannot)
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Meta\n');
-            fprintf(1,'\n');
+      function set.Meta(obj,value)
+         %SET.META  Assigns .Meta property
+         [csvFullName,metaName] = getVideoFileList(obj.Block);
+         T = obj.Block.Meta.(metaName);
+         T(obj.VideoIndex,:) = value;
+         obj.Block.Meta.(metaName) = T;
+         try
+            writetable(T,csvFullName);
+         catch
+            fileattrib(csvFullName,'+w');
+            writetable(T,csvFullName);
          end
       end
       
@@ -501,7 +537,11 @@ classdef VideosFieldType < handle ...
          %  --> Returns the offset that is obj.GrossOffset -
          %  obj.VideoOffset
          
-         value = obj.GrossOffset - obj.VideoOffset;
+         if obj.Block.HasVideoTrials
+            value = obj.GrossOffset;
+         else
+            value = obj.GrossOffset - obj.VideoOffset;
+         end
       end
       function set.NeuOffset(obj,value)
          %SET.NEUOFFSET  Assign corresponding video of linked Block   
@@ -512,7 +552,11 @@ classdef VideosFieldType < handle ...
          %  Where tSpecific is the "Trial-Specific" and "Camera-Specific"
          %  offset.
          
-         obj.GrossOffset = value+obj.VideoOffset;
+         if obj.Block.HasVideoTrials
+            obj.GrossOffset = value;
+         else
+            obj.GrossOffset = value + obj.VideoOffset;
+         end
 %          % Since times are relative to the VIDEO record, any time a NEURAL
 %          % or TRIAL offset is changed, then change the event times
 %          obj.Block.Trial = obj.Block.Trial - value;
@@ -601,7 +645,43 @@ classdef VideosFieldType < handle ...
          %      video tensors (images with x,y, and color data) can be
          %      indexed using notation `im = imagedata(obj.ROI{:});`
          
-         if numel(obj.ROI_) < 3
+         if obj.Block.HasVideoTrials
+            value = {':',':',':'};
+            return;
+         end
+         
+         if isempty(obj.ROI_)
+            T = obj.Meta;
+            if isempty(T)
+               value = {':',':',':'};
+               return;
+            elseif (~ismember('ROI_rows',T.Properties.VariableNames)) || ...
+                  (~ismember('ROI_cols',T.Properties.VariableNames))
+               value = {':',':',':'};
+               return;
+            end
+            
+            obj.ROI_ = cell(1,3);
+            if strcmp(T.ROI_rows_start{1},':')
+               obj.ROI_(1) = T.ROI_rows_start(1);
+            else
+               if ischar(T.ROI_rows_start{1})
+                  obj.ROI_{1} = str2double(T.ROI_rows_start{1}):str2double(T.ROI_rows_stop{1});
+               else
+                  obj.ROI_{1} = T.ROI_rows_start{1}:T.ROI_rows_stop{1};
+               end
+            end
+            if strcmp(T.ROI_cols_start{1},':')
+               obj.ROI_(2) = T.ROI_cols_start(1);
+            else
+               if ischar(T.ROI_cols_start{1})
+                  obj.ROI_{2} = str2double(T.ROI_cols_start{1}):str2double(T.ROI_cols_stop{1});
+               else
+                  obj.ROI_{2} = T.ROI_cols_start{1}:T.ROI_cols_stop{1};
+               end
+            end
+            obj.ROI_{3} = ':';
+         elseif numel(obj.ROI_) < 3            
             for i = (numel(obj.ROI_)+1):3
                obj.ROI_ = [obj.ROI_, ':'];
             end
@@ -617,6 +697,10 @@ classdef VideosFieldType < handle ...
          
          if iscell(value)
             if numel(value) < 3
+               if isempty(value)
+                  obj.ROI_ = {};
+                  return;
+               end
                for i = (numel(value)+1):3
                   value = [value, ':']; %#ok<AGROW>
                end
@@ -634,11 +718,31 @@ classdef VideosFieldType < handle ...
                otherwise
                   fprintf(1,['<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
                      'Could not assign ROI for %s\n'],obj.Name);
+                  return;
             end
          else
             fprintf(1,['<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
                'Could not assign ROI for %s\n'],obj.Name);
+            return;
          end
+         
+         % Update metadata table as well
+         T = obj.Meta;
+         if ischar(obj.ROI_{1})
+            T.ROI_rows_start = obj.ROI_(1);
+            T.ROI_rows_stop = obj.ROI_(1);
+         else
+            T.ROI_rows_start = {obj.ROI_{1}(1)};
+            T.ROI_rows_stop = {obj.ROI_{1}(end)};
+         end
+         if ischar(obj.ROI_{2})
+            T.ROI_cols_start = obj.ROI_(2);
+            T.ROI_rows_stop = obj.ROI_(2);
+         else
+            T.ROI_cols_start = {obj.ROI_{2}(1)};
+            T.ROI_cols_stop = {obj.ROI_{2}(end)};
+         end
+         obj.Meta = T;
       end
       
       % [DEPENDENT]  Returns .Source property (Camera angle or view)
@@ -660,16 +764,10 @@ classdef VideosFieldType < handle ...
          
          value = obj.store_.Source;
       end
-      function set.Source(obj,~)
+      function set.Source(obj,value)
          % Does nothing
-         if obj.Block.Verbose
-            nigeLab.sounds.play('pop',2.7);
-            dbstack();
-            nigeLab.utils.cprintf('Errors*','[VIDEOSFIELDTYPE]: ');
-            nigeLab.utils.cprintf('Errors',...
-               'Failed attempt to set DEPENDENT property: Source\n');
-            fprintf(1,'\n');
-         end
+         
+         obj.store_.Source = value;
       end
       
       % [DEPENDENT]  Returns .StreamNames property (from .Streams)
@@ -699,8 +797,17 @@ classdef VideosFieldType < handle ...
          %  value = get(obj,'TrialOffset');
          %  --> Returns Trial/Camera-specific offset for current trial
          
-         iRow = obj.VideoIndex;
-         iCol = obj.Block.TrialIndex;
+         if ~isfield(obj.Block.Meta,'Video')
+            value = nan;
+            return;
+         end
+         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         if obj.Block.HasVideoTrials
+            iCol = str2double(obj.Meta.MovieID{:});
+            obj.Block.TrialIndex = iCol;
+         else
+            iCol = obj.Block.TrialIndex;
+         end
          value = obj.Block.TrialVideoOffset(iRow,iCol);
       end
       function set.TrialOffset(obj,value)
@@ -713,9 +820,16 @@ classdef VideosFieldType < handle ...
          
          if isempty(obj.Block)
             return;
+         elseif ~isfield(obj.Block.Meta,'Video')
+            return;
          end
-         iRow = keyToIndex(obj);
-         iCol = obj.Block.TrialIndex;
+         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         if obj.Block.HasVideoTrials
+            iCol = str2double(obj.Meta.MovieID{:});
+            obj.Block.TrialIndex = iCol;
+         else
+            iCol = obj.Block.TrialIndex;
+         end
          obj.Block.TrialVideoOffset(iRow,iCol) = value;
       end
       
@@ -952,7 +1066,7 @@ classdef VideosFieldType < handle ...
          end
          
          tmp = obj.Time.data(:);
-         value = tmp+obj.GrossOffset+obj.TrialOffset;
+         value = tmp+obj.GrossOffset;
       end
       function set.tNeu(obj,~)
          %SET.TNEU  Assigns .tNeu property (cannot)
@@ -1071,11 +1185,15 @@ classdef VideosFieldType < handle ...
       end
       
       % "Readies" the VideosFieldType object for playing videos
-      function v = Ready(obj)
+      function v = Ready(obj,suppress_text)
          %READY  "Readies" the VideosFieldType object for playing videos
          %
          %  Ready(obj);
          %  v = Ready(obj);  Return handle to "readied" VideoReader object
+         
+         if nargin < 2
+            suppress_text = false; % Needs Verbose to == true as well to print
+         end
          
          if numel(obj) > 1
             if nargout > 0
@@ -1083,22 +1201,23 @@ classdef VideosFieldType < handle ...
                   'Cannot call `Ready` on array with output syntax');
             end
             for i = 1:numel(obj)
-               Ready(obj(i)); 
+               Ready(obj(i),suppress_text); 
             end
             return;
          end
+         verbose = obj.Block.Verbose && ~suppress_text;
          
          if isempty(obj.V_)
-            nigeLab.utils.cprintf('[0.45 0.45 0.45]',obj.Block.Verbose,...
+            nigeLab.utils.cprintf('[0.45 0.45 0.45]',verbose,...
                '\t\t->\t[VIDEOS]: Readying %s...',obj.Name);
             obj.V_ = VideoReader(obj.fname);
-            nigeLab.utils.cprintf('Keywords*',obj.Block.Verbose,...
+            nigeLab.utils.cprintf('Keywords*',verbose,...
                'complete\n');
          elseif ~isvalid(obj.V_)
-            nigeLab.utils.cprintf('[0.45 0.45 0.45]',obj.Block.Verbose,...
+            nigeLab.utils.cprintf('[0.45 0.45 0.45]',verbose,...
                '\t\t->\t[VIDEOS]: Readying %s...',obj.Name);
             obj.V_ = VideoReader(obj.fname);
-            nigeLab.utils.cprintf('Keywords*',obj.Block.Verbose,...
+            nigeLab.utils.cprintf('Keywords*',verbose,...
                'complete\n');
          end
          v = obj.V_;
@@ -1113,6 +1232,10 @@ classdef VideosFieldType < handle ...
          %
          %  idx = findVideo(obj,objArray);
          %  --> Return idx as element of objArray
+         %
+         %  idx = findVideo(obj,objArray);
+         %  --> if no elements of objArray match obj, then the index is
+         %        equal to the number of elements in objArray + 1
          
          if nargin < 2
             objArray = obj.Block.Videos;
@@ -1126,6 +1249,13 @@ classdef VideosFieldType < handle ...
             return;
          end
          idx = find(objArray == obj,1,'first');
+         if isempty(idx)
+            if isempty(obj.mIndex)
+               idx = numel(objArray)+1;
+            else
+               idx = obj.mIndex;
+            end
+         end
       end
       
       % Returns the VidStream corresponding to streamName & source
@@ -1176,6 +1306,24 @@ classdef VideosFieldType < handle ...
          stream.t  = obj.tNeu;
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
          
+      end
+      
+      % Assign video offsets to array of videosfieldtype objects
+      function setVideoOffsets(objArray,vidOffsets)
+         if numel(objArray) ~= numel(vidOffsets)
+            error(['nigeLab:' mfilename ':BadSize'],...
+               ['\t\t->\t<strong>[VIDEOSFIELDTYPE/SETVIDEOOOFFSETS]: ' ...
+               'Video array and offset array must be same size\n']);
+         end
+         
+         if numel(objArray) > 1
+            for i = 1:numel(objArray)
+               setVideoOffsets(objArray(i),vidOffsets(i));
+            end
+            return;
+         end
+         
+         objArray.VideoOffset = vidOffsets;         
       end
       
       % Updates .fname by replacing the "path" portion of the file name
@@ -1342,7 +1490,11 @@ classdef VideosFieldType < handle ...
          % Use static method of nigeLab.libs.VideosFieldType class
          bMeta = obj.Block.Meta;
          ext = obj.Paths.V.FileExt;
-         matchStr = nigeLab.libs.VideosFieldType.parse(bMeta,obj.Pars,ext);
+         pars = obj.Pars;
+         if obj.Block.HasVideoTrials
+            pars.DynamicVars = pars.DynamicVarsTrials;
+         end
+         matchStr = nigeLab.libs.VideosFieldType.parse(bMeta,pars,ext);
          F = dir(nigeLab.getUNCPath(pathName,matchStr));
          
       end
@@ -1417,9 +1569,7 @@ classdef VideosFieldType < handle ...
          % Derived from `Block` --> `Meta`/`Pars`
          if isempty(obj.Block)
             return; % Nothing goes without obj.Block
-         elseif ~isfield(obj.Block.Meta,'Video')
-            return; % Then .Meta doesn't work
-         elseif isempty(obj.mIndex)
+         elseif isempty(obj.Meta)
             return; % Then "meta" index is missing
          elseif ~isfield(obj.Block.Pars,'Video')
             return; % Then .Pars doesn't work

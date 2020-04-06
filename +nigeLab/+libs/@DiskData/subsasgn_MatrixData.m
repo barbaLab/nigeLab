@@ -67,12 +67,12 @@ switch S(1).type
          propName = S(2).subs;
          numColumns = dataSize(2);
          % Return restricted "Hyperslab" we are writing to
-         c = obj.getEnumeratedColumn(propName,numColumns);
+         c = nigeLab.libs.DiskData.getEnumeratedColumn(propName,numColumns);
          offset = c(1) - 1;
          dims = [dataSize(1), numel(c)];
-         [iRow,iCol] = obj.parseRowColumnIndices(S(2),dims,offset);
+         [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),dims,offset);
       else
-         [iRow,iCol] = obj.parseRowColumnIndices(S,dataSize);
+         [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S,dataSize);
       end
       
    case '.'
@@ -87,11 +87,11 @@ switch S(1).type
       end
       
       propName = S(1).subs;
-      c = obj.getEnumeratedColumn(propName,dataSize(2));
+      c = nigeLab.libs.DiskData.getEnumeratedColumn(propName,dataSize(2));
       offset = c(1)-1;
       dims = [n, numel(c)];
       if numel(S) > 1
-         [iRow,iCol] = obj.parseRowColumnIndices(S(2),dims,offset);
+         [iRow,iCol] = nigeLab.libs.DiskData.parseRowColumnIndices(S(2),dims,offset);
       else
          switch lower(propName)
             case 'data'

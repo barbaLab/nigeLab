@@ -68,7 +68,7 @@ elseif ~isfield(blockObj.Pars,'Video')
 end
 
 % Get formatting for printing outputs
-[fmt,idt,type] = blockObj.getDescriptiveFormatting();
+[fmt,idt,type] = getDescriptiveFormatting(blockObj);
 
 if ~isfield(blockObj.Paths,'V') % Then initVideos was old/incorrect
    if blockObj.Verbose

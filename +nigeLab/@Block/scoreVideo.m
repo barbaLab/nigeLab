@@ -21,6 +21,18 @@ if ~blockObj.Pars.Video.HasVideo
 end
 checkCompatibility(blockObj,{blockObj.ScoringField,'Video'});
 
+% If missing video metadata table, re-parse naming info to ensure that
+% indexing etc. is matched correctly.
+if ~isfield(blockObj.Meta,'Video') && ~isfield(blockObj.Meta,'TrialVideo')
+   updateParams(blockObj,'Video','Direct');
+   updateParams(blockObj,'Block','Direct');
+   updateParams(blockObj,'Event','Direct');
+   parseNamingMetadata(blockObj);
+   for i = 1:numel(blockObj.Videos)
+      parseVidFileName(blockObj,blockObj.Videos(i).Name);
+   end
+end
+
 %MAKE UI WINDOW AND DISPLAY CONTAINER
 fig=figure('Name','Behavior Scoring',...
    'NumberTitle','off',...

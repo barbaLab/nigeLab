@@ -262,7 +262,7 @@ classdef Block < nigeLab.nigelObj
          % Does nothing
          obj.ChannelID_ = value;
       end
-      
+           
       % [DEPENDENT]  Returns .EventTimes property (write to DiskData)
       function value = get.EventTimes(blockObj)
          %GET.EVENTTIMES  Returns .EventTimes property
@@ -298,8 +298,15 @@ classdef Block < nigeLab.nigelObj
          elseif isempty(blockObj.Videos)
             return;
          end
-         hasROI = ~cellfun(@isempty,{blockObj.Videos.ROI});
-         value = all(hasROI([blockObj.Videos.Masked]));
+         ROI = {blockObj.Videos.ROI};
+         value = true;
+         for i = 1:numel(ROI)
+            if ~blockObj.Videos(i).Masked
+               continue;
+            end
+            flag = ~ischar(ROI{i}{1}) && ~ischar(ROI{i}{2});
+            value = value && flag;
+         end
       end
       function set.HasROI(~,~)
          %SET.HASROI  Cannot set READ-ONLY property
@@ -723,7 +730,7 @@ classdef Block < nigeLab.nigelObj
                if nargin < 3
                   N = numel(obj.Trial);
                end
-               C = nigeLab.utils.cubehelix(N,0.25,N/5,...
+               C = nigeLab.utils.cubehelix(max(N,1),0.25,N/5,...
                   3.0,0.6,[0.3 0.7],[0.25 0.75]);
             case 'EventTimes'
                if nargin < 3
@@ -743,8 +750,8 @@ classdef Block < nigeLab.nigelObj
    
    % PROTECTED
    methods (Access=protected)
-      % Modify inherited name parsing method
-      function [name,meta] = parseNamingMetadata(blockObj,fName,pars)
+      % Modify inherited superclass name parsing method
+      function meta = parseNamingMetadata(blockObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(obj);
@@ -815,7 +822,7 @@ classdef Block < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             blockObj,fName,pars);
          
          % % % % Parse additional parameters for BLOCK % % % % 
@@ -930,8 +937,8 @@ classdef Block < nigeLab.nigelObj
    
    % RESTRICTED:nigeLab.libs.VideosFieldType
    methods (Access=?nigeLab.libs.VideosFieldType)
-      index = parseVidFileName(blockObj,fName,keyIndex)  % Add to Block.Meta.Video table and return corresponding index
       s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
+      index = parseVidFileName(blockObj,fName,keyIndex,forceTrials)  % Add to Block.Meta.Video table and return corresponding index
    end
    
    % PUBLIC
@@ -966,6 +973,8 @@ classdef Block < nigeLab.nigelObj
       addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
       clearScoringMetadata(blockObj,fieldName);  % Erase "empty" scoring metadata for a given tracking field
       info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
+      [tStart,tStop] = getTrialStartStopTimes(blockObj,optStart,optStop); % Returns neural times of "trial" start and stop times
+      [csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
       
       % Methods for data extraction:
       flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
@@ -1073,6 +1082,25 @@ classdef Block < nigeLab.nigelObj
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    
+      function formatTrialVideosForExtraction(blockObj)
+         %FORMATTRIALVIDEOSFOREXTRACTION  Moves videos to correct place
+         %
+         %  formatTrialVideosForExtraction(blockObj);
+         
+         if numel(blockObj) > 1
+            for i = 1:numel(blockObj)
+               formatTrialVideosForExtraction(blockObj(i));
+            end
+            return;
+         end
+         
+         if ~blockObj.HasVideoTrials
+            return;
+         end
+         
+         
+      end
+      
       function lockData(blockObj,fieldType)
          %LOCKDATA  Lock all data of a given fieldType
          %

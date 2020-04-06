@@ -164,9 +164,9 @@ pars.TrialDetectionInfo = struct(... % For sync using LED (Example B)
    'Threshold',0.5,... % Used in parsing other 'auto' events as well
    'Type','Rising');
 pars.EventDetectionType = {... % Example B (RHD)
-   'Rising';    % 1)
-   'Rising';    % 2) 
-   'Rising';    % 3) (skip 4-7 because not 'auto' fields)
+   'Falling';    % 1)
+   'Rising';     % 2) 
+   'Rising';     % 3) (skip 4-7 because not 'auto' fields)
    };
 pars.EventSource = {...
    'Streams';    % 1)
@@ -174,9 +174,9 @@ pars.EventSource = {...
    'Streams';    % 3) (skip 4-7 because not 'auto' fields)
    };
 pars.UseAutoAsDefaultScoredEvent = {... % Example B (RHD)
-   ''; ...      % 1) trial-running already related to special "Trial" field
-   'Reach'; ... % 2) beam-break
-   'Init'       % 3) nose-poke: should be essentially same as trial-running
+   'Complete'; ... % 1) trial-running already related to special "Trial" field
+   'Reach'; ...    % 2) beam-break
+   'Init'          % 3) nose-poke: should be essentially same as trial-running
 };
 
 %% Error parsing (do not change)

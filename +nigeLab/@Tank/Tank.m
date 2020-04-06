@@ -49,7 +49,9 @@ classdef Tank < nigeLab.nigelObj
 %     list - List Block objects in the TANK.
 %
 %     Empty - Create an Empty TANK object or array
-  
+    properties 
+          MultiAnimals logical = false           % flag to signal if it's a single animal or a joined animal recording
+    end
    % % % METHODS% % % % % % % % % % % %
    % NO ATTRIBUTES
    methods
@@ -136,7 +138,7 @@ classdef Tank < nigeLab.nigelObj
    % PROTECTED
    methods (Access=protected)
       % Modify inherited superclass name parsing method
-      function [name,meta] = parseNamingMetadata(tankObj,fName,pars)
+      function meta = parseNamingMetadata(tankObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(animalObj);
@@ -193,7 +195,7 @@ classdef Tank < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             tankObj,fName,pars);
          
          % % % % Parse additional parameters for TANK % % % % 
