@@ -5694,7 +5694,7 @@ classdef nigelObj < handle & ...
          if (fid < 0)
             if ~isempty(obj.Name)
                % "ID" file doesn't exist; make it using current properties
-               obj.saveIDFile();
+               flag = obj.saveIDFile();
                return;
             else
                return;
@@ -6146,7 +6146,7 @@ classdef nigelObj < handle & ...
             [outPath,~,~] = fileparts(obj.IDFile);
          end
          if exist(outPath,'dir')==0
-            mkdir(outPath); % Make sure the output folder exists
+            [SUCCESS,MESSAGE,MESSAGEID] = mkdir(outPath); % Make sure the output folder exists
          end
          fid = fopen(obj.IDFile,'w');
          if fid > 0
@@ -6504,7 +6504,7 @@ classdef nigelObj < handle & ...
          %  obj = loadobj(obj);
          
          % Check if it is empty first
-         if isempty(a)
+          if isempty(a)
             b = a;
             return;
          end
@@ -6611,6 +6611,9 @@ classdef nigelObj < handle & ...
                   b.addChild(in.(varName));
                end
                b.PropListener(1).Enabled = true;
+         end
+         if DataMoved
+            b.loadIDFile(); 
          end
          [fmt,idt,type] = b.getDescriptiveFormatting();
          nigeLab.utils.cprintf(fmt,b.Verbose,...
