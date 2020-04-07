@@ -1633,7 +1633,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   obj.Tank.addChild([]); % Empty -> prompt for selection
                case 'nigeLab.Block'
                   %% Add nigeLab.Block
-                  [~,a] = obj.getSelectedItems('obj');
+                  a = nigelObj.Parent;
                   if numel(a) > 1
                      [~,idx]=nigeLab.utils.uidropdownbox('Animal Selector',...
                         'Select "parent" Animal',...
