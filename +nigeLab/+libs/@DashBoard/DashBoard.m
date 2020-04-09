@@ -653,15 +653,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             {@obj.toggleSplitMultiAnimalsUI,'start'})];
          
          % By default, buttons are enabled
-%          if obj.SelectionIndex(1,2) == 0
+         if ~any([obj.Tank.Children.MultiAnimals])
             setButton(obj.nigelButtons.Tree,'Split','Enable','off');
-%          end
-         
-%          obj.Listener = [obj.Listener, ...
-%             addlistener(obj,'SelectionIndex','PostSet',...
-%             @(~,~)obj.toggleSplitUIMenuEnable)];
-         
+         end   
       end
+      
       
       % Returns figure handle, with layout mediated by core nigelPanels
       function fig = buildGUI(obj)
@@ -1508,7 +1504,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       end
           
           
-   end
+      end
+   
    
    % RESTRICTED: nigeLab.libs.splitMultiAnimalsUI
    methods (Access=?nigeLab.libs.splitMultiAnimalsUI)
@@ -1526,101 +1523,38 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          switch mode
             case 'start'
-               bl = obj.getSelectedItems;
-               % if more than one block is selected, select the first
-               % one with a multiAnimal
-               indx = find([bl.MultiAnimals],1);
-               if isempty(indx)
-                   errordlg('This is not a multiAnimal!');
-                   return;
-               end % if ~MultiAnimals
-               bl = bl(indx);
-               Index = obj.selectedItems2Index(bl,obj.Tank);
-               obj.Tree.SelectedNodes = obj.Tree.Root.Children(Index(2)).Children(Index(3));
-               
-               
-               % Ensure that only 1 "child" object is selected at a time
-               obj.getChild('TreePanel').getChild('Tree').SelectionType = 'single';
-               if isvalid(obj.splitMultiAnimalsUI)
-                  obj.splitMultiAnimalsUI.toggleVisibility;
-                  return;
-               else
-                  % 'start' is only entered via button-click
-                  toggleSplitMultiAnimalsUI(obj,'init');
-                  drawnow;
-                  toggleSplitMultiAnimalsUI(obj,'start');
-                  return;
-               end % if isvalid
-               
-               % TODO disable nodes without multiAnimal flag!
-               %                    [obj.Tree.Root.Children(find([obj.Tank.Children.MultiAnimals])).Enable] = deal('off');
+                % pop multi aniamsl interface up
+                if ~isempty(obj.splitMultiAnimalsUI) && isvalid(obj.splitMultiAnimalsUI)
+                    obj.splitMultiAnimalsUI.toggleVisibility('on');
+                    obj.Tree.changeTreeSelection([])
+                else
+                    toggleSplitMultiAnimalsUI(obj,'init');
+                    toggleSplitMultiAnimalsUI(obj,'start');
+                end
+ 
             case 'stop'
-               obj.getChild('TreePanel').getChild('Tree').SelectionType = ...
-                  'discontiguous';
+               
                % TODO reenable nodes without multiAnimal flag!
                if any([obj.Tank.Children.MultiAnimals])
                   obj.splitMultiAnimalsUI.toggleVisibility;
                else
                   delete( obj.splitMultiAnimalsUI.Fig);
                   delete(obj.splitMultiAnimalsUI);
-                  listenerIndex = strcmp({obj.Listener.eventName},'SplitCompleted');
-                  delete(obj.Listener(listenerIndex));
-                  obj.Listener(listenerIndex) = [];
                end
                
             case 'init'
-               % First, make sure the selection is valid
+               % First, make sure the Tank contains multiAnimals
                
-               % The multiAnimalsUI must be opened
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               % Note that SelectedItems only contains nodes of a specific
-               % type, based on exclusion done in `treeSelectionFcn`.
-               % Therefore the vertical concatenation above is always valid
-               nCol = size(SelectedItems,2);
-               switch  nCol
-                  case 0  % tank
-                     % Cannot be invoked at "TANK" level
-                     error(['nigeLab:' mfilename ':badCase'],...
-                        'Should not be able to enter split UI from TANK level.');
-                  case 1  % animal
-                     % Gets all blocks of selected animals
-                     B = obj.Tank{SelectedItems(1),:};
-                     A = repmat(obj.Tank{SelectedItems(1)},1,numel(B));
-                     for i = 1:numel(SelectedItems)
-                        b = obj.Tank{SelectedItems(i),:};
-                        B = [B, b];
-                        A = [A, ...
-                           repmat(obj.Tank{SelectedItems(i)},1,numel(b))];
-                     end
-                     
-                  case 2  % block
-                     % Get specific subset of block or blocks
-                     A = obj.Tank{SelectedItems(:,1)};
-                     B = obj.Tank{SelectedItems};
-               end % switch nCol
+               an = obj.Tank.Children;
+               an = an([an.MultiAnimals]);
                
-               if ~all([A.MultiAnimals])
-                  return;
-               end
+               if isempty(an)
+                   errordlg('This is not a multiAnimal!');
+                   return;
+               end % if ~MultiAnimals
                
-               if ~all([B.MultiAnimals])
-                  return;
-               end
+               obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(an);
                
-               obj.toSplit = struct('Animal',cell(numel(A),1),...
-                  'Block',cell(numel(B),1));
-               for i = 1:numel(obj.toSplit)
-                  obj.toSplit(i).Animal = A(i);
-                  obj.toSplit(i).Block = B(i);
-               end
-               obj.toAdd = struct('Animal',{},'Block',{});
-               
-               obj.splitMultiAnimalsUI = ...
-                  nigeLab.libs.splitMultiAnimalsUI(obj);
-               
-              obj.Listener = [obj.Listener,...
-            addlistener(obj.splitMultiAnimalsUI,'SplitCompleted',...
-               @(~,e)obj.addToTree(e.nigelObj))];
          end % switch mode
       end
       
