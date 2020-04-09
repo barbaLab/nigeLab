@@ -6147,6 +6147,9 @@ classdef nigelObj < handle & ...
          end
          if exist(outPath,'dir')==0
             [SUCCESS,MESSAGE,MESSAGEID] = mkdir(outPath); % Make sure the output folder exists
+            if ~SUCCESS
+                return;
+            end
          end
          fid = fopen(obj.IDFile,'w');
          if fid > 0
@@ -6613,7 +6616,7 @@ classdef nigelObj < handle & ...
                b.PropListener(1).Enabled = true;
          end
          if DataMoved
-            b.loadIDFile(); 
+             b.loadIDFile();
          end
          [fmt,idt,type] = b.getDescriptiveFormatting();
          nigeLab.utils.cprintf(fmt,b.Verbose,...
