@@ -17,7 +17,7 @@ if strcmp(S(1).type,'.')
       {'type','value','tag','ts','snippet','data'});
    mIdx = strcmp(diskMethods,S(1).subs);
    if any(mIdx) && ~any(strcmp(excludedPropNames,S(1).subs))
-       nOut = nargout(eval(sprintf('@obj.%s',m(mIdx).Name)));
+       nOut = nargout;
       if nOut > 0
          data = builtin('subsref',obj,S);
       else
