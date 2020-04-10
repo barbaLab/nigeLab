@@ -28,7 +28,7 @@ demoPath = fullfile(nigelPath,'+nigeLab','setup','demo');
 inputPath = fullfile(demoPath,'myTank');
 % unzip data if needed
 if ~exist(inputPath,'dir')
-   unzip(fullfile(inputPath,'myTank.zip'));
+   unzip(fullfile(fileparts(inputPath),'myTank.zip'),fullfile(fileparts(inputPath)));
 end
 
 % Get output location and make folder if needed
@@ -95,7 +95,7 @@ end
 
 %% Perform spike detection and feature extraction (wavelet decomposition)
 % --> (on only the third Block of the second Animal)
-blockObj = tankObj{2,3};
+blockObj = tankObj{1,1};
 doSD(blockObj);
 linkToData(blockObj);
 

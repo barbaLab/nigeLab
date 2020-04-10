@@ -6487,6 +6487,8 @@ classdef nigelObj < handle & ...
           switch answer
               case btn1
                   path = uigetdir(obj.Paths.SaveLoc);
+                  dd = dir(fullfile(fileparts(path),'**','*_Tank.mat'));
+                  path = dd.folder;
                   obj.updatePaths(path);
                   flag = true;
               case btn2

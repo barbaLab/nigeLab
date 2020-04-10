@@ -35,10 +35,10 @@ nigelPath = fullfile(nigelPath{1:end-3});
 switch upper(pathMode)
    case 'UNC'
       if isunix
-         nigelPath = nigelPath_;
+         nigelPath = nigelPath;
       else
          nigelPath = getUNCPath(nigelPath);
-         nigelPath = strrep(nigelPath,'\','/');
+         nigelPath = strrep(nigelPath,'\','/'); 
       end
       
    case ''

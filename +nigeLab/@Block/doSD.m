@@ -352,8 +352,9 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
-         iStart = artifact([true, diff(artifact) > 1]);
-         iStop = artifact(fliplr([true, diff(fliplr(artifact)) > 1]));
+          artifact = artifact(:); % make sure is column oriented
+         iStart = artifact([true, diff(artifact)' ~= 1]);
+         iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));
          
          artifact = reshape(artifact,numel(artifact),1);
 
