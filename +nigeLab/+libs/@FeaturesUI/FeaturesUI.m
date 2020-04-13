@@ -331,7 +331,7 @@ classdef FeaturesUI < handle
          obj.rotateImg = imread(fullfile(fileparts(mfilename('fullpath')),'private','rotate.png'));
         
          obj.rotateButton = uicontrol(featureDisplayPanel,...
-            'Style','pushbutton',...
+            'Style','togglebutton',...
             'Units','Normalized',...
             'Position',[0.6 0 0.04 0.07],...
             'Callback',@obj.RotateBtnPress,...
@@ -575,9 +575,9 @@ classdef FeaturesUI < handle
       % Find subset of spikes to move based on convex-hull polygon
       function GetSpikesToMove(obj,ax)
          %GETSPIKESTOMOVE  Draw polygon, move spikes 
-         if ~obj.isVisible % If it's not visible, can't do cutting here
-            return;
-         end
+%          if ~obj.isVisible % If it's not visible, can't do cutting here
+%             return;
+%          end
          
          % Get the potential features to move clusters
          curCh = obj.ChannelSelector.Channel;

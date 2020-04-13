@@ -22,6 +22,8 @@ else
          'have `Sort` parameters initialized yet.\n'],...
          numel(nigelObj),class(nigelObj));
       return;
+   elseif isscalar(pars)
+       flag = true;
    elseif isequal(pars{:})
       flag = true;
    else
@@ -33,7 +35,7 @@ else
 end
 
 % UPDATE PARS PROPERTY
-sortObj.pars = pars;
+sortObj.pars = pars{1};
 
 
 end

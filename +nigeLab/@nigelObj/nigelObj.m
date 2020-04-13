@@ -4346,10 +4346,13 @@ classdef nigelObj < handle & ...
          %  --> Sets obj.SortGUI to nigeLab.Sort class object
          
          % Make sure that parameters have been set
-         if ~isfield(obj.HasParsInit,'Sort')
-            obj.updateParams('Sort','Direct');
-         elseif ~obj.HasParsInit.Sort
-            obj.updateParams('Sort','KeepPars');
+         parsIdx = arrayfun(@(o) isfield(o.HasParsInit,'Sort'),obj);
+         if any(~parsIdx)
+            obj(~parsIdx).updateParams('Sort','Direct');
+         end
+        initParsIdx= arrayfun(@(o) getfield(o.HasParsInit,'Sort'),obj);
+         if any(~initParsIdx)
+            obj(~initParsIdx).updateParams('Sort','KeepPars');
          end
          % Update the `SortGUI` property
          set(obj,'SortGUI',nigeLab.Sort(obj));
@@ -6484,6 +6487,8 @@ classdef nigelObj < handle & ...
           switch answer
               case btn1
                   path = uigetdir(obj.Paths.SaveLoc);
+                  dd = dir(fullfile(fileparts(path),'**','*_Tank.mat'));
+                  path = dd.folder;
                   obj.updatePaths(path);
                   flag = true;
               case btn2

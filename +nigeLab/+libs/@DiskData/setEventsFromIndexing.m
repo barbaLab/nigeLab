@@ -39,19 +39,43 @@ if isscalar(data)
    data = repmat(data,numel(iRow),numel(iCol));
 end
 
+% step 0. To speed up and avoid calling h5read too many times lets find
+% adjacent chunks of iCol
+iCol = iCol(:);
+clustIdx = find([1;diff(iCol)-1]); % this is the starting index of clusters
+strideCol = diff(clustIdx(:));
+ColBlocks = [iCol(clustIdx(:)) [strideCol;numel(iCol)-sum(strideCol)]];
+
+% same for iRow
+iRow = iRow(:);
+clustIdx = find([1;diff(iRow)-1]); % this is the starting index of clusters
+strideRow = diff(clustIdx(:));
+RowBlocks = [iRow(clustIdx(:)) [strideRow;numel(iRow)-sum(strideRow)]];
+
 % Do the H5 assignment
 varname_ = ['/' obj.name_];
 
 % Iterate on columns, reading in the full column and then overwriting the
 % relevant rows. There should in general be many fewer Columns than rows,
 % unless the number of rows is so small that it becomes a trivial tradeoff
-for i = 1:numel(iCol)
-   a = h5read(obj.diskfile_,varname_,[1 iCol(i)],[N 1]);
-   assigned_data = data(:,i);
-   a(iRow,1) = assigned_data;
-   h5write(obj.diskfile_,varname_,a,[1 iCol(i)],[N 1]);
-end
+% for i = 1:numel(iCol)
+%    a = h5read(obj.diskfile_,varname_,[1 iCol(i)],[N 1]);
+%    assigned_data = data(:,i);
+%    a(iRow,1) = assigned_data;
+%    h5write(obj.diskfile_,varname_,a,[1 iCol(i)],[N 1]);
+% end
 
+% write data to file
+stCol = 0;
+for ii = 1:size(ColBlocks,1)
+    stRow = 0;
+    for jj = 1:size(RowBlocks,1)
+        h5write(obj.diskfile_,varname_,data(stRow+1:stRow+RowBlocks(jj,2),stCol+1:stCol+ColBlocks(ii,2)),...
+            [RowBlocks(jj,1) ColBlocks(ii,1)],[RowBlocks(jj,2) ColBlocks(ii,2)]);
+        stRow = stRow + RowBlocks(jj,2);
+    end
+    stCol = stCol + ColBlocks(ii,2);
+end
 
 
 end
