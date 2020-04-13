@@ -12,7 +12,7 @@ function mergeBlocks(animalObj,ind,varargin)
         warning('Not enough input args, no blocks merged.');
        return; 
     end
-    TargetBlock=animalObj.Blocks(ind(1));
+    TargetBlock=animalObj.Children(ind(1));
     
     BlockFieldsToMerge_={ 'Channels';
 %                          'DACChannels';
@@ -21,7 +21,7 @@ function mergeBlocks(animalObj,ind,varargin)
 %                          'DigOutChannels';
                         };
    BlockFieldsToMerge = BlockFieldsToMerge_(...
-                        ismember( BlockFieldsToMerge_, fieldnames(animalObj.Blocks(ind(1)))));
+                        ismember( BlockFieldsToMerge_, fieldnames(animalObj.Children(ind(1)))));
                 
    ChannelsFieldsToMerge_={ 'rawData';
                             'stimData';
@@ -37,7 +37,7 @@ for iV = 1:2:numel(varargin)
 end
                     
     ChannelsFieldsToMerge = ChannelsFieldsToMerge_(...
-                            isfield( animalObj.Blocks(ind(1)).Channels, ChannelsFieldsToMerge_));
+                            isfield( animalObj.Children(ind(1)).Channels, ChannelsFieldsToMerge_));
     
     fprintf(1,'\nmerging blocks %d to %d... ',ind(1),ind(end));                    
     fprintf(1,'%.3d%%',0)
@@ -50,7 +50,7 @@ end
                 for ll=1:numel(ChannelsFieldsToMerge)
                 TargetBlock.(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}) = append(...
                 TargetBlock.(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}),...
-                animalObj.Blocks(ii).(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}));
+                animalObj.Children(ii).(BlockFieldsToMerge{kk})(jj).(ChannelsFieldsToMerge{ll}));
                 progr=progr+1;
                 fraction_done = 100 * (progr / totProgr);
                 if ~floor(mod(fraction_done,5)) % only increment counter by 5%

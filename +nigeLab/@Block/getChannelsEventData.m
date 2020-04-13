@@ -6,9 +6,8 @@ function eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,match
 %
 %  Should be called from blockObj.getEventData.
 
-%%
 F = fieldnames(blockObj.Channels(ch));
-iF = strncmpi(F,field,7);
+iF = strcmpi(F,field);
 if sum(iF)==1
    eventData = retrieveChannelData(blockObj,ch,F{iF},prop);
    if ~isnan(matchValue(1))
@@ -42,7 +41,12 @@ end
       %                     format.
       
       try
-         out = blockObj.Channels(ch).(type).(field);
+         nonEmpty = checkSize(blockObj.Channels(ch).(type));
+         if nonEmpty
+            out = blockObj.Channels(ch).(type).(field);
+         else
+            out = [];
+         end
       catch me % Parse for old file format
          if strcmp(me.identifier,'MATLAB:MatFile:VariableNotInFile')
             switch field

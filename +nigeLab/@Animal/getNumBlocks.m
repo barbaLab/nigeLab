@@ -11,7 +11,7 @@ if numel(animalObj) > 1
    end
    return;
 end
-N = numel(animalObj.Blocks);
+N = numel(animalObj.Children);
 
 
 end

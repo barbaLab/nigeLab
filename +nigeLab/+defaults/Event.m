@@ -1,4 +1,4 @@
-function pars = Event(paramName)
+function varargout = Event(varargin)
 %% EVENT    Template for initializing parameters related to EVENTS
 %
 %  pars = nigeLab.defaults.Event(); Return full pars struct
@@ -185,9 +185,18 @@ if numel(pars.EventDetectionType) ~= nAuto
           numel(pars.EventDetectionType));
 end
 
-%% If a specific parameter was requested, return only that parameter
-if nargin > 0
-   pars = pars.(paramName);
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
 end
                               
 end

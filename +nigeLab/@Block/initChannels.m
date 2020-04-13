@@ -1,40 +1,49 @@
 function flag = initChannels(blockObj,header)
-%% INITCHANNELS   Initialize header information for channels
+%INITCHANNELS   Initialize header information for channels
 %
 %  flag = blockObj.initChannels;
 %  flag = blockObj.initChannels(header);
 %  --> Uses custom-defined 'header' struct
 
-%% GET HEADER INFO DEPENDING ON RECORDING TYPE
+%GET HEADER INFO DEPENDING ON RECORDING TYPE
 flag = false;
 if nargin < 2
-   header = nigeLab.parseHeader();
+   header = blockObj.parseHeader();
 end
 
-%% ASSIGN DATA FIELDS USING HEADER INFO
-blockObj.Channels = header.raw_channels;
-blockObj.RecSystem = nigeLab.utils.AcqSystem(header.acqsys);
-blockObj.Meta.Header = nigeLab.utils.fixNamingConvention(header);
+%ASSIGN DATA FIELDS USING HEADER INFO
+blockObj.Channels = header.RawChannels;
+blockObj.RecSystem = nigeLab.utils.AcqSystem(header.Acqsys);
 
 if ~blockObj.parseProbeNumbers % Depends on recording system
    warning('Could not properly parse probe identifiers.');
    return;
 end
-blockObj.NumChannels = header.num_raw_channels;
-blockObj.NumProbes = header.num_probes;
-blockObj.SampleRate = header.sample_rate;
-blockObj.Samples = header.num_raw_samples;
+blockObj.SampleRate = header.SampleRate;
+blockObj.Samples = header.NumRawSamples;
 
-%% SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
-blockObj.parseChannelID();
+%SET CHANNEL MASK (OR IF ALREADY SPECIFIED MAKE SURE IT IS CORRECT)
 if isfield(header,'Mask')
    blockObj.Mask = reshape(find(header.Mask),1,numel(header.Mask));
 elseif isempty(blockObj.Mask)
    blockObj.Mask = 1:blockObj.NumChannels;
-else
+elseif islogical(blockObj.Mask)
+   if numel(blockObj.Mask)~=numel(blockObj.NumChannels)
+      error(['nigeLab:' mfilename ':MaskChannelsMismatch'],...
+         ['%s.Mask is a logical vector but has %g elements ',...
+          'while there are %g Channels\n'],...
+            blockObj.Name,numel(blockObj.Mask),blockObj.NumChannels);
+   end
+   % Convert to `double`
+   blockObj.Mask = find(blockObj.Mask); 
+elseif isnumeric(blockObj.Mask)
    blockObj.Mask(blockObj.Mask > blockObj.NumChannels) = [];
    blockObj.Mask(blockObj.Mask < 1) = [];
    blockObj.Mask = reshape(blockObj.Mask,1,numel(blockObj.Mask));
+else
+   error(['nigeLab:' mfilename ':InvalidMaskType'],...
+      '%s.Mask is assigned an invalid class of value (%s)\n',...
+         blockObj.Name,class(blockObj.Mask));
 end
 
 flag = true;

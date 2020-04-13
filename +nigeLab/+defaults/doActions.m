@@ -1,5 +1,5 @@
-function pars = doActions(name)
-% DOACTIONS  Default method to return "dependencies" for doActions
+function varargout = doActions(varargin)
+% DOACTIONS  Returns default "dependencies" for doActions
 %
 %  pars = nigeLab.defaults.doActions();  Return all as struct
 %  
@@ -15,7 +15,7 @@ function pars = doActions(name)
 %     * 'enabled'  :  true or false. If false, will be greyed out in
 %                     nigeLab.libs.DashBoard.
 
-%%
+%% Set "dependencies" for checking that stages are valid for `doMethods`
 pars = struct;
 pars.doAutoClustering = doAction({'Spikes'},true);
 pars.doBehaviorSync= doAction({'Video'});
@@ -29,10 +29,21 @@ pars.doUnitFilter = doAction({'Raw'},true);
 pars.doVidInfoExtraction = doAction({'Video'});
 pars.doVidSyncExtraction = doAction({'Video'});
 
-if nargin > 0
-   pars = pars.(name);
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
 end
 
+% Helper function to make `doAction` param struct
    function doStruct = doAction(required,en)
       %DOACTION  Helper function to create doAction struct
       %

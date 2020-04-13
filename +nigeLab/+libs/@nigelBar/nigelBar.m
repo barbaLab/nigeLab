@@ -1,111 +1,50 @@
-classdef nigelBar < handle
-   %NIGELBAR   
+classdef nigelBar < handle & matlab.mixin.SetGet
+   %NIGELBAR   Bar that goes across title of nigelDash GUI
    %
    %  barObj = nigeLab.libs.nigelBar(parent);
    %  barObj = nigeLab.libs.nigelBar(parent,'propName1',propVal1,...);
    
-   properties
+   % % % PROPERTIES % % % % % % % % % %
+   % DEPENDENT,PUBLIC
+   properties (Dependent,Access=public)
+      BackgroundColor   (1,3) double = [0.00,0.00,0.00] % Panel face color
+      FaceColor         (1,3) double = [0.26,0.51,0.76] % Button face color
+      FontColor         (1,3) double = [1.00,0.81,0.27] % Font color
+      FontName                char = 'DroidSans'
+      Position          (1,4) double = [.01,.93,.98,.06]
+      String                  char = ''
+      Substr                  char = ''
+      Units                   char = 'normalized'
+      Visible                 char = 'on'
+   end
+   
+   % PUBLIC
+   properties (Dependent,GetAccess=public,SetAccess=protected)
+      LeftButtonContainer                       % Left-button container  (Children{1})
+      RightButtonContainer                      % Right-button container (Children{2})
+      Button           nigeLab.libs.nigelButton % Array of nigeLab.libs.nigelButton objects
+   end
+   
+   % HIDDEN,PUBLIC/PROTECTED
+   properties (Hidden,GetAccess=public,SetAccess=protected)
+      Children   cell % {1} -> Always LEFT button container; {2} -> Always RIGHT button container; 3+ are ALWAYS buttons
+   end
+   
+   % PUBLIC/PROTECTED
+   properties(GetAccess=public,SetAccess=protected)
       Parent
-      Children
-      Tag
-      Visible = true;
-      InnerPosition;
-      Position;
-      String
-      Substr
-      strCol
-      barCol
+      Tag        char = 'nigelBar'
    end
    
-   properties(SetObservable)
-      Units
+   % PROTECTED
+   properties(Access=protected)
+      ParentListener    event.listener
    end
+   % % % % % % % % % % END PROPERTIES %
    
-   properties (Access = private)
-      panel
-      titleBar
-   end
-   
-   methods
-      % Class constructor for nigeLab.libs.nigelBar handle class
-      function obj = nigelBar(parent,varargin)
-         %NIGELBAR   
-         %  barObj = nigeLab.libs.nigelBar(parent);
-         %  barObj = nigeLab.libs.nigelBar(parent,'propName1',val1,...);
-         
-         addlistener(obj,'Units','PostSet',@obj.UnitsChanged);
-
-         Pars.TitleBarColor = nigeLab.defaults.nigelColors('blue');
-         Pars.StringColor = nigeLab.defaults.nigelColors('yellow');
-         Pars.Position  = [0.1 0.1 0.3 0.91];
-         Pars.String = '';
-         Pars.Substr = '';
-         Pars.Tag = 'nigelBar';
-         Pars.Units = 'normalized';
-         Pars.Buttons = struct('String','Home','Callback','');
-         Pars = nigeLab.utils.getopt(Pars,varargin{:});
-         
-         obj.barCol = Pars.TitleBarColor;
-         obj.strCol = Pars.StringColor;
-         obj.String = Pars.String;
-         obj.Substr = Pars.Substr;
-         obj.Tag = Pars.Tag;
-         
-        p = uipanel(parent,...
-           'BackgroundColor',parent.Color,...
-           'Units',Pars.Units,...
-           'Position',Pars.Position,...
-           'BorderType','none');
-
-        titleBar.axes = axes(p,...
-           'Color','none',...
-           'Units','normalized',...
-           'Position',[0 0 1 1]);
-        titleBar.axes.XAxis.Visible='off';
-        titleBar.axes.YAxis.Visible='off';
-        
-        titleBar.r1 = rectangle(titleBar.axes,...
-           'Position',[0 0.5 1 0.5],...
-           'Curvature',[0 0],...
-           'FaceColor', parent.Color,...
-           'EdgeColor', parent.Color);
-        
-        titleBar.r2 = rectangle(titleBar.axes,...
-           'Position',[0 0 1 1],...
-           'Curvature',[0.02 0.55],...
-           'FaceColor', Pars.TitleBarColor,...
-           'EdgeColor', Pars.TitleBarColor);
-        
-        for bb = 1:numel(Pars.Buttons)
-           titleBar.btn(bb) = text(titleBar.axes,0.1,0.5,...
-              Pars.Buttons(bb).String,...
-              'Units','normalized',...
-              'VerticalAlignment','middle',...
-              'Color',Pars.StringColor,...
-              'FontSize',13,...
-              'FontWeight','bold',...
-              'FontName','DroidSans',...
-              'ButtonDownFcn',Pars.Buttons(bb).Callback);
-           titleBar.btn(bb).Units = 'pixels';
-           if not(bb-1)
-              titleBar.btn(bb).Position(1) = 40;
-           else
-              titleBar.btn(bb).Position(1) = titleBar.btn(bb-1).Position(1) ...
-                 + titleBar.btn(bb-1).Extent(3) + 40;
-              titleBar.btn(bb-1).Units = 'normalized';
-           end
-        end
-        titleBar.btn(bb).Units = 'normalized';
-        titleBar.btn(1).Units = 'normalized';
-        
-        obj.Parent = parent;
-        obj.Tag = Pars.Tag;
-        obj.InnerPosition = [.05 .05 .90 (.90 - titleBar.axes.Position(4))];
-        obj.titleBar = titleBar;
-        obj.panel = p;
-        obj.Units = Pars.Units;
-      end
-      
+   % % % METHODS% % % % % % % % % % % %
+   % NO ATTRIBUTES (overloaded methods)
+   methods      
       % OVERRIDDEN "class" method
       function [cl,tag] = class(obj)
          % CLASS  Returns the "type" of nigelBar
@@ -119,34 +58,283 @@ classdef nigelBar < handle
          tag = obj.Tag;
       end
       
-      % Listener callback to be executed when the UNITS property changes
-      % -- DEPRECATED --
-      function UnitsChanged(obj, src, Event)
-         % UNITSCHANGED  Listener callback to be executed when the UNITS
-         %               property changes. Ensures that sizing is
-         %               proportional to the UNITS.
+      % Override `delete` to handle Children destructor
+      function delete(obj)
+         %DELETE Handles destruction of .Children members
          
-         switch Event.AffectedObject.Units
-            case 'normalized'
-               obj.InnerPosition =...
-                  [.05 .05 .90 (.90-obj.titleBar.axes.Position(4))];
-               obj.Position = obj.panel.Position;
-            case 'pixels'
-               set(obj.axes,'Units','pixels');
-               set(obj.panel,'Units','pixels');
-               obj.InnerPosition = [obj.panel.Position([3 4]).*[.05 .05] ...
-                  obj.panel.Position(3) ...
-                  obj.panel.Position( 4)-obj.axes.Position(4)];
-               obj.InnerPosition = round(obj.InnerPosition);
-               obj.InnerPosition(3:4)= ...
-                  obj.InnerPosition(3:4)-obj.InnerPosition(1:2)*2;
-               obj.Position = obj.panel.Position;
-               set(obj.titleBar.axes,'Units','normalized');
-               set(obj.panel,'Units','normalized');
+         if ~isempty(obj.ParentListener)
+            if isvalid(obj.ParentListener)
+               delete(obj.ParentListener)
+            end
          end
          
+         if ~isempty(obj.Children)
+            for i = 1:numel(obj.Children)
+               if isvalid(obj.Children{i})
+                  delete(obj.Children{i});
+               end
+            end
+         end
+         
+      end
+      
+      % % % GET.PROPERTY METHODS % % % % % % % % % % % %
+      function value = get.BackgroundColor(obj)
+         value = obj.Parent.Color.Panel;
+      end
+      
+      function value = get.Button(obj)
+         if numel(obj.Children) <= 2
+            value = {};
+            return;
+         end
+         value = obj.Children(3:end);
+      end
+      
+      function value = get.FaceColor(obj)
+         value = obj.Parent.Color.TitleBar;
+      end
+      
+      function value = get.FontColor(obj)
+         value = obj.Parent.Color.TitleText;
+      end
+      
+      function value = get.FontName(obj)
+         value = obj.Parent.FontName;
+      end
+      
+      function value = get.LeftButtonContainer(obj)
+         value = obj.Children{1};
+      end
+      
+      function value = get.Position(obj)
+         value = obj.Parent.OutPanel.Position;
+      end
+      
+      function value = get.RightButtonContainer(obj)
+         value = obj.Children{2};
+      end
+      
+      function value = get.String(obj)
+         value = obj.Parent.String;
+      end
+      
+      % Returns all the Button Strings
+      function value = get.Substr(obj)
+         value = {};
+         for k = 1:2 % First two are Left, Right (respectively)
+            for i = 1:numel(obj.Children{k}.Children)
+               h = findobj(obj.Children{k}.Children(i).Children,'Tag','Label');
+               value = [value, h.String]; %#ok<AGROW>
+            end
+         end
+      end
+      
+      function value = get.Units(obj)
+         value = obj.Parent.OutPanel.Units;
+      end
+      
+      function value = get.Visible(obj)
+         value = obj.Parent.OutPanel.Visible;
+      end
+      % % % % % % % % % % END GET.PROPERTY METHODS % % %
+      
+      % % % SET.PROPERTY METHODS % % % % % % % % % % % %
+      function set.BackgroundColor(obj,value)
+         obj.Parent.Color.Panel = value;
+      end
+      
+      function set.Button(obj,value)
+         if ~isscalar(value)
+            error(['nigeLab:' mfilename ':BadAssignment'],...
+               '.Button elements must be assigned as scalars');
+         end
+         obj.Children{end+1} = value;
+      end
+      
+      function set.FaceColor(obj,value)
+         if ~isnumeric(value)
+            value = nigeLab.defaults.nigelColors(value);
+         end
+         obj.Parent.Color.TitleBar = value;
+         if isempty(obj.Button)
+            return;
+         end
+         for i = 1:numel(obj.Button)
+            obj.Button{i}.FaceColorEnable = value;
+            obj.Button{i}.FaceColorDisable = value * 0.75;
+         end
 
       end
       
+      function set.FontColor(obj,value)
+         if ~isnumeric(value)
+            value = nigeLab.defaults.nigelColors(value);
+         end
+         obj.Parent.Color.TitleText=value;
+         if isempty(obj.Button)
+            return;
+         end
+         for i = 1:numel(obj.Button)
+            obj.Button{i}.FontColorEnable = value;
+            obj.Button{i}.FontColorDisable = value * 0.75;
+         end
+
+      end
+      
+      function set.FontName(obj,value)
+         obj.Parent.FontName = value;
+         if isempty(obj.Button)
+            return;
+         end
+         for i = 1:numel(obj.Button)
+            obj.Button{i}.FaceColorEnable = value;
+            obj.Button{i}.FaceColorDisable = value * 0.75;
+         end
+      end
+      
+      function set.LeftButtonContainer(obj,value)
+         if isempty(obj.Children)
+            obj.Children = cell(1,2);
+         end
+         obj.Children{1} = value;
+      end
+      
+      function set.Position(obj,value)
+         obj.Parent.OutPanel.Position = value;
+      end
+      
+      function set.RightButtonContainer(obj,value)
+         if isempty(obj.Children)
+            obj.Children = cell(1,2);
+         end
+         obj.Children{2} = value;
+      end
+      
+      function set.String(obj,value)
+         obj.Parent.String = value;
+      end
+      
+      % Sets all the Button Strings
+      function set.Substr(obj,value)
+         if isempty(obj.Button)
+            return;
+         elseif ~isequal(numel(obj.Button),numel(value))
+            nigeLab.utils.cprintf('Errors',...
+               ['Number of elements of value (%g) '...
+               'must match number of buttons (%g)\n'],...
+               numel(value),numel(obj.Button));
+            return;
+         end
+         for i = 1:numel(obj.Button)
+            obj.Button{i}.String = value{i};
+         end
+      end
+      
+      function set.Units(obj,value)
+         obj.Parent.OutPanel.Units = value;
+      end
+      
+      function set.Visible(obj,value)
+         obj.Parent.OutPanel.Visible = value;
+      end
+      % % % % % % % % % % END SET.PROPERTY METHODS % % %
    end
+   
+   % PUBLIC (constructor)
+   methods (Access=public)
+      % Class constructor for nigeLab.libs.nigelBar handle class
+      function obj = nigelBar(parent,varargin)
+         %NIGELBAR   Create title bar object for figures
+         %  barObj = nigeLab.libs.nigelBar(parent);
+         %  barObj = nigeLab.libs.nigelBar(parent,'propName1',val1,...);
+         
+         if nargin < 1
+            parent = nigeLab.libs.nigelPanel(gcf);
+         end
+         
+         for i = 1:2:numel(varargin)
+            if isprop(obj,varargin{i})
+               set(obj,varargin{i},varargin{i+1});
+            end
+         end
+
+         obj.Parent = parent;
+         obj.ParentListener = addlistener(parent,'ObjectBeingDestroyed',...
+            @(~,~)obj.delete);
+         
+         obj.Children{1} = axes('Units','normalized', ...
+            'Tag','ButtonAxes',...
+            'Position',[0.00 0.10 0.40 0.40],...
+            'Color','none',...
+            'XColor','none',...
+            'YColor','none',...
+            'NextPlot','add',...
+            'XLimMode','manual',...
+            'XLim',[-0.1 3],...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
+            'FontName','DroidSans');
+         obj.Parent.nestObj(obj.Children{1},'LeftButtonAxes');
+         obj.Children{2} = axes('Units','normalized', ...
+            'Tag','ButtonAxes',...
+            'Position',[0.60 0.10 0.40 0.40],...
+            'Color','none',...
+            'XColor','none',...
+            'YColor','none',...
+            'NextPlot','add',...
+            'XLimMode','manual',...
+            'XLim',[-2.1 1],...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
+            'FontName','DroidSans');
+         obj.Parent.nestObj(obj.Children{2},'RightButtonAxes');
+      end
+      
+      % Adds button to 'left' or 'right' container
+      function addButton(obj,side,btn)
+         %ADDBUTTON Add button to 'left' or 'right' container
+         %
+         %  obj.addButton(side,btn);
+         %
+         %  side: 'left' or 'right' (which side of title to add to)
+         %  --> Buttons are always added so that the most-recent button is
+         %      the furthest "inside" (regardless of which side)
+         %  btn: struct with fields 'String' and 'Callback'
+         %        --> Can be array struct
+
+         if nargin < 3
+            error(['nigeLab:' mfilename ':BadNumInputs'],...
+               'Must provide all three input arguments.');
+         end
+         
+         if ~isstruct(btn)
+            error(['nigeLab:' mfilename ':BadClass'],...
+               ['"btn" should be struct with ' ...
+               'fields ''String'' and ''Callback''']);
+         end
+         
+         if ~isfield(btn,'String')
+            error(['nigeLab:' mfilename ':BadStruct'],...
+               '"btn" is missing ''String'' field');
+         end
+         
+         if ~isfield(btn,'Callback')
+            error(['nigeLab:' mfilename ':BadStruct'],...
+               '"btn" is missing ''Callback'' field');
+         end
+         
+         side = strcmpi(side,'right') + 1; % Get index to correct .Children
+         scl = -1*(side-1.5)*2;
+         for i = 1:numel(btn)
+            nButton = numel(obj.Children{side}.Children);
+            pos = [scl*nButton 0.05 0.85 0.9];
+            b = nigeLab.libs.nigelButton(obj.Children{side},pos,...
+               btn(i).String,btn(i).Callback);
+            obj.Button = b; 
+         end
+         
+      end
+   end
+   % % % % % % % % % % END METHODS% % %
 end

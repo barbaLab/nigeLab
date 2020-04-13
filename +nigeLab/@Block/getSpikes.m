@@ -48,11 +48,13 @@ function spikes = getSpikes(blockObj,ch,clusterIndex,type)
 %                       corresponding to each identified spike wave peak
 %                       (or subset that matches class vector elements).
 %
+%  -- OR (if `type` is 'feat') --
+%
 %  features    :     Feature coefficients used for semi-automated
 %                       clustering and sorting. Only returned if 'feat' is
 %                       specified for type variable.
 
-%% ERROR CHECKING
+% ERROR CHECKING
 if nargin < 2
    error(['nigeLab:' mfilename ':MissingInputArguments'],...
       'Must at least specify ''ch'' input arg');
@@ -63,7 +65,7 @@ if ~ParseSingleChannelInput(blockObj,ch)
       'Invalid value of ''ch'' input:  %g',ch);
 end
 
-%% PARSE INPUTS
+% PARSE INPUTS
 if nargin < 4
    type = 'spikes';
 end
@@ -81,7 +83,7 @@ if (numel(blockObj) > 1)
    return;
 end
 
-%% RETRIEVE SPIKES OR FEATURES
+% RETRIEVE SPIKES OR FEATURES
 switch lower(type) % Could add expansion for things like 'pw' and 'pp' etc.
    case {'feat','spikefeat','features','spikefeatures'}
       % Variable is still called "spikes"
@@ -89,11 +91,14 @@ switch lower(type) % Could add expansion for things like 'pw' and 'pp' etc.
    otherwise % Default is 'spikes'
       spikes = getEventData(blockObj,'Spikes','snippet',ch);
 end
+if isempty(spikes)
+   return;
+end
 
-%% USE CLUSTERINDEX TO REDUCE SET
+% USE CLUSTERINDEX TO REDUCE SET
 switch class(clusterIndex)
    case 'cell' % isnan does not work on 'cell' inputs
-      %% If cell, specifies {'clusterType',[clusterIndicesToKeep]}
+      % If cell, specifies {'clusterType',[clusterIndicesToKeep]}
       if numel(clusterIndex) ~= 2
          error(['nigeLab:' mfilename ':badInputSyntax'],...
             ['If clusterIndex is a cell, it must have two elements:\n' ...
@@ -114,26 +119,33 @@ switch class(clusterIndex)
             '-->\t{''Sorted'',[clusterIndices]}, or\n',...
             '-->\t{''Clusters'',[clusterIndices]}']);
       end
+      if isnan(clusterIndex)
+         return;
+      end
       
       switch lower(clusterType)
          case {'s','sort','sorted','sorts','sorting'}
+            clusterType = 'Sorted';
             c = blockObj.getSort(ch);
-         case {'clusters','clu','clust','cluster','clus','c','cl'}
+         case {'clusters','clu','clust','cluster','clustered','clus','c','cl'}
+            clusterType = 'Clustered';
             c = blockObj.getClus(ch);
          otherwise
             error(['nigeLab:' mfilename ':UnexpectedString'],...
                'Unexpected "clustering" type: %s',clusterType);
       end
    otherwise
-      %% Otherwise, must be numeric (or NaN to skip)
+      % Otherwise, must be numeric (or NaN to skip)
       if isnan(clusterIndex)
          return; % Returns all spikes or features if this arg is unused
       end
       
       if isnumeric(clusterIndex)
          if getStatus(blockObj,'Sorted',ch)
+            clusterType = 'Sorted';
             c = blockObj.getSort(ch);
          elseif getStatus(blockObj,'Clusters',ch)
+            clusterType = 'Clustered';
             c = blockObj.getClus(ch);
          else
             return; % do nothing
@@ -144,8 +156,19 @@ switch class(clusterIndex)
             class(clusterIndex));
       end
 end
+if numel(c) ~= size(spikes,1)
+   warning(...
+      ['[GETSPIKES]::[%s] There are %g %s group assignment elements ' ...
+       'for %g spikes on Channel P%g-%s.\n' ...
+       '\t->Returning ALL spikes instead.\n'],...
+      blockObj.Name,numel(c),clusterType,size(spikes,1),...
+      blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+   return;
+else
+   % Return the reduced subset of spikes
+   spikes = spikes(ismember(c,clusterIndex),:);
 
-% Return the reduced subset of spikes
-spikes = spikes(ismember(c,clusterIndex),:);
+end
+
 
 end

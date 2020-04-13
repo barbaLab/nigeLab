@@ -73,7 +73,7 @@ function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,ma
 %
 %  blockIdx    :     Index of the block that matches each element of data.
 
-%% PARSE INPUT
+% PARSE INPUT
 if nargin < 2 % field was not provided
    field = 'Spikes';
 elseif isempty(field)
@@ -82,7 +82,7 @@ elseif isempty(field)
 end
 
 if nargin < 3 % prop was not provided
-   prop = 'value';
+   prop = 'value'; % Equivalent to "cluster" for clusters/sorted data
 else
    prop = lower(prop);
 end
@@ -111,9 +111,7 @@ if nargin < 6 % matchValue was not provided
    matchValue = nan;
 end
 
-
-
-%% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
+% ITERATE ON MULTIPLE CHANNELS
 if isnumeric(ch)
    if (numel(ch) > 1)
       eventData = cell(size(ch));
@@ -134,11 +132,11 @@ elseif iscell(ch)
    return;
 end
 
-%% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
+% ITERATE ON MULTIPLE BLOCKS
 if (numel(blockObj) > 1)
    [eventData,blockIdx] = nigeLab.utils.initEmpty;
    if isnumeric(ch)
-      masterID = parseChannelID(blockObj(1));
+      masterID = ChannelID(blockObj); % Gets "biggest" ChannelID matrix
       masterIdx = matchChannelID(blockObj,masterID);
       for iBk = 1:numel(blockObj)
          [tmpData,tmpBlockIdx] = getEventData(blockObj(iBk),field,prop,...
@@ -160,10 +158,10 @@ blockObj.checkCompatibility(field);
 % Events struct is not associated with channels, so handle differently
 fieldType = blockObj.getFieldType(field);
 switch fieldType
-   case 'Channels'
+   case 'Channels' % Returns Events parsed from Channels
       eventData = blockObj.getChannelsEventData(field,prop,ch,...
          matchProp,matchValue);
-   case 'Streams'
+   case 'Streams' % Returns Events parsed from Streams (go in .Events)
       eventName = ch;
       eventData = blockObj.getStreamsEventData(field,prop,eventName,...
          matchProp,matchValue);

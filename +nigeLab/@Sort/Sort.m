@@ -1,5 +1,5 @@
 classdef Sort < handle
-%% SORT  User interface for "cluster-cutting" to manually classify spikes
+%SORT  User interface for "cluster-cutting" to manually classify spikes
 %
 %  nigeLab.Sort;
 %  sortObj = nigeLab.Sort;
@@ -21,63 +21,96 @@ classdef Sort < handle
 %   included in each cluster. Works with spikes that have been extracted
 %   using the NIGELAB workflow.
    
-   %% PROPERTIES
-   properties (SetAccess = public, GetAccess = public)
-      Blocks      % Array of orgExp block objects
-      Channels    % Struct containing channels info
+   % % % PROPERTIES % % % % % % % % % %   
+   % PUBLIC/PROTECTED
+   properties (GetAccess=public,SetAccess=protected)
+      nigelDash                           % Handle to DashBoard (if exists)
+      pars                                % Parameters
+      progCatPars = struct(...            % Parameters for "progressCat"
+                           'imgStrDef','Nigel_%03g.jpg',...
+                           'nImg',11,...
+                           'pawsInterval',0.05,...
+                           'progPctThresh',4);
+      spk                                 % Contains spike snippets
+      UI                                  % UI controller class
    end
    
-   properties (SetAccess = private, GetAccess = public)
-      spk      % Contains spike snippets
-      UI       % UI controller variable
-   end
-   
-   properties (SetAccess = private, GetAccess = private)
-      pars     % Parameters
+   % PROTECTED
+   properties (Access=protected)
+      Input    % Original nigelObj array
       orig     % Original assignments
       prev     % Previous assignments
-      
-      progCatPars = struct(...
-         'imgStrDef','Nigel_%03g.jpg',...
-         'nImg',11,...
-         'pawsInterval',0.05,...
-         'progPctThresh',4);
    end
    
-   events
-      channelUpdated
-      
+   % PUBLIC
+   properties (Access=public)
+      Blocks                     % Array of nigeLab.Block objects
+      Channels                   % Struct containing channels info
    end
+   % % % % % % % % % % END PROPERTIES %
    
-   %% METHODS
-   methods (Access = public)
+   % % % EVENTS % % % % % % % % % % % %
+   % PUBLIC
+   events (ListenAccess=public,NotifyAccess=public)
+      ChannelUpdated
+   end
+   % % % % % % % % % % END EVENTS % % %
+   
+   % % % METHODS% % % % % % % % % % % %
+   % RESTRICTED:nigeLab.nigelObj (method: .Sort)
+   methods (Access={?nigeLab.nigelObj,?nigeLab.Sort,...
+                    ?nigelab.Block,?nigeLab.Animal,?nigeLab.Tank})
+   % Class constructor
       function sortObj = Sort(nigelObj)
-         %% SORT  Sort class object constructor
+         %SORT  Sort class object constructor
          %
          %  nigeLab.Sort;
          %  sortObj = nigeLab.Sort;
          %  sortObj = nigeLab.Sort(nigelObj);                       
          
-         %% INITIALIZE PARAMETERS
-         if ~initParams(sortObj)
-            error(['nigeLab:' mfilename ':BadInit'],...
-                  'Could not set parameters for sortObj.');
-         end
-         
-         %% INITIALIZE INPUT DATA
+         % Initialize input data
          if nargin > 0
+            if isnumeric(nigelObj) % Initialize
+               dims = nigelObj;
+               if numel(dims) == 1
+                  dims = [dims,0];
+               end
+               sortObj = repmat(sortObj,dims);
+               close(gcf);
+               return;
+            end
+            
+            % Initialize parameters
+            if ~initParams(sortObj,nigelObj)
+               error(['nigeLab:' mfilename ':BadInit'],...
+                     'Could not set parameters for sortObj.');
+            end
+            
             if ~initData(sortObj,nigelObj)
                error(['nigeLab:' mfilename ':BadInit'],...
                   'sortObj array not created successfully.');
             end
-         else
-            if ~initData(sortObj)
-               error(['nigeLab:' mfilename ':BadInit'],...
-                  'sortObj array not created successfully.');
-            end
+%          else       % Note: it is no longer possible to call `Sort`
+%                     %       constructor from Command Window directly; has
+%                     %       to be called via a `nigelObj` method
+%                     %       2020-01-20 -MM
+%
+%             % Initialize parameters
+%             if ~initParams(sortObj)
+%                error(['nigeLab:' mfilename ':BadInit'],...
+%                      'Could not set parameters for sortObj.');
+%             end
+%             % And then initialize data
+%             if ~initData(sortObj)
+%                error(['nigeLab:' mfilename ':BadInit'],...
+%                   'sortObj array not created successfully.');
+%             end
+         else % Therefore, if it is given without inputs, it is for init
+            sortObj = nigeLab.Sort.empty(); % Empty
+            return;
          end
          
-         %% INITIALIZE GRAPHICAL INTERFACE
+         % Initialize graphical interface
          if ~initUI(sortObj)
             error('Error constructing graphical interface for sorting.');
          end
@@ -85,11 +118,35 @@ classdef Sort < handle
          if nargout == 0
             clear sortObj
          end
+      end
+   end
+      
+   % NO ATTRIBUTES (overloaded methods)
+   methods      
+      % Overloaded `delete` method
+      function delete(sortObj)
+         %DELETE  Ensure that objects are destroyed on sortObj destructor
+         %
+         %  delete(sortObj);
 
+         % Remove the channel selector UI, if it exists
+         if ~isempty(sortObj.UI)
+            if isvalid(sortObj.UI)
+               delete(sortObj.UI);
+            end 
+         end
+         
+         % Remove association from input
+         if ~isempty(sortObj.Input)
+            set(sortObj.Input,'SortGUI',nigeLab.Sort.empty());
+         end
       end
       
+      % Overloaded `set` method
       function flag = set(sortObj,name,value)
-         %% SET   Overloaded set method for the nigeLab.Sort class object
+         %SET   Overloaded set method for the nigeLab.Sort class object
+         %
+         %  flag = set(sortObj,'Name',value);
          
          flag = false;
          switch lower(name)
@@ -129,8 +186,9 @@ classdef Sort < handle
          
       end
       
+      % Overloaded `get` method
       function value = get(sortObj,name)
-         %% GET   Overloaded get method for the nigeLab.Sort class object
+         %GET   Overloaded get method for the nigeLab.Sort class object
          switch lower(name)
             case 'channel'
                value = sortObj.UI.ch;
@@ -141,38 +199,19 @@ classdef Sort < handle
             otherwise
                builtin('get',sortObj,name);
          end
-               
-         
       end
-      
+   end
+   
+   % PUBLIC
+   methods (Access=public)
       setChannel(sortObj,~,~) % Set the current channel in the UI
       setClass(sortObj,class) % Set the current sort class
       saveData(sortObj)       % Save the sorting
    end
    
-   methods (Access = private)
-      
-      function exitScoring(sortObj)
-         %% EXITSCORING    Exit the scoring interface
-         
-         % Remove the channel selector UI, if it exists
-         if isvalid(sortObj.UI.ChannelSelector.Figure)
-            close(sortObj.UI.ChannelSelector.Figure);
-            clear sortObj.UI.ChannelSelector
-         end
-         
-         % Remove the spike interface, if it exists
-         if isvalid(sortObj.UI.SpikeImage.Figure)
-            delete(sortObj.UI.SpikeImage.Figure);
-            clear sortObj.UI.SpikeImage
-         end
-         
-         % Delete the Sort object
-         delete(sortObj);
-         clear sortObj
-      end
-      
-      flag = initParams(sortObj); % Initialize general parameters
+   % PROTECTED
+   methods (Access=protected)      
+      flag = initParams(sortObj,nigelObj); % Initialize general parameters
       flag = initData(sortObj,nigelObj); % Initialize data structures
       flag = initUI(sortObj); % Initializes spike scoring UI parameters
       
@@ -184,7 +223,17 @@ classdef Sort < handle
       flag = setAxesPositions(sortObj); % Draw axes positions
       
       channelName = parseChannelName(sortObj); % Get all channel names
-      
    end
    
+   % STATIC, PUBLIC
+   methods (Static,Access=public)
+      function obj = empty()
+         %EMPTY  Returns empty `nigeLab.Sort` object handle
+         %
+         %  obj = nigeLab.Sort.empty();
+         
+         obj = nigeLab.Sort([0 0]);
+      end
+   end   
+   % % % % % % % % % % END METHODS% % %
 end

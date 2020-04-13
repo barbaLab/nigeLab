@@ -58,7 +58,7 @@ for iCh = blockObj.Mask
    end
    
    pct = 100 * (curCh / numel(blockObj.Mask));
-   blockObj.reportProgress(str,pct,'toWindow','Linking');
+   blockObj.reportProgress(str,pct,'toWindow','Linking-Channels');
 end
 blockObj.updateStatus(field,updateFlag,blockObj.Mask);
 % Only update status of unmasked channels. The other ones shouldn't matter

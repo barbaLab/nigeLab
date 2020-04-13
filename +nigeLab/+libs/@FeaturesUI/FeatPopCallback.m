@@ -18,9 +18,9 @@ switch this.Tag
         OldValOther = usrDatOther(selectValOther);
         
         obj.featInd(1) = usrDat(selectVal);
-        ind = obj.Parent.UI.feat.combo(:,1) == usrDat(selectVal);
-        vals=unique(obj.Parent.UI.feat.combo(ind,2));
-        str = obj.Parent.UI.feat.name(vals);
+        ind = obj.Parent.feat.combo(:,1) == usrDat(selectVal);
+        vals=unique(obj.Parent.feat.combo(ind,2));
+        str = obj.Parent.feat.name(vals);
 
         set(other,'UserData',vals)
         set(other,'String',str)
@@ -40,9 +40,9 @@ switch this.Tag
         OldValOther = usrDatOther(selectValOther);
         
         obj.featInd(2) = usrDat(selectVal);
-%         ind = obj.Parent.UI.feat.combo(:,2) == usrDat(selectVal);
-%         vals=unique(obj.Parent.UI.feat.combo(ind,1));
-%         str = obj.Parent.UI.feat.name(vals);
+%         ind = obj.Parent.feat.combo(:,2) == usrDat(selectVal);
+%         vals=unique(obj.Parent.feat.combo(ind,1));
+%         str = obj.Parent.feat.name(vals);
 % 
 %         set(other,'UserData',vals)
 %         set(other,'String',str)

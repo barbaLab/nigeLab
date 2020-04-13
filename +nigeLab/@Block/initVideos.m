@@ -13,6 +13,10 @@ end
 
 % Make "Videos" fieldtype object or array
 blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+if isempty(blockObj.Videos)
+   flag = true;
+   return;
+end
 
 %% Initialize "VidStreams" if it is a Field (special case)
 if ~ismember('VidStreams',blockObj.Fields)

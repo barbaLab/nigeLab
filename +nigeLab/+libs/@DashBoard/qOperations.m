@@ -25,16 +25,7 @@ function qOperations(obj,operation,target,sel)
 %  NIGELAB.BLOCK/DOAUTOCLUSTERING, NIGELAB.BLOCK/DOLFPEXTRACTION,
 %  NIGELAB.DEFAULTS.QUEUE
 
-%% Define imports within scope of qOperations
-import nigeLab.utils.buildWorkerConfigScript
-import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
-import nigeLab.utils.findGoodCluster
-
-%%
-% Set indexing to assign to UserData property of Jobs, so that on
-% job completion the corresponding "jobIsRunning" property array
-% element can be updated appropriately.
-
+% Set indexing to assign to UserData property of Jobs
 if nargin < 4
    sel = [1 1];
 end
@@ -43,32 +34,51 @@ end
 % manage Job/Task creation depending on the input target class
 switch class(target)
    case 'nigeLab.Tank'
-      for ii = 1:numel(target.Animals)
-         for ik = 1:target.Animals(ii).getNumBlocks
+      for ii = 1:numel(target.Children)
+         for ik = 1:target.Children(ii).getNumBlocks
             qOperations(obj,operation,...
-               target.Animals(ii).Blocks(ik),[ii ik]);
-            
+               target.Children(ii).Children(ik),[ii ik]);
+            drawnow;
          end
       end
+      return;
    case 'nigeLab.Animal'
-      for ii = 1:numel(target.Blocks)
-         qOperations(obj,operation,target.Blocks(ii),[sel ii]);
+      for ii = 1:numel(target.Children)
+         qOperations(obj,operation,target.Children(ii),[sel ii]);
+         drawnow;
       end
+      return;
    case 'nigeLab.Block'
-      % checking licences and parallel flags to determine where to execute the
+      % Define imports within scope of qOperations
+      import nigeLab.utils.buildWorkerConfigScript
+      import nigeLab.utils.getNigeLink nigeLab.utils.getUNCPath
+      import nigeLab.utils.findGoodCluster
+      
+      % checking licenses and parallel flags to determine where to execute the
       % computation. Three possible outcomes:
       % local - Serialized
       % local - Distributed
       % remote - Distributed
-      [~,qPars] = target.updateParams('Queue');
-      [~,nPars] = target.updateParams('Notifications');
+      [fmt,idt,type] = target.getDescriptiveFormatting();
+      if ~target.checkParsInit({'Queue','Notifications','doActions'})
+         nigeLab.utils.cprintf('Errors*',...
+            '%s[QOPERATIONS]: ',idt);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            'Failed to initialize parameters for %s (%s)\n',...
+            target.Name,type);
+         return;
+      else
+         qPars = target.Pars.Queue;
+         nPars = target.Pars.Notifications;
+      end
       opLink = getNigeLink('nigeLab.Block',operation);
                  
       if obj.Tank.UseParallel
          %% Configure remote or local cluster for correct parallel computation
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
-                                '(Parallel)');
-         fprintf(1,'Initializing %s job: %s - %s\n',...
+                                'Parallel');
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
+         fprintf(1,'Initializing (%s) job: %s - %s\n',...
             lineLink,opLink,target.Name);
          if qPars.UseRemote
             if isfield(qPars,'Cluster')
@@ -97,7 +107,7 @@ switch class(target)
             % Create a worker config file that adds the remote repository,
             % then loads the corresponding block matfile and runs the
             % desired operation.
-            add_debug_outputs = true;
+            add_debug_outputs = nPars.DebugOn;
             [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p,...
                add_debug_outputs);
             attachedFiles = {c, w};
@@ -128,30 +138,33 @@ switch class(target)
             'UserData',sel,...
             'Tag',tagStr); %#ok<*PROPLC>
          
-         bar = obj.remoteMonitor.startBar(barName,sel,job);
+         bar = obj.RemoteMonitor.startBar(barName,sel,job);
+         if isempty(bar)
+            return;
+         end
 
+         if qPars.UseRemote
          % Assign callbacks to update labels and timers etc.
          job.FinishedFcn=@(~,~)bar.indicateCompletion();
+         end
          if isempty(qPars.RemoteRepoPath)
             createTask(job,operation,0,{target});
          else
-            targetFile = getUNCPath(...
-               [target.Paths.SaveLoc.dir '_Block.mat']);
-            fprintf(1,'\n->\tTarget: %s\n',targetFile);
-            createTask(job,@qWrapper,0,{targetFile});
+            % Will always run on _Block
+            nigeLab.utils.cprintf(fmt,'\t%s[QOPERATIONS]: ',idt);
+            fprintf(1,'Target: %s\n',target.File);
+            createTask(job,@qWrapper,0,{target.File});
          end
          submit(job);
-         if ~isempty(qPars.RemoteRepoPath)
-%             delete(c); % Delete configW.m (from Tempdir)
-%             delete(w); % Delete qWrapper.m (from pwd)
-         end
-         fprintf(1,'%s Job running: %s - %s\n',lineLink,opLink,target.Name);
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
+         fprintf(1,'(%s) Job running: %s - %s\n',lineLink,opLink,target.Name);
          
       else
          %% otherwise run single operation serially
          lineLink = getNigeLink('nigeLab.libs.DashBoard','qOperations',...
-                                '(Non-Parallel)');
-         fprintf(1,'%s Job running: %s - %s\n',...
+                                'Non-Parallel');
+         nigeLab.utils.cprintf(fmt,'%s[QOPERATIONS]: ',idt);
+         fprintf(1,'%s Job running: (%s) - %s\n',...
             lineLink,opLink,target.Name);
          % (target is scalar nigeLab.Block)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
@@ -159,8 +172,12 @@ switch class(target)
          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();
-         bar = obj.remoteMonitor.startBar(barName,sel);
+         bar = obj.RemoteMonitor.startBar(barName,sel);
+         if isempty(bar)
+            return;
+         end
          bar.setState(0,'Pending...');
+         bar.IsRemote = false;
          try
             feval(operation,target);
             flag = true;
@@ -179,6 +196,7 @@ switch class(target)
             lasterror(s); %#ok<LERR> % Set the last error struct
          end
          if flag
+            bar.IsRunning = false;
             field = target.getOperationField(operation);
             if ~iscell(field)
                field = {field};
@@ -191,7 +209,7 @@ switch class(target)
       
    otherwise
       error(['nigeLab:' mfilename ':badInputType2'],...
-         'Invalid target class: %s',class(target));
+         '[QOPERATIONS]: Invalid target class: %s',class(target));
 end
 drawnow;
 

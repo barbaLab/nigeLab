@@ -8,8 +8,13 @@ function parseProbes(animalObj)
 %  size has increased or if the number of non-empty Child Blocks is equal
 %  to the mask size.
 
-animalObj.updateParams('Animal');
-if isempty(animalObj.Blocks)
+if ~isfield(animalObj.HasParsInit,'Animal')
+   animalObj.updateParams('Animal');
+elseif ~animalObj.HasParsInit.Animal
+   animalObj.updateParams('Animal');
+end
+
+if isempty(animalObj.Children)
    nigeLab.utils.cprintf('Comments',...
       'No child blocks of Animal: %s -- skipped probe parsing\n',...
       animalObj.Name);
@@ -17,23 +22,23 @@ if isempty(animalObj.Blocks)
 end
 
 % Get all possible unique probe/channel number combinations for this Animal
-channelID = [];
-B = animalObj.Blocks(~isempty(animalObj.Blocks));
-B = B(animalObj.BlockMask);
+C = [];
+B = animalObj.Children(~isempty(animalObj.Children));
+B = B([B.IsMasked]);
 for b = B
    if isempty(b)
       continue;
    end
-   if isempty(channelID)
-      channelID = b.parseChannelID;
-      channelID_red = channelID;
+   if isempty(C)
+      C = b.ChannelID;
+      C_red = C;
    else
-      channelID = union(channelID,b.parseChannelID,'rows');
-      channelID_red = intersect(channelID_red,b.parseChannelID,'rows');
+      C = union(C,b.ChannelID,'rows');
+      C_red = intersect(C_red,b.ChannelID,'rows');
    end
 end
 
-if isempty(channelID)
+if isempty(C)
    nigeLab.utils.cprintf('Comments',...
       'No non-empty Child Blocks of Animal: %s -- skipped probe parsing\n',...
       animalObj.Name);
@@ -43,25 +48,25 @@ end
 
 % Get the probe struct array for all probe/channel combos in this animal's
 % recordings
-animalObj.Probes = probeStructArray(channelID);
+animalObj.Probes = probeStructArray(C);
 
 % Get the aggregate "mask" for this animal (an indexing array)
-animalObj.Mask = find(ismember(channelID,channelID_red,'rows'));
+animalObj.Mask = find(ismember(C,C_red,'rows'));
 
 % Assign each channel a hash ID so it can be easily linked to parent
 for b = B
-   bChannelID = b.parseChannelID;   
-   for iCh = 1:size(bChannelID,1)
-      pCh = bChannelID(iCh,:);
-      idx = find(ismember(channelID,pCh,'rows'),1,'first');
+   bC = b.ChannelID;   
+   for iCh = 1:size(bC,1)
+      pCh = bC(iCh,:);
+      idx = find(ismember(C,pCh,'rows'),1,'first');
       b.Channels(iCh).ID = animalObj.Probes(idx).ID;
       
    end
    
    % Also, remove child channels that are not present in all recordings
    % (if parameter is set as such).
-   if animalObj.Pars.Animal.UnifyChildBlockMask
-      setChannelMask(b,ismember(bChannelID,channelID_red,'rows'));
+   if animalObj.Pars.Animal.UnifyChildMask
+      setChannelMask(b,ismember(bC,C_red,'rows'));
    end
 end
 

@@ -11,7 +11,19 @@ function flag = doSD(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
-flag = false;
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 checkActionIsValid(blockObj);
 nigeLab.utils.checkForWorker('config');
 
@@ -30,15 +42,15 @@ blockObj.updateStatus('Artifact',false,blockObj.Mask);
 
 %% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
 if ~blockObj.OnRemote
-   str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spikes');
-   str = sprintf('Detecting %s',str);
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spike');
+   str = sprintf('%s-Detection',str);
 else
    str = 'Spike-Detection';
 end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = blockObj.Mask
-   
+   curCh = curCh + 1;
    % Parse file-name information
    pNum  = num2str(blockObj.Channels(iCh).probe);
    chNum = blockObj.Channels(iCh).chStr;
@@ -58,7 +70,6 @@ for iCh = blockObj.Mask
    end
    
    % Status updates done in saveChannelSpikingEvents
-   curCh = curCh + 1;
    pct = round(curCh/numel(blockObj.Mask) * 100);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Spike-Detection.',pct,'toEvent','Spike-Detection');

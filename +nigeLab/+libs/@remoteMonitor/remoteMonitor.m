@@ -108,10 +108,10 @@ classdef remoteMonitor < handle
 
          monitorObj.bars = nigeLab.libs.nigelProgress(0);
          
-         for iA = 1:numel(tankObj.Animals)
-            a = tankObj.Animals(iA);
-            for iB = 1:numel(a.Blocks)
-               b = a.Blocks(iB);
+         for iA = 1:numel(tankObj.Children)
+            a = tankObj.Children(iA);
+            for iB = 1:numel(a.Children)
+               b = a.Children(iB);
                monitorObj.bars = [monitorObj.bars, ...
                   monitorObj.addBar(b,[iA,iB])];
             end
@@ -184,13 +184,24 @@ classdef remoteMonitor < handle
          
          % Error check on multi-job submissions
          if ~isempty(bar.job)
-            error(['nigeLab:' mfilename ':InvalidJobSubmission'],...
-               'Cannot run multiple jobs for the same Block simultaneously.');
+            nigeLab.sounds.play('pop',1.25);
+            dbstack;
+            nigeLab.utils.cprintf('Errors*',...
+               '->\t[BAD QUEUE]: Close past job for %s (click red X)\n',...
+               name);
+            nigeLab.utils.cprintf('Errors',...
+               ['\t\t* Cannot run multiple jobs for same ' ...
+               'Block simultaneously\n' ...
+               '\t\t* Successful jobs must also be cleared manually']);
+            bar = [];
+            return;
          end
 
          % Increment counter of running jobs
          bar.Progress = 0;
          bar.Name = name;
+         bar.IsParallel = ~isempty(job);
+         bar.IsRemote = strcmp('parallel.cluster.MJS',class(job.Parent));
          bar.job = job;
          
          % Changing BarIndex toggles the visibility, queue position etc.

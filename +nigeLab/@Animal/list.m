@@ -3,6 +3,11 @@ function L = list(animalObj,keyIdx)
 %
 %  L = animalObj.list();
 
+if isempty(animalObj)
+   L = table;
+   return;
+end
+
 if nargin < 2
    keyIdx = [];
 end
@@ -22,8 +27,8 @@ if numel(animalObj) > 1
 end
 
 L_ = [];
-for n = 1:numel(animalObj.Blocks)
-   tmp = animalObj.Blocks(n).list([keyIdx, n]);
+for n = 1:numel(animalObj.Children)
+   tmp = animalObj.Children(n).list([keyIdx, n]);
    I=ismember(tmp.Properties.VariableNames,'Animals');
    % Rearranges the order of columns:
    L_ = [L_; tmp(1,I),tmp(1,~I)]; %#ok<*AGROW>

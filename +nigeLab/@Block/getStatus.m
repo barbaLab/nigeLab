@@ -38,37 +38,86 @@ if ~isscalar(blockObj)
    switch nargin
       case 1
          status = cell(size(blockObj));
+         keepvec = true(numel(status),1);
          for i = 1:numel(blockObj)
-            status{i} = blockObj(i).getStatus;
+            if isvalid(blockObj(i))
+               status{i} = blockObj(i).getStatus;
+            else
+               keepvec(i) = false;
+            end
+         end
+         status = status(keepvec);
+         if isempty(status)
+            status = [];
          end
          return;
       case 2
          if isempty(field)
-            status = getStatus(blockObj,blockObj(1).Fields);
+            status = [];
+            for i = 1:numel(blockObj)
+               if isvalid(blockObj(i))
+                  status = getStatus(blockObj,blockObj(i).Fields);
+                  break;
+               end
+            end
             return;
          end
-         
-         switch blockObj.getFieldType(field)
-            case 'Channels'
+         fieldType = '';
+         for i = 1:numel(blockObj)
+            if isvalid(blockObj(i))
+               fieldType = blockObj(i).getFieldType(field);
+               break;
+            end
+         end
+         if isempty(fieldType)
+            status = false(1,numel(field));
+            return;
+         end
+         switch fieldType
+            case {'Channels','Streams'}
                if iscell(field)
                   status = false(numel(blockObj),numel(field));
                   if numel(field) > 1
-                     for i = 1:numel(blockObj)
-                        status(i,:) = blockObj(i).getStatus(field);
+                     % "Expanded" representation for channels
+                     for k = 1:numel(blockObj)
+                        if isvalid(blockObj(k))
+                           status(k,:) = blockObj(k).getStatus(field);
+                        end
                      end
                   else
-                     for i = 1:numel(blockObj)
-                        status(i) = all(blockObj(i).getStatus(field));
+                     % "Condensed" representation for channels
+                     for k = 1:numel(blockObj)
+                        if isvalid(blockObj(k))
+                           status(k) = all(blockObj(k).getStatus(field));
+                        end
                      end
                   end
                else
-                  status = false(numel(blockObj),blockObj(1).NumChannels);
-                  for i = 1:numel(blockObj)
-                     status(i,:) = blockObj(i).getStatus(field);
+                  % Use 'i' from search for fieldType above to get NumChan
+                  if strcmpi(fieldType,'Channels')
+                     N = blockObj(i).NumChannels;
+                  else
+                     N = numel(blockObj(i).Streams.(field));
                   end
+                  status = false(numel(blockObj),N);
+                  for k = 1:numel(blockObj)
+                     if isvalid(blockObj(k))
+                        status(k,:) = blockObj(k).getStatus(field);
+                     end
+                  end
+               end               
+            case 'Meta' % 'Time'
+               if strcmpi(field,'Time') % Special case
+                  status = false(numel(blockObj),1);
+                  for k = 1:numel(blockObj)
+                     if isvalid(blockObj(k))
+                        status(k) = exist(blockObj(k).Time,'file')~=0;
+                     end
+                  end
+               else
+                  nigeLab.utils.cprintf('Errors*',...
+                     '\t\t->\t[GETSTATUS]: Not configured for .Probes yet\n');
                end
-            otherwise
-               
          end
       case 3
          if iscell(field)
@@ -200,14 +249,18 @@ end
             for ii = 1:numel(stage) 
                channelStage = strcmp(blockObj.getFieldType(stage{ii}),...
                                      'Channels');
-               flags = blockObj.Status.(stage{ii});
+               if isfield(blockObj.Status,stage{ii})
+                  flags = blockObj.Status.(stage{ii});
+               else
+                  flags = false;
+               end
                % If this is a 'Channels' FieldType Stage AND there is a
                % Channel Mask specified, then require ALL elements to be
                % true; otherwise, just require 'Any' element to be true
                if channelStage && maskExists
                   status(ii) = all(flags(blockObj.Mask));
                else
-                  status(ii) = any(flags);
+                  status(ii) = all(flags);
                end
                
             end

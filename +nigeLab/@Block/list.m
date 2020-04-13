@@ -39,14 +39,16 @@ if ~strcmp(blockObj.Meta.RecTime,'hhmmss')
 end
 
 try
-DateTime=datetime(str,'InputFormat',Format);
+   DateTime=datetime(str,'InputFormat',Format);
 catch
    DateTime=NaT;
 end
 
 info.Key = {num2str(keyIdx)};
+info.Enabled = blockObj.IsMasked;
 info.Recording_date=DateTime;
-info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
+% info.LengthInMinutes=minutes(seconds((blockObj.Samples./blockObj.SampleRate)));
+info.Duration = blockObj.Duration;
 
 %% PARSE ANIMAL AND RECORDING ID
 infoFields={'AnimalID'
@@ -59,21 +61,12 @@ for jj=1:numel(infoFields)
    end
 end
 
-%% PARSE RECORDING TYPE AND TOTAL NUMBER OF CHANNELS
-infoFields={'RecType'
-            'NumChannels'
-            };
-for jj=1:numel(infoFields)
-   if isprop(blockObj,infoFields{jj})
-      info.(infoFields{jj})={blockObj.(infoFields{jj})};
-   else
-      info.(infoFields{jj})='Unspecified';
-   end
-end
+info.RecType = blockObj.RecType;
+info.NumChannels = blockObj.NumChannels;
 
 % Update RecType (for example, for Intan .rhd or .rhs; TDT will not have a
 % file extension though.
-info.RecType={sprintf('%s (%s)',info.RecType{:},blockObj.FileExt)};
+info.RecType={sprintf('%s (%s)',info.RecType,blockObj.FileExt)};
 
 %% PARSE CURRENT STATUS OF PROCESSING
 St = blockObj.getStatus;
@@ -87,9 +80,9 @@ for ii=1:length(L_.Properties.VariableNames)
         case 'Corresponding_animal' 
             L_.Properties.VariableNames{ii}='Animal';
         case 'RecType'
-            L_.Properties.VariableNames{ii}='RecordingType';
-        case 'numChannels' 
-            L_.Properties.VariableNames{ii}='NumberOfChannels';
+            L_.Properties.VariableNames{ii}='Recording_Type';
+        case {'numChannels','NumChannels'} 
+            L_.Properties.VariableNames{ii}='Number_Of_Channels';
     end
 end
 

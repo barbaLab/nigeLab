@@ -124,7 +124,16 @@ for iCh = 1:numel(F)
       otherwise
          cNew.port_prefix = strInfo{end-2};
    end % switch upper(cNew(iCh).port_name)
-   cNew.signal = nigeLab.utils.signal(strInfo{end-2});
+   m = matfile(fullfile(F(iF).folder,F(iF).name));
+   if isfield(m,'data')
+      if isvector(m.data)
+         cNew.signal = nigeLab.utils.signal(strInfo{end-2},numel(m.data));
+      else
+         cNew.signal = nigeLab.utils.signal(strInfo{end-2});
+      end
+   else
+      cNew.signal = nigeLab.utils.signal(strInfo{end-2});
+   end
    c = [c, cNew]; %#ok<*AGROW>
 end
 

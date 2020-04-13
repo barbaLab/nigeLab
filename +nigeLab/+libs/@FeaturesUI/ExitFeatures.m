@@ -1,4 +1,4 @@
-function ExitFeatures(obj,src,evt)
+function ExitFeatures(obj,~,~)
 %% EXITFEATURES    Exit the scoring interface
          
 % Remove the channel selector UI, if it exists
@@ -13,13 +13,15 @@ function ExitFeatures(obj,src,evt)
 %    clear obj.SpikeImage
 % end
 
-
-if isvalid(obj.HighDimUI)
-    delete(obj.HighDimUI.Figure);
+if ~isempty(obj.HighDimsUI)
+   if isvalid(obj.HighDimsUI)
+       delete(obj.HighDimsUI.Figure);
+   end
 end
 
-if isvalid(obj.Figure)
-   delete(obj.Figure);
+if ~isempty(obj.Figure)
+   if isvalid(obj.Figure)
+      delete(obj.Figure);
+   end
 end
-
 end

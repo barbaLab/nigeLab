@@ -8,7 +8,19 @@ function flag = doReReference(blockObj)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% CHECK FOR PROBLEMS
-flag = false; % Create flag for reporting successful execution
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 blockObj.checkActionIsValid();
 
 if ~genPaths(blockObj)
@@ -41,7 +53,9 @@ end
 %% COMPUTE THE MEAN FOR EACH PROBE
 blockObj.reportProgress('Computing-CAR',0,'toWindow');
 curCh = 0;
+nCh = numel(blockObj.Mask);
 for iCh = blockObj.Mask
+   curCh = curCh + 1;
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
       iProbe = blockObj.Channels(iCh).probe;
@@ -52,17 +66,18 @@ for iCh = blockObj.Mask
       warning('STIM SUPPRESSION method not yet available.');
       return;
    end
-   curCh = curCh + 1;
-   pct = round(100 * (curCh / numel(blockObj.Mask)));
-   PCT = round((pct/100) * 20); 
+   
+   PCT = round(20*curCh/nCh);
    blockObj.reportProgress('Computing-CAR',PCT,'toWindow');
    blockObj.reportProgress('Computing-CAR',PCT,'toEvent','Computing-CAR');
 end
 
 %% SAVE EACH PROBE REFERENCE TO THE DISK
 refMeanFile = cell(numel(probe),1);
-
 for iProbe = 1:nProbes
+   PCT = 20 + round(10 * iProbe/nProbes);
+   blockObj.reportProgress('Computing-CAR',PCT,'toWindow');
+   blockObj.reportProgress('Computing-CAR',PCT,'toEvent','Computing-CAR');
    refName = fullfile(sprintf(...
       strrep(blockObj.Paths.CAR.file,'\','/'),...
       num2str(probe(iProbe)),'REF'));
@@ -72,14 +87,14 @@ end
 
 %% SUBTRACT CORRECT PROBE REFERENCE FROM EACH CHANNEL AND SAVE TO DISK
 if ~blockObj.OnRemote
-   str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference',...
-      'common-average noise');
-   str = sprintf('Removing %s',str);
+   str = nigeLab.utils.getNigeLink('nigeLab.Block','doReReference','CAR');
+   str = sprintf('Removing-%s',str);
 else
    str = 'Removing-CAR';
 end
 curCh = 0;
 for iCh = blockObj.Mask
+   curCh = curCh + 1;
    % Do re-reference
    data = doCAR(blockObj.Channels(iCh),...
       refMean(blockObj.Channels(iCh).probe));
@@ -98,9 +113,8 @@ for iCh = blockObj.Mask
       refMeanFile{blockObj.Channels(iCh).probe});
    
    % Update user
-   curCh = curCh + 1;
-   pct = 100 * (curCh / numel(blockObj.Mask));
-   PCT = 20 + round((pct/100) * 80);
+   
+   PCT = 30 + round(60 * curCh/nCh);
    blockObj.reportProgress(str,PCT,'toWindow'); 
    blockObj.reportProgress('Removing-CAR',PCT,'toEvent','Removing-CAR');
    blockObj.updateStatus('CAR',true,iCh);
@@ -108,7 +122,7 @@ end
 
 if blockObj.OnRemote
    str = 'Saving-Block';
-   blockObj.reportProgress(str,100,'toWindow',str);
+   blockObj.reportProgress(str,95,'toWindow',str);
 else
    blockObj.save;
    linkStr = blockObj.getLink('CAR');

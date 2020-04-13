@@ -60,10 +60,10 @@ for iStream = 1:numel(blockObj.Streams.(field))
          nigeLab.libs.DiskData('Hybrid',dataFileName);
    end
    pct = 100 * (counter / numel(blockObj.Streams.(field))); 
-   blockObj.reportProgress(str,pct);
+   blockObj.reportProgress(str,pct,'toWindow','Linking-Streams');
 end
 
-blockObj.updateStatus(field,updateFlag);
+blockObj.updateStatus(field,updateFlag,1:numel(blockObj.Streams.(field)));
 
 
 end

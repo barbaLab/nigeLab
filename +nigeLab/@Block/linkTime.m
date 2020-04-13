@@ -1,31 +1,23 @@
 function flag = linkTime(blockObj)
-%% LINKTIME  Connect the data saved on the disk to Time property
+%LINKTIME  Connect the data saved on the disk to Time property
 %
 %  b = nigeLab.Block;
 %  flag = LINKTIME(b,field);
-%
-% flag is returned as true if there is no 'Time' file found.
+%  --> flag is returned as true if there is no 'Time' file found.
 %  This method automatically updates the 'Time' Status, and requires 'Time'
-%  as an element of nigeLab.defaults.Block('Fields').
+%  as an element of nigeLab.defaults.Block('Fields')
 
-%%
-flag = false;
-updateflag = false;
-blockObj.checkCompatibility('Time');
-
+blockObj.checkCompatibility('Time'); % Checks that 'Time' is in .Fields
 nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Time'),'Time');
 counter = 0;
-fName = fullfile(blockObj.Paths.Time.file);
-   
+fName=sprintf(strrep(blockObj.Paths.Time.file,'\','/'),'Time.mat');
 % If file is not detected
-if ~exist(fullfile(fName),'file')
-   flag = true;
+if ~exist(fName,'file')
+   flag = true;  % Somtehing went wrong
 else
-   updateflag = true;
+   flag = false; % Nothing went wrong (update .Time status as true)
    blockObj.Time = nigeLab.libs.DiskData('Hybrid',fName);
 end
-fprintf(1,'\b\b\b\b\b%.3d%%\n',100)
-
-blockObj.updateStatus('Time',updateflag);
+blockObj.updateStatus('Time',~flag);
 
 end

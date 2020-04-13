@@ -28,4 +28,5 @@ end
 nChar = min(nCharTotal,nChar); 
 % Add 1 to actually return nChar output characters
 txt = output_string((nCharTotal - nChar + 1):nCharTotal);
+
 end

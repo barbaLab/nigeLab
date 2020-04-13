@@ -23,16 +23,16 @@ function clusterIndex = getClus(blockObj,ch,suppressText)
 %                    -> If ch is a vector, returns a cell array of
 %                       corresponding spike classes.
 
-%% PARSE INPUT
+% PARSE INPUT
 if nargin < 2
    ch = 1:blockObj(1).NumChannels;
 end
 
 if nargin < 3
-   suppressText = false;
+   suppressText = ~blockObj.Verbose;
 end
 
-%% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
+% ITERATE ON MULTIPLE CHANNELS
 if (numel(ch) > 1)
    clusterIndex = cell(size(ch));
    for ii = 1:numel(ch)
@@ -41,7 +41,7 @@ if (numel(ch) > 1)
    return;
 end
 
-%% USE RECURSION TO ITERATE ON MULTIPLE BLOCKS
+% ITERATE ON MULTIPLE BLOCKS
 if (numel(blockObj) > 1)
    clusterIndex = [];
    for ii = 1:numel(blockObj)
@@ -50,15 +50,29 @@ if (numel(blockObj) > 1)
    return;
 end
 
-%% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
+% CHECK TO BE SURE THAT THIS BLOCK/CHANNEL HAS BEEN SORTED
 if getStatus(blockObj,'Clusters',ch)
    clusterIndex = blockObj.Channels(ch).Clusters.value;
+   ts = getSpikeTimes(blockObj,ch);
+   n = numel(ts);
+   if isempty(clusterIndex) % If the file does not exist
+      clusterIndex = zeros(n,1); % Assignment for output
+      return;
+   elseif numel(clusterIndex)~=n
+      warning(['[GETCLUS]::[%s] Mismatch between number of Cluster '...
+         'assignments (%g) and number of spikes (%g) for ' ...
+         '%s::P%g-%s\n\t->\tAssigning all spikes to cluster zero.\n'],...
+         blockObj.Name,numel(clusterIndex),n,...
+         blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+      clusterIndex = zeros(n,1);
+      return;
+   end
 else % If it doesn't exist
    if getStatus(blockObj,'Spikes',ch) % but spikes do
       ts = getSpikeTimes(blockObj,ch);
       n = numel(ts);
-      clusterIndex = zeros(n,1);
-      data = [zeros(n,2) clusterIndex ts zeros(n,1)];
+      clusterIndex = zeros(n,1); % Assignment for output
+      data = [zeros(n,3) clusterIndex zeros(n,1)];
       
       % initialize the 'Sorted' DiskData file
       fType = blockObj.getFileType('Clusters');
@@ -77,8 +91,10 @@ else % If it doesn't exist
                blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
          end
       end
+      return;
    else
-      clusterIndex = [];
+      clusterIndex = zeros(0,1);
+      return;
    end
 end
 

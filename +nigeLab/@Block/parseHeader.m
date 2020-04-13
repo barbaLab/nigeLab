@@ -1,4 +1,4 @@
-function header = parseHeader(blockObj)
+function header = parseHeader(blockObj,fid)
 % PARSEHEADER  Parse header from recording file or from folder hierarchy
 %
 %  header = blockObj.parseHeader();
@@ -37,19 +37,26 @@ else
    % blockObj.RecFile is actually the recording
    switch blockObj.RecSystem.Name
       case 'RHD'
-         header = ReadRHDHeader('NAME',blockObj.RecFile,...
-                                'VERBOSE',blockObj.Verbose);
+         if nargin < 2
+            header = ReadRHDHeader(blockObj.RecFile,blockObj.Verbose);
+         else
+            header = ReadRHDHeader([],blockObj.Verbose,fid);
+         end
       case 'RHS'
-         header=ReadRHSHeader('NAME',blockObj.RecFile,...
-                              'VERBOSE',blockObj.Verbose); 
+         if nargin < 2
+            header = ReadRHSHeader(blockObj.RecFile,blockObj.Verbose); 
+         else
+            header = ReadRHSHeader([],blockObj.Verbose,fid);
+         end
       case 'TDT'
-         header=ReadTDTHeader('NAME',blockObj.RecFile,...
-                              'VERBOSE',blockObj.Verbose);
+         header = ReadTDTHeader(blockObj.RecFile,blockObj.Verbose);
       otherwise
          error(['nigeLab:' mfilename ':missingCase'],...
             'blockObj.RecSystem.Name == ''%s'' not yet handled.',...
             blockObj.RecSystem.Name);
    end
 end
+
+header = nigeLab.utils.fixNamingConvention(header);
 
 end

@@ -67,7 +67,7 @@ if ~(animalObj.MultiAnimals)
    return;
 end
 
-animalDestructor_lh = addlistener(animalObj.Blocks,...
+animalDestructor_lh = addlistener(animalObj.Children,...
    'ObjectBeingDestroyed',...
    @(h,e)deleteAnimalWhenEmpty(animalObj));
 
@@ -76,10 +76,10 @@ TankPath = fileparts(animalObj.Paths.SaveLoc);
 
 % animalObjPaths is a cell array of cell arrays of paths to one or more
 % "parent" animals:
-animalObjPaths = cell(numel(animalObj.Blocks),1);
-for ii = 1:numel(animalObj.Blocks)
-   animalObj.Blocks(ii).splitMultiAnimals('init');
-   Metas = [animalObj.Blocks(ii).MultiAnimalsLinkedBlocks.Meta];
+animalObjPaths = cell(numel(animalObj.Children),1);
+for ii = 1:numel(animalObj.Children)
+   animalObj.Children(ii).splitMultiAnimals('init');
+   Metas = [animalObj.Children(ii).MultiAnimalsLinkedBlocks.Meta];
    animalObjPaths{ii} = cellfun(@(x) fullfile(TankPath,x),...
       {Metas.AnimalID},'UniformOutput',false);
 end % ii
@@ -88,7 +88,7 @@ uAnimals = unique(animalObjPaths);
 splittedAnimals = [];
 for ii = 1:numel(uAnimals)
    an = copy(animalObj);
-   an.Blocks = [];
+   an.Children = [];
    an.Paths.SaveLoc = uAnimals{ii};
    [~,Name]=fileparts(uAnimals{ii});
    an.Name = Name;
@@ -111,7 +111,7 @@ function ApplyChanges(animalObj,Tree)
 %
 %  ApplyChanges(animalObj,Tree)
 
-B = animalObj.Blocks;
+B = animalObj.Children;
 for kk=1:size(Tree,1)
    indx = find(cellfun(@(x) any(x == Tree(kk,1).UserData),...
       {B.MultiAnimalsLinkedBlocks},'UniformOutput',true));
@@ -119,8 +119,8 @@ for kk=1:size(Tree,1)
    for ii=1:size(Tree,2)
       bl = Tree(kk,ii).UserData;
       match = find( strcmp({animalObj.MultiAnimalsLinkedAnimals.Name},bl.Meta.AnimalID));
-      blocks = animalObj.MultiAnimalsLinkedAnimals(match).Blocks;
-      animalObj.MultiAnimalsLinkedAnimals(match).Blocks = [blocks, bl];
+      blocks = animalObj.MultiAnimalsLinkedAnimals(match).Children;
+      animalObj.MultiAnimalsLinkedAnimals(match).Children = [blocks, bl];
    end % ii
 end % kk
 
@@ -136,7 +136,7 @@ function deleteAnimalWhenEmpty(animalObj)
 %
 %  
 
-if  ( isvalid(animalObj)) && (numel(animalObj.Blocks)==1)
+if  ( isvalid(animalObj)) && (numel(animalObj.Children)==1)
    delete(fullfile([animalObj.Paths.SaveLoc '_Animal.mat']));
    delete(animalObj);
 end

@@ -17,7 +17,7 @@ switch blockObj.RecType
       end
       
       [~,~,probe] = unique(portStream,'rows');
-      for iCh = 1:numel(blockObj.Channels)
+      for iCh = 1:blockObj.NumChannels
          blockObj.Channels(iCh).probe = probe(iCh);
       end
       
@@ -34,7 +34,7 @@ switch blockObj.RecType
       end
       
    case {'TDT','nigelBlock'}
-      for iCh = 1:numel(blockObj.Channels)
+      for iCh = 1:blockObj.NumChannels
          blockObj.Channels(iCh).probe = blockObj.Channels(iCh).port_number;
       end
       probeSize = getProbeSize([blockObj.Channels.probe]);
@@ -43,20 +43,23 @@ switch blockObj.RecType
          return;
       end
       
-      for iCh = 1:numel(blockObj.Channels)
+      for iCh = 1:blockObj.NumChannels
          [blockObj.Channels(iCh).chNum,...
                blockObj.Channels(iCh).chStr] = getChannelNum(...
                blockObj.Channels(iCh).custom_channel_name,probeSize,false);
       end
    case 'Matfile'
-      nigeLab.utils.cprintf([255,88,0]./255, ...
-         ['Matfile detected!\n' ...
-          'Be sure you handled everything correctly '...
-          'in your custom load function!\n']);
+      if ~blockObj.OnRemote
+         linkStr = nigeLab.utils.getNigeLink('nigeLab.defaults.Block',19,...
+            'custom load function');
+         nigeLab.utils.cprintf('[1.000,0.345,0.000]*','\nMatfile detected!\n');
+         nigeLab.utils.cprintf('Text','->\tBe sure you handled everything\n');
+         fprintf(1,'\tcorrectly in your %s!\n',linkStr);
+      end
       
    otherwise
-      warning('%s is not a supported RecType.',blockObj.RecType);
-      return;
+      error(['nigeLab:' mfilename ':UnsupportedRecType'],...
+         '''%s'' is not a supported RecType.',blockObj.RecType);
 end
 flag = true;
 

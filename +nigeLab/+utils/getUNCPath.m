@@ -46,8 +46,8 @@ end
 
 %% Return the Full path using FEX code
 p = nigeLab.utils.GetFullPath.GetFullPath(p);
-p = strrep(p,'\',filesep);
-pathParts = strsplit(p,filesep);
+p = strrep(p,'\','/');
+pathParts = strsplit(p,'/');
 if isempty(pathParts{1})
    % This means it is already in UNC
    UNCPath = p;      

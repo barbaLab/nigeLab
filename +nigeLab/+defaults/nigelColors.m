@@ -27,7 +27,7 @@ switch nargin
       if iscell(input),Col=nigeLab.defaults.nigelColors(input{1});return;end
       switch lower(input)
          case {'help','opts','options'}
-            fprintf(1,'<strong>''primary'',''g'',''hl''</strong> -> ');
+            fprintf(1,'<strong>''primary'',''g'',''enableobj'',''goodobj'',''hl''</strong> -> ');
             nigeLab.utils.cprintf([30, 185, 128]./255,'green\n');
             fprintf(1,'<strong>''secondary'',''dg'',''enable'',''button''</strong> -> ');
             nigeLab.utils.cprintf([4, 93, 86]./255,'dark green\n');
@@ -49,13 +49,13 @@ switch nargin
             nigeLab.utils.cprintf([220, 220, 220]./255,'light gray\n');
             fprintf(1,'''onsecondary'',''onbutton'',''onsurface'',''rollover'',''enabletext'',''w'' -> ');
             nigeLab.utils.cprintf([1 1 1],'white\n');
-            fprintf(1,'<strong>''r'',''red''</strong> -> ');
+            fprintf(1,'<strong>''r'',''red'',''disableobj'',''badobj''</strong> -> ');
             nigeLab.utils.cprintf([240, 25, 25]./255,'red\n');
             fprintf(1,'<strong>''m'',''magenta''</strong> -> ');
             nigeLab.utils.cprintf([240, 25, 240]./255,'magenta\n');
             fprintf(1,'<strong>''b'',''blue''</strong> -> ');
             nigeLab.utils.cprintf([67 129 193]./255,'blue\n');
-         case {'primary','g','green','highlight','hl',1}
+         case {'primary','g','green','highlight','hl','goodobj','enableobj',1}
             Col = [30, 185, 128]./255;   % green
          case {'secondary','dg','darkgreen','button','enable',2}
             Col = [4, 93, 86]./255;      % dark green
@@ -77,7 +77,7 @@ switch nargin
             Col = [220, 220, 220]./255; % light grey
          case {'onsecondary','w','white','rollover','onbutton','enabletext','onsurface','onsfc',2.1,0.2} 
             Col = [255, 255, 255]./255; % white
-         case {'r','red'}
+         case {'r','red','disableobj','badobj'}
             Col = [240, 25, 25]./255; % red
          case {'m','magenta'}
             Col = [240, 25, 240]./255; % magenta

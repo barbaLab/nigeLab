@@ -11,7 +11,19 @@ function flag = doLFPExtraction(blockObj)
 %  NIGELAB.DEFAULTS.LFP
 
 %% INITIALIZE PARAMETERS
-flag = false;
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doSD(blockObj(i));
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
 blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
 if ~genPaths(blockObj)
@@ -36,7 +48,9 @@ else
 end
 fType = blockObj.FileType{strcmpi(blockObj.Fields,'LFP')};
 curCh = 0;
+nCh = numel(blockObj.Mask);
 for iCh=blockObj.Mask
+   curCh = curCh + 1;
    % Get the values from Raw DiskData, and decimate:
    data=double(blockObj.Channels(iCh).Raw(:));
    for jj=1:numel(DecimateCascadeM)
@@ -50,16 +64,14 @@ for iCh=blockObj.Mask
    blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
       fName,data,'access','w');
    blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
-
-   curCh = curCh + 1;
-   pct = round(curCh/numel(blockObj.Mask) * 100);
+   pct = round(curCh/nCh*90);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
    blockObj.updateStatus('LFP',true,iCh);
 end
 if blockObj.OnRemote
    str = 'Saving-Block';
-   blockObj.reportProgress(str,100,'toWindow',str);
+   blockObj.reportProgress(str,95,'toWindow',str);
 else
    blockObj.save;
    linkStr = blockObj.getLink('LFP');

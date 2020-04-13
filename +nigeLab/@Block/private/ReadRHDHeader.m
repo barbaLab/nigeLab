@@ -1,35 +1,44 @@
-function header=ReadRHDHeader(varargin)
+function [header,FID] = ReadRHDHeader(name,verbose,FID)
+%READRHDHEADER  Reads header from Intan .rhd format to parse metadata
+%
+%  header = ReadRHDHeader(name,verbose);
+%  [header,FID] = ReadRHDHeader([],verbose,FID);
+%
+%  name : Name of recording .rhd file
+%  verbose : True - shows messages; False - suppress command window msg
+%  FID : File ID for file to read from fopen
+
 %% PARSE VARARGIN
 
 acqsys = 'RHD';
 
-if nargin >0
-   VERBOSE = false;
-else
-   VERBOSE = true;
+if nargin < 1
+   verbose = false;
+elseif nargin < 2
+   verbose = true;
 end
 
-for iV = 1:2:length(varargin)
-   eval([upper(varargin{iV}) '=varargin{iV+1};']);
-end
-
-if exist('FID','var')
-   
-   [NAME,~,~,~] = fopen(FID); %#ok<NODEF>
-   if isempty(NAME)
+if nargin == 3
+   [name,~,~,~] = fopen(FID);
+   if isempty(name)
       error('Must provide a valid file pointer.');
    end
-elseif exist('NAME', 'var')
-   
-   % If a pre-specified path exists, must be a valid path.
-   if exist(NAME,'file')==0 %#ok<NODEF>
-      error('Must provide a valid RHD2000 Data File and Path.');
+elseif nargin == 2
+   if isempty(name)
+      FID = [];
    else
-      FID = fopen(NAME, 'r');
+      % If a pre-specified path exists, must be a valid path.
+      if exist(name,'file')==0
+         error('Must provide a valid RHD2000 Data File and Path.');
+      else
+         FID = fopen(name, 'r');
+      end
    end
 else    % Must select a directory and a file
-   
-   
+   FID = [];
+end
+
+if isempty(FID)   
    [file, path] = ...
       uigetfile('*.rhd', 'Select an RHD2000 Data File', ...
       'MultiSelect', 'off');
@@ -38,14 +47,12 @@ else    % Must select a directory and a file
       error('Must select a valid RHD2000 Data File.');
    end
    
-   NAME = [path, file];
-   FID = fopen(NAME, 'r');
-   
-   
+   name = [path, file];
+   FID = fopen(name, 'r');
 end
 
-[path,file,~] = fileparts(NAME);
-s = dir(NAME);
+% [path,file,~] = fileparts(name);
+s = dir(name);
 filesize = s.bytes;
 
 % Check 'magic number' at beginning of file to make sure this is an Intan
@@ -59,7 +66,7 @@ end
 data_file_main_version_number = fread(FID, 1, 'int16');
 data_file_secondary_version_number = fread(FID, 1, 'int16');
 
-if VERBOSE
+if verbose
    fprintf(1, '\n');
    fprintf(1, 'Reading Intan Technologies RHD2000 Data File, Version %d.%d\n', ...
       data_file_main_version_number, data_file_secondary_version_number);
@@ -154,11 +161,11 @@ raw_index = 1;
 analogIO_index = 1;
 digIO_index = 1;
 
-aux_input_index = 1;
-supply_voltage_index = 1;
-board_adc_index = 1;
-board_dig_in_index = 1;
-board_dig_out_index = 1;
+aux_index = [];
+supply_index = [];
+adc_index = [];
+dig_in_index = [];
+dig_out_index = [];
 
 % Read signal summary from data file header.
 
@@ -214,36 +221,36 @@ for signal_group = 1:number_of_signal_groups
                   new_channel(1).signal = nigeLab.utils.signal('Aux');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
+                  aux_index = [aux_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
-                  aux_input_index = aux_input_index + 1;
                case 2
-                  new_channel(1).fs = frequency_parameters.supply_voltage_sample_rate;
+                  new_channel(1).fs = sample_rate / num_samples_per_data_block;
                   new_channel(1).signal = nigeLab.utils.signal('Supply');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
+                  supply_index = [supply_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
-                  supply_voltage_index = supply_voltage_index + 1;
                case 3
                   new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('Adc');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
+                  adc_index = [adc_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
-                  board_adc_index = board_adc_index + 1;
                case 4
                   new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigIn');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
+                  dig_in_index = [dig_in_index, digIO_index]; %#ok<AGROW>
                   digIO_index = digIO_index + 1;
-                  board_dig_in_index = board_dig_in_index + 1;
                case 5
                   new_channel(1).fs = sample_rate;
                   new_channel(1).signal = nigeLab.utils.signal('DigOut');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   digIO_channels(digIO_index) = new_channel;
+                  dig_out_index = [dig_out_index, digIO_index]; %#ok<AGROW>
                   digIO_index = digIO_index + 1;
-                  board_dig_out_index = board_dig_out_index + 1;
                otherwise
                   error('Unknown channel type');
             end
@@ -258,35 +265,35 @@ num_raw_channels = raw_index - 1;
 num_analogIO_channels = analogIO_index - 1;
 num_digIO_channels = digIO_index - 1;
 
-num_amplifier_channels = raw_index - 1;
-num_aux_channels = aux_input_index - 1;
-num_supply_channels = supply_voltage_index - 1;
-num_adc_channels = board_adc_index - 1;
-num_dig_in_channels = board_dig_in_index - 1;
-num_dig_out_channels = board_dig_out_index - 1;
+num_aux_channels = numel(aux_index);
+num_supply_channels = numel(supply_index);
+num_adc_channels = numel(adc_index);
+num_dig_in_channels = numel(dig_in_index);
+num_dig_out_channels = numel(dig_out_index);
 
-fprintf(1, 'Found %d amplifier channel%s.\n', ...
-   num_amplifier_channels, nigeLab.utils.plural(num_amplifier_channels));
-fprintf(1, 'Found %d auxiliary input channel%s.\n', ...
-   num_aux_channels, nigeLab.utils.plural(num_aux_channels));
-fprintf(1, 'Found %d supply voltage channel%s.\n', ...
-   num_supply_channels, nigeLab.utils.plural(num_supply_channels));
-fprintf(1, 'Found %d board ADC channel%s.\n', ...
-   num_adc_channels, nigeLab.utils.plural(num_adc_channels));
-fprintf(1, 'Found %d board digital input channel%s.\n', ...
-   num_dig_in_channels, nigeLab.utils.plural(num_dig_in_channels));
-fprintf(1, 'Found %d board digital output channel%s.\n', ...
-   num_dig_out_channels, nigeLab.utils.plural(num_dig_out_channels));
-fprintf(1, 'Found %d temperature sensors channel%s.\n', ...
-   num_sensor_channels, nigeLab.utils.plural(num_sensor_channels));
-fprintf(1, '\n');
-
+if verbose
+   fprintf(1, 'Found %d amplifier <strong>(raw)</strong> channel%s.\n', ...
+      num_raw_channels, nigeLab.utils.plural(num_raw_channels));
+   fprintf(1, 'Found %d auxiliary input channel%s.\n', ...
+      num_aux_channels, nigeLab.utils.plural(num_aux_channels));
+   fprintf(1, 'Found %d supply voltage channel%s.\n', ...
+      num_supply_channels, nigeLab.utils.plural(num_supply_channels));
+   fprintf(1, 'Found %d board ADC channel%s.\n', ...
+      num_adc_channels, nigeLab.utils.plural(num_adc_channels));
+   fprintf(1, 'Found %d board digital input channel%s.\n', ...
+      num_dig_in_channels, nigeLab.utils.plural(num_dig_in_channels));
+   fprintf(1, 'Found %d board digital output channel%s.\n', ...
+      num_dig_out_channels, nigeLab.utils.plural(num_dig_out_channels));
+   fprintf(1, 'Found %d temperature sensors channel%s.\n', ...
+      num_sensor_channels, nigeLab.utils.plural(num_sensor_channels));
+   fprintf(1, '\n');
+end
 
 % Determine how many samples the data file contains.
 
 % Each data block contains num_samples_per_data_block amplifier samples.
 bytes_per_block = num_samples_per_data_block * 4;  % timestamp data
-bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_amplifier_channels;
+bytes_per_block = bytes_per_block + num_samples_per_data_block * 2 * num_raw_channels;
 % Auxiliary inputs are sampled 4x slower than amplifiers
 bytes_per_block = bytes_per_block + (num_samples_per_data_block / 4) * 2 * num_aux_channels;
 % Supply voltage is sampled once per data block
@@ -325,7 +332,32 @@ num_dig_out_samples = num_samples_per_data_block * num_data_blocks;
 
 record_time = num_raw_samples / sample_rate;
 
-if VERBOSE
+for i = 1:num_raw_channels
+   raw_channels(i).signal.Samples = num_raw_samples;
+end
+
+for i = 1:num_aux_channels
+   analogIO_channels(aux_index(i)).signal.Samples = num_aux_samples;
+end
+
+for i = 1:num_supply_channels
+   analogIO_channels(supply_index(i)).signal.Samples = num_supply_samples;
+end
+
+for i = 1:num_adc_channels
+   analogIO_channels(adc_index(i)).signal.Samples = num_adc_samples;
+end
+
+for i = 1:num_dig_in_channels
+   digIO_channels(dig_in_index(i)).signal.Samples = num_dig_in_samples;
+end
+
+for i = 1:num_dig_out_channels
+   digIO_channels(dig_out_index(i)).signal.Samples = num_dig_out_samples;
+end
+
+
+if verbose
    if (data_present)
       fprintf(1, 'File contains %0.3f seconds of data.  Amplifiers were sampled at %0.2f kS/s, for a total of %d samples.\n',...
          record_time, sample_rate / 1000, num_raw_samples);
@@ -338,9 +370,7 @@ if VERBOSE
 end
 header_size=ftell(FID);
 % Determine how many probes and channels per probe
-
-nPort   = [raw_channels(:).port_number];
-probes = unique(nPort);
+probes = unique([raw_channels.port_number]);
 num_probes = numel(probes);
 DC_amp_data_saved = false;
 num_dac_channels = 0;
@@ -349,15 +379,12 @@ num_DC_channels = 0;
 num_DC_samples = 0;
 num_stim_channels = 0;
 num_stim_samples = 0;
-
-for iN = 1:num_probes
-   eval(['numArray' num2str(iN) 'Chans = sum(nPort == iN);']);
-end
 DesiredOutputs = nigeLab.utils.initDesiredHeaderFields('RHD').';
 
 for field = DesiredOutputs %  DesiredOutputs defined in nigeLab.utils
    fieldOut = field{:};
-   fieldOutVal = eval(fieldOut);
+   fieldOutVal = eval(fieldOut); % This is for backwards compatibility
+   % Should eventually be changed to remove the eval
    header.(fieldOut) = fieldOutVal;
 end
 

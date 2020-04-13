@@ -26,7 +26,11 @@ if numel(blockObj) > 1
    return;
 end
 
-blockObj.updateParams('doActions');
+if isempty(blockObj.HasParsInit)
+   blockObj.updateParams('doActions');
+elseif ~blockObj.HasParsInit.doActions
+   blockObj.updateParams('doActions');
+end
 nigeLab.utils.checkForWorker(blockObj,'config');
 
 % Get dbstack, ignoring first N "cards"
@@ -50,7 +54,16 @@ end
 for i = 1:numel(Fields)
    f = Fields{i};  % Status from each must be met
    completionFlag = blockObj.getStatus(f);
-   if ~all(completionFlag)
+   switch blockObj.getFieldType(f)
+      case 'Channels'
+         % Only consider the channels for which Mask == true
+         isIncomplete = ~all(completionFlag(blockObj.Mask));
+      otherwise
+         % Otherwise, everything must be completed
+         isIncomplete = ~all(completionFlag);
+   end
+   
+   if isIncomplete
       error(['nigeLab:' mfilename ':doActionNotReady'],...
          ['%s (a necessary pre-processing step) is not yet completed.\n' ...
          'Cannot run %s until this is complete, or requirement is changed in %s'],...

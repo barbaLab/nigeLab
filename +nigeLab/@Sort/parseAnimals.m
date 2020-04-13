@@ -16,7 +16,7 @@ function flag = parseAnimals(sortObj,animalObj)
 %% CONCATENATE ALL BLOCKS AND THEN PARSE BLOCK ARRAY
 blockObjArray = [];
 for ii = 1:numel(animalObj)
-   blockObjArray = [blockObjArray; animalObj(ii).Blocks]; %#ok<AGROW>
+   blockObjArray = [blockObjArray; animalObj(ii).Children]; %#ok<AGROW>
 end
 flag = parseBlocks(sortObj,blockObjArray);
 

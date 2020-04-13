@@ -1,56 +1,100 @@
-function flag = doAutoClustering(blockObj,chan,unit)
-% DOAUTOCLUSTERING  Cluster spikes based on extracted waveform features
+function flag = doAutoClustering(blockObj,chan,unit,useSort)
+%DOAUTOCLUSTERING  Cluster spikes based on extracted waveform features
 %
 % b = nigeLab.Block;
+% To specify a single channel:
 % chan = 1;
 % b.doAutoClustering(chan);
 %
-% To recluster a single unit already sorted in the past:
+% To recluster a single unit already CLUSTERED in the past:
 % unit = 1;
 % b.doAutoClustering(chan,unit);
+%
+% To recluster a single unit already SORTED in the past:
+% unit = 1;
+% b.doAutoClustering(chan,unit,true);
 %
 %  --------
 %   OUTPUT
 %  --------
 %   flag       :     Returns true if clustering completed successfully.
 
-%%
-flag = false;
-[~,par] = blockObj.updateParams('AutoClustering');
-blockObj.checkActionIsValid();
 
-%% runs automatic clustering algorithms
 switch nargin
    case 1
       chan = blockObj.Mask;
       unit = 'all';
+      useSort = false;
    case 2
       unit = 'all';
+      useSort = false;
+   case 3
+      useSort = false;
    otherwise
       % Then unit is already defined
 end
 
-if strcmpi(unit,'all') % Returns false if unit is numeric
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      if ~isempty(blockObj(i))
+         if isvalid(blockObj(i))
+            flag = flag && doAutoClustering(blockObj(i),chan,unit);
+         end
+      end
+   end
+   return;
+else
+   flag = false;
+end
+[~,par] = blockObj.updateParams('AutoClustering');
+blockObj.checkActionIsValid();
+SuppressText = ~blockObj.Verbose; 
+% runs automatic clustering algorithms
+if isempty(unit)
    unit = 0:par.NMaxClus;
+elseif strcmpi(unit,'all') % Returns false if unit is numeric
+   unit = 0:par.NMaxClus;
+elseif ischar(unit)
+   error(['nigeLab:' mfilename ':BadString'],...
+      'Unexpected "unit" value: %s (should be ''all'' or numeric)\n',unit);
 end
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
       par.MethodName);
-   str = sprintf('AutoClustering (%s)',str);
+   str = sprintf('AutoClustering-(%s)',str);
 else
    str = sprintf('AutoClustering-(%s)',par.MethodName);
 end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = chan
-   % load spikes and classes
-   inspk = blockObj.getSpikeFeatures(iCh,unit);
+   curCh = curCh+1;
+   
+   % load spikes and classes.
+   % NOTE: for now this is fine, since we will NEVER call this method from
+   % the @Sort interface (it uses nigeLab.libs.SpikeImage/Recluster()
+   % method to group "leftover" spikes using PCA on spike waveforms);
+   % however, if `.doAutoClustering` is used in combination with @Sort,
+   % the method should be changed to make use of `useSort`
+   if useSort 
+      if blockObj.getStatus('Sorted',iCh)
+         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',unit});
+      else
+         inspk = blockObj.getSpikeFeatures(iCh,{'Sorted',nan});
+      end
+   else
+      if blockObj.getStatus('Clusters',iCh)
+         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',unit});
+      else
+         inspk = blockObj.getSpikeFeatures(iCh,{'Clusters',nan});
+      end
+   end
+   classes =  blockObj.getClus(iCh,SuppressText);
    if isempty(inspk)
-      saveClusters(blockObj,[],iCh,[]);
+      saveClusters(blockObj,classes,iCh,nan);
       continue;
    end
-   SuppressText = true;
-   classes =  blockObj.getClus(iCh,SuppressText);
    
    % if unit is porvided, match sikes and classes with the unit
    SubsetIndx = ismember(classes,unit);
@@ -82,15 +126,14 @@ for iCh = chan
    saveClusters(blockObj,classes,iCh,temp);
    
    % report progress to the user
-   curCh = curCh+1;
-   pct = round((curCh/numel(chan)) * 100);
+   pct = round((curCh/numel(chan)) * 90);
    blockObj.updateStatus('Clusters',true,iCh);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
 end
 if blockObj.OnRemote
    str = 'Saving-Block';
-   blockObj.reportProgress(str,100,'toWindow',str);
+   blockObj.reportProgress(str,95,'toWindow',str);
 else
    blockObj.save;
    linkStr = blockObj.getLink('Clusters');
@@ -199,7 +242,7 @@ ts = getSpikeTimes(blockObj,iCh);
 n = numel(ts);
 data = [zeros(n,1) classes temperature*ones(n,1) ts zeros(n,1)];
 
-%% save the 'Clusters' DiskData file and potentially initialize `Sorted`
+% save the 'Clusters' DiskData file and potentially initialize `Sorted`
 blockObj.Channels(iCh).Clusters = nigeLab.libs.DiskData('Event',...
    fNameC,data,'access','w');
 
