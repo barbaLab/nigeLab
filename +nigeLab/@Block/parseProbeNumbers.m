@@ -1,9 +1,9 @@
 function flag = parseProbeNumbers(blockObj)
-% PARSEPROBENUMBERS    Function to parse probe numbers depending on recType
+%PARSEPROBENUMBERS    Function to parse probe numbers depending on recType
 %
 %  flag = blockObj.PARSEPROBENUMBERS;
 
-%% PARSE BASED ON RECORDING TYPE
+% PARSE BASED ON RECORDING TYPE
 flag = false;
 switch blockObj.RecType
    case 'Intan'

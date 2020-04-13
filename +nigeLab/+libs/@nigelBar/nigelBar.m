@@ -10,7 +10,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
       BackgroundColor   (1,3) double = [0.00,0.00,0.00] % Panel face color
       FaceColor         (1,3) double = [0.26,0.51,0.76] % Button face color
       FontColor         (1,3) double = [1.00,0.81,0.27] % Font color
-      FontName                char = 'DroidSans'
+      FontName                char = 'Droid Sans'
       Position          (1,4) double = [.01,.93,.98,.06]
       String                  char = ''
       Substr                  char = ''
@@ -27,7 +27,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
    
    % HIDDEN,PUBLIC/PROTECTED
    properties (Hidden,GetAccess=public,SetAccess=protected)
-      Children   cell % {1} -> Always LEFT button container; {2} -> Always RIGHT button container; 3+ are ALWAYS buttons
+      Children   cell = cell(1,2);% {1} -> Always LEFT button container; {2} -> Always RIGHT button container; 3+ are ALWAYS buttons
    end
    
    % PUBLIC/PROTECTED
@@ -194,9 +194,6 @@ classdef nigelBar < handle & matlab.mixin.SetGet
       end
       
       function set.LeftButtonContainer(obj,value)
-         if isempty(obj.Children)
-            obj.Children = cell(1,2);
-         end
          obj.Children{1} = value;
       end
       
@@ -205,9 +202,6 @@ classdef nigelBar < handle & matlab.mixin.SetGet
       end
       
       function set.RightButtonContainer(obj,value)
-         if isempty(obj.Children)
-            obj.Children = cell(1,2);
-         end
          obj.Children{2} = value;
       end
       
@@ -274,8 +268,8 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             'XLim',[-0.1 3],...
             'YLimMode','manual',...
             'YLim',[0 1],...
-            'FontName','DroidSans');
-         obj.Parent.nestObj(obj.Children{1},'LeftButtonAxes');
+            'FontName','Droid Sans');
+         nestObj(obj.Parent,obj.Children{1},'LeftButtonAxes');
          obj.Children{2} = axes('Units','normalized', ...
             'Tag','ButtonAxes',...
             'Position',[0.60 0.10 0.40 0.40],...
@@ -287,8 +281,8 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             'XLim',[-2.1 1],...
             'YLimMode','manual',...
             'YLim',[0 1],...
-            'FontName','DroidSans');
-         obj.Parent.nestObj(obj.Children{2},'RightButtonAxes');
+            'FontName','Droid Sans');
+         nestObj(obj.Parent,obj.Children{2},'RightButtonAxes');
       end
       
       % Adds button to 'left' or 'right' container
@@ -331,6 +325,7 @@ classdef nigelBar < handle & matlab.mixin.SetGet
             pos = [scl*nButton 0.05 0.85 0.9];
             b = nigeLab.libs.nigelButton(obj.Children{side},pos,...
                btn(i).String,btn(i).Callback);
+            b.FontSize = 2.5;
             obj.Button = b; 
          end
          

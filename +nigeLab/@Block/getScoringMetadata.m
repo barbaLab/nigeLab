@@ -1,20 +1,20 @@
-function info = getScoringMetadata(blockObj,fieldName,hashID)
-% GETSCORINGMETADATA  Returns table row corresponding to 'hashID' for
+function info = getScoringMetadata(blockObj,fieldName,scoringID)
+%GETSCORINGMETADATA  Returns table row corresponding to 'scoringID' for
 %  'fieldName'. This can be used to get the 'tic' for a particular table
 %  entry, to track the total time spent.
 %
-%  info = getScoringMetadata(blockObj,fieldName,hashID);
+%  info = getScoringMetadata(blockObj,fieldName,scoringID);
 %
 %  inputs- 
 %  blockObj : nigeLab.Block class object
 %  fieldName : Name of field to score (e.g. 'Video'). Acts as an index into
 %              struct property Scoring (e.g. blockObj.Scoring.(fieldName))
-%  hashID : Unique 16-digit alphanumeric hash corresponding to table row
+%  scoringID : Unique 16-digit alphanumeric hash corresponding to table row
 %
 %  outputs-
 %  info : Table row for a given scoring run
 
-%%
+
 info = [];
 if ~isstruct(blockObj.Scoring)
    return;
@@ -39,7 +39,7 @@ if nargin < 3
             return;
          end
          idx = find(idx,1,'last'); % Only retrieve 1 row at most
-         hashID = blockObj.Scoring.(fieldName).Properties.RowNames(idx);
+         scoringID = blockObj.Scoring.(fieldName).Properties.RowNames(idx);
       else
          return;         
       end
@@ -48,6 +48,15 @@ if nargin < 3
    end
 end
 
-info = blockObj.Scoring.(fieldName)(hashID,:);
+if ismember(scoringID,blockObj.Scoring.(fieldName).Properties.RowNames)
+   info = blockObj.Scoring.(fieldName)(scoringID,:);
+else
+   Tic = tic;
+   User = {blockObj.User};
+   Date = {nigeLab.utils.getNigelDate()};
+   Status = {'Unknown'};
+   Toc = toc(Tic);
+   info = table(User, Date, Status, Tic, Toc,'RowNames',scoringID);
+end
 
 end

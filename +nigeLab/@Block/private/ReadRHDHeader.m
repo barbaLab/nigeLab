@@ -8,8 +8,6 @@ function [header,FID] = ReadRHDHeader(name,verbose,FID)
 %  verbose : True - shows messages; False - suppress command window msg
 %  FID : File ID for file to read from fopen
 
-%% PARSE VARARGIN
-
 acqsys = 'RHD';
 
 if nargin < 1
@@ -127,7 +125,7 @@ end
 % If data file is from v2.0 or later (Intan Recording Controller),
 % load name of digital reference channel.
 if (data_file_main_version_number > 1)
-   reference_channel = nigeLab.utils.fread_QString(fid);
+   reference_channel = nigeLab.utils.fread_QString(FID);
 end
 
 % Place frequency-related information in data structure.
@@ -150,7 +148,9 @@ frequency_parameters = struct( ...
 
 % spike_trigger_struct is defined below in its function
 new_trigger_channel = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
-spike_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
+spikes_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',1);
+dig_in_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',0);
+dig_out_triggers = nigeLab.utils.initSpikeTriggerStruct('RHD',0);
 
 % Create structure arrays for each type of data channel.
 raw_channels = nigeLab.utils.initChannelStruct('Channels',0); 
@@ -212,44 +212,67 @@ for signal_group = 1:number_of_signal_groups
             switch (signal_type)
                case 0
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('Raw');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Data',[],'Raw','Channels','RHD',...
+                     new_channel.custom_channel_name,'Channels');
                   raw_channels(raw_index) = new_channel;
-                  spike_triggers(raw_index) = new_trigger_channel;
+                  new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                     'Data',[],'Spikes','Events','RHD',...
+                     new_channel.custom_channel_name,'Channels');
+                  spikes_triggers(raw_index) = new_trigger_channel;
                   raw_index = raw_index + 1;
                case 1
                   new_channel(1).fs = sample_rate / 4;
-                  new_channel(1).signal = nigeLab.utils.signal('Aux');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Aux',[],'AnalogIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Extra');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   aux_index = [aux_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
                case 2
                   new_channel(1).fs = sample_rate / num_samples_per_data_block;
-                  new_channel(1).signal = nigeLab.utils.signal('Supply');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Supply',[],'AnalogIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Extra');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   supply_index = [supply_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
                case 3
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('Adc');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'Adc',[],'AnalogIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
                   analogIO_channels(analogIO_index) = new_channel;
                   adc_index = [adc_index, analogIO_index]; %#ok<AGROW>
                   analogIO_index = analogIO_index + 1;
                case 4
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('DigIn');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'DigIn',[],'DigIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
+                  new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigIn',[],'DigIO','Events','RHD',...
+                        new_channel.custom_channel_name,'IO');
                   digIO_channels(digIO_index) = new_channel;
                   dig_in_index = [dig_in_index, digIO_index]; %#ok<AGROW>
+                  dig_in_triggers = [dig_in_triggers, new_trigger_channel];  %#ok<AGROW>
                   digIO_index = digIO_index + 1;
                case 5
                   new_channel(1).fs = sample_rate;
-                  new_channel(1).signal = nigeLab.utils.signal('DigOut');
+                  new_channel(1).signal = nigeLab.utils.signal(...
+                     'DigOut',[],'DigIO','Streams','RHD',...
+                     new_channel.custom_channel_name,'Standard');
                   new_channel = nigeLab.utils.initChannelStruct('Streams',new_channel);
+                  new_trigger_channel(1).signal = nigeLab.utils.signal(...
+                        'DigOut',[],'DigIO','Events','RHD',...
+                        new_channel.custom_channel_name,'IO');
                   digIO_channels(digIO_index) = new_channel;
                   dig_out_index = [dig_out_index, digIO_index]; %#ok<AGROW>
+                  dig_out_triggers = [dig_out_triggers, new_trigger_channel];  %#ok<AGROW>
                   digIO_index = digIO_index + 1;
                otherwise
                   error('Unknown channel type');

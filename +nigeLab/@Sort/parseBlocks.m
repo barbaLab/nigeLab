@@ -16,7 +16,7 @@ function flag = parseBlocks(sortObj,blockObj)
 %% INITIALIZE CHANNELS PROPERTY
 flag = false;
 
-sortObj.Channels.ID = ChannelID(blockObj(1));
+sortObj.Channels.ID = blockObj(1).ChannelID;
 sortObj.Channels.Mask = blockObj(1).Mask;
 sortObj.Channels.Name = parseChannelName(sortObj);
 sortObj.Channels.N = size(sortObj.Channels.ID,1);

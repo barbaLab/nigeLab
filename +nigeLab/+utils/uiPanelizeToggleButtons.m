@@ -1,5 +1,5 @@
 function h = uiPanelizeToggleButtons(parent,nBox,pos,nCol,val,xOffset,yOffset)
-%% UIPANELIZETICKBOXES Returns axes cell array, with panelized axes objects
+%UIPANELIZETICKBOXES Returns axes cell array, with panelized axes objects
 %
 %  h = UIPANELIZETOGGLEBUTTONS(parent,nBox,pos);
 %  h = UIPANELIZETOGGLEBUTTONS(parent,nBox,pos,nCol);
@@ -31,17 +31,15 @@ function h = uiPanelizeToggleButtons(parent,nBox,pos,nCol,val,xOffset,yOffset)
 %   OUTPUT
 %  --------
 %    ax        :     Cell array of axes object handles.
-%
-% By: Max Murphy  v1.0  03/22/2018  Original version (R2017b)
 
-%% DEFAULTS
+% DEFAULTS
 % For specified inputs
 X_OFFSET = 0.0025;
 Y_OFFSET = 0.0025;
 N_COL = 1;
 VAL = 0;
 
-%% PARSE INPUT
+% PARSE INPUT
 if exist('nCol','var')==0
    nCol = N_COL;
 end
@@ -58,9 +56,7 @@ if exist('yOffset','var')==0
    yOffset = Y_OFFSET;
 end
 
-
-
-%% GET NUMBER OF ROWS, COLUMNS, AND AXES WIDTH/HEIGHT
+% GET NUMBER OF ROWS, COLUMNS, AND AXES WIDTH/HEIGHT
 nRow = ceil(nBox/nCol);
 
 widthBox  = (pos(3) - xOffset*(nCol + 1))/nCol;
@@ -70,8 +66,7 @@ widthPos = widthBox + xOffset;
    'TOP',yOffset,'BOT',yOffset,...
    'YLIM',[pos(2) (pos(2)+pos(4))]);
 
-%% INITIALIZE AXES ARRAY
-
+% INITIALIZE AXES ARRAY
 h = cell(nBox,1);
 for ii = 1:nBox
    xpos = mod(ii-1,nCol)*widthPos + xOffset + pos(1);

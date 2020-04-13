@@ -80,6 +80,7 @@ function varargout = Video(varargin)
 pars = struct;
 pars.HasVideo = true;
 pars.HasVidStreams = true;
+pars.UseVideoPromptOnEmpty = false;
 
 % % % -- For Video Scoring -- % % %
 
@@ -160,51 +161,62 @@ pars.VidStreamSource = '';  % If pars.CameraSourceVar is non-empty
 % to toggle it.
 
 pars.VidFilePath    = { ... % "Includes" for where videos might be. Stops after first non-empty path.
-   'K:\Rat\Video\BilateralReach\Murphy'; 
-   'K:\Rat\Video\BilateralReach\RC';
-   'K:\Rat\Video\Audio Discrimination Task\post-surg'
+...   'K:\Rat\Video\BilateralReach\Murphy'; 
+...   'K:\Rat\Video\BilateralReach\RC';
+   'P:\Rat\BilateralReach\Video\post-surg'
    };
 
 % Default search path for UI selection:
-pars.DefaultSearchPath = 'K:/Rat/Video/Audio Discrimination Task/post-surg';
+pars.DefaultSearchPath = 'P:\Rat\BilateralReach\Video\post-surg';
 % Valid extensions for UI selection:
 pars.ValidVidExtensions = {'*_Right-A_0.MP4','Right Camera Videos Only';...
                            '*_0.MP4','First Video Only';...
                            '*.MP4;*.mp4;*.avi','Video Files (*.mp4,*.avi)';...
                            '*.*','All Files (*.*)'};  
-pars.SelectionUITitle = 'No Videos Found - Select VIDEO associated with BLOCK';
-
 pars.FileExt = '.MP4';
-% For DynamicVars expressions, see 'Metadata parsing' below
-pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$SessionID','$View','$MovieID'}; % KUMC: "Murphy"
-% pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','&MovieID'}; % KUMC: "RC"
+% For DynamicVars expressions, see 'Metadata parsing' below; main
+% difference here is that ALL variables (if there are enough tokens) are
+% included as metadata variables; '$' vs '~' only denotes whether to use
+% that particular variable in figuring out other videos belonging to a
+% given recording.
+pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$RecID','~View','~MovieID'}; % KUMC: "Murphy"
+% pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','~MovieID'}; % KUMC: "RC"
 pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
+
+% Make a separate set of "DynamicVars" to be parsed from 'Trials' videos
+pars.DynamicVarsTrials = {'$Field','~View','~MovieID'};
 
 % Information about video scoring
 % pars.OutcomeEvent = [];
+pars.OriginalVideoListFile = 'VideoList.csv';
+pars.TrialVideoListFile = 'TrialVideoList.csv';
 pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
-% pars.User = 'MM'; % Who did the scoring? -- This is set elsewhere
-pars.TrialBuffer = -0.25;  % Time before "trial" to start video frame for
-                            % a given scoring "trial." It is useful to
-                            % start at an earlier frame, because the
-                            % VideoReader object is faster at reading the
-                            % "next" frame rather than going backwards, for
-                            % whatever reason (it seems).
-      
-[pars.VarsToScore,pars.VarType] = setScoringVars();
+pars.StartExportVariable = 'Init';    % Can be '' to always use trial-running vector to parse
+pars.StopExportVariable = 'Complete'; % Can be '' to always use trial-running vector to parse
+
+% Information for "Trial Video" export
+pars.ROI.Width = 512;   % (Standardized) cropped frame width, in pixels
+pars.ROI.Height = 512;  % (Standardized) cropped frame height, in pixels
+% Note: KUMC Z620 workstation for running DeepLabCut seems to max out for
+%                 images of size 600 x 600.
+pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
+                             % a given scoring "trial." It is useful to
+                             % start at an earlier frame, because the
+                             % VideoReader object is faster at reading the
+                             % "next" frame rather than going backwards, for
+                             % whatever reason (it seems).
+pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" to keep writing
+
+[pars.VarsToScore,pars.VarType,pars.VarDefs] = setScoringVars();
 
 % % % -- For Video Alignment -- % % %
 pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
 
 %% Less-likely to change these parameters
-% Paths information
-pars.File = [];
-
 % Metadata parsing
 pars.Delimiter = '_'; % Break filename "variables" by this
 pars.IncludeChar = '$'; % Include data from these variables
 pars.ExcludeChar = '~'; % Exclude data from these variables
-pars.Meta = [];
 
 pars.ValueShortcutFcn = @nigeLab.workflow.defaultVideoScoringShortcutFcn;
 pars.VideoScoringStringsFcn = @nigeLab.workflow.defaultVideoScoringStrings;
@@ -219,17 +231,35 @@ pars.HasVidStreams = ...
    (~isempty(pars.VidStreamName));
 
 if pars.HasVidStreams
+   dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
+   if ismember('Key',dyVar)
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         '[DEFAULTS/VIDEO]: Invalid use of reserved meta variable (''Key'')');
+   end
+   
+   % Check that the CameraSourceVar and MovieIndexVar were added to `pars`
+   if ~isfield(pars,'CameraSourceVar')
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         ['CameraSourceVar parameter field is missing\n' ...
+         '->\t(can be left as [] if unwanted)']);
+   end
+   if ~isfield(pars,'MovieIndexVar')
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         ['MovieIndexVar parameter field is missing\n' ...
+         '->\t(can be left as [] if unwanted)']);
+   end
+   
    n = numel(pars.VidStreamName);
    if ~isempty(pars.CameraSourceVar)
       pars.VidStreamField = cell(n,1);
       pars.VidStreamFieldType = cell(n,1);
       
       % Check that the CameraSourceVar is good
-      dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
       idx = ismember(dyVar,pars.CameraSourceVar);
       if sum(idx) ~= 1
-         error('CameraSourceVar (%s) is not a member of pars.DynamicVars (%s)',...
-            pars.CameraSourceVar,dyVar);
+         error(['nigeLab:' mfilename ':BadConfig'],...
+            'CameraSourceVar (%s) is not a member of pars.DynamicVars',...
+            pars.CameraSourceVar);
       end
       
       % For each Cell corresponding to a different subset of markings,
@@ -324,31 +354,37 @@ end
 
 %%
    % Helper function to isolate this part of parameters
-   function [VarsToScore,VarType] = setScoringVars()
+   function [VarsToScore,VarType,VarDefs] = setScoringVars()
       % SETSCORINGVARS  Variables for video scoring are set here
       %
       %  [VarsToScore,VarType] = setScoringVars();
       
       % varsToScore = []; % Must be left empty if no videos to score
       varsToScore = {... % KUMC: "RC" project (MM)
-         'Pellets';           % 1)
-         'PelletPresent';     % 2)
-         'Stereotyped';       % 3)
-         'Outcome';           % 4)
-         'Forelimb';          % 5)
+         'Pellets';           % 1) [0,1,2,3,4,5,6,7,8,9+]
+         'PelletPresent';     % 2) Yes / No
+         'Stereotyped';       % 3) Yes / No
+         'Outcome';           % 4) Successful / Unsuccessful
+         'Door';              % 5) L / R
+         'Forelimb';          % 6) L / R
       };
 
       % varType = []; % Must be left empty if no videos to score
-      varType = [2 3 3 4 5];      % Should have same number as VarsToScore
+      varType = [2 3 3 4 5 5];    % Should have same number as VarsToScore
                                   % NOTE: VarType will be added to by any
                                   %       Event variable that is 
-                                  
-      [VarsToScore,VarType] = prependEventVars(varsToScore,varType);
+      % Default values; again, should correspond 1-to-1 with elements of
+      % varType and varsToScore. Set value to nan so that the shortcut will
+      % not update its value when this is called even if the value is
+      % unset.
+      varDefs = [1, 1, 0, 0, nan, nan]; 
+      
+      [VarsToScore,VarType,VarDefs] = prependEventVars(varsToScore,varType,varDefs);
       
    end
 
    % Helper function that does the prepending
-   function [toScore,type] = prependEventVars(vToScore,vType)
+   function [toScore,type,def] = prependEventVars(vToScore,vType,vDefs)
       % PREPENDEVENTVARS Pre-append VarType and VarsToScore based on values
       %     in nigeLab.defaults.Event('Name'); and
       %     nigeLab.defaults.Event('Fields').
@@ -363,12 +399,14 @@ end
             vn = vName(ismember(lower(vField),lower(fnames{ii})));
             vToScore = [vn; vToScore]; %#ok<*AGROW>
             vType = [ones(1,numel(vn)), vType];
+            vDefs = [inf(1,numel(vn)), vDefs];
          end
       end
       
       % Assign output
       toScore = vToScore;
       type = vType;
+      def = vDefs;
    end
    
                               

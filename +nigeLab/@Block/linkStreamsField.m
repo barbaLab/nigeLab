@@ -25,6 +25,12 @@ if iscell(field)
    return;
 end
 
+if ~isfield(blockObj.Streams,field)
+    
+    blockObj.updateStatus(field,false,1);
+    flag = true;
+   return; 
+end
 %%
 flag = false;
 str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
@@ -57,7 +63,7 @@ for iStream = 1:numel(blockObj.Streams.(field))
       counter = counter + 1;
       updateFlag(iStream) = true;
       blockObj.Streams.(field)(iStream).data = ...
-         nigeLab.libs.DiskData('Hybrid',dataFileName);
+         nigeLab.libs.DiskData('MatFile',dataFileName);
    end
    pct = 100 * (counter / numel(blockObj.Streams.(field))); 
    blockObj.reportProgress(str,pct,'toWindow','Linking-Streams');

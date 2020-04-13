@@ -22,11 +22,16 @@ pars.Delimiter = '|';
 pars.StandardPortNames = {'A','B','C','D'};
 pars.DefaultAcquisitionSystem = 'RHD';  % Important if things go wrong
 pars.SupportedFormats = {'.rhs','.rhd','tdt'};
-pars.User = 'MM'; % Default user
+pars.User = ''; % Default user is now parsed from local machine
 
 %% Parse output
 if nargin < 1
    varargout = {pars};
+   if strcmpi(pars.User,'demo')
+      nigeLab.utils.cprintf('Errors*','\n\t[+defaults/Experiment.m]: ');
+      nigeLab.utils.cprintf('[0.5 0.5 0.5]',...
+         'Running using `''demo''` "User"\n');
+   end
 else
    varargout = cell(1,nargin);
    f = fieldnames(pars);

@@ -77,8 +77,7 @@ function [eventData,blockIdx] = getEventData(blockObj,field,prop,ch,matchProp,ma
 if nargin < 2 % field was not provided
    field = 'Spikes';
 elseif isempty(field)
-   blockObj.updateParams('Video');
-   field = blockObj.Pars.Video.ScoringEventFieldName;
+   field = blockObj.ScoringField;
 end
 
 if nargin < 3 % prop was not provided
@@ -89,7 +88,8 @@ end
 
 if nargin < 4 % ch was not provided
    if isempty(blockObj(1).Mask)
-      warning('No channel mask set for %s, using all channels.',...
+      warning(['nigeLab:' mfilename ':MissingMask'],...
+         'No channel mask set for %s, using all channels.',...
          blockObj.Name);
       ch = 1:blockObj(1).NumChannels;
    else
@@ -154,16 +154,16 @@ if (numel(blockObj) > 1)
    return;
 end
 
-blockObj.checkCompatibility(field);
+checkCompatibility(blockObj,field);
 % Events struct is not associated with channels, so handle differently
-fieldType = blockObj.getFieldType(field);
+fieldType = getFieldType(blockObj,field);
 switch fieldType
    case 'Channels' % Returns Events parsed from Channels
-      eventData = blockObj.getChannelsEventData(field,prop,ch,...
+      eventData = getChannelsEventData(blockObj,field,prop,ch,...
          matchProp,matchValue);
-   case 'Streams' % Returns Events parsed from Streams (go in .Events)
+   case {'Streams','Events'} % Returns Events parsed from Streams (go in .Events)
       eventName = ch;
-      eventData = blockObj.getStreamsEventData(field,prop,eventName,...
+      eventData = getStreamsEventData(blockObj,field,prop,eventName,...
          matchProp,matchValue);
    otherwise
       error(['nigeLab:' mfilename ':UnexpectedFieldType'],...

@@ -16,7 +16,7 @@ function offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo)
 %  automatically saved as the 'ts' property of a special 'Header' file
 %  located with the other 'ScoredEvents' files in the block hierarchy.
 
-%% Parse input
+% Parse input
 if nargin < 3
    if isempty(blockObj.UserData)
       error('If UserData property is not set, must provide all 3 args.');
@@ -52,10 +52,12 @@ end
 
 blockObj.updateParams('Video');
 
-%% Get streams to correlate
+% Get streams to correlate
 dig = blockObj.getStream(digStreamInfo.name);
-vid = getStream(blockObj.Videos,vidStreamInfo.name,...
-                  blockObj.Pars.Video.VideoEventCamera);
+camOpts = nigeLab.utils.initCamOpts(...
+   'csource','cname',...
+   'cname',vidStreamInfo.Name);
+vid = getStream(blockObj.Videos,camOpts);
 fs = blockObj.Pars.Video.Alignment_FS.(blockObj.RecSystem.Name);
 
 switch blockObj.RecSystem.Name

@@ -1,5 +1,5 @@
 function addScoringMetadata(blockObj,fieldName,info)
-% ADDSCORINGMETADATA  Appends scoring metadata to Block record
+%ADDSCORINGMETADATA  Appends scoring metadata to Block record
 %
 %  blockObj.addScoringMetadata(fieldName,info);
 %  % Adds table row in 'info' to table in blockObj.Scoring.(fieldName)
@@ -20,7 +20,7 @@ function addScoringMetadata(blockObj,fieldName,info)
 %
 %  info        :     Table entry to append to table in that field
 
-%% Check that Scoring and Scoring.(fieldName) are initialized.
+% Check that Scoring and Scoring.(fieldName) are initialized.
 if ~isstruct(blockObj.Scoring)
    blockObj.Scoring = struct;
 end
@@ -29,7 +29,7 @@ if ~isfield(blockObj.Scoring,fieldName)
    blockObj.Scoring.(fieldName) = table;
 end
 
-%% Assign using hashed row names
+% Assign using hashed row names
 blockObj.Scoring.(fieldName)(info.Properties.RowNames,:) = info;
 
 end

@@ -49,7 +49,9 @@ classdef Tank < nigeLab.nigelObj
 %     list - List Block objects in the TANK.
 %
 %     Empty - Create an Empty TANK object or array
-  
+    properties 
+          MultiAnimals logical = false           % flag to signal if it's a single animal or a joined animal recording
+    end
    % % % METHODS% % % % % % % % % % % %
    % NO ATTRIBUTES
    methods
@@ -102,6 +104,23 @@ classdef Tank < nigeLab.nigelObj
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize TANK object.');
          end
+         tankObj.Key = nigeLab.nigelObj.InitKey;
+      end
+      
+      % Modify save method for non-verbose "long" saves
+      function flag = save(tankObj)
+         %SAVE  Modifies inherited save method to notify on "long" saves
+         %
+         %  flag = save(tankObj);
+         
+         flag = save@nigeLab.nigelObj(tankObj);
+         if ~tankObj.Verbose % Then it might run for a while without notifying
+            [fmt,idt,~] = getDescriptiveFormatting(tankObj);
+            nigeLab.utils.cprintf(fmt,true,'%s[TANK]: ',idt);
+            nigeLab.utils.cprintf(fmt(1:(end-1)),...
+               '%s saved successfully\n',tankObj.Name);
+            nigeLab.sounds.play('bell',2,-50);
+         end
       end
    end
    
@@ -119,7 +138,7 @@ classdef Tank < nigeLab.nigelObj
    % PROTECTED
    methods (Access=protected)
       % Modify inherited superclass name parsing method
-      function [name,meta] = parseNamingMetadata(tankObj,fName,pars)
+      function meta = parseNamingMetadata(tankObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(animalObj);
@@ -176,12 +195,13 @@ classdef Tank < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             tankObj,fName,pars);
          
          % % % % Parse additional parameters for TANK % % % % 
          % Currently no fixed TANK naming convention.       %
          % % % % % % % % % % % % % % % % % % % % % % % % %  % 
+         tankObj.Meta = nigeLab.nigelObj.MergeStructs(tankObj.Meta,meta);
       end
    end
    
@@ -226,7 +246,9 @@ classdef Tank < nigeLab.nigelObj
                   tmp=all(tmp,2); 
                else
                   B = A.Children;
-                  tmp = tmp | ~[B.IsMasked]';
+                  if ~isempty(B)
+                      tmp = tmp | ~[B.IsMasked]';
+                  end
                end
                Status(iAnimal,:) = all(tmp,1) | ~A.IsMasked;
             end
@@ -386,7 +408,7 @@ classdef Tank < nigeLab.nigelObj
 %       --> Deprecated (inherited from `nigelObj`)
       blockList = list(tankObj)     % List Blocks in TANK    
       N = getNumBlocks(tankObj) % Get total number of blocks in TANK
-      runFun(tankObj,f) % Run function f on all child blocks in tank
+      runFun(tankObj,f,varargin) % Run function f on all child blocks in tank
    end
    % % % % % % % % % % END METHODS% % %
 end

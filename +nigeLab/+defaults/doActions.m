@@ -18,16 +18,17 @@ function varargout = doActions(varargin)
 %% Set "dependencies" for checking that stages are valid for `doMethods`
 pars = struct;
 pars.doAutoClustering = doAction({'Spikes'},true);
-pars.doBehaviorSync= doAction({'Video'});
-pars.doEventDetection = doAction();
-pars.doEventHeaderExtraction = doAction({'Video'});
+pars.doBehaviorSync= doAction({},false,{'Raw','Video'});
+pars.doEventDetection = doAction({'Raw'},true);
+pars.doEventHeaderExtraction = doAction({},false,{'Raw','Video'});
 pars.doLFPExtraction = doAction({'Raw'},true);
 pars.doRawExtraction = doAction({},true);
 pars.doReReference = doAction({'Filt'},true);
 pars.doSD = doAction({'CAR'},true);
+pars.doTrialVidExtraction = doAction({},false,{'Raw','Video'});
 pars.doUnitFilter = doAction({'Raw'},true);
-pars.doVidInfoExtraction = doAction({'Video'});
-pars.doVidSyncExtraction = doAction({'Video'});
+pars.doVidInfoExtraction = doAction({},true,{});
+pars.doVidSyncExtraction = doAction({},false,{'Raw','Video'});
 
 %% Parse output
 if nargin < 1
@@ -44,7 +45,7 @@ else
 end
 
 % Helper function to make `doAction` param struct
-   function doStruct = doAction(required,en)
+   function doStruct = doAction(required,en,to_check_on_batch_run)
       %DOACTION  Helper function to create doAction struct
       %
       %  doStruct = doAction({'field1',...,'fieldk'}); Sets required fields
@@ -58,9 +59,20 @@ end
          en = false;
       end
       
+      if nargin < 3
+         to_check_on_batch_run = {};
+      end
+      
+      if ~isempty(to_check_on_batch_run) && ~isempty(required)
+         error(['nigeLab:' mfilename ':BadConfig'],...
+            '[DOACTIONS]: If .batch has members, .required should be empty.');
+      end
+      
       doStruct = struct;
       doStruct.required = required;
       doStruct.enabled = en;
+      doStruct.batch = to_check_on_batch_run;
+      
    end
 
 end

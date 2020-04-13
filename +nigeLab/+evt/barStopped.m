@@ -26,7 +26,7 @@ classdef (ConstructOnLoad) barStopped < event.EventData
 
    properties (Access = public)
       BarIndex            double   % Index of bar into remote monitor 'bars' array
-      BlockSelectionIndex double   % Index of [animal block] from tank{} ref
+      BlockKey            cell   % Index of [animal block] from tank{} ref
       IsComplete          logical  % Was the job completed
       IsRemote            logical  % Was job run remotely?
       Name                char     % Name (AnimalID.RecID) of job
@@ -50,7 +50,7 @@ classdef (ConstructOnLoad) barStopped < event.EventData
          %  evt  --  EventData that can be passed via `notify` function
          
          evt.BarIndex = bar.BarIndex;
-         evt.BlockSelectionIndex = bar.BlockSelectionIndex;
+         evt.BlockKey = bar.BlockKey;
          evt.IsComplete = bar.IsComplete;
          evt.IsRemote = bar.IsRemote;
          strinfo = strsplit(bar.Name,'.');

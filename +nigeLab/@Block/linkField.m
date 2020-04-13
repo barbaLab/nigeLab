@@ -25,9 +25,9 @@ if isnumeric(fieldIndex)
    field = blockObj.Fields{fieldIndex};
 elseif ischar(fieldIndex)
    field = fieldIndex;
-   fieldIndex = blockObj.checkCompatibility(field);
+   fieldIndex = checkCompatibility(blockObj,field);
 end
-fileType = blockObj.getFileType(field);
+fileType = getFileType(blockObj,field);
 switch blockObj.FieldType{fieldIndex}
    case 'Channels'
       % Streamed data from the high-resolution neurophysiological
@@ -35,19 +35,19 @@ switch blockObj.FieldType{fieldIndex}
       % is acquired in parallel and manipulated together for downstream
       % processing and analyses.
       
-      flag = blockObj.linkChannelsField(field,fileType);
+      flag = linkChannelsField(blockObj,field,fileType);
    case 'Streams'
       % Streams are like Channels, but from DAC or ADC, etc. so they are
       % not associated with the neurophysiological recording Channels
       % structure
-      flag = blockObj.linkStreamsField(field);
+      flag = linkStreamsField(blockObj,field);
    case 'Events'
       % Events have the following fields:
       % 'type', 'value', 'tag', 'ts', 'snippet'
-      flag = blockObj.linkEventsField(field);
+      flag = linkEventsField(blockObj,field);
    case 'Videos'
       if blockObj.Pars.Video.HasVideo
-         flag = blockObj.linkVideosField(field);
+         flag = linkVideosField(blockObj,field);
       else
          flag = true;
       end
@@ -56,7 +56,7 @@ switch blockObj.FieldType{fieldIndex}
       switch lower(field)
          case 'notes'
             flag = blockObj.linkNotes;
-            blockObj.updateStatus(field,flag);
+            updateStatus(blockObj,field,flag);
          case 'probes'
             flag = blockObj.linkProbe;
             % blockObj.updateStatus called in linkProbe method

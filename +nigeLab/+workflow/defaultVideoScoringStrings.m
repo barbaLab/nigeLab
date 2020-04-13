@@ -1,64 +1,91 @@
-function str = defaultVideoScoringStrings(obj,varType,scoredVal)
-% DEFAULTVIDEOSCORINGSTRINGS  Default function that returns a string based
-%     on the value of 'varType' property.
+function str = defaultVideoScoringStrings(Type,scoredVal)
+%DEFAULTVIDEOSCORINGSTRINGS  Default function that returns a string based
+%     on the value of 'Type' property.
 %
-%  str = obj.defaultVideoScoringStrings(varType,scoredVal);
+%  str = defaultVideoScoringStrings(Type,scoredVal);
 %
 %  Inputs:
-%     varType  --  Integer value from nigeLab.defaults.Video('VarType')
+%     Type  --  Integer value from nigeLab.defaults.Video('VarType')
 %     scoredVal -- Value passed from scoring interface for a particular
 %                    variable based on pressing a 'hotKey'
 %
 %  See also:
 %  nigeLab.defaults.Event, nigeLab.defaults.Video
 
-%%
-switch varType
+
+switch Type
    case 5 % Currently, which paw was used for the trial
-      if scoredVal > 0
-         str = 'Right';
+      if isnan(scoredVal)
+         str = 'Unscored';
       else
-         str = 'Left';
+         if scoredVal > 0
+            str = 'Right';
+         else
+            str = 'Left';
+         end
       end
       
    case 4 % Currently, outcome of the pellet retrieval attempt
-      if scoredVal > 0
-         str = 'Successful';
+      if isnan(scoredVal)
+         str = 'Unscored';
       else
-         str = 'Unsuccessful';
+         if scoredVal > 0
+            str = 'Successful';
+         else
+            str = 'Unsuccessful';
+         end
       end
       
    case 3 % Currently, presence of pellet in front of rat
-      if scoredVal > 0
-         str = 'Yes';
+      if isnan(scoredVal)
+         str = 'Unscored';
       else
-         str = 'No';
+         if scoredVal > 0
+            str = 'Yes';
+         else
+            str = 'No';
+         end
       end
       
    case 2 % Currently, # of pellets on platform
-      if scoredVal > 8
-         str = '9+';
+      if isnan(scoredVal)
+         str = 'Unscored';
+      else
+         if scoredVal > 8
+            str = '9+';
+         else
+            str = num2str(scoredVal);
+         end
+      end
+      
+   case 1
+      if isnan(scoredVal)
+         str = 'Unscored';
+      elseif isinf(scoredVal)
+         str = 'N/A';
       else
          str = num2str(scoredVal);
       end
       
-   case 1
-      % Already in video time: set to neural time for display
-      str = num2str(obj.toNeuTime(scoredVal));
-      
    case 0
-      % Already in video time: set to neural time for display
-      str = num2str(obj.toNeuTime(scoredVal));
-      
+      if isnan(scoredVal)
+         str = 'Unscored';
+      elseif isinf(scoredVal)
+         str = 'N/A';
+      else
+         str = num2str(scoredVal);
+      end
    otherwise
-      warning(['Make a copy of this function and then modify the ' ...
+      warning(['nigeLab:' mfilename ':BadConfig'],...
+         ['Make a copy of this function and then modify the ' ...
          'switch ... case statement to accomodate your new VarType']);
-      str_varType = nigeLab.utils.getNigeLink('nigeLab.defaults.Video',...
+      str_Type = nigeLab.utils.getNigeLink('nigeLab.defaults.Video',...
          'setScoringVars');
       str_fcn = nigeLab.utils.getNigeLink('nigeLab.defaults.Video',182,...
          'pars.VideoScoringStringsFcn');
-      fprintf(1,'\n\t-->\tCheck %s <--\n',str_varType);
+      fprintf(1,'\n\t-->\tCheck %s <--\n',str_Type);
       fprintf(1,'\t*** Make sure to also change %s ***\n',str_fcn);
-      error('Strings function not designed for VarType: %g',varType);
+      error(['nigeLab:' mfilename ':BadConfig'],...
+         'Strings function not designed for VarType: %g',Type);
 end
 end

@@ -7,7 +7,7 @@ function ts = debouncePointProcess(ts,debounce)
 %  ts  --  List of times or sample indices
 %  debounce  --  Debounce threshold, in units that correspond to ts.
 
-%% Handle input
+%Handle input
 if nargin < 2
    error('Must supply two inputs');
 end
@@ -24,7 +24,7 @@ if isinf(debounce)
    return;
 end
 
-%% Use loop to iteratively remove ts based on time differences
+%Use loop to iteratively remove ts based on time differences
 ts = sort(ts,'ascend');
 ts = reshape(ts,numel(ts),1); % Get fixed orientation
 idx = 1;

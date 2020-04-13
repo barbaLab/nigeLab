@@ -1,5 +1,5 @@
 classdef ProgressCircle < handle
-%% PROGRESSCIRCLE   A visual indicator of progress on a loop.
+%PROGRESSCIRCLE   A visual indicator of progress on a loop
 
    properties (Access = public)
       Figure

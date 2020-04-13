@@ -9,14 +9,14 @@ function flag = doRawExtraction(blockObj)
 %  --------
 %   flag       :     Returns true if conversion was successful.
 
-%% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
+% PARSE EXTRACTION DEPENDING ON RECORDING TYPE AND FILE EXTENSION
 % If returns before completion, indicate failure to complete with flag
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doRawExtraction(blockObj(i));
          end
       end
    end
@@ -31,7 +31,7 @@ if ~genPaths(blockObj)
    return;
 end
 
-%% extraction
+% extraction
 switch blockObj.RecType
    case 'Intan'
       % Intan extraction should be compatible for both the *.rhd and *.rhs
@@ -66,12 +66,12 @@ switch blockObj.RecType
       %  
       %  * All formats listed on open-ephys "data formats"
         
-      warning('%s is not a supported (case-sensitive).',...
+      warning('%s is not a supported data format (case-sensitive)',...
          blockObj.RecType);
       return;
 end
 
-%% Update status and save
+% Update status and save
 if blockObj.OnRemote
    str = 'Saving-Block';
    blockObj.reportProgress(str,100,'toWindow',str);

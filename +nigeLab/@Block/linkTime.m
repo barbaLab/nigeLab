@@ -16,7 +16,7 @@ if ~exist(fName,'file')
    flag = true;  % Somtehing went wrong
 else
    flag = false; % Nothing went wrong (update .Time status as true)
-   blockObj.Time = nigeLab.libs.DiskData('Hybrid',fName);
+   blockObj.Time = nigeLab.libs.DiskData('MatFile',fName);
 end
 blockObj.updateStatus('Time',~flag);
 

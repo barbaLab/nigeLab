@@ -11,7 +11,7 @@ for kk= 1:size(Tree,1)
             AllProbesNumbers = [bl.Channels.port_number];
             ProbesNumbers = unique(AllProbesNumbers);
             Chans = {bl.Channels.custom_channel_name};
-            for ii = 1:bl.NumProbes
+            for ii = 1:numel(ProbesNumbers)
                 indx = find(AllProbesNumbers == ProbesNumbers(ii));
                 Probe_T =  uiw.widget.TreeNode('Name',ProbesNames{ii},...
                     'Parent',Channels_T);
@@ -25,11 +25,15 @@ for kk= 1:size(Tree,1)
         %% events
         Evts_T = uiw.widget.TreeNode('Name','Events',...
             'Parent',Tree(kk,tt).Root,'UserData',0);
-        if numel(bl.Events)>0
-            for ii=1:numel(bl.Events)
-                chan = uiw.widget.TreeNode('Name',bl.Events(ii).name,...
-                    'Parent',Evts_T,'UserData',[tt,ii]);
+        EvtTypes = fieldnames(bl.Events);
+        for ii =1:numel(EvtTypes)
+            EvtType_T =  uiw.widget.TreeNode('Name',EvtTypes{ii},...
+                'Parent',Evts_T);
+            for jj=1:numel(bl.Events.(EvtTypes{ii}))
+                evt = uiw.widget.TreeNode('Name',bl.Events.(EvtTypes{ii})(jj).name,...
+                    'Parent',EvtType_T,'UserData',[tt,ii]);
             end
+            
         end
         Evts_T.expand();
         %% Streams

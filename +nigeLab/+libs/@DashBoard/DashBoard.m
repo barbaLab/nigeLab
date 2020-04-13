@@ -16,7 +16,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       StatsPanel              % current Status & brief description; .Children{2}
       TreePanel               % nodes are: Tank > Animal > Block; .Children{1}
       TitleBar                % Title Bar with "Home" and "Visualization Tools" buttons; .Children{5}
-      Visible  char = 'on';   % (Default: 'on') Can be 'off' for figure visibility
+      Visible                 % (Default: 'on') Can be 'off' for figure visibility
    end
    
    % DEPENDENT,HIDDEN,PROTECTED
@@ -33,6 +33,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    % PUBLIC/PROTECTED
    properties(GetAccess=public,SetAccess=protected)
       Tank                                              % Tank associated with this DashBoard
+      B_split                                           % Blocks with MultiAnimals flag on
       Children       (5,1)  cell                        % Cell array of nigelPanels
       Listener              event.listener              % Array of event listeners to delete on destruction
       RemoteMonitor
@@ -48,9 +49,12 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    properties(Access=protected)
       nigelButtons         (1,1) struct = struct('Tree',[],'TitleBar',[])   % Each field is an array of nigelButtons
       RecapAxes                              % "Recap" circles container
+      RecapBackground                        % Background "cover" that screens axes lines
+      RecapBubble                            % Indicators of "completed" status on RecapAxes
       RecapTable                             % "Recap" table
+      Mask                                   % "Mask" indexing vector
       Status                                 % Logical status matrix represented by RecapAxes rectangles
-      splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI   % interface to split multiple animals
+      splitMultiAnimalsUI  nigeLab.libs.splitMultiAnimalsUI      % interface to split multiple animals
       
       
       Tree_ContextMenu     matlab.ui.container.ContextMenu       % UI context menu for launching "do" actions
@@ -61,9 +65,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    
    % SETOBSERVABLE,PUBLIC/PROTECTED
    properties(SetObservable,GetAccess=public,SetAccess=protected)
-      nigelGUI       (1,1) matlab.ui.Figure     % matlab.ui.Figure handle to user interface figure
+      nigelGUI             matlab.ui.Figure     % matlab.ui.Figure handle to user interface figure
       Color                struct               % Struct referencing colors
-      SelectionIndex double = [1 0 0]           % indexing of currently-selected items
    end
    
    % SETOBSERVABLE,RESTRICTED:SPLITMULTIANIMALSUI
@@ -109,10 +112,10 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          elseif isnumeric(tankObj)
             dims = tankObj;
             if numel(dims) == 1
-               dims = [dims,0];
+               dims = [0,dims];
             end
+%             delete(obj.nigelGUI); %Just in case a figure is opened
             obj = repmat(obj,dims);
-            close(gcf); % If a figure is opened
             return;
          end
          
@@ -121,23 +124,30 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.Tank = tankObj;
          obj.Color = nigeLab.libs.DashBoard.initColors();
          
+         % Init B_split
+         An = obj.Tank.Animals;
+         obj.B_split = [An([An.MultiAnimals]).Blocks];
+         
          % Build figure and all container panels 
-         obj.nigelGUI = obj.buildGUI();
+         obj.nigelGUI = buildGUI(obj);
          
          % Add nigelObj hierarchy as a uiw.widget.Tree to "Tree" panel
-         pTree = obj.getChild('TreePanel');
-         obj.Tree = obj.buildTree(pTree);
+         pTree = getChild(obj,'TreePanel');
+         pos = pTree.InnerPosition;
+         pos(3) = pos(3)/2;
+         obj.Tree = nigeLab.libs.nigelTree(tankObj,pTree,...
+             'Color',obj.Color,...
+             'Position',pos);
          
          % Add the remote monitor to the "Queue" panel
          pQueue = obj.getChild('QueuePanel');
          obj.RemoteMonitor=nigeLab.libs.remoteMonitor(tankObj,pQueue);
-         obj.buildJavaObjs();
          
          % Nest the buttons in the "Tree" panel
          obj.buildButtons(pTree);
          
          % Create recap Table and container for "recap circles"
-         [obj.RecapTable,obj.RecapAxes] = obj.buildRecapObjects();
+         obj.buildRecapObjects(tankObj.Fields);
          
          % Build title bar that has "buttons" for visual methods etc.
          obj.buildTitleBar();
@@ -147,23 +157,17 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          pParam = getChild(obj,'ParametersPanel');
          pParam.nestObj(h,'TabGroup');
          
-         % Initialize the current selected node as "root"
-         obj.Tree.SelectedNodes = obj.Tree.Root;
-         Nodes.Nodes = obj.Tree.Root;
-         Nodes.AddedNodes = obj.Tree.Root;
-         treeSelectionFcn(obj,obj.Tree,Nodes)
-         
          % Initialize the context menu
-         obj.Tree_ContextMenu = obj.initUICMenu();
+         treeContextMenu = obj.initUICMenu();
+         obj.Tree.addUIContextMenu(treeContextMenu);
+         obj.Tree_ContextMenu = treeContextMenu;
          
          % Add event listeners
          obj.addAllListeners();
          
          % Add "rollover" interaction mediator for nigelButtons
-         obj.RollOver = nigeLab.utils.Mouse.rollover(obj.nigelGUI);
-         
-         % Notify tankObj that the GUI is open
-         obj.Tank.IsDashOpen = true;
+         obj.RollOver = nigeLab.utils.Mouse.rollover(...
+            obj.nigelGUI,[obj.nigelButtons.Tree,obj.nigelButtons.TitleBar]);
       end
    end
    
@@ -201,6 +205,13 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          if ~isempty(obj.RemoteMonitor)
             if isvalid(obj.RemoteMonitor)
                delete(obj.RemoteMonitor);
+            end
+         end
+
+         % Delete nigelTree object(if it exists)
+         if ~isempty(obj.Tree)
+            if isvalid(obj.Tree)
+               delete(obj.Tree);
             end
          end
          
@@ -453,103 +464,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  nigelObj = obj.getHighestLevelNigelObj(); Result depends on
          %     current selection highlight on uiw.widget.Tree (obj.Tree)
          
-         if isempty(obj.SelectionIndex)
-            nigelObj = [];
-            return;
-         end
-         
-         if obj.SelectionIndex(1,2)==0
-            nigelObj = obj.Tank;
-            return;
-         end
-         
-         tankObj = obj.Tank;
-         if obj.SelectionIndex(1,3)==0
-            Index = unique(obj.SelectionIndex(:,2));
-            nigelObj = tankObj.Children(Index);
-            return;
-         else
-            Index = obj.SelectionIndex(:,[2,3]);
-         end
-         
-         nigelObj = tankObj{Index};
-         
+         nigelObj = obj.Tree.SelectedItems;
       end
       
-      % Return the current item selection
-      function [block,animal] = getSelectedItems(obj,mode)
-         % GETSELECTEDITEMS  Returns the currently-selected items from the
-         %                   tree.
-         %
-         %  [block,animal] = obj.getSelectedItems(mode);
-         %
-         %  mode: default -- 'obj'
-         %        * Can be 'index'
-         %        * Can be 'name'
-         %
-         %  Returns Block and Animal objects corresponding to the selected
-         %  Nodes (default). If a different mode is specified, such as
-         %  'index' or 'name' then those corresponding properties are
-         %  returned instead of the object handle arrays.
-         
-         if nargin < 2
-            mode = 'obj';
-         end
-         switch lower(mode)
-            case 'obj'
-               block = [];
-               animal = [];
-               % SelectedItems will always have consistent # columns, since
-               % "unlike" nodes are de-selected during treeSelectionFcn
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               nCol = size(SelectedItems,2);
-               switch  nCol
-                  case 0  % tank
-                     animal = obj.Tank{:};
-                     block = obj.Tank{:,:};
-                     
-                  case 1  % animal
-                     animal = obj.Tank{SelectedItems};
-                     block = obj.Tank{SelectedItems,:};
-                     
-                  case 2  % block
-                     animalIdx = unique(SelectedItems(:,1));
-                     animal = obj.Tank{animalIdx};
-                     block = obj.Tank{SelectedItems};
-               end
-            case 'index'
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-            case 'name'
-               [B,A] = obj.getSelectedItems('obj');
-               for i = 1:numel(B)
-                  if isfield(B(i).Meta,'AnimalID') && ...
-                        isfield(B(i).Meta,'RecID')
-                     blockName = sprintf('%s.%s',...
-                        B(i).Meta.AnimalID,...
-                        B(i).Meta.RecID);
-                  else
-                     warning(['Missing AnimalID or RecID Meta fields. ' ...
-                        'Using Block.Name instead.']);
-                     blockName = strrep(B(i).Name,'_','.');
-                  end
-                  % target is nigelab.Block
-                  blockName = blockName(1:min(end,...
-                     B(i).Pars.Notifications.NMaxNameChars));
-               end
-               animal = {A.Name};
-            otherwise
-               error(['nigeLab:' mfilename ':badInputType3'],...
-                  ['Unexpected "mode" value: ''%s''\n' ...
-                  '(should be ''obj'', ''index'', or ''name'')'],mode);
-         end % case
-      end % getSelectedItems
-      
       % Update the status table for TANK, ANIMAL, or BLOCK
-      function updateStatusTable(obj,~,~)
+      function updateStatusTable(obj,src,evt)
          %UPDATESTATUSTABLE  Update status table for TANK, ANIMAL, or BLOCK
          %
          %
-         
+         plotRecapBubbles(obj);
          nigelObj = obj.getHighestLevelNigelObj();
          if isempty(nigelObj)
             return;
@@ -559,17 +482,17 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             case 'Tank'  % tank
                setTankTable(obj);
             case 'Animal'  % animal
-               setAnimalTable(obj,SelectedItems);
+               setAnimalTable(obj);
             case 'Block'  % block
-               setBlockTable(obj,SelectedItems);
+               setBlockTable(obj);
          end
          
       end
    end
    
    % PROTECTED (in separate files)
-   methods (Access=protected)
-      qOperations(obj,operation,target,sel) % Wraps "do" methods of Block
+   methods (Access = {?nigeLab.libs.splitMultiAnimalsUI,?nigeLab.libs.DashBoard})
+     bar = qOperations(obj,operation,target,sel) % Wraps "do" methods of Block
    end
    
    % PROTECTED
@@ -582,47 +505,37 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          % Add listeners for 'Completed' or 'Changed' events
          obj.Listener = [...
-            addlistener(obj,'SelectionIndex','PostSet',...
-               @(~,~)obj.toggleSplitUIMenuEnable), ...
             addlistener(obj.Tank,'StatusChanged',...
                @obj.updateStatusTable), ...
             addlistener(obj.RemoteMonitor,'JobCompleted',...
-               @obj.refreshStats),...
-            addlistener(obj.splitMultiAnimalsUI,'SplitCompleted',...
-               @(~,e)obj.addToTree(e.nigelObj))];
-         
-         % Add listeners for Multi-Animals UI tree "pruning"
-         for a = obj.Tank.Children
-            obj.Listener = [obj.Listener,...
-               addlistener(a,'ObjectBeingDestroyed',...
-                  @obj.removeFromTree)];
-            for b = a.Children
-               obj.Listener = [obj.Listener, ...
-                  addlistener(b,'ObjectBeingDestroyed',...
-                     @obj.removeFromTree)];
-            end
-         end
-         obj.Listener = [obj.Listener, ...
-            addlistener(obj.Tank,'ObjectBeingDestroyed',...
-               @obj.removeFromTree)];
-         
+               @obj.refreshStats)];
+                  
          % Add listeners for uiContextMenu items so that they are
          % appropriately enabled or disabled according to the selection
+         fcnList = {{ @(~,evt)obj.uiCMenu_updateEnable(evt)},
+                    { @(src,evt)obj.updateAfterSelectionChanged(src,evt)}
+             };
          obj.Listener = [obj.Listener, ...
-            addlistener(obj,'TreeSelectionChanged',...
-               @(~,evt)obj.uiCMenu_updateEnable(evt))];
+            addlistener(obj.Tree,'TreeSelectionChanged',...
+              @(ObjH, EventData)nigeLab.utils.multiCallbackWrap(ObjH, EventData,fcnList))];
          
       end
       
       % Add a nigelObj to the tree
-      function addToTree(obj,nigelObj)
+      function addToTree(obj,nigelObj,addToTank)
          % ADDTOTREE  Add a nigelObj to the tree, for example after
          %            splitting multiple animals.
+         %            if addToTank is true, also attaches the nigelobj to
+         %            the tank in memory
          %
          %  Typical syntax:
          %  lh = addlistener(obj.splitMultiAnimalsUI,...
          %                    'splitCompleted',...
          %                    @(~,e)obj.addToTree(e.nigelObj));
+         
+         if nargin < 3
+             addToTank = false;
+         end
          
          switch class(nigelObj)
             case 'nigeLab.Tank'
@@ -636,43 +549,67 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                      AnNode = obj.Tree.Root.Children(indx);
                   else
                      AnNode = uiw.widget.CheckboxTreeNode(...
-                        'Name',AnNames{ii},'Parent',obj.Tree.Root);
-                     set(AnNode,'UserData',numAnimals+ii);
+                        'Name',AnNames{ii},...
+                        'Parent',obj.Tree.Root);
+                     set(AnNode,'UserData',{nigelObj.Key.Public});
+                     obj.Listener = [obj.Listener, ...
+                         addlistener(nigelObj(ii),'ObjectBeingDestroyed',...
+                         @obj.removeFromTree)];                     
                   end
 
-                  Metas = [nigelObj(ii).Children.Meta];
-                  BlNames = {Metas.RecID};
+                  nBlock = numel(nigelObj(ii).Children);
+                  BlNames = cell(1,nBlock);
+                  for iBlk = 1:nBlock
+                     cBlk = nigelObj(ii).Children(iBlk);
+                     if isfield(cBlk.Meta,'RecTag')
+                        BlNames{iBlk} = cBlk.Meta.RecTag;
+                     else
+                        BlNames{iBlk} = cBlk.Meta.RecID;
+                     end
+                     
+                  end
+                  
                   for jj=1:numel(BlNames)
                      BlNode = uiw.widget.CheckboxTreeNode(...
                         'Name',BlNames{jj},'Parent',AnNode);
-
-                     set(BlNode,'UserData',[numAnimals + ii,jj]);
+                    obj.Listener = [obj.Listener, ...
+                        addlistener(nigelObj(ii).Children(jj),'ObjectBeingDestroyed',...
+                        @obj.removeFromTree)];
+                     set(BlNode,'UserData',...
+                         {nigelObj(ii).Key.Public,nigelObj(ii).Children(jj).Key.Public});
                   end
-
-                  % Add animal to the block
-                  addChild(obj.Tank.Children,nigelObj(ii));
+                  if addToTank
+                      % Add animal to the block
+                      addChild(obj.Tank,nigelObj(ii));
+                  end
                end
             case 'nigeLab.Block'
-               Metas = [nigelObj.Meta];
-               AnNames = {Meta.AnimalID};
-               for ii =1:numel(AnNames)
-                  AnIndx = strcmp({obj.Tree.Root.Children.Name},AnNames(ii));
+               nBlock = numel(nigelObj);
+               for ii =1:nBlk
+                  AnIndx = strcmp({obj.Tree.Root.Children.Name},nigelObj(ii).Meta.AnimalID);
                   AnNode = obj.Tree.Root.Children(AnIndx);
-                  BlNames = {Metas.RecID};
-                  for jj=1:numel(BlNames)
-                     BlNode = uiw.widget.CheckboxTreeNode('Name',BlNames{jj},'Parent',AnNode);
-                     
-                     set(BlNode,'UserData',[numAnimal + ii,jj]);
+
+                  if isfield(nigelObj(ii).Meta,'RecTag')
+                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecTag,'Parent',AnNode);  
+                  else
+                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecID,'Parent',AnNode);   
                   end
-                  % actually add animals to block
-                  obj.Tank.Children(AnIndx).Children = [obj.Tank.Children(AnIndx).Children, nigelObj];
+                  set(BlNode,'UserData',{AnNode.UserData,nigelObj.Key.Public});
+                  obj.Listener = [obj.Listener, ...
+                      addlistener(nigelObj(ii),'ObjectBeingDestroyed',...
+                      @obj.removeFromTree)];  
+
+                  if addToTank
+                      % actually add animals to block
+                      obj.Tank.Children(AnIndx).Children = [obj.Tank.Children(AnIndx).Children, ...
+                         nigelObj(ii)];
+                  end
                end
             otherwise
                error(['nigeLab:' mfilename ':unrecognizedClass'],...
                   'Unexpected class: %s',class(nigelObj));
          end
          
-         nigeLab.libs.DashBoard.addToNode(animalNode,BlNames);
       end
       
       % Add buttons to interface
@@ -713,18 +650,14 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             nigeLab.libs.nigelButton(p, [0.15 0.70 0.70 0.275],'Save',...
             @obj.saveData),...
             nigeLab.libs.nigelButton(p, [0.15 1.00 0.70 0.275],'Split',...
-            @obj.toggleSplitMultiAnimalsUI,'start')];
+            {@obj.toggleSplitMultiAnimalsUI,'start'})];
          
          % By default, buttons are enabled
-         if obj.SelectionIndex(1,2) == 0
+         if ~any([obj.Tank.Children.MultiAnimals])
             setButton(obj.nigelButtons.Tree,'Split','Enable','off');
-         end
-         
-         obj.Listener = [obj.Listener, ...
-            addlistener(obj,'SelectionIndex','PostSet',...
-            @(~,~)obj.toggleSplitUIMenuEnable)];
-         
+         end   
       end
+      
       
       % Returns figure handle, with layout mediated by core nigelPanels
       function fig = buildGUI(obj)
@@ -751,7 +684,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             'NumberTitle','off',...
             'DeleteFcn',@(~,~)obj.delete);
 
-         
+         obj.nigelGUI = fig;
          % Create "Tree" panel (nodes are: Tank > Animal > Block)
          str    = {'TreePanel'};
          strSub = {''};
@@ -802,47 +735,23 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
       end
       
-      % Build Java objects associated with Tree object
-      function buildJavaObjs(obj)
-         % BUILDJAVAOBJS  Builds the Java objects associated with Tree
-         %
-         %  obj.buildJavaObjs(); Should just be called in constructor
-         
-         % Cosmetic adjustments
-         Jobjs = obj.Tree.getJavaObjects;
-         Jobjs.JScrollPane.setBorder(...
-            javax.swing.BorderFactory.createEmptyBorder)
-         Jobjs.JScrollPane.setComponentOrientation(...
-            java.awt.ComponentOrientation.RIGHT_TO_LEFT);
-      end
-      
       % Construct recap table for recording
-      function [recapTable,recapAx] = buildRecapObjects(obj,nigelPanelObj,hOff,vOff)
+      function buildRecapObjects(obj,Fields)
          % BUILDRECAPOBJECTS  Construct "recap table" for displaying basic
          %                    info about the recording, and "recap axes"
-         %                    for containing the result of PLOTRECAPCIRCLES
+         %                    for containing PLOTRECAPBUBBLES
          %
-         %  recapTable = obj.buildRecapTable(); Return recaptable uiw
-         %  recapTable = obj.buildRecapTable(hOff,vOff);
-         %  Set horizontal and vertical offset respectively (distance from
-         %     left side of panel to left side of table, or from bottom to
-         %     bottom, in normalized units).
+         %  obj.buildRecapTable(nFields);
+         %  --> nFields: number of fields (# columns in table)
          
-         if nargin < 4
-            vOff = .025;
-         end
-         
-         if nargin < 3
-            hOff = .025;
-         end
-         
-         if nargin < 2
-            nigelPanelObj = obj.getChild('StatsPanel');
-         end
-         
+
+         vOff = .025;
+         hOff = .025;
+         nigelPanelObj = obj.getChild('StatsPanel');
+         nField = numel(Fields);         
          ppos = nigelPanelObj.InnerPosition;
          tab_pos = ppos .* [1 1 1 .5] + [hOff vOff+.7 -hOff*2 -vOff*10];
-         recapTable = uiw.widget.Table(...
+         obj.RecapTable = uiw.widget.Table(...
             'Parent',nigelPanelObj.Panel,...
             'CellEditCallback',[],...
             'CellSelectionCallback',[],...
@@ -850,32 +759,48 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             'Position',tab_pos,...
             'BackgroundColor',obj.Color.panel,...
             'FontName','Droid Sans');
-         nigelPanelObj.nestObj(recapTable);
-         RecapTableMJScrollPane = recapTable.JControl.getParent.getParent;
+         nigelPanelObj.nestObj(obj.RecapTable);
+         RecapTableMJScrollPane = obj.RecapTable.JControl.getParent.getParent;
          RecapTableMJScrollPane.setBorder(...
             javax.swing.BorderFactory.createEmptyBorder);
          
          ax_pos = ppos .* [1 1 1 .5] + [hOff vOff -hOff*2 -vOff*4];
-         recapAx = axes(nigelPanelObj.Panel,...
+         obj.RecapAxes = axes(nigelPanelObj.Panel,...
             'Units','normalized', ...
             'Position', ax_pos,...
             'Tag','RecapAxes',...
             'Color','none',...
             'TickLength',[0 0],...
-            'XTickLabels',[],...
             'XAxisLocation','top',...
+            'XLimMode','manual',...
+            'XLim',[1 nField+1],...
             'LineWidth',0.005,...
             'GridColor','none',...
             'XColor',obj.Color.onPanel,...
             'YColor',obj.Color.onPanel,...
+            'NextPlot','add',...
             'YDir','reverse',...
+            'YLimMode','manual',...
+            'YLim',[0 1],...
             'Box','off',...
-            'FontName','DroidSans',...
+            'Clipping','off',...
+            'FontName','Droid Sans',...
             'FontSize',13,...
             'FontWeight','bold');
-         recapAx.XAxis.TickLabelRotation = 75;
-         % axes cosmetic adjustment
-         nigelPanelObj.nestObj(recapAx,'RecapAxes');
+         % axes cosmetic adjustment:
+         obj.RecapAxes.XAxis.TickLabelRotation = 75;
+         obj.RecapAxes.XAxis.TickLabel = Fields;
+         obj.RecapAxes.XAxis.TickValues = 1.5:(nField+0.5);
+         % This removes the X- and Y- borders (crazy to have to do that
+         % kind of workaround but oh well):
+         obj.RecapBackground =  ...
+            rectangle(obj.RecapAxes,...
+               'Position',[0.95 -0.05 (nField+0.60) 1.1],...
+               'Clipping','off',...
+               'EdgeColor','none',...
+               'FaceColor',obj.Color.panel);
+            
+         nigelPanelObj.nestObj(obj.RecapAxes,'RecapAxes');
          drawnow;
       end
       
@@ -916,58 +841,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          addButton(bar,'right',RButtons);
          obj.Children{5} = bar;
       end
-      
-      % Initializes the graphics tree widget
-      function Tree = buildTree(obj,nigelPanelObj)
-         % BUILDTREE  Method to initialize tree
-         %
-         %  Tree = obj.buildTree(); Automatically puts Tree in "Tree" panel
-         %  Tree = obj.buildTree(nigelPanelObj); Puts tree in assigned
-         %                                       nigelPanelObj.
-         
-         if nargin < 2
-            nigelPanelObj = obj.TreePanel;
-         end
-         
-         pos = nigelPanelObj.InnerPosition;
-         pos(3) = pos(3)/2;
-         if ~isempty(obj.Tree)
-            if isvalid(obj.Tree)
-               delete(obj.Tree);
-            end
-         end
-         Tree = uiw.widget.Tree(...
-            'SelectionChangeFcn',@obj.treeSelectionFcn,...
-            'Units', 'normalized', ...
-            'Position',pos,...
-            'FontName','Droid Sans',...
-            'FontSize',15,...
-            'Tag','Tree',...
-            'ForegroundColor',obj.Color.onPanel,...
-            'TreePaneBackgroundColor',obj.Color.panel,...
-            'SelectionBackgroundColor',obj.Color.enabled_selection,...
-            'BackgroundColor',obj.Color.panel,...
-            'TreeBackgroundColor',obj.Color.panel,...
-            'Units','normalized',...
-            'SelectionType','discontiguous');
-         
-         Tree.Root.Name = obj.Tank.Name;
-         
-         % Add animals to tank Tree
-         animalObj = obj.Tank.Children;
-         for ii = 1:numel(animalObj)
-            animalNode = uiw.widget.CheckboxTreeNode(...
-               'Name',animalObj(ii).Name,...
-               'Parent',Tree.Root,...
-               'UserData',ii);
-            
-            names = obj.getName(animalObj(ii),'Block');
-            nigeLab.libs.DashBoard.addToNode(animalNode,names);
-         end
-         
-         nigelPanelObj.nestObj(Tree,Tree.Tag);
-      end
-      
+        
       % LISTENER CALLBACK: Issued as obj.nigelGUI `CloseRequestFcn`
       function deleteDashBoard(obj)
          % DELETEDASHBOARD  CloseRequestFcn assigned property to ensure
@@ -977,6 +851,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          obj.nigelGUI(:) = []; % Remove object so not deleted twice
          delete(obj);
+         
       end
       
       % Delete all current event.listener object handles
@@ -1023,136 +898,118 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             'Label','Spike Sorting',...
             'Separator','on',...
             'Callback',@(~,~)obj.uiCMenuClick_Sort);
-         
-         set(obj.Tree,'UIContextMenu',treeContextMenu);
       end
       
       % Adds "recap circles" (rounded rectangles) to "Status" panel child
-      function plotRecapCircle(obj,Status,N,mask)
-         % PLOTRECAPCIRCLE  Plot overview of operations performed within the
+      function plotRecapBubbles(obj)
+         % PLOTRECAPBUBBLES  Plot overview of operations performed within the
          %                  "Stats" panel.
          %
-         %   obj.plotRecapCircle(Status);
-         %
          %   obj --  nigeLab.libs.DashBoard object
-         %   SelectedItems -- indexing matrix from tree/node structure where
-         %                    first column is animal index and second is
-         %                    block index.
-         %      --> If only a single "row" of SelectedItems (e.g. one block)
-         %          is given, then the behavior of the table changes such
-         %          that it shows individual channel statuses for that
-         %          block. Otherwise it looks at the "aggregate" stage
-         %          processing status based on combination of all channels'
-         %          progress on that stage and the channel mask (Block.Mask)
-         %
-         %  N   -- # Animals or # Channels (if single block)
-         %
-         %  mask  -- "masked" status 
          
-         cla(obj.RecapAxes);
-         
-         if nargin < 2
-            Status = obj.Status;       
-         end
-         
-         if nargin < 3
-            if iscell(Status)
-               N = numel(Status{1});
-            else
-               N = size(Status,1);
+         if ~isempty(obj.RecapBubble)
+            if isvalid(obj.RecapBubble)
+               delete(obj.RecapBubble);
+               obj.RecapBubble(:) = [];
             end
          end
-         
-         if nargin < 4
-            mask = true(1,N);
-         end
-         
+         thisObj = obj.Tree.SelectedItems;
+         S = obj.Status;
          nField = numel(obj.Fields);
-         % This removes the X- and Y- borders (crazy to have to do that
-         % kind of workaround but oh well):
-         rectangle(obj.RecapAxes,...
-                  'Position',[0.95 0.95 nField+1.1 N+1.1],...
-                  'Clipping','off',...
-                  'EdgeColor','none',...
-                  'FaceColor',obj.Color.panel);
+         mask = obj.Mask;
          
          h = obj.getHighestLevelNigelObj();
-         switch class(Status)
+         switch class(S)
             case 'cell'
-               obj.Status = Status;
+               
                % If it's a cell, this was a single block
-               xlim(obj.RecapAxes,[1 nField+1]);
-               ylim(obj.RecapAxes,[1 N+1]);
-               obj.RecapAxes.FontSize = 13;
                obj.RecapAxes.YAxis.FontSize = 16;
                obj.RecapAxes.YAxis.TickLabel = {'1'};
-               obj.RecapAxes.YAxis.TickValues = (N+1)/2;
+               obj.RecapAxes.YAxis.TickValues = 0.5; % In the middle
                for ii=1:nField
-                  switch numel(Status{ii})
-                     case 1
-                        if Status{ii}
+                  switch numel(S{ii})
+                     case 1 % Case: single large block represents this Field
+                        if S{ii}
                            if any(mask)
                               % Complete/Enabled
                               % (mask is all set to false if enable=false)
-                              rectangle(obj.RecapAxes,'Position',[ii 1 .97 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 .97 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.enabled_selection,...
                                  'LineWidth',1.5,...
-                                 'EdgeColor',[.2 .2 .2]);
+                                 'EdgeColor',[.2 .2 .2])];
                            else
                               % Complete/Not Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 .97 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 .97 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.enabled_selection*0.5,...
                                  'LineWidth',1.5,...
-                                 'EdgeColor',[.2 .2 .2]);
+                                 'EdgeColor',[.2 .2 .2])];
                            end
                         else
                            if mask
                               % Incomplete/Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 1 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 1 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.button,...
-                                 'EdgeColor','none');
+                                 'EdgeColor','none')];
                            else
                               % Incomplete/Not Enabled
-                              rectangle(obj.RecapAxes,'Position',[ii 1 1 N],...
+                              obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii 0 1 1],...
                                  'Curvature',[0.3 0.6],...
                                  'FaceColor',obj.Color.button*0.5,...
-                                 'EdgeColor','none');
+                                 'EdgeColor','none')];
                            end
                         end
-                     otherwise
-                        for jj = 1:numel(Status{ii})
-                           if Status{ii}(jj)
+                     otherwise % Case: multiple smaller blocks represent progress
+                        for jj = 1:numel(S{ii}) % jj is height (channel)
+                           hh = 0.97/numel(S{ii}); % portion of height
+                           ht = 1/numel(S{ii}); % total height
+                           y = (jj-1)*ht;
+                           ft = getFieldType(obj.Tank,obj.Fields{ii});
+                           if strcmpi(ft,'Channels')
+                              mask = obj.Mask;
+                           else
+                              % "always good" if non-Channels
+                              mask = true(1,numel(S{ii})); 
+                           end
+                           if S{ii}(jj)
                               if mask(jj)
                                  % Complete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.enabled_selection,...
                                     'LineWidth',1.5,...
-                                    'EdgeColor',[.2 .2 .2]);
+                                    'EdgeColor',[.2 .2 .2])];
                               else
                                  % Complete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.enabled_selection*0.5,...
                                     'LineWidth',1.5,...
-                                    'EdgeColor',[.2 .2 .2]);
+                                    'EdgeColor',[.2 .2 .2])];
                               end
                            else
                               if mask(jj)
                                  % Incomplete/Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.button,...
-                                    'EdgeColor','none');
+                                    'EdgeColor','none')];
                               else
                                  % Incomplete/Not Enabled
-                                 rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                                 obj.RecapBubble = [obj.RecapBubble, ...
+                                    rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                                     'Curvature',[0.3 0.6],...
                                     'FaceColor',obj.Color.button*0.5,...
-                                    'EdgeColor','none');
+                                    'EdgeColor','none')];
                               end
                            end % if
                         end % jj
@@ -1160,68 +1017,72 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end % ii
                
             case 'logical'
-               obj.Status = Status;
                % Then "channels" are condensed (multi-block, animal, or
                % tank selection)
-               [N,~] = size(Status);
-               xlim(obj.RecapAxes,[1 nField+1]);
-               ylim(obj.RecapAxes,[1 N+1]);
+               N = size(S,1);
                obj.RecapAxes.YAxis.FontSize = max(5,16-N);
-               obj.RecapAxes.XAxis.FontSize = 13;
-               obj.RecapAxes.YAxis.TickLabel = cellstr( num2str((1:N)'));
-               obj.RecapAxes.YAxis.TickValues = 1.5:N+0.5;
-               for jj=1:N
-                  for ii=1:nField
-                     if Status(jj,ii)
+               obj.RecapAxes.YAxis.TickLabel = ...
+                  cellstr( num2str((1:N)'));
+               hOff = (0.985/N)/2; % Average "mid-height"
+               obj.RecapAxes.YAxis.TickValues = linspace(hOff,1-hOff,N);
+               
+               hh = 0.97/N; % Fraction of height
+               ht = 1/N; % Total height
+               for jj=1:N % jj is height (N is total number of rows always)
+                  y = (jj-1)*ht;
+                  for ii=1:nField % ii is horizontal (field)
+                     
+                     if S(jj,ii)
                         if mask(jj)
+                           
                            % Complete/Enable
-                           rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
-                              'Curvature',[0.3 0.6],...
-                              'FaceColor',obj.Color.enabled_selection,...
-                              'LineWidth',1.5,...
-                              'EdgeColor',[.2 .2 .2]);
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
+                                 'Curvature',[0.3 0.6],...
+                                 'FaceColor',obj.Color.enabled_selection,...
+                                 'LineWidth',1.5,...
+                                 'EdgeColor',[.2 .2 .2])];
                         else
                            % Complete/Not Enable
-                           rectangle(obj.RecapAxes,'Position',[ii jj .97 .97],...
-                              'Curvature',[0.3 0.6],...
-                              'FaceColor',obj.Color.enabled_selection*0.5,...
-                              'LineWidth',1.5,...
-                              'EdgeColor',[.2 .2 .2]);
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                                 rectangle(obj.RecapAxes,'Position',[ii y .97 hh],...
+                                 'Curvature',[0.3 0.6],...
+                                 'FaceColor',obj.Color.enabled_selection*0.5,...
+                                 'LineWidth',1.5,...
+                                 'EdgeColor',[.2 .2 .2])];
                         end
                      else
                         if mask(jj)
                            % Incomplete/Enabled
-                           rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                              rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                               'Curvature',[0.3 0.6],...
                               'FaceColor',obj.Color.button,...
-                              'EdgeColor','none');
+                              'EdgeColor','none')];
                         else
                            % Incomplete/Not Enabled
-                           rectangle(obj.RecapAxes,'Position',[ii jj 1 1],...
+                           obj.RecapBubble = [obj.RecapBubble, ...
+                              rectangle(obj.RecapAxes,'Position',[ii y 1 ht],...
                               'Curvature',[0.3 0.6],...
                               'FaceColor',obj.Color.button*0.5,...
-                              'EdgeColor','none');
+                              'EdgeColor','none')];
                         end
                      end % if
                   end % ii
                end % jj
             case 'double'
-               Status = logical(Status);
-               N = size(Status,1);
-               obj.plotRecapCircle(Status,N,mask);
+               obj.Status = logical(S);
+               obj.plotRecapBubbles();
                return;
             otherwise
                error(['nigeLab:' mfilename ':badInputType2'],...
-                  'Unexpected Status class: %s',class(Status));
+                  'Unexpected obj.Status class: %s',class(S));
          end
-         
-         obj.RecapAxes.XAxis.TickLabel = obj.Fields;
-         obj.RecapAxes.XAxis.TickValues = 1.5:nField+0.5;
       end
       
       % Refresh the "Stats" table when a stage is updated
       function refreshStats(obj,~,evt)
-         % REFRESHSTATS  Callback to refresh the "stats" table when a stage
+         % REFRESHSTATS  Callback to refresh the Status table when a stage
          %               is updated.
          %
          %  Example usage:
@@ -1234,48 +1095,37 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %           'JobCompleted' event, which is a
          %           nigeLab.evt.jobCompleted custom event
          
-         idx = evt.BlockSelectionIndex;
-         b = obj.Tank.Children(idx(1)).Children(idx(2));
-         reload(b);
-         b.IsDashOpen = true;
+         idx = evt.BlockKey;
+         b = obj.Tank.Children.findByKey(idx(1)).Children.findByKey(idx(2));
+         reload(b,'Status');
+         b.GUI = obj; % Store association to GUI
          
-         h = obj.getHighestLevelNigelObj();
+         h = obj.Tree.SelectedItems;
          switch h.Type
             case 'Tank'
                [~,a] = getSelectedItems('obj');
-               a_all = obj.Tank.Children;
+               a_all = h.Children;
                idx = ismember(a_all,a);
-               status = getStatus(obj.Tank,[]);
+               status = getStatus(h,[]);
                obj.Status = status(idx,:);
+               obj.Mask = nigeLab.libs.DashBoard.animal2info(h);
+               
             case 'Animal'
                b_all = getSelectedItems('obj');
                idx = find(b==b_all,1,'first');
                obj.Status(idx,:) = getStatus(b,[]);
+               obj.Mask = nigeLab.libs.DashBoard.animal2info(h);
+               
             case 'Block' % Make sure current block is in selection
-               allAnimalNodes = get(obj.Tree.Root,'Children');
-               if iscell(allAnimalNodes)
-                  allAnimalNodes = horzcat(allAnimalNodes{:});
-               end
-               allBlockNodes = get(allAnimalNodes,'Children');
-               if iscell(allBlockNodes)
-                  allBlockNodes = horzcat(allBlockNodes{:});
-               end
-               block2update = findobj(allBlockNodes,'UserData',idx);
+               
+               block2update = obj.Tree.getNodes(idx);
                selEvt = struct(...
                   'Nodes',cat(1,obj.Tree.SelectedNodes,block2update),...
                   'AddedNodes',block2update);
-               obj.treeSelectionFcn([],selEvt);
-               if numel(obj.Tree.SelectedNodes)==1
-                  obj.Status = cell(1,numel(b.Fields));
-                  for i = 1:numel(b.Fields)
-                     obj.Status{i} = getStatus(b,b.Fields{i});
-                  end
-               else
-                  idx = find(obj.Tree.SelectedNodes==block2update,1,'first');
-                  obj.Status(idx,:) = getStatus(b,[]);
-               end
+               obj.Tree.changeTreeSelection(block2update);
+               [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.block2info(b);
          end
-         obj.plotRecapCircle();
+         obj.plotRecapBubbles();
          
       end
       
@@ -1300,21 +1150,31 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  addlistener(nigelObj,...
          %     'ObjectBeingDestroyed',@obj.removeFromTree);
          
+         if isempty(obj)
+            Tree = gobjects(1);
+            delete(Tree);
+            return;
+         elseif ~isvalid(obj)
+            Tree = gobjects(1);
+            delete(Tree);
+            return;
+         end
          Tree = obj.Tree;
          switch class(src)
             case 'nigeLab.Tank'
                ...
             case 'nigeLab.Animal'
             A=obj.Tank.Children;
-            indx = find(src == A);
+            indx = (src == A);
             
             obj2del = obj.Tree.Root.Children(indx);
-            if obj2del.Name == src.Name % useless check  but just to be sure
+            if strcmp(obj2del.Name,src.Name) % useless check  but just to be sure
                delete(obj2del);
-               UserData = cellfun(@(x) x-1,{obj.Tree.Root.Children(indx:end).UserData},'UniformOutput',false);
-               [obj.Tree.Root.Children(indx:end).UserData]=deal(UserData{:});
             else
-               nigeLab.utils.cprintf('SystemCommands','There is mimatch between the tank loaded in the dashboard and the one in memory.\n Try to reload it!');
+               nigeLab.utils.cprintf('SystemCommands*',...
+                  ['There is mimatch between the Tank loaded ' ...
+                  'in nigelDash and the one in memory.\n ' ...
+                  'Try to reload it!'],obj.Tank.Verbose);
             end
             
             case 'nigeLab.Block'
@@ -1324,10 +1184,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                obj2del = obj.Tree.Root.Children(indx(1)).Children(min(indx(2),end));
                if obj2del.Name == src.Meta.RecID % useless check  but just to be sure
                   delete(obj2del);
-                  UserData = cellfun(@(x) x-[0 1],{obj.Tree.Root.Children(indx(1)).Children(indx(2):end).UserData},'UniformOutput',false);
-                  [obj.Tree.Root.Children(indx(1)).Children(indx(2):end).UserData]=deal(UserData{:});
                else
-                  nigeLab.utils.cprintf('SystemCommands','There is mimatch between the tank loaded in the dashboard and the one in memory.\n Try to reload it!');
+                  nigeLab.utils.cprintf('SystemCommands*',...
+                  ['There is mimatch between the Tank loaded ' ...
+                  'in nigelDash and the one in memory.\n ' ...
+                  'Try to reload it!'],obj.Tank.Verbose);
                end
          end
          
@@ -1344,7 +1205,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          tt = obj.Tank.list;
          tCell = table2cell(tt);
-         status = obj.Tank.getStatus(obj.Fields);
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.tank2info(obj.Tank);
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1361,12 +1222,12 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         a = [obj.Tank.Children];
-         plotRecapCircle(obj,status,numel(a),[a.IsMasked]);
+         
+         plotRecapBubbles(obj);
       end
       
       % Set the "ANIMAL" table -- the display showing processing status
-      function setAnimalTable(obj,SelectedItems)
+      function setAnimalTable(obj)
          % SETANIMALTABLE  Creates "ANIMAL" table for currently-selected
          %                 NODE, indicating the current state of processing
          %                 for a given nigeLab.Animal object.
@@ -1376,20 +1237,14 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  SelectedItems  --  Subset of nodes corresponding to
          %                     currently-selected nigeLab.Animal objects.
          %                    --> This is an indexing array
-         
-         if nargin < 2
-            [~,A] = obj.getSelectedItems('obj');
-         else
-            A = obj.Tank.Children(SelectedItems);
-         end
+         A = obj.Tree.SelectedItems;
          f = A(1).Children(1).Fields;
          tCell = [];
-         status = [];
          for ii=1:numel(A)
             tt = A(ii).list;
             tCell = [tCell; table2cell(tt)];
-            status = [status; A(ii).getStatus(obj.Fields)];
          end
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.animal2info(A);
          nonStatusCols = ~strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,nonStatusCols);
          header = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1403,22 +1258,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormatData = header(:,2);
          w.Data = tCell;
          N = numel(A);
-         if N > 1
-            tmp_mask = [A.IsMasked];
-            mask = [];
-            for i = 1:numel(A)
-               b = A(i).Children;
-               mask = [mask, [b.IsMasked] & repmat(tmp_mask(i),1,numel(b))];
-            end
-         else
-            b = [A.Children];
-            mask = [b.IsMasked];
-         end
-         plotRecapCircle(obj,status,N,mask);
+         plotRecapBubbles(obj);
       end
       
       % Set the "BLOCK" table -- the display showing processing status
-      function setBlockTable(obj,SelectedItems)
+      function setBlockTable(obj)
          % SETBLOCKTABLE  Creates the "BLOCK" table for currently-selected
          %                NODE, indicating the current state of processing
          %                for a given nigeLab.Block object.
@@ -1430,40 +1274,13 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %                    --> This is an indexing matrix, where the
          %                        first column indexes Animals and the
          %                        second column indexes Block.
-         
-         if nargin < 2
-            B = obj.getSelectedItems('obj');
-         else
-            B = obj.Tank{SelectedItems};
-         end
+         B = obj.Tree.SelectedItems;
          tt = list(B);
          if isempty(tt)
             return;
          end
          tCell = table2cell(tt);
-         s = getStatus(B,obj.Fields);
-         if numel(B) == 1
-            status = cell(size(s));
-            iCh = B.getFieldTypeIndex('Channels');
-            for i = 1:numel(status)
-               if iCh(i)
-                  status{i} = B.getStatus(obj.Fields{i});
-               else
-                  status{i} = s(i);
-               end
-            end
-            nCh = B.NumChannels;
-            vec = 1:nCh;
-            if B.IsMasked
-               mask = ismember(vec,B.Mask);
-            else
-               mask = false(size(vec));
-            end
-         else
-            status = s;
-            nCh = 1;
-            mask = [B.IsMasked];
-         end
+         [obj.Mask,obj.Status] = nigeLab.libs.DashBoard.block2info(B);
          StatusIndx = strcmp(tt.Properties.VariableNames,'Status');
          tCell = tCell(:,not(StatusIndx));
          columnFormatsAndData = cellfun(@(x) class(x), tCell(1,:),'UniformOutput',false);
@@ -1474,7 +1291,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          w.ColumnFormat = columnFormatsAndData(:,1);
          w.ColumnFormatData = columnFormatsAndData(:,2);
          w.Data = tCell;
-         plotRecapCircle(obj,status,nCh,mask);
+         plotRecapBubbles(obj);
          
       end
       
@@ -1516,100 +1333,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
             uit.ColumnWidth{3} = width*0.725;
          end
       end
-      
-      % Toggles the split UI menu button depending on nodes that are click
-      function toggleSplitUIMenuEnable(obj)
-         % TOGGLESPLITUIMENUENABLE  Toggles the split UI menu depending on
-         %                          what is clicked.
-         %
-         %  Syntax:
-         %  addlistener(obj,'SelectionIndex','PostSet',...
-         %                 @(~,~)obj.toggleSplitUIMenuEnable);
-         
-         % If TANK is clicked, disable
-         if obj.SelectionIndex(1,2) == 0
-            setButton(obj.nigelButtons.Tree,'Split','Enable','off');
-            return;
-         end
-         
-         A = obj.Tank.Children;
-         if all([A(obj.SelectionIndex(:,2)).MultiAnimals])
-            % Only enable the button if ALL are multi-animals
-            setButton(obj.nigelButtons.Tree,'Split','Enable','on');
-         else
-            setButton(obj.nigelButtons.Tree,'Split','Enable','off');
-         end
-      end
-      
-      % Function for interfacing with the tree based on current selection
-      function treeSelectionFcn(obj,Tree,nodeEvent)
-         % TREESELECTIONFCN  Interfaces with the Tree based on the current
-         %                   selection. Used as SELECTIONCHANGEDFCN for
-         %                   uiw.widget.Tree 'SelectionChanged' event
-         %
-         %  node = uiw.widget.Tree('Parent',obj.Tree);
-         %  node.SelectionChangedFcn = @obj.treeSelectionFcn;
-         %
-         %  obj  --  nigeLab.libs.DashBoard class object
-         %  Tree  --  "Source" object
-         %  nodeEvent  --  "EventData" that has field .AddedNodes, which 
-         %                 can be used in combination with .UserData to 
-         %                 figure out which Animal and Block combinations 
-         %                 were selected.
-         %
-         %     --> nodeEvent.Nodes      :  Currently-selected nodes
-         %     --> nodeEvent.AddedNodes :  New nodes
-         
-         if isempty(Tree)
-            Tree = obj.Tree;
-         end
-         
-         NumNewNodes = numel(nodeEvent.AddedNodes);
-         % Get UserData indexing all OLD nodes (from previous selection)
-         OldNodeType = min( cellfun(@(x) numel(x), ...
-            {nodeEvent.Nodes(1:(end-NumNewNodes)).UserData}));
-         % Get UserData indexing ALL nodes
-         AllNodeType =  cellfun(@(x) numel(x), {nodeEvent.Nodes.UserData});
-         
-         % Prevent bad concatenation things
-         NodesToRemove = not(AllNodeType==OldNodeType);
-         Tree.SelectedNodes(NodesToRemove) = [];
-         
-         SelectedItems = cat(1,Tree.SelectedNodes.UserData);
-         obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
-         [blockObj,animalObj] = obj.getSelectedItems('obj');
-
-         switch  size(SelectedItems,2) % After cat they will have same #
-            case 0  % tank
-               setTankTable(obj);
-               setParamsTable(obj,obj.Tank);
-            case 1  % animal
-               if numel(animalObj) > 1
-                  Tree.SelectedNodes = Tree.SelectedNodes([animalObj.IsMasked]);
-                  SelectedItems = cat(1,Tree.SelectedNodes.UserData);
-                  animalObj = animalObj([animalObj.IsMasked]);
-                  obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
-               end
-               evt = nigeLab.evt.treeSelectionChanged(...
-                  obj.Tank,obj.SelectionIndex,'Animal');
-               notify(obj,'TreeSelectionChanged',evt);
-               setAnimalTable(obj,SelectedItems);
-               setParamsTable(obj,animalObj);
-            case 2  % block
-               if numel(blockObj) > 1
-                  Tree.SelectedNodes = Tree.SelectedNodes([blockObj.IsMasked]);
-                  SelectedItems = cat(1,Tree.SelectedNodes.UserData);
-                  blockObj = blockObj([blockObj.IsMasked]);
-                  obj.SelectionIndex = obj.selectedItems2Index(SelectedItems);
-               end
-               evt = nigeLab.evt.treeSelectionChanged(...
-                  obj.Tank,obj.SelectionIndex,'Block');
-               notify(obj,'TreeSelectionChanged',evt);
-               setBlockTable(obj,SelectedItems);
-               setParamsTable(obj,blockObj);
-         end
-      end
-      
+            
       % LISTENER CALLBACK: Any `doMethod` menu item click
       function uiCMenuClick_doAction(obj,m,~)
          % UICMENUCLICK_DOACTION  Callback for clicks on tree interface
@@ -1628,18 +1352,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  Key fields of m:
          %  --> 'Label' :: Char array for the current 'do' method to run
          
-         % Make a column vector of Animal Indices from any selected
-         % (highlighted) animal node
-         SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
          
          % Depending on what is in this array, we will run our extraction
          % methods at different levels (e.g. Tank vs Animal vs Block). We
          % can figure out what level was selected based on the number of
          % unique "counts" of UserData
          tankObj = obj.Tank;
-         switch  unique(cellfun(@(x) numel(x), ...
-               {obj.Tree.SelectedNodes.UserData}))
-            case 0  % tank
+         SelectedItems = obj.Tree.SelectedItems;
+         switch  obj.Tree.SelectedItemsType
+            case 'Tank'  % tank
                [fmt,idt,type] = tankObj.getDescriptiveFormatting();
                nigeLab.utils.cprintf(fmt,...
                   '%s[%s]: Submitting batch job for %s (%s)\n',...
@@ -1647,7 +1368,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                for ii = 1:numel(tankObj.Children)
                	A = tankObj.Children(ii);
                   if A.IsMasked
-                     obj.qOperations(m.Label,A,ii);
+                     obj.qOperations(m.Label,A,getKey(A));
                   else
                      [fmt,idt,type] = A.getDescriptiveFormatting();
                      nigeLab.utils.cprintf(fmt,...
@@ -1655,11 +1376,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                         idt,upper(m.Label),type,A.Name);
                   end
                end
-            case 1  % animal
-               for ii=1:size(SelectedItems,1)
-                  A = tankObj.Children(SelectedItems(ii));
+            case 'Animal'  % animal
+               for ii=1:numel(SelectedItems)
+                  A = SelectedItems(ii);
                   if A.IsMasked
-                     obj.qOperations(m.Label,A,SelectedItems(ii));
+                     obj.qOperations(m.Label,A,A.getKey);
                   else
                      [fmt,idt,type] = A.getDescriptiveFormatting();
                      nigeLab.utils.cprintf(fmt,...
@@ -1667,11 +1388,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                         idt,upper(m.Label),type,A.Name);
                   end
                end
-            case 2  % block
-               for ii = 1:size(SelectedItems,1)
-                  B = tankObj{SelectedItems(ii,1),SelectedItems(ii,2)};
+            case 'Block'  % block
+               for ii = 1:numel(SelectedItems)
+                  B = SelectedItems(ii);
                   if B.IsMasked
-                     obj.qOperations(m.Label,B,SelectedItems(ii,:));
+                     obj.qOperations(m.Label,B,{B.Parent.getKey ,B.getKey});
                   else
                      [fmt,idt,type] = B.getDescriptiveFormatting();
                      nigeLab.utils.cprintf(fmt,...
@@ -1689,9 +1410,18 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  mitem.Callback = @(~,~)obj.uiCMenuClick_Sort;
          %
          %  Runs the spike sorting interface.
-         
-         blockObj = obj.getSelectedItems('obj');
-         Sort(blockObj); % Invoke sorting interface
+         nigelObj = obj.Tree.SelectedItems;
+         switch nigelObj.Type
+             case 'Block'
+                  Sort(nigelObj);
+             case 'Animal'
+                 if numel(nigelObj)>1
+                     error('You can only sort one aniaml at a time!');
+                 end
+                 Sort(nigelObj);
+             case 'Tank'
+                 error('Sort operation is not possible on the whole tank at once.\nPlease select an Animal or a Block.');
+         end
       end
       
       % LISTENER CALLBACK: Menu item toggle child mask on "Enable" click
@@ -1759,7 +1489,23 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          end
       end
       
-   end
+      % LISTENER CALLBACK: updates Tables, bubbles and params
+      function updateAfterSelectionChanged(obj,src,evt)
+          switch evt.SourceType
+              case 'Tank'
+                  setTankTable(obj);
+              case 'Animal'
+                  setAnimalTable(obj);
+              case 'Block'
+                  setBlockTable(obj);
+              otherwise
+          end
+               setParamsTable(obj,src.SelectedItems);
+      end
+          
+          
+      end
+   
    
    % RESTRICTED: nigeLab.libs.splitMultiAnimalsUI
    methods (Access=?nigeLab.libs.splitMultiAnimalsUI)
@@ -1777,46 +1523,17 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          
          switch mode
             case 'start'
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               switch  unique(cellfun(@(x) numel(x), {obj.Tree.SelectedNodes.UserData}))
-                  case 0  % tank
-                     idx= find([obj.Tank.Children.MultiAnimals],1);
-                     obj.Tree.SelectedNodes = obj.Tree.Root.Children(idx).Children(1);
-                  case 1  % animal
-                     
-                     % If this animal is a "multi-animal" Animal, then
-                     % cycle through its children, finding "multi-animal"
-                     % blocks.
-                     if obj.Tank.Children(SelectedItems).MultiAnimals
-                        obj.Tree.SelectedNodes = obj.Tree.SelectedNodes.Children(1);
-                     else
-                        errordlg('This is not a multiAnimal!');
-                        return;
-                     end % if MultiAnimals
-                     
-                     
-                  case 2  % block
-                     if ~obj.Tank.Children(SelectedItems(1)).Children(SelectedItems(2)).MultiAnimals
-                        errordlg('This is not a multiAnimal!');
-                        return;
-                     end % if ~MultiAnimals
-               end % case
-               
-               % Ensure that only 1 "child" object is selected at a time
-               obj.getChild('TreePanel').getChild('Tree').SelectionType = 'single';
-               if isvalid(obj.splitMultiAnimalsUI)
-                  obj.splitMultiAnimalsUI.toggleVisibility;
-                  return;
-               else
-                  % 'start' is only entered via button-click
-                  toggleSplitMultiAnimalsUI(obj,'init');
-               end % if isvalid
-               
-               % TODO disable nodes without multiAnimal flag!
-               %                    [obj.Tree.Root.Children(find([obj.Tank.Children.MultiAnimals])).Enable] = deal('off');
+                % pop multi aniamsl interface up
+                if ~isempty(obj.splitMultiAnimalsUI) && isvalid(obj.splitMultiAnimalsUI)
+                    obj.splitMultiAnimalsUI.toggleVisibility('on');
+                    obj.Tree.changeTreeSelection([])
+                else
+                    toggleSplitMultiAnimalsUI(obj,'init');
+                    toggleSplitMultiAnimalsUI(obj,'start');
+                end
+ 
             case 'stop'
-               obj.getChild('TreePanel').getChild('Tree').SelectionType = ...
-                  'discontiguous';
+               
                % TODO reenable nodes without multiAnimal flag!
                if any([obj.Tank.Children.MultiAnimals])
                   obj.splitMultiAnimalsUI.toggleVisibility;
@@ -1826,54 +1543,17 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end
                
             case 'init'
-               % First, make sure the selection is valid
+               % First, make sure the Tank contains multiAnimals
                
-               % The multiAnimalsUI must be opened
-               SelectedItems = cat(1,obj.Tree.SelectedNodes.UserData);
-               % Note that SelectedItems only contains nodes of a specific
-               % type, based on exclusion done in `treeSelectionFcn`.
-               % Therefore the vertical concatenation above is always valid
-               nCol = size(SelectedItems,2);
-               switch  nCol
-                  case 0  % tank
-                     % Cannot be invoked at "TANK" level
-                     error(['nigeLab:' mfilename ':badCase'],...
-                        'Should not be able to enter split UI from TANK level.');
-                  case 1  % animal
-                     % Gets all blocks of selected animals
-                     B = obj.Tank{SelectedItems(1),:};
-                     A = repmat(obj.Tank{SelectedItems(1)},1,numel(B));
-                     for i = 1:numel(SelectedItems)
-                        b = obj.Tank{SelectedItems(i),:};
-                        B = [B, b];
-                        A = [A, ...
-                           repmat(obj.Tank{SelectedItems(i)},1,numel(b))];
-                     end
-                     
-                  case 2  % block
-                     % Get specific subset of block or blocks
-                     A = obj.Tank{SelectedItems(:,1)};
-                     B = obj.Tank{SelectedItems};
-               end % switch nCol
+               an = obj.Tank.Children;
+               an = an([an.MultiAnimals]);
                
-               if ~all([A.MultiAnimals])
-                  return;
-               end
+               if isempty(an)
+                   errordlg('This is not a multiAnimal!');
+                   return;
+               end % if ~MultiAnimals
                
-               if ~all([B.MultiAnimals])
-                  return;
-               end
-               
-               obj.toSplit = struct('Animal',cell(numel(A),1),...
-                  'Block',cell(numel(B),1));
-               for i = 1:numel(obj.toSplit)
-                  obj.toSplit(i).Animal = A(i);
-                  obj.toSplit(i).Block = B(i);
-               end
-               obj.toAdd = struct('Animal',{},'Block',{});
-               
-               obj.splitMultiAnimalsUI = ...
-                  nigeLab.libs.splitMultiAnimalsUI(obj);
+               obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(an);
                
          end % switch mode
       end
@@ -1896,7 +1576,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   obj.Tank.addChild([]); % Empty -> prompt for selection
                case 'nigeLab.Block'
                   %% Add nigeLab.Block
-                  [~,a] = obj.getSelectedItems('obj');
+                  a = nigelObj.Parent;
                   if numel(a) > 1
                      [~,idx]=nigeLab.utils.uidropdownbox('Animal Selector',...
                         'Select "parent" Animal',...
@@ -2165,49 +1845,73 @@ classdef DashBoard < handle & matlab.mixin.SetGet
    
    % STATIC,PUBLIC
    methods (Static,Access=public)
+      % Convert animal object or array into corresonding mask & status
+      function [mask,status] = animal2info(A)
+         %ANIMAL2INFO  Convert animal object array to mask & status
+         %
+         %  [mask,status] = nigeLab.libs.DashBoard.animal2info(A)
+         
+         status = [];
+         for ii = 1:numel(A)
+            status = [status; A(ii).getStatus(A(ii).Fields)];
+         end
+         if numel(A) > 1
+            tmp_mask = [A.IsMasked];
+            mask = [];
+            for i = 1:numel(A)
+               b = A(i).Children;
+               mask = [mask, [b.IsMasked] & repmat(tmp_mask(i),1,numel(b))];
+            end
+         else
+            b = [A.Children];
+            mask = [b.IsMasked];
+         end
+      end
+      
+      % Convert block object or array into corresponding mask & status
+      function [mask,status] = block2info(B)
+         %BLOCK2INFO  Convert block object array to corresponding mask vec
+         %
+         %  mask = nigeLab.libs.DashBoard.block2mask(B);
+         %
+         %  B: nigeLab.Block scalar object or array
+         
+         if numel(B) == 1
+            status = cell(1,numel(B.Fields));
+            for i = 1:numel(status)
+               status{i} = B.getStatus(B.Fields{i});
+            end
+            nCh = B.NumChannels;
+            vec = 1:nCh;
+            if B.IsMasked
+               mask = ismember(vec,B.Mask);
+            else
+               mask = false(size(vec));
+            end
+         else
+            status = getStatus(B,[]);
+            nCh = 1;
+            mask = [B.IsMasked];
+         end
+      end
+      
+      % Convert tank object to corresponding mask & status
+      function [mask,status] = tank2info(T)
+         %TANK2INFO  Convert tank object array to mask & status
+         %
+         %  [mask,status] = nigeLab.libs.DashBoard.tank2info(tankObj);
+         
+         status = T.getStatus(T.Fields);
+         a = [T.Children];
+         mask = [a.IsMasked];
+      end
+      
       function obj = empty()
          %EMPTY  Returns empty object
          %
          %  obj = nigeLab.libs.DashBoard.empty();
          
          obj = nigeLab.libs.DashBoard([0 0]);
-      end
-      
-      % Translates "SelectedItems" (nodes UserData) to "selection index"
-      function sel = selectedItems2Index(items)
-         % SELECTEDITEMS2INDEX  Returns the "indexing" for SelectedItems
-         %                       from UserData of nodes on obj.Tree
-         %
-         %  sel = obj.selectedItems2Index(items);
-         %
-         %  >> obj.SelectionIndex = selectedItems2Index(items);
-         %
-         %  sel : [tankIndex animalIndex blockIndex];
-         %     --> If tank only, always is [1 0 0];
-         %     --> If animal or block, then is [1 iAk iBkj]
-         %        Where iAk is the k-th animal's index, and iBkj is the
-         %        j-th block of the k-th animal. If only animals are
-         %        selected, then it will create rows for all block
-         %        "children" of the animal.
-         
-         % tankObj
-         if isempty(items)
-            sel = [1 0 0];
-            return;
-         end
-         
-         % animalObj
-         if size(items,2) == 1
-            sel = [ones(numel(items),1), items, zeros(numel(items),1)];
-            return;
-         end
-         
-         % blockObj
-         if size(items,2) == 2
-            sel = ones(size(items,1),3);
-            sel(:,[2,3]) = items;
-            return;
-         end
       end
       
       % Update status

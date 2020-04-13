@@ -1,5 +1,5 @@
 function flag = doSD(blockObj)
-%% DOSD   Detects spikes after raw extraction and unit filter
+%DOSD   Detects spikes after raw extraction and unit filter
 %
 %  EXAMPLE USAGE
 %  -------------------------------------------------------
@@ -10,7 +10,7 @@ function flag = doSD(blockObj)
 %
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
-%% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
+% LOAD DEFAULT PARAMETERS FROM HARD-CODED SOURCE FILE
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
@@ -35,12 +35,12 @@ end
 [~,pars] = blockObj.updateParams('SD');
 pars.FS = blockObj.SampleRate;
 
-%% UPDATE STATUS FOR THESE STAGES
+% UPDATE STATUS FOR THESE STAGES
 blockObj.updateStatus('Spikes',false,blockObj.Mask);
 blockObj.updateStatus('SpikeFeatures',false,blockObj.Mask);
 blockObj.updateStatus('Artifact',false,blockObj.Mask);
 
-%% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
+% GO THROUGH EACH CHANNEL AND EXTRACT SPIKE WAVEFORMS AND TIMES
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doSD','Spike');
    str = sprintf('%s-Detection',str);
@@ -64,9 +64,23 @@ for iCh = blockObj.Mask
    else
       [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD);
    end
+
+   if isempty(spk)
+      spk = nan(1,size(spk,2));
+   end
    
-   if ~blockObj.saveChannelSpikingEvents(iCh,spk,feat,art)
-      error('Could not save spiking events for channel %d.',iCh);
+   if isempty(feat)
+      feat = nan(size(spk,1),size(feat,2));
+   end
+   
+   if isempty(art)
+      art = nan(size(spk,1),size(art,2));
+   end
+   
+   if ~saveChannelSpikingEvents(blockObj,iCh,spk,feat,art)
+      error(['nigeLab:' mfilename ':BadSave'],...
+         '[BLOCK/DOSD]::%s: Could not save spiking events for channel %d.',...
+         blockObj.Name,iCh);
    end
    
    % Status updates done in saveChannelSpikingEvents
@@ -89,7 +103,7 @@ end
 flag = true;
 
    function [spk,feat,art,pars] = PerChannelDetection(data, pars)
-      %% PERCHANNELDETECTION  Main sub-function for thresholding and detection
+      %PERCHANNELDETECTION  Main sub-function for thresholding and detection
       %
       %   spk = PERCHANNELDETECTION(data,pars);
       %   [spk,feat] = PERCHANNELDETECTION(data,pars);
@@ -125,7 +139,7 @@ flag = true;
       %
       % Adapted by: MAECI 2018 Collaboration (Federico Barban & Max Murphy)
       
-      %% CONVERT PARAMETERS
+      % CONVERT PARAMETERS
       pars.w_pre       =   double(round(pars.W_PRE / 1000 * pars.FS));        % Samples before spike
       pars.w_post      =   double(round(pars.W_POST / 1000 * pars.FS));       % Samples after spike
       pars.ls          =   double(pars.w_pre+pars.w_post);                    % Length of spike
@@ -140,7 +154,7 @@ flag = true;
          pars.th_artifact = pars.ARTIFACT_THRESH * 1e-6;
       end
       
-      %% REMOVE ARTIFACT
+      % REMOVE ARTIFACT
       if ~isempty(pars.STIM_TS)
          data_ART = RemoveStimPeriods(data,pars);
       else
@@ -154,7 +168,7 @@ flag = true;
       end
       [data_ART,artifact] = HardArtifactRejection(data_ART,pars);
       
-      %% COMPUTE SPIKE THRESHOLD AND DO DETECTION
+      % COMPUTE SPIKE THRESHOLD AND DO DETECTION
       % SpikeDetection_PTSD_core.cpp;
       if mod(pars.PLP,2)>0
          pars.PLP = pars.PLP + 1; % PLP must be even or doesn't work...
@@ -202,7 +216,7 @@ flag = true;
          otherwise
             error('Invalid PKDETECT specification.');
       end
-      %% ENSURE NO SPIKES REMAIN FROM ARTIFACT PERIODS
+      % ENSURE NO SPIKES REMAIN FROM ARTIFACT PERIODS
       if any(artifact)
          [ts,ia]=setdiff(ts,(artifact./pars.FS));
          p2pamp=p2pamp(ia);
@@ -213,7 +227,7 @@ flag = true;
          end
       end
       
-      %% EXCLUDE SPIKES THAT WOULD GO OUTSIDE THE RECORD
+      % EXCLUDE SPIKES THAT WOULD GO OUTSIDE THE RECORD
       out_of_record = ts <= pars.w_pre+1 | ts >= pars.npoints-pars.w_post-2;
       p2pamp(out_of_record) = [];
       pw(out_of_record) = [];
@@ -223,7 +237,7 @@ flag = true;
          E(out_of_record) = [];
       end
       
-      %% BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
+      % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
       if (any(ts)) % If there are spikes in the current signal
          
          [peak_train,spikes] = BuildSpikeArray(data,ts,p2pamp,pars);
@@ -306,11 +320,13 @@ flag = true;
          
       else % If there are no spikes in the current signal
          peak_train = sparse(double(pars.npoints) + double(pars.w_post), double(1));
-         spikes = [];
-         features = [];
+         spk = ones(0,pars.ls + 4);
+         feat = ones(0,numel(pars.FEAT_NAMES)+4);
+         art = ones(0,5);
+         return;
       end
       
-      %% GENERATE OUTPUT VECTORS
+      % GENERATE OUTPUT VECTORS
       tIdx = find(peak_train);
       tIdx = reshape(tIdx,numel(tIdx),1);
       
@@ -319,19 +335,37 @@ flag = true;
       tag = zeros(size(tIdx));
       ts = tIdx./pars.FS; % Get values in seconds
       
-      %% CONCATENATE OUTPUT MATRICES
-      spk = [type,value,tag,ts,spikes];
-      feat = [type,value,tag,ts,features];
+      % CONCATENATE OUTPUT MATRICES
+      if isempty(spikes)
+         spk = ones(0,pars.ls + 4);
+      else
+         spk = [type,value,tag,ts,spikes];
+      end
       
-      %% ASSIGN "ARTIFACT" OUTPUT
-      artifact = reshape(artifact,numel(artifact),1);
+      if isempty(features)
+         feat = ones(0,numel(pars.FEAT_NAMES)+4);
+      else
+         feat = [type,value,tag,ts,features];
+      end
       
-      type = zeros(size(artifact));
-      value = artifact;
-      tag = zeros(size(artifact));
-      ts = artifact./pars.FS;
-      
-      art = [type,value,tag,ts,zeros(size(artifact))];
+      % ASSIGN "ARTIFACT" OUTPUT
+      if isempty(artifact)
+         art = ones(0,5);
+      else
+          artifact = artifact(:); % make sure is column oriented
+         iStart = artifact([true, diff(artifact)' ~= 1]);
+         iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));
+         
+         artifact = reshape(artifact,numel(artifact),1);
+
+         value = reshape(iStart,numel(iStart),1);
+         tag = reshape(iStop,numel(iStop),1);
+         type = zeros(size(value));
+         ts = value./pars.FS;
+         snippet = tag./pars.FS;
+
+         art = [type,value,tag,ts,snippet];
+      end
       
    end
 

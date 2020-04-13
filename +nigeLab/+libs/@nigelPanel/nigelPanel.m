@@ -47,45 +47,52 @@ classdef nigelPanel < handle
 % p.nestObj(ax);  % use function nestobj to correctly nest something inside
 %                 % a nigelpanel
    
-   properties
-      Parent % Handle to Parent container. Must be a class that is a valid parent for matlab.ui.container.Panel
-      Tag    % Short identifier that can be used to get this object from an array of nigelPanels
-      Visible = true;
-      BorderType       % default: 'None'
-      Position         % Position of "outer" panel (4-element numeric vector: [x,y,width,height])
-      InnerPosition    % Position for inner "non-scroll" region
-      Substr      % Char array that is a sub-string. currently unused ...?
-      Scrollable  % ('on' or 'off' (default))
-      
-      DeleteFcn  % Function handle to execute on object deletion
+   % % % PROPERTIES % % % % % % % % % %
+   % PUBLIC
+   properties(Access=public)
+      Parent                              % Handle to Parent container. Must be a class that is a valid parent for matlab.ui.container.Panel
+      Tag               char              % Short identifier that can be used to get this object from an array of nigelPanels
+      Visible     (1,1) logical = true    % Is the panel visible?
+      BorderType        char = 'None'     % default: 'None'
+      Position                            % Position of "outer" panel (4-element numeric vector: [x,y,width,height])
+      InnerPosition                       % Position for inner "non-scroll" region
+      Substr            char = ''         % Char array that is a sub-string. currently unused ...?
+      Scrollable        char = 'off'      % ('on' or 'off' (default))
+      DeleteFcn                           % Function handle to execute on object deletion
+      UserData                            % user defined data
    end
    
-   properties(SetObservable)
-      Children    % Cell Array of nigeLab.libs.nigelPanel objects
-      Color       % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
-      String      % Char array for string in obj.textBox.ann
-      Units       % 'Normalized' or 'Pixels'
-      FontName          char = 'DroidSans' % Default: 'DroidSans'
-      MinTitleBarHeightPixels  double = 20 % Default: 20
-      TitleFontSize     double = 13 % Default: 13
-      TitleFontWeight   char = 'bold' % Default: 'bold'
-      TitleVerticalAlignment char = 'middle' % Default: 'middle'
-      TitleAlignment    char = 'left' % Default: 'left'
-      TitleBarLocation  % Location of title bar (can be 'top' or 'bot')
-      TitleBarPosition  % Coordinate [px py width height] vector for titleBox position
-      TitleStringX  % X-coordinate of Title String ([0 -- far left; 1 -- far right])
-      TitleStringY  % Y-coordinate of middle of Title String (default: 0.5)
+   % SETOBSERVABLE,PUBLIC
+   properties(SetObservable,Access=public)
+      Children                                     % Cell Array of nigeLab.libs.nigelPanel objects
+      Color                                        % Struct with parameters for 'Panel','TitleText','TitleBar',and 'Parent'
+      String                                       % Char array for string in obj.textBox.ann
+      Units                    char = 'Normalized' % 'Normalized' or 'Pixels'
+      FontName                 char = 'Droid Sans' % Default: 'Droid Sans'
+      MinTitleBarHeightPixels  double = 20         % Default: 20
+      TitleFontSize            double = 13         % Default: 13
+      TitleFontWeight          char = 'bold'       % Default: 'bold'
+      TitleVerticalAlignment   char = 'middle'     % Default: 'middle'
+      TitleAlignment           char = 'left'       % Default: 'left'
+      TitleBarLocation         char = 'top'        % Location of title bar (can be 'top' or 'bot')
+      TitleBarPosition                             % Coordinate [px py width height] vector for titleBox position
+      TitleStringX                                 % X-coordinate of Title String ([0 -- far left; 1 -- far right])
+      TitleStringY             double = 0.5        % Y-coordinate of middle of Title String (default: 0.5)
    end
    
-   properties (GetAccess=public,SetAccess={?nigeLab.libs.nigelPanel,?nigeLab.libs.nigelBar})
+   % PUBLIC/RESTRICTED:nigeLab.libs.nigelBar
+   properties (GetAccess=public,SetAccess={?nigeLab.libs.nigelBar})
       ChildName   % Cell array of names corresponding to elements of Children
-      OutPanel;   % Handle to the uipanel that is an "outer" container
-      Panel;      % Handle to the uipanel that is the nigelPanel basically ("inner scroll region")
+      OutPanel    % Handle to the uipanel that is an "outer" container
+      Panel       % Handle to the uipanel that is the nigelPanel basically ("inner scroll region")
       TitleBar    % Struct for titleBox with fields: 'axes', 'r1', 'r2', and 'ann'
       lh          % Array of listener handles
    end
+   % % % % % % % % % % END PROPERTIES %
    
-   methods (Access = public)
+   % % % METHODS% % % % % % % % % % % %
+   % PUBLIC (constructor)
+   methods (Access=public)
       % Class constructor for nigeLab.libs.nigelPanel object
       function obj = nigelPanel(parent,varargin)
          % NIGELPANEL  Class constructor for nigelPanel, a standardized
@@ -132,14 +139,18 @@ classdef nigelPanel < handle
          end
          obj.Parent = parent;
          
-         obj.initProps(varargin{:});
+         initProps(obj,varargin{:});
          
-         obj.buildOuterPanel;  % Make "outer frame" for if there is scroll bar
-         obj.buildTitleBar;    % Makes "nice header box"
-         obj.buildInnerPanel;  % Make scrollbar and "inner frame" container
-         obj.buildListeners;   % Make event listeners
+         buildOuterPanel(obj);  % Make "outer frame" for if there is scroll bar
+         buildTitleBar(obj);    % Makes "nice header box"
+         buildInnerPanel(obj);  % Make scrollbar and "inner frame" container
+         buildListeners(obj);   % Make event listeners
       end
       
+   end
+   
+   % NO ATTRIBUTES (overloads)
+   methods
       % Returns the class, which is just obj.Tag
       function cl = class(obj)
          % CLASS  Returns the Tag property as formatted char array
@@ -162,6 +173,41 @@ classdef nigelPanel < handle
          end
       end
       
+      % Set a specific property (case-insensitive)
+      function set(obj,propName,value)
+         % SET  Sets a specific property, specified by "propName", to the
+         %      value specified by "value"
+         %
+         %  obj.set('parent',value); Matches 'Parent' property (case
+         %                           insensitive).
+         
+         if numel(obj) > 1
+            for i = 1:numel(obj)
+               set(obj(i),propName,value);
+            end
+            return;
+         end
+         
+         % Parse whether property exists. If not, check if there is a
+         % case-insensitive match and use that.
+         if ~isprop(obj,propName)
+            pname = properties(obj);
+            idx = find(ismember(lower(pname),lower(propName)),1,'first');
+            if isempty(idx)
+               error(['nigeLab:' mfilename ':BadPropName'],...
+                  'Not a valid property of nigelPanel: %s',propName);
+            end
+            propName = pname{idx};
+            obj.(propName) = value;
+         else
+            obj.(propName) = value;
+         end
+         
+      end
+   end
+   
+   % SEALED,PUBLIC
+   methods (Sealed,Access=public)
       % Function to execute when panel is deleted
       function deleteFcn(obj)
          delete(obj);
@@ -224,7 +270,25 @@ classdef nigelPanel < handle
          if nargin < 3
             name = '';
          end
-         set(c, 'Parent', obj.Panel);
+         if numel(c) > 1
+            if ~iscell(name)
+               name = repmat({name},size(c));
+            elseif numel(name) == 1
+               name = repmat(name,size(c));
+            end
+            
+            for i = 1:numel(c)
+               nestObj(obj,c(i),name{i});
+            end
+            return;
+         end
+         if isempty(c.Parent)
+            c.Parent = obj.Panel;
+         elseif isa(c.Parent,'matlab.graphics.axis.Axes')
+            c.Parent.Parent = obj.Panel;
+         else
+            c.Parent = obj.Panel;
+         end
          obj.Children{end+1} = c;
          obj.ChildName{end+1} = name;
          obj.fixProperties(c,'FontName');
@@ -287,40 +351,10 @@ classdef nigelPanel < handle
          
       end
       
-      % Set a specific property (case-insensitive)
-      function set(obj,propName,value)
-         % SET  Sets a specific property, specified by "propName", to the
-         %      value specified by "value"
-         %
-         %  obj.set('parent',value); Matches 'Parent' property (case
-         %                           insensitive).
-         
-         if numel(obj) > 1
-            for i = 1:numel(obj)
-               set(obj(i),propName,value);
-            end
-            return;
-         end
-         
-         % Parse whether property exists. If not, check if there is a
-         % case-insensitive match and use that.
-         if ~isprop(obj,propName)
-            pname = properties(obj);
-            idx = find(ismember(lower(pname),lower(propName)),1,'first');
-            if isempty(idx)
-               error('Not a valid property of nigelPanel: %s',propName);
-            end
-            propName = pname{idx};
-            obj.(propName) = value;
-         else
-            obj.(propName) = value;
-         end
-         
-      end
-      
    end
    
-   methods (Access=private)
+   % PROTECTED
+   methods (Access=protected)
       % Method for accessing Java-based Scrollbar, provided by Yair Altman
       [hScrollPanel, hPanel] = attachScrollPanelTo(~,hObject)
       
@@ -438,7 +472,7 @@ classdef nigelPanel < handle
               'FontWeight',obj.TitleFontWeight,...
               'FontName',obj.FontName);
          end
-         obj.fixTitleHeight;
+         fixTitleHeight(obj);
       end
       
       % "Fix" child properties so they are the same as nigelPanel (e.g.
@@ -536,30 +570,31 @@ classdef nigelPanel < handle
          % SETPROPS  Set all properties in constructor based on 'Name',
          %           value input argument pairs.
          
-         Pars.TitleBar = [];
-         Pars.TitleBarColor = nigeLab.defaults.nigelColors('primary'); 
-         Pars.PanelColor = nigeLab.defaults.nigelColors('surface');
-         Pars.TitleColor = nigeLab.defaults.nigelColors('onprimary');
-         Pars.Position  = [0.1 0.1 0.3 0.91];
-         Pars.InnerPosition =  [0 0 1 1];
-         Pars.String = '';
-         Pars.Substr = '';
-         Pars.BorderType = 'none';
-         Pars.Tag = 'nigelPanel';
-         Pars.Units = 'normalized';
-         Pars.Scrollable = 'off';
-         Pars.FontName = 'DroidSans';
-         Pars.MinTitleBarHeightPixels = 20;
-         Pars.TitleFontSize = 13;
-         Pars.TitleFontWeight = 'bold';
-         Pars.TitleAlignment = 'left';
-         Pars.TitleBarLocation = 'top';
-         Pars.TitleBarPosition = [0.000 0.945 1.000 0.055; ... % top
-                                  0.000 0.000 1.000 0.055];    % bottom
-         Pars.TitleStringX = 0.1;
-         Pars.TitleStringY = 0.5;
-         Pars.DeleteFcn = @obj.deleteFcn;
-         Pars = nigeLab.utils.getopt(Pars,varargin{:});
+         p.TitleBar = [];
+         p.TitleBarColor = nigeLab.defaults.nigelColors('primary'); 
+         p.PanelColor = nigeLab.defaults.nigelColors('surface');
+         p.TitleColor = nigeLab.defaults.nigelColors('onprimary');
+         p.Position  = [0.1 0.1 0.3 0.91];
+         p.InnerPosition =  [0 0 1 1];
+         p.String = '';
+         p.Substr = '';
+         p.BorderType = 'none';
+         p.Tag = 'nigelPanel';
+         p.Units = 'normalized';
+         p.Scrollable = 'off';
+         p.FontName = 'Droid Sans';
+         p.MinTitleBarHeightPixels = 20;
+         p.TitleFontSize = 13;
+         p.TitleFontWeight = 'bold';
+         p.TitleAlignment = 'left';
+         p.TitleBarLocation = 'top';
+         p.TitleBarPosition = [0.000 0.945 1.000 0.055; ... % top
+                               0.000 0.055 1.000 0.055];    % bottom
+         p.TitleStringX = 0.1;
+         p.TitleStringY = 0.5;
+         p.DeleteFcn = @obj.deleteFcn;
+         p.UserData = [];
+         Pars = nigeLab.utils.getopt(p,varargin{:});
          
          % Parse Color struct property
          obj.Color = struct;
@@ -607,17 +642,12 @@ classdef nigelPanel < handle
          obj.TitleStringX = Pars.TitleStringX;
          obj.TitleStringY = Pars.TitleStringY;
          obj.DeleteFcn = Pars.DeleteFcn;
+         obj.UserData = Pars.UserData;
          
          % Create listeners for all setObservable properties
          obj.buildListeners;
       end
-   end
-   
-   % Private "CALLBACK" methods for property-listeners. Any methods here
-   % should only take "obj" as an argument, and would typically update
-   % graphics elements using some property value (from a property that has
-   % the Attribute SetObservable == true)
-   methods (Access = private)
+      
       % Set colors for all graphics objects
       function setColors(obj)
          % SETCOLORS  Set colors for all graphics objects
@@ -667,11 +697,10 @@ classdef nigelPanel < handle
                obj.Position = obj.OutPanel.Position;
          end
       end
-      
    end
    
-   % Private Static method to handle property change events
-   methods (Access = private, Static = true)  
+   % STATIC,PROTECTED
+   methods (Static,Access=protected)  
       % Method to find properties based on their attribute values
       function propList = findAttrValue(attrName,attrValue)
          % FINDATTRVALUE  Find properties given an attribute value
@@ -700,7 +729,8 @@ classdef nigelPanel < handle
          for  c = 1:nProp
             mp = mc.PropertyList(c);
             if isempty (findprop(mp,attrName))
-               error('Not a valid attribute name')
+               error(['nigeLab:' mfilename ':BadPropName'],...
+                  'Not a valid attribute name')
             end
             val = mp.(attrName);
             if val
@@ -750,5 +780,6 @@ classdef nigelPanel < handle
          end
       end
    end
+   % % % % % % % % % % END METHODS% % %
 end
 

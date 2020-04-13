@@ -9,9 +9,9 @@ classdef Sort < handle
 %    INPUTS
 %   --------
 %   nigelObj  :     (Optional) If not provided, a UI for generation or
-%                       loading of the correct orgExpObj pops up.
+%                       loading of the correct nigelObj pops up.
 %                       Otherwise, the Sort class object parses which
-%                       orgExpObj is given (based on object class), and
+%                       nigelObj is given (based on object class), and
 %                       presents the Sort interface based on that.
 %
 %   --------
@@ -76,7 +76,6 @@ classdef Sort < handle
                   dims = [dims,0];
                end
                sortObj = repmat(sortObj,dims);
-               close(gcf);
                return;
             end
             
@@ -220,7 +219,6 @@ classdef Sort < handle
       flag = parseBlocks(sortObj,nigelObj);  % Assigns Blocks property
       flag = parseAnimals(sortObj,nigelObj); % Assigns Blocks from Animals
       
-      flag = setAxesPositions(sortObj); % Draw axes positions
       
       channelName = parseChannelName(sortObj); % Get all channel names
    end
@@ -236,4 +234,10 @@ classdef Sort < handle
       end
    end   
    % % % % % % % % % % END METHODS% % %
+
+
+   methods (Access = ?nigeLab.libs.SortUI)
+       flag = setAxesPositions(sortObj); % Draw axes positions
+   end
+
 end

@@ -3,30 +3,36 @@ function ts = binaryStream2ts(stream,fs,threshold,transition_type,debounce)
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream);
 %  --> Returns ts as sample indices. 
+%     * Note: `ts` is always returned as a column vector
+%     * Note: if no event times are detected, `ts` returns as empty double
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs);
 %  --> Converts ts based on sample rate of stream (fs)
 %  --> If fs is empty, returns sample indices instead.
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,threshold);
-%  --> Sets threshold where stream > threshold determines initial
-%      binarization of stream.
-%  --> If empty, takes default value from nigeLab.defaults.Event
+%  --> Sets threshold value
+%      * Stream is binarized as follows:
+%        + stream >  threshold -> 1
+%        + stream <= threshold -> 0
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %  
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,threshold,transition_type);
 %  --> Sets transition type: must be 'All', 'Rising', or 'Falling'.
 %      'Rising' limits to transitions from LOW to HIGH, while 'Falling'
 %      limits to transitions from HIGH to LOW.
-%  --> If empty, takes default value from nigeLab.defaults.Event
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %
 %  ts = nigeLab.utils.binaryStream2ts(stream,fs,...,debounce);
-%  --> Sets debounce period.
+%  --> Sets debounce period (seconds)
+%  --> Default value is set in nigeLab.defaults.Event (if empty)
 %
-%  stream should be a row vector. 
+%  `stream` should be a row vector, or a `nigeLab.libs.nigelStream` object
+%
 %  If stream is given as a matrix, then rows are treated as individual
 %  streams. For each row of stream, a cell array of ts is returned.
 
-%% Handle inputs
+% Handle inputs
 defPars = nigeLab.defaults.Event('TrialDetectionInfo');
 if nargin < 5
    debounce = [];
@@ -44,21 +50,34 @@ elseif isempty(threshold)
    threshold = defPars.Threshold;
 end
 
-if nargin < 2
-   fs = [];
-end
-
-% If multiple streams, iterate on rows
-if size(stream,1) > 1
-   ts = cell(1,size(stream,1));
-   for i = 1:size(stream,1)
-      ts{i} = nigeLab.utils.binaryStream2ts(stream(i,:),fs,...
-         threshold,transition_type,debounce);
+if ~isa(stream,'nigeLab.libs.nigelStream')
+   if nargin < 2
+      fs = [];
    end
-   return;
-end
 
-%% 
+   % If multiple streams, iterate on rows
+   if size(stream,1) > 1
+      ts = cell(1,size(stream,1));
+      for i = 1:size(stream,1)
+         ts{i} = nigeLab.utils.binaryStream2ts(stream(i,:),fs,...
+            threshold,transition_type,debounce);
+      end
+      return;
+   end
+else
+   if numel(stream) > 1
+      ts = cell(1,numel(stream));
+      for i = 1:numel(stream)
+         ts{i} = nigeLab.utils.binaryStream2ts(stream(i).data,stream(i).fs,...
+            threshold,transition_type,debounce);
+      end
+      return;
+   else
+      fs = stream.fs;
+      stream = stream.data;
+   end
+end
+ 
 x = stream > threshold;
 x = reshape(x,1,numel(stream)); % Make sure it's a row vector
 

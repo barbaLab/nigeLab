@@ -1,5 +1,33 @@
-classdef signal
-   % SIGNAL  Class to enumerate signal types to keep them properly grouped
+classdef signal < matlab.mixin.SetGet
+   % SIGNAL  Handle class that enumerates signal properties for grouping
+   %
+   %  sig = nigeLab.utils.signal(group,samples,field,fieldType);
+   %  sig = nigeLab.utils.signal(___,source,name,subgroup);
+   %
+   %  SIGNAL Properties:
+   %  Samples  --  (double) Number of samples in this signal
+   %
+   %  Name  --  (char)  Name of signal
+   %
+   %  Group  --  (char)  Original "signal group" given during header parse
+   %     NOTE: VERY IMPORTANT IN DORAWEXTRACTION
+   %
+   %  SubGroup  --  (char)  More granular grouping than "Group" property
+   %     NOTE: USED IN VIDEOSFIELDTYPE/VIDSTREAMS STUFF
+   %     Example: splits .Group (which would be 'Marker' or 'Sync' for
+   %               VidStreams-related signal) into {'p','x','y','z'} for
+   %               Marker or {'stream' / 'discrete'} for Sync etc.
+   %
+   %  Field   --  (char)  Field associated with signal group
+   %     NOTE: VERY IMPORTANT IN DORAWEXTRACTION
+   %
+   %  FieldType  -- (char)  FieldType associated with .Field property
+   %
+   %  Source  -- (char)  Type of source that generated data
+   %     NOTE: This can sometimes be nigeLab.utils.AcqSys class object that
+   %           gives enumerated info about specific kinds of acquisition
+   %           systems (such as Intan RHS or RHD headstages, or
+   %           Tucker-Davis Technologies [TDT] acquisition system)
    
    % % % PROPERTIES % % % % % % % % % %
    % PUBLIC
@@ -7,12 +35,17 @@ classdef signal
       Samples     double   % Number of samples for this signal
    end
    
+   % DEPENDENT,TRANSIENT,PUBLIC
+   properties (Dependent,Transient,Access=public)
+      FileType    char     % {'MatFile', or 'Hybrid', or 'Event'}
+   end
+   
    % PUBLIC/IMMUTABLE
    properties (GetAccess=public,SetAccess=immutable)
       Name        char     % Name of signal
-      Group       char     % Original "signal group" given during header parsing
-      SubGroup    char     % More granular grouping than "Group"
-      Field       char     % Field associated with "signal group"
+      Group       char     % Original "signal group" given during header parsing NOTE: VERY IMPORTANT IN DORAWEXTRACTION
+      SubGroup    char     % More granular grouping than "Group" NOTE: USED IN VIDEOSFIELDTYPE/VIDSTREAMS STUFF
+      Field       char     % Field associated with "signal group" NOTE: VERY IMPORTANT IN DORAWEXTRACTION
       FieldType   char     % FieldType associated with that Field 
       Source      char     % Type of source that generated data
    end
@@ -119,51 +152,39 @@ classdef signal
          sig.Group = group;
          [sig.Samples,sig.Field,sig.FieldType,sig.Source,sig.Name,sig.SubGroup] = sig.enum(field,fieldType,source,name,subgroup,samples);
       end
+   end
+   
+   % NO ATTRIBUTE (overloaded)
+   methods
+      % [DEPENDENT]  Property GET method for .FileType (depends .Field)
+      function value = get.FileType(obj)
+         %GET.FILETYPE  Returns .FileType (depends on .Field)
+         %
+         %  value = get(obj,'FileType');
+         
+         switch lower(obj.Field)
+            case {'raw','filt','lfp','car',...
+                  'digio','analogio',...
+                  'time','vidstreams'}
+               value = 'MatFile';
+            case {'artifact','spikes','spikefeatures',...
+                  'clusters','sorted','sort',...
+                  'digevents','stim','scoredevents'}
+               value = 'Event';
+            case {'probes'}
+               value = 'Other';
+         end
+      end
       
-      % Check if sig belongs to a group of signals or cell array or char
-      % vector with for a given property, 'toMatch'
-      function [idx,n] = belongsTo(varargin)
-         % BELONGSTO  Checks if sig belongs to 'toCompare' using 'toMatch'
-         %
-         %  [idx,n] = belongsTo(sig,toCompare,toMatch);
-         %
-         %  toCompare  --  nigeLab.utils.signal or char array
-         %  toMatch  --  Property "to match" (char array)
-         %
-         %  toCompare and toMatch must always be the last two inputs
-         
-         if numel(varargin) < 3
-            error('Must provide at least 3 input arguments.');
-         end
-         
-         toCompare = varargin{end-1};
-         toMatch = varargin{end};
-         varargin((end-1):end) = [];
-         
-         if isa(toCompare,'nigeLab.utils.signal')
-            toCompare = {toCompare.(toMatch)};
-         elseif ischar(toCompare)
-            toCompare = {toCompare};
-         end
-         
-         if numel(varargin) > 1
-            idx = false(size(varargin));
-            for i = 1:numel(varargin)
-               idx(i) = belongsTo(varargin{i},toCompare,toMatch);
-            end
-            n = sum(idx);
-            return;
-         end
-         
-         sig = varargin{1};
-         
-         if any(strcmpi(sig.(toMatch),toCompare))
-            idx = true;
-            n = 1;
-         else
-            idx = false;
-            n = 0;
-         end
+      % [DEPENDENT]  Property SET method for .FileType (cannot set)
+      function set.FileType(~,~)
+         %SET.FILETYPE  Does nothing
+         nigeLab.sounds.play('pop',2.7);
+         dbstack();
+         nigeLab.utils.cprintf('Errors*','[UTILS.SIGNAL]: ');
+         nigeLab.utils.cprintf('Errors',...
+            'Failed attempt to set DEPENDENT property: FileType\n');
+         fprintf(1,'\n');
       end
    end
    
@@ -201,7 +222,7 @@ classdef signal
          end
          
          str = nigeLab.utils.signal.cleanString(sig.Group);
-         switch str
+         switch str            
             case {'DIGIN','DIGITALIN','DIGOUT','DIGITALOUT'}
                field = 'DigIO';
                fieldType = 'Streams';
@@ -218,12 +239,12 @@ classdef signal
                subgroup = 'analog';
                samples = [];
                
-            case {'RAW','FILT','SPIKES','SORT','CLUSTERS','LFP','ARTIFACT','SPIKEFEATURES'}
+            case {'DATA','RAW','FILT','LFP','SPIKES','SPIKE','SORTED','SORT','CLUSTERS','ARTIFACT','SPIKEFEATURES'}
                field = sig.Group;
                fieldType = 'Channels';
                source = 'AcqSystem';
                name = str;
-               subgroup = 'data';
+               subgroup = '';
                samples = [];
                
             case {'SYNC','KINEMATICS','MARKERS','MARKER'}
@@ -247,6 +268,14 @@ classdef signal
                fieldType = 'Videos';
                source = 'Video';
                name = sig.Group;
+               subgroup = '';
+               samples = [];
+            
+            case {'STANDARD','HEADER','TRIAL','FSM'}
+               field = '';
+               fieldType = 'Events';
+               source = '';
+               name = '';
                subgroup = '';
                samples = [];
                

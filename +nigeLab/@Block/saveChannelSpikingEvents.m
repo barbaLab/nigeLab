@@ -28,25 +28,24 @@ function flag = saveChannelSpikingEvents(blockObj,ch,spk,feat,art)
 %  --------
 %    flag         :     Logical value indicating that save was completed
 %                          successfully.
-
-%%
 flag = false;
-
-%% CHECK FILE PATH INFO
+% CHECK FILE PATH INFO
 if any(~ismember({'Spikes','SpikeFeatures','Artifact'},blockObj.Fields))
    if ~blockObj.genPaths
-      warning('Could not make correct paths.');
+      warning(['nigeLab:' mfilename ':BadPaths'],...
+         'Could not make correct paths.');
       return;
    end
 elseif any(~ismember({'Spikes','SpikeFeatures','Artifact'},...
       fieldnames(blockObj.Paths)))
    if ~blockObj.genPaths
-      warning('Could not make correct paths.');
+      warning(['nigeLab:' mfilename ':BadPaths'],...
+         'Could not make correct paths.');
       return;
    end
 end
 
-%% MAKE FILE NAMES
+% MAKE FILE NAMES
 pNum  = num2str(blockObj.Channels(ch).probe);
 chNum = blockObj.Channels(ch).chStr;
 
@@ -59,8 +58,7 @@ fNameFeats = nigeLab.utils.getUNCPath(...
 fNameArt = nigeLab.utils.getUNCPath(...
    sprintf(strrep(blockObj.Paths.Artifact.file,'\','/'),...
       pNum,chNum));
-
-%% SAVE FILES
+% SAVE FILES
 % Save Spikes using DiskData pointer to the file:
 if exist(fullfile(fNameSpikes),'file')~=0
    delete(fullfile(fNameSpikes));
@@ -70,11 +68,9 @@ if exist(blockObj.Paths.Spikes.dir,'dir')==0
 end
 blockObj.Channels(ch).Spikes = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameSpikes),...
-   spk,'access','w');
-blockObj.Channels(ch).Spikes = lockData(...
-   blockObj.Channels(ch).Spikes);
+   spk,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('Spikes',true,ch);
-
 % Save Features using DiskData pointer to the file:
 if exist(fullfile(fNameFeats),'file')~=0
    delete(fullfile(fNameFeats));
@@ -84,11 +80,9 @@ if exist(blockObj.Paths.SpikeFeatures.dir,'dir')==0
 end
 blockObj.Channels(ch).SpikeFeatures = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameFeats),...
-   feat,'access','w');
-blockObj.Channels(ch).SpikeFeatures = lockData(...
-   blockObj.Channels(ch).SpikeFeatures);
+   feat,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('SpikeFeatures',true,ch);
-
 % Save Artifact using DiskData pointer to the file:
 if exist(fullfile(fNameArt),'file')~=0
    delete(fullfile(fNameArt));
@@ -98,14 +92,8 @@ if exist(blockObj.Paths.Artifact.dir,'dir')==0
 end
 blockObj.Channels(ch).Artifact = ...
    nigeLab.libs.DiskData('Event',fullfile(fNameArt),...
-   art,'access','w');
-blockObj.Channels(ch).Artifact = lockData(...
-   blockObj.Channels(ch).Artifact);
+   art,'access','w','overwrite',true,...
+   'Complete',ones(1,1,'int8'));
 blockObj.updateStatus('Artifact',true,ch);
-
-
-
-
 flag = true;
-
 end

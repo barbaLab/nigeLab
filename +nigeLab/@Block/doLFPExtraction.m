@@ -10,13 +10,13 @@ function flag = doLFPExtraction(blockObj)
 %  See Also:
 %  NIGELAB.DEFAULTS.LFP
 
-%% INITIALIZE PARAMETERS
+% INITIALIZE PARAMETERS
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
       if ~isempty(blockObj(i))
          if isvalid(blockObj(i))
-            flag = flag && doSD(blockObj(i));
+            flag = flag && doLFPExtraction(blockObj(i));
          end
       end
    end
@@ -27,7 +27,8 @@ end
 blockObj.checkActionIsValid(); % Now contains `checkForWorker`
 
 if ~genPaths(blockObj)
-   warning('Something went wrong with extraction');
+   warning(['nigeLab:' mfilename ':DOLFPEXTRACTION'],...
+      'Something went wrong with generating output file save paths.');
    return;
 end
 
@@ -38,7 +39,7 @@ DecimateCascadeN = pars.DecimateCascadeN;
 DecimationFactor =  pars.DecimationFactor;
 blockObj.Pars.LFP.DownSampledRate = blockObj.SampleRate / DecimationFactor;
 
-%% DECIMATE DATA AND SAVE IT
+% DECIMATE DATA AND SAVE IT
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doLFPExtraction',...
          'Decimating');
@@ -62,8 +63,8 @@ for iCh=blockObj.Mask
    
    % Assign to diskData and protect it:
    blockObj.Channels(iCh).LFP = nigeLab.libs.DiskData(fType,...
-      fName,data,'access','w');
-   blockObj.Channels(iCh).LFP = lockData(blockObj.Channels(iCh).LFP);
+      fName,data,'access','w','overwrite',true);
+   lockData(blockObj.Channels(iCh).LFP);
    pct = round(curCh/nCh*90);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');

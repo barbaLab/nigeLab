@@ -10,12 +10,12 @@ classdef splitMultiAnimalsUI < handle
    end
    
    properties (Access = private,SetObservable,AbortSet)
-      animalObj                  % nigeLab.Animal
+      animalObj                  % nigeLab.Animal object
    end
    
    properties (Access = private)
-      blockObj                   % nigeLab.Block
-      DashObj                    nigeLab.libs.DashBoard
+      blockObj                   % nigeLab.Block object or array
+      DashObj                    % nigeLab.libs.DashBoard object
       AcceptBtn                  matlab.ui.control.UIControl % pushbutton
       ApplyToAllBtn              matlab.ui.control.UIControl % pushbutton
       Tree                       % uiw.widget.Tree
@@ -24,6 +24,7 @@ classdef splitMultiAnimalsUI < handle
       
       PropListener                  event.listener  % Array of listeners
       SelectionChangedListener      event.listener
+      SplitCompletedListener        event.listener
    end
    
    events
@@ -43,6 +44,19 @@ classdef splitMultiAnimalsUI < handle
          % DashObj has special restricted properties: 
          %  --> A_split  :: Animals to split
          %  --> B_split  :: Blocks to split
+         if nargin < 1
+            obj = nigeLab.libs.splitMultiAnimalsUI.empty([0,0]);
+            return;
+         elseif isnumeric(DashObj)
+            n = DashObj;
+            if numel(n) < 2
+               n = [zeros(1,2-numel(n)),n];
+            else
+               n = [0, max(n)];
+            end
+            obj = repmat(obj,n);
+            return;
+         end
          
          obj.DashObj = DashObj;
          
@@ -102,16 +116,20 @@ classdef splitMultiAnimalsUI < handle
          %  obj.toggleVisibility(vis_mode);   Forces to one state
          
          if nargin < 2
-            switch obj.Fig.Visible
+            switch obj.Fig.Visible         
+         % Set visibility of figure
                case 'on'
                   vis_mode = 'off';
+                  figAlwaysOnTop(obj,false);
+                  obj.Fig.Visible = vis_mode;
                case 'off'
                   vis_mode = 'on';
+                  obj.Fig.Visible = vis_mode;
+                  drawnow;
+                  figAlwaysOnTop(obj,true);
             end
          end
-         
-         % Set visibility of figure
-         obj.Fig.Visible = vis_mode;
+
          
          % Listener only executes callback if figure is visible
          obj.SelectionChangedListener.Enabled = strcmp(vis_mode,'on');
@@ -120,7 +138,18 @@ classdef splitMultiAnimalsUI < handle
          end
 
          changeVisibility(obj);
-         % toggle figure alway on top. Has to be changed before
+         
+               
+      end % function toggleVisibility
+      
+   end % methods public
+   
+   methods (Access=private)
+       function figAlwaysOnTop(obj,mode)
+           if nargin < 2
+               mode = false;
+           end
+           % toggle figure alway on top. Has to be changed before
          % the visibility property
          %                     drawnow;
          warningTag = 'MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame';
@@ -129,18 +158,21 @@ classdef splitMultiAnimalsUI < handle
          jFrame = get(handle(obj.Fig),'JavaFrame');
          jFrame_fHGxClient = jFrame.fHG2Client;
          jFrame_fHGxClientW=jFrame_fHGxClient.getWindow;
+         tt = tic;
          while(isempty(jFrame_fHGxClientW))
+             if toc > 5
+                 % this is not critical, no need to lock everythong here if
+                 % it's not working
+                 warning('on',warningTag);
+                 return;
+             end
             jFrame_fHGxClientW=jFrame_fHGxClient.getWindow;
          end
 
-         jFrame_fHGxClientW.setAlwaysOnTop(true);
+         jFrame_fHGxClientW.setAlwaysOnTop(mode);
          warning('on',warningTag);
-               
-      end % function toggleVisibility
-      
-   end % methods public
-   
-   methods (Access=private)
+       end
+       
       % Add buttons to interface
       function addButtons(obj)
          % ADDBUTTONS  Add buttons to user interface
@@ -181,6 +213,8 @@ classdef splitMultiAnimalsUI < handle
          obj.SelectionChangedListener.Enabled = false;
          obj.PropListener = addlistener(obj,'animalObj','PostSet',...
             @(~,~)obj.beginSplit);
+        obj.SplitCompletedListener = addlistener(obj,'SplitCompleted',...
+            @(~,~)obj.deleteAnimalWhenEmpty());
       end
       
       % LISTENER CALLBACK: Initialize the splitting process
@@ -192,12 +226,12 @@ classdef splitMultiAnimalsUI < handle
          %  Syntax:
          %  obj.PropListener = addlistener(obj,'animalObj','PostSet',...
          %                       @(~,~)obj.beginSplit);
-         
+         obj.animalObj.splitMultiAnimals('init');
+
          % TODO case where only blockobj is initialized
          obj.Tree = obj.buildBlockTrees();
          obj.AcceptBtn.UserData.reviewedBlocks = false(1,...
             numel(obj.animalObj.Children));
-         obj.animalObj.splitMultiAnimals('init');
          
       end
       
@@ -208,7 +242,7 @@ classdef splitMultiAnimalsUI < handle
          %
          %  Tree = obj.buildBlockTrees();
          
-         Tree = gobjects(numel(obj.DashObj.B_split),...
+         Tree = gobjects(numel(obj.animalObj.Children),...
                          numel(obj.blockObj.MultiAnimalsLinkedBlocks));
                       
          for jj = 1:numel(obj.animalObj.Children)
@@ -218,7 +252,7 @@ classdef splitMultiAnimalsUI < handle
             else
                visible = 'off';
             end
-            thisBlock.splitMultiAnimals('init');
+            
             for ii=1:numel(obj.blockObj.MultiAnimalsLinkedBlocks)
                Tree(jj,ii)= uiw.widget.Tree(...
                   'Parent',obj.panel,...
@@ -321,11 +355,10 @@ classdef splitMultiAnimalsUI < handle
          if ~RawFlag % if raw not extracted
             if ~isempty(obj.DashObj) % if in the gui mode
                operation = 'doRawExtraction';
-               job = obj.DashObj.qOperations(operation,obj.blockObj);
-               if ~isempty(job)
-                  fcnList = {job.FinishedFcn,{@(~,~)obj.applychanges}};
-                  CompletedFun = {@nigeLab.utils.multiCallbackWrap, fcnList};
-                  job.FinishedFcn = CompletedFun;
+               bar = obj.DashObj.qOperations(operation,obj.blockObj,{obj.animalObj.getKey,obj.blockObj.getKey});
+               if bar.IsParallel
+                  bar.FinishedFun = [bar.FinishedFun,...
+                                    {{@(~,~)obj.applychanges}}];
                   return;
                end
                
@@ -359,7 +392,6 @@ classdef splitMultiAnimalsUI < handle
                obj.blockObj.MultiAnimalsLinkedBlocks);
          end
          populateTree(Tree_);
-         obj.animalObj.removeChild(find(obj.animalObj.Children == obj.blockObj)); %#ok<FNDSB>
          notify(obj,'SplitCompleted',splitCompletedEvt);
          % if an animal obj is available, move everything to the correct
          % animal
@@ -462,8 +494,31 @@ classdef splitMultiAnimalsUI < handle
          end
       end % changeVisibility
       
+      function deleteAnimalWhenEmpty(obj)
+         if isvalid(obj.animalObj) && numel(obj.animalObj.Children) == 0
+             delete(obj.animalObj.File);
+            delete(obj.animalObj);
+         end
+      end
    end % methods private
    
-   
+   methods (Static,Access=public)
+      % Create empty nigeLab.libs.splitMultiAnimalsUI object
+      function obj = empty(n)
+         %EMPTY  Create empty nigeLab.libs.splitMultiAnimalsUI object
+         %
+         %  obj = nigeLab.libs.splitMultiAnimalsUI.empty();
+         %  --> Empty scalar
+         %  obj = nigeLab.libs.splitMultiAnimalsUI.empty(n);
+         %  --> Empty array with n elements
+         
+         if nargin < 1
+            n = [0,0];
+         else
+            n = [0,max(n)];
+         end
+         obj = nigeLab.libs.splitMultiAnimalsUI(n);         
+      end
+   end
 end
 

@@ -41,9 +41,9 @@ if nargin < 1
          && qParams.UseParallel
       
       % Prompt the user to install the correct toolboxes
-      nigeLab.utils.cprintf('SystemCommands','Parallel computing toolbox might be uninstalled or unlicensed on this machine.\n');
-      nigeLab.utils.cprintf('Comments','But no worries: your code will still be executed serially.\n');
-      nigeLab.utils.cprintf('Comments','However, depending on recording size, this can take substantially longer.\n');
+      nigeLab.utils.cprintf('SystemCommands',obj.Verbose,'Parallel computing toolbox might be uninstalled or unlicensed on this machine.\n');
+      nigeLab.utils.cprintf('Comments',obj.Verbose,'But no worries: your code will still be executed serially.\n');
+      nigeLab.utils.cprintf('Comments',obj.Verbose,'However, depending on recording size, this can take substantially longer.\n');
    end
    return;
 end
@@ -76,14 +76,17 @@ switch class(obj)
       config_flag = obj.Pars.Queue.UseParallel || ...
                     obj.Pars.Queue.UseRemote;
       if compat_flag ~= config_flag
-         nigeLab.utils.cprintf('SystemCommands',['Mismatch between parsed '...
+         nigeLab.utils.cprintf('SystemCommands',obj.Verbose,...
+            ['Mismatch between parsed '...
             'parallel configuration and default parameters. \n']);
-         str = nigeLab.utils.getNigeLink(class(obj),...
-            'checkParallelCompatibility');
-         fprintf(1,'Consider re-running %s\n',str);
-         objName = inputname(1);
-         fprintf(1,['\t-->\t<a href="matlab:%s.checkParallelCompatibility();"' ...
-            '(Click here re-run check)</a> <--\n\n'],objName);
+         if obj.Verbose
+            str = nigeLab.utils.getNigeLink(class(obj),...
+               'checkParallelCompatibility');
+            fprintf(1,'Consider re-running %s\n',str);
+            objName = inputname(1);
+            fprintf(1,['\t-->\t<a href="matlab:%s.checkParallelCompatibility();"' ...
+               '(Click here re-run check)</a> <--\n\n'],objName);
+         end
       end
       
       if compat_flag

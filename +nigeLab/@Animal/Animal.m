@@ -41,7 +41,7 @@ classdef Animal < nigeLab.nigelObj
    end
    
    % HIDDEN,TRANSIENT,PUBLIC/RESTRICTED:nigelObj
-   properties (Hidden,Transient,GetAccess = public,SetAccess=?nigeLab.nigelObj)
+   properties (Hidden,Transient,GetAccess=public,SetAccess=?nigeLab.nigelObj)
       MultiAnimalsLinkedAnimals  nigeLab.Animal % Array of "linked" animals
    end
    
@@ -93,6 +93,7 @@ classdef Animal < nigeLab.nigelObj
             error(['nigeLab:' mfilename ':initFailed'],...
                'Could not initialize ANIMAL object.');
          end
+         animalObj.Key = nigeLab.nigelObj.InitKey;
       end
       
       % Modify behavior of 'end' keyword in indexing expressions
@@ -110,7 +111,7 @@ classdef Animal < nigeLab.nigelObj
    % PROTECTED
    methods (Access=protected)
       % Modify inherited superclass name parsing method
-      function [name,meta] = parseNamingMetadata(animalObj,fName,pars)
+      function meta = parseNamingMetadata(animalObj,fName,pars)
          %PARSENAMINGMETADATA  Parse metadata from file or folder name
          %
          %  name = PARSENAMINGMETADATA(animalObj);
@@ -167,7 +168,7 @@ classdef Animal < nigeLab.nigelObj
          end
          
          % % % % Run supermethod@superclass % % % % %
-         [name,meta] = parseNamingMetadata@nigeLab.nigelObj(...
+         meta = parseNamingMetadata@nigeLab.nigelObj(...
             animalObj,fName,pars);
          
          % % % % Parse additional parameters for ANIMAL % % % % 
@@ -187,6 +188,7 @@ classdef Animal < nigeLab.nigelObj
                meta.AnimalType = 'Rat?';
          end
          
+         animalObj.Meta=nigeLab.nigelObj.MergeStructs(animalObj.Meta,meta);
       end
    end
    
@@ -215,7 +217,7 @@ classdef Animal < nigeLab.nigelObj
          if numel(animalObj) > 1
             flag = [];
             for i = 1:numel(animalObj)
-               flag = [flag; getStatus(animalObj(i).Children,opField)]; %#ok<*AGROW>
+               flag = [flag; getStatus(animalObj(i))]; %#ok<*AGROW>
             end
             return;
          end
@@ -278,7 +280,7 @@ classdef Animal < nigeLab.nigelObj
 %       flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
 %       --> Deprecated (inherited from `nigelObj`)
       N = getNumBlocks(animalObj); % Gets total number of blocks 
-      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together
+      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together  % -- Is it deprecated? (MM to FB 2020-Feb-01)
    end
     
    % PRIVATE 

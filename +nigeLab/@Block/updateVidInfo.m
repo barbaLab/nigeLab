@@ -1,47 +1,78 @@
-function flag = updateVidInfo(blockObj)
-%% UPDATEVIDINFO    Update the video info associated with Block object
+function flag = updateVidInfo(blockObj,forceExtraction)
+%UPDATEVIDINFO    Update the video info associated with Block object
 %
-%  Called as part of DOVIDINFOEXTRACTION.
+%  Private method: Called as part of nigeLab.Block/doVidInfoExtraction()
 %
 %  --------
 %   INPUTS
 %  --------
 %  blockObj    :     BLOCK class object from orgExp package.
 %
+%  forceExtraction   :     Default is false. Set to true (called from
+%                             linkVideosField) to force extraction if no
+%                             Videos are detected.
+%                          --> Method called from /doVidInfoExtraction
+%                              should NOT have this flag set to true
+%                              (otherwise potential infinite loop)
+%
 %  --------
 %   OUTPUT
 %  --------
 %    flag      :     Flag indicating if setting new path was successful.
-%
-% By: MAECI 2018 collaboration (MM, FB, SB)
 
-%% ITERATE ON EACH VIDEO IN VIDPARS
-flag = false;
-
-if isempty(blockObj.VidPars)
-   warning('Video parameters not yet set. Try DOVIDINFOEXTRACTION.');
-   return;
-elseif isempty(blockObj.VideoPars.File)
-   warning('No video files associated (path: ~/%s).',...
-      blockObj.VideoPars.FilePath);
-   return;
+if nargin < 2
+   forceExtraction = false;
 end
 
-Props = cell(numel(blockObj.VideoPars.File),1);
-for iV = 1:numel(blockObj.VideoPars.File)
-   V = VideoReader(fullfile(blockObj.VideoPars.Root,...
-                            blockObj.VideoPars.FilePath,...
-                            blockObj.VideoPars.File{iV})); %#ok<TNMLP>
-                         
-   propNames = properties(V);
-   Props{iV} = struct;
-   for iP = 1:numel(propNames)
-      Props{iV}.(propNames{iP}) = V.(propNames{iP});
+% ITERATE ON EACH BLOCK IN AN ARRAY
+if numel(blockObj) > 1
+   flag = true;
+   for i = 1:numel(blockObj)
+      flag = flag && updateVidInfo(blockObj(i));
    end
-   
+   return;
+else
+   flag = false;
 end
-clear V
-blockObj.VideoPars.Props = Props;
+
+if isempty(blockObj)
+   flag = true;
+   return;
+elseif ~isvalid(blockObj)
+   flag = true;
+   return;
+end
+
+[fmt,idt,type] = blockObj.getDescriptiveFormatting();
+if ~isfield(blockObj.Paths,'V')
+   if ~forceExtraction
+      if blockObj.Verbose
+         nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),...
+            'Video info for %s %s not yet set. See: ',...
+            type,blockObj.Name);
+         nigeLab.utils.cprintf('Keywords*','doVidInfoExtraction\n');
+      end
+   else
+      doVidInfoExtraction(blockObj);
+   end
+   return;
+   
+elseif ~isfield(blockObj.Paths.V,'Match')
+   if blockObj.Verbose
+      nigelab.utils.cprintf('Errors*','%s[UPDATEVIDINFO]: ',idt);
+      nigeLab.utils.cprintf(fmt,...
+         'No videos initialized for %s %s.\n',...
+         type,blockObj.Name);
+   end
+   flag = true;
+   return;
+
+end
+
+blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
+uView = unique(blockObj.Meta.Video.View);
+initRelativeTimes(blockObj.Videos,uView);
 
 flag = true;
 

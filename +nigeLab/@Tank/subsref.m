@@ -47,33 +47,65 @@ if isempty(tankObj.Children)
    return;
 end
 
-subs = S(1).subs;
-
 switch S(1).type
-   case '{}'
-      %% Shortcut: tankObj{:} --> All Animals / tankObj{:,:} --> All Blocks
+   case '{}' % Shortcut: tankObj{:} --> All Animals / tankObj{:,:} --> All Blocks
+      % Only use the first indexing argument pair (e.g. {} or () or . only)
+      subs = S(1).subs;
       if numel(S) > 1
          error(['nigeLab:' mfilename ':badSubscriptReference'],...
             ['Shortcut indexing using {} does not support subsequent ' ...
             '''.'' or ''()'' references.']);
       end
       switch numel(subs)
-         % If only 1 subscript, then it indexes Animals
          case 1
-            % Unless it is a matrix reference
-            if size(subs{1},2) > 1
-               s = substruct('{}',subs);
-            else
-               % If "return all" make sure it is in row vector format
-               if ischar(subs{1})
-                  if strcmp(subs{1},':')
-                     subs = [1, subs];
-                  end
-               end
+            % If only 1 subscript, then it indexes Animals
+            if isnumeric(subs{1})
+               % if is numeric the indexing is direct, no need to parse
+               % anything here. Eg tankObj{1} or tankObj{[1,2]}
                s = substruct('()',subs);
+            elseif ischar(subs{1})
+               % it's either ':', which means return all animals, or it
+               % indexes animals using the 16 digit key value directly,
+               % which should return only one animal.
+               % eg tankObj{:} or tankObj{'xxxxxxxxxxxxxxxx'}
+               if strcmp(subs{1},':')
+                  varargout = {tankObj.Children};
+                  return;
+               else
+                  s = substruct('.','findByKey','()',subs);
+               end
+            elseif  iscell(subs{1})
+               % cell case only happens for key indexing. This should
+               % return one or more than one animal
+               % eg tankObj{{'xxxxxxxxxxxxxxxx'}} or
+               % tankObj{{'xxxxxxxxxxxxxxxx','yyyyyyyyyyyyyyyy'}}
+               s = substruct('.','findByKey','()',subs);
             end
             out = subsref(tankObj.Children,s);
          case 2
+            if isscalar(tankObj.Children)
+               % let's do some error handing. This is handled here becuse
+               % from the animal the case where the sbsref comes from
+               % tank or from the user is undistiguishable
+               if IsRightKeyFormat(tankObj.Children,subs{1})
+                  if isempty(tankObj.Children.findByKey(subs{1}))
+                     out = nigeLab.Block.Empty;
+                     varargout{1} = out;
+                     return;
+                  else
+                     subs(1) = [];
+                  end
+               elseif IsColon(subs{1})
+%                   subs(1) = [];
+               elseif isnumeric(subs{1})
+                  if subs{1} > 1
+                     error(['nigeLab:' mfilename ':indexExceed'],...
+                        'Index (%d) exceeds the number of Animals elements (%d).',subs{1},1);
+                  else
+                     subs(1) = [];
+                  end
+               end
+            end
             s = substruct('{}',subs);
             out = subsref(tankObj.Children,s);
             
@@ -82,12 +114,7 @@ switch S(1).type
                'Too many subscript indexing args (%g) given.',...
                numel(subs));
       end
-      if numel(S) > 1
-         methodIndex = tankObj.findMethodSubsIndices(S);
-      else
-         varargout{1} = out;
-      end
-      
+      varargout{1} = out;
       return;
       
       % If not {} index, use normal behavior
@@ -100,7 +127,7 @@ switch S(1).type
             tankObj.findMethodSubsIndices(S);
          obj = tankObj;
          while ~isempty(methodSubs)
-            if methodOutputs(1) > 0 
+            if methodOutputs(1) > 0
                if numel(S) > methodSubs(1)
                   switch S(methodSubs(1)+1).type
                      case '()' % Then arguments were given
@@ -142,7 +169,7 @@ switch S(1).type
                      return;
                   else
                      ans = tmp %#ok<NOPRT,*NOANS>
-                     nigeLab.utils.mtb(ans); 
+                     nigeLab.utils.mtb(ans);
                      return;
                   end
                end
@@ -155,4 +182,13 @@ switch S(1).type
          nigeLab.utils.mtb(ans);
       end
 end
+end
+
+% Check that input is a colon
+function value = IsColon(subs)
+%ISSEMICOLON  Returns true if subs is a `char` with value ':'
+%
+%  value = IsColon(subs);
+
+value = ischar(subs) && strcmp(subs,':');
 end

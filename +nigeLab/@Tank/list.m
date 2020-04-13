@@ -98,7 +98,7 @@ end
 
 function N = getNChannel(animalObj)
 b = animalObj.Children;
-N = {unique(b.NumChannels)};
+N = {unique([b.NumChannels])};
 end
 
 function R = getRecDate(animalObj)

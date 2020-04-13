@@ -70,14 +70,14 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-% pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % FB?
-pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$Year' '$Month' '$Day' '$SessionID' '~RecDate' '$RecTime'}; % KUMC
+% pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$RecID' '$RecDate' '$RecTime'}; %  ???? (FB, for these just comment out the one if you are replacing it please)  
+pars.DynamicVarExp={'$SurgYear','$SurgNumber','$Year','$Month','$Day','$RecID','$RecDate','$RecTime'};
 
 %% Common NamingConvention values
 % pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecTime'}; % FB stuff
-pars.NamingConvention={'AnimalID','Year','Month','Day','SessionID'}; % MM stuff
-% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj
+% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecDate','RecTime'}; % (FB/KUMC R03) Since these are different for different configs, please keep commented lines instead of changing directly
+pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuff
+% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
@@ -86,21 +86,29 @@ pars.NamingConvention={'AnimalID','Year','Month','Day','SessionID'}; % MM stuff
 %  used). The same goes for "AnimalID"
 
 pars.SpecialMeta = struct;
-pars.SpecialMeta.SpecialVars = {};
-pars.SpecialMeta.RecID.cat = '-'; % Concatenater (if used) for names
-pars.SpecialMeta.AnimalID.cat = '-'; % Concatenater (if used) for names
 
-% pars.SpecialMeta.SpecialVars = {}; % Default case
+% Note that RecTag (if created) replaces 'RecID' in DashBoard
+% pars.SpecialMeta.SpecialVars = {'RecTag'};     % FB ~!!
+pars.SpecialMeta.SpecialVars = {'AnimalID','RecTag'}; % MM
+pars.SpecialMeta.RecTag.cat = '-';
+% pars.SpecialMeta.RecID.cat = '-';      % Concatenater (if used) for names
+pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
+
+% pars.SpecialMeta.SpecialVars = {'AnimalID','RecID'}; % KUMC "RC"
 
 % (All must be included in DynamicVarExp):
-pars.SpecialMeta.RecID.vars = {'Month','Day','SessionID'}; % KUMC "RC"  
-% pars.SpecialMeta.RecID.vars = {'Year','Month','Day'}; % KUMC "RC"  
-pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'}; % KUMC "standard"
+% pars.SpecialMeta.RecTag.vars = {'RecID'}; % FB
+% pars.SpecialMeta.RecID.vars = {}; % FB/KUMC-R03/MM
+% pars.SpecialMeta.RecTag.vars = {'Year','Month','Day'}; % KUMC "RC"
+pars.SpecialMeta.RecTag.vars = {'Year','Month','Day','RecID'}; % KUMC "MM"
+% pars.SpecialMeta.AnimalID.vars = {}; % FB/KUMC-R03  Keep commented
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
+pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
 pars.Concatenater = '_'; % concatenater for variables INCLUDED in BLOCK name
-pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+% pars.VarExprDelimiter = {'_'};   % Delimiter for parsing "special" vars   -- (FB)
+pars.VarExprDelimiter = {'_','-'}; % Since these are different for different configs, please keep commented lines instead of changing directly
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
@@ -136,7 +144,7 @@ TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    pars.Delimiter 'Stream.mat'];
 TAG.Videos = ... % Videos: behavioral videos
    [pars.Delimiter '%s', ...
-    pars.Delimiter '%g.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
+    pars.Delimiter '%s.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
 
 Fields =  { ...
    'Raw';            % 1  - hard-coded for extraction
