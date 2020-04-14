@@ -74,6 +74,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
       toSplit   % Struct array of Block and corresponding Animal to split
       toAdd     % Struct array of Block and corresponding Animal to add
    end
+   
+   properties (Access=private)
+      warningsToSolence = {'MATLAB:ui:javacomponent:FunctionToBeRemoved';
+                           'MATLAB:ui:javaframe:PropertyToBeRemoved'};
+   end
    % % % % % % % % % % END PROPERTIES %
    
    % % % EVENTS % % % % % % % % % % % %
@@ -104,6 +109,14 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          %  is a "member" of a Tank hierarchy. Block and Animal objects can
          %  be created separate from a Tank, but in order to use this
          %  interface, you must have a Tank object.
+         
+         
+         % turn off java warnings
+        for ii=1:numel(obj.warningsToSolence)
+            warnID = obj.warningsToSolence{ii};
+            warning('off',warnID);
+        end
+         
          
          % Check input
          if nargin < 1
@@ -168,6 +181,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          % Add "rollover" interaction mediator for nigelButtons
          obj.RollOver = nigeLab.utils.Mouse.rollover(...
             obj.nigelGUI,[obj.nigelButtons.Tree,obj.nigelButtons.TitleBar]);
+        
+        
+
       end
    end
    
@@ -852,6 +868,13 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.nigelGUI(:) = []; % Remove object so not deleted twice
          delete(obj);
          
+         
+         % turn on java warnings previously deactivated
+        for ii=1:numel(obj.warningsToSolence)
+            warnID = obj.warningsToSolence{ii};
+            warning('on',warnID);
+        end
+         
       end
       
       % Delete all current event.listener object handles
@@ -1103,15 +1126,15 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          h = obj.Tree.SelectedItems;
          switch h.Type
             case 'Tank'
-               [~,a] = getSelectedItems('obj');
+               a = b.Parent;
                a_all = h.Children;
                idx = ismember(a_all,a);
                status = getStatus(h,[]);
-               obj.Status = status(idx,:);
+               obj.Status(idx,:) = status(idx,:);
                obj.Mask = nigeLab.libs.DashBoard.animal2info(h);
                
             case 'Animal'
-               b_all = getSelectedItems('obj');
+               b_all = obj.Tree.SelectedBlocks;
                idx = find(b==b_all,1,'first');
                obj.Status(idx,:) = getStatus(b,[]);
                obj.Mask = nigeLab.libs.DashBoard.animal2info(h);

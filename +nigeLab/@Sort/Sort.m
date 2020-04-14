@@ -161,6 +161,10 @@ classdef Sort < handle
                   return;
                end
                
+               if checkForUnconfirmedChanges(sortObj.UI.SpikeImage,true)
+                   return;
+               end
+               
                sortObj.UI.ch = value;
                
             case 'cluster'

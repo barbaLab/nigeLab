@@ -3860,6 +3860,8 @@ classdef nigelObj < handle & ...
          %        think of a reason that we would want the
          %        nigeLab.libs.DashBoard object in the base workspace.
          
+         
+         
          requestDash(obj);         
       end
       

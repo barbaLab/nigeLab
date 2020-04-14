@@ -186,21 +186,32 @@ classdef SpikeImage < handle
          obj.Init(fs);
          obj.UpdateChannel;
       end
+
+      function flag = checkForUnconfirmedChanges(obj,askUser)
+          % CHECKFORUNCONFIRMEDCHANGES cheacks if there are any unconfirmed changes.
+          % also asks the suer if it's ok to proceed anyway.
+          
+          % returns true if we unconfirmed changes are present, therefore
+          % actions should be taken.
+
+% is the user is prompted and decides to proceed, this will return false as
+% if there were no unconfirmed changes.
+          flag = false;
+
+          % Check if it's okay to lose changes if there are any
+         if obj.UnconfirmedChanges
+             if askUser 
+                 str = questdlg('Unconfirmed changes will be lost. Proceed anyways?',...
+                     'Discard Sorting on this Channel?','Yes','No','Yes');
+                 flag = strcmp(str,'No');
+             else
+                 flag = true;
+             end
+         end
+      end
       
       function UpdateChannel(obj,~,~)
          %UPDATECHANNEL  Update the spike data structure to new channel
-         
-         % Check if it's okay to lose changes if there are any
-         if obj.UnconfirmedChanges
-            str = questdlg('Unconfirmed changes will be lost. Change channel anyways?',...
-               'Discard Sorting on this Channel?','Yes','No','Yes');
-         else
-            str = 'Yes';
-         end
-         
-         if strcmp(str,'No')
-            return;
-         end
          
          % Interpolate spikes
          obj.Interpolate(obj.Parent.spk.spikes{obj.Parent.UI.ch});

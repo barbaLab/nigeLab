@@ -132,6 +132,8 @@ classdef ChannelUI < handle
             if set(obj.Parent,'channel',src.Value)
                obj.Channel = src.Value;
                notify(obj,'NewChannel');
+            else
+                src.Value = obj.Channel;
             end
          end
       end
