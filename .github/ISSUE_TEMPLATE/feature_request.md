@@ -3,7 +3,7 @@ name: Feature request
 about: Suggest an idea for this project
 title: "[REQUEST]"
 labels: enhancement
-assignees: Nabarb, m053m716
+assignees: m053m716, Nabarb
 
 ---
 
@@ -16,6 +16,9 @@ How will it improve nigeLab?
 
 ## Alternatives?
 Are there any workarounds you've tried? 
+
+## Release or Branch
+* Which [`release`](https://github.com/m053m716/ePhys_packages/releases) does the proposed feature request apply to?
 
 ## Urgency
 _Low_

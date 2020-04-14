@@ -1,9 +1,9 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Something is not working correctly.
 title: "[BUG]"
 labels: bug
-assignees: Nabarb, m053m716
+assignees: m053m716, Nabarb
 
 ---
 
@@ -16,6 +16,9 @@ I think it may be related to...
 ```matlab
 Copy/paste error stack here
 ```
+
+## Release or Branch
+* Which [`release`](https://github.com/m053m716/ePhys_packages/releases) does this bug relate to?
 
 ## Machine
  - OS: **Win-64 (64-bit)**
