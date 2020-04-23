@@ -32,7 +32,8 @@ for ii = 1:numel(blockObj)
    
    % Check the format of files
    fprintf(1,'\nChecking SORTED for %s...000%%\n',blockObj(ii).Name);
-   curCh = 0; nCh = numel(blockObj(ii).Mask);
+   curCh = 0;
+   nCh = numel(blockObj(ii).Mask);
    for iCh = blockObj(ii).Mask
       blockObj(ii).checkSpikeFile(blockObj(ii).Mask);
       curCh = curCh+1;
@@ -44,4 +45,32 @@ end
 sortObj.Blocks = blockObj;
 flag = true;
 
+end
+
+function set = intersectN(rows,varargin)
+% Utility function to inteersect multiple arrays.
+% skipping input validation cause I'm lazy.
+if nargin-1 == 2
+    if rows
+        set = intersect(varargin{:},'rows','stable');
+    else
+        set = intersect(varargin{:},'stable');
+    end
+else
+    set = intersectN(rows,varargin{1},intersectN(rows,varargin{2:end}));
+end
+end
+
+function set = unionN(rows,varargin)
+% Utility function to inteersect multiple arrays.
+% skipping input validation cause I'm lazy.
+if nargin-1 == 2
+    if rows
+        set = union(varargin{:},'rows','stable');
+    else
+        set = union(varargin{:},'stable');
+    end
+else
+    set = unionN(rows,varargin{1},unionN(rows,varargin{2:end}));
+end
 end
