@@ -47,7 +47,7 @@ for iBk = 1:M % For each block
    C = blockObj(iBk).ChannelID; % parse the channel IDs
    for iCh = 1:N % For each channel
       % Match the channel ID to the correct row (if it exists)
-      tmp = find(ismember(masterID,C(iCh,:),'rows'),1,'first');
+      tmp = find(ismember(C,masterID(iCh,:),'rows'),1,'first');
       if ~isempty(tmp)
          masterIdx(iCh,iBk) = tmp;
       end
