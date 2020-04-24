@@ -35,7 +35,7 @@ for ii = 1:numel(blockObj)
    curCh = 0;
    nCh = numel(blockObj(ii).Mask);
    for iCh = blockObj(ii).Mask
-      blockObj(ii).checkSpikeFile(blockObj(ii).Mask(iCh));
+      blockObj(ii).checkSpikeFile(iCh);
       curCh = curCh+1;
       pct = 100 * (curCh / nCh);
       fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct));
