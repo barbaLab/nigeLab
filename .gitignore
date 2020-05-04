@@ -47,6 +47,10 @@ test.mat
 
 \+nigeLab/\+defaults/Block.m
 
-resources/
+resources/project/Root.type.Categories/FileClassCategory.type.Category/
 
-desktop.ini
+EPhys_packages.prj
+
+resources/project/
+
+\+nigeLab/\+defaults/Animal.m

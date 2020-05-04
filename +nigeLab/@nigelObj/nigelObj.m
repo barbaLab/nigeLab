@@ -6570,7 +6570,7 @@ classdef nigelObj < handle & ...
                if ~isempty(b.Videos)
                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
                elseif b.Pars.Video.HasVideo
-                  b.Videos = nigeLab.libs.VideosFieldType.empty();
+                   b.Videos = nigeLab.libs.VideosFieldType.empty();
                else
                end
                
@@ -6614,7 +6614,7 @@ classdef nigelObj < handle & ...
                  
              case{'Tank'}
                  b.PropListener(1).Enabled = false;
-               % Adds Children if it finds them
+                 % Adds Children if it finds them
                  [C,varName] = b.searchForChildren();
                  DataMoved = false;
                if isempty(C)                                      
@@ -6638,7 +6638,7 @@ classdef nigelObj < handle & ...
             '%s\b\b\b[LOAD]: %s (%s) loaded successfully!\n',...
             idt,b.Name,type);
       end
-      
+           
       % Print detailed description to Command Window
       function DisplayCurrent(obj,displayStyle)
          %DISPLAYCURRENT  Print detailed description to Command Window

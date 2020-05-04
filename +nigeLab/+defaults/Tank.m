@@ -30,7 +30,9 @@ pars.SpecialMeta.SpecialVars = {};
 
 pars.Delimiter   = '_'; % delimiter for variables in TANK name
 pars.Concatenater = '_'; % concatenater for variables INCLUDED in TANK name
-pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+% pars.VarExprDelimiter = {'-','_'}; % Delimiter for parsing "special" vars
+pars.VarExprDelimiter = {'_'}; % Delimiter for parsing "special" vars
+
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 

@@ -70,15 +70,15 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-% pars.DynamicVarExp={'$AnimalID' '$Year' '$Month' '$Day' '$RecID' '$RecDate' '$RecTime'}; %  ???? (FB, for these just comment out the one if you are replacing it please)  
-pars.DynamicVarExp={'$SurgYear','$SurgNumber','$Year','$Month','$Day','$RecID','$RecDate','$RecTime'};
+pars.DynamicVarExp={'$AnimalID','$Year','$Month','$Day','$RecID','$RecDate','$RecTime'}; % demo
+% pars.DynamicVarExp={'$AnimalID' '$RecID' '$RecDate' '$RecTime'}; % iit acute
 
 %% Common NamingConvention values
 % pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecDate','RecTime'}; % (FB/KUMC R03) Since these are different for different configs, please keep commented lines instead of changing directly
-pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuff
+% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuff
 % pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC
+pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC, demo
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 % OPTIONAL: To parse "RecID" from combination of meta vars, specify here
@@ -103,12 +103,12 @@ pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
 pars.SpecialMeta.RecTag.vars = {'Year','Month','Day','RecID'}; % KUMC "MM"
 % pars.SpecialMeta.AnimalID.vars = {}; % FB/KUMC-R03  Keep commented
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
-pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff
+% pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff
 
 pars.Delimiter   = '_'; % delimiter for variables in BLOCK name
 pars.Concatenater = '_'; % concatenater for variables INCLUDED in BLOCK name
-% pars.VarExprDelimiter = {'_'};   % Delimiter for parsing "special" vars   -- (FB)
-pars.VarExprDelimiter = {'_','-'}; % Since these are different for different configs, please keep commented lines instead of changing directly
+pars.VarExprDelimiter = {'_'};   % Delimiter for parsing "special" vars   -- (FB)
+% pars.VarExprDelimiter = {'_','-'}; % Since these are different for different configs, please keep commented lines instead of changing directly
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
