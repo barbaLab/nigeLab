@@ -1556,14 +1556,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                 end
  
             case 'stop'
-               
-               % TODO reenable nodes without multiAnimal flag!
-               if any([obj.Tank.Children.MultiAnimals])
-                  obj.splitMultiAnimalsUI.toggleVisibility;
-               else
+                            
                   delete( obj.splitMultiAnimalsUI.Fig);
                   delete(obj.splitMultiAnimalsUI);
-               end
+                  obj.nigelButtons.Tree.getButton('Split').Enable = 'off';
+               
                
             case 'init'
                % First, make sure the Tank contains multiAnimals
@@ -1577,7 +1574,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end % if ~MultiAnimals
                
                obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(an);
-               
+               addlistener(obj.splitMultiAnimalsUI,'SplitCompleted',@(~,~)toggleSplitMultiAnimalsUI(obj,'stop'));
          end % switch mode
       end
       

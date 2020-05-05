@@ -22,23 +22,23 @@ classdef  (ConstructOnLoad) splitCompleted < event.EventData
    %        evt = nigeLab.evt.splitCompleted(nigelObjArray);
     
    properties (GetAccess = public, SetAccess = immutable)
-      nigelObj         % An array of `nigelObjects`
-      type    char     % Type of `nigelObject`
-      n       double   % Number of nigelObjects in array
+%       nigelObj         % An array of `nigelObjects`
+%       type    char     % Type of `nigelObject`
+%       n       double   % Number of nigelObjects in array
    end
    
    methods (Access = public)
-      function evt = splitCompleted(nigelObj)
+      function evt = splitCompleted()
       % SPLITCOMPLETED Event class to notify the DashBoard and any other
       %                objects involved in splitting a "multi-animal" block
       %
       %  evt = nigeLab.evt.splitCompleted(blockObjArray);
       %  evt = nigeLab.evt.splitCompleted(animalObjArray);
       
-         evt.nigelObj = nigelObj;
-         clInfo = strsplit(class(nigelObj),'.');
-         evt.type = clInfo{2};
-         evt.n = numel(nigelObj);
+%          evt.nigelObj = nigelObj;
+%          clInfo = strsplit(class(nigelObj),'.');
+%          evt.type = clInfo{2};
+%          evt.n = numel(nigelObj);
       end
    end
 end

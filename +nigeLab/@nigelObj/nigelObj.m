@@ -493,6 +493,10 @@ classdef nigelObj < handle & ...
             end
          end
          
+         if ~isempty(obj.TreeNodeContainer)
+             delete(obj.TreeNodeContainer);
+         end
+         
          if ~isempty(obj.GUI)
             if isvalid(obj.GUI)
                delete(obj.GUI);
@@ -2457,9 +2461,14 @@ classdef nigelObj < handle & ...
             end % switch obj.Type
          end % if isempty
          
+         RmIdx = false(1,numel(childObj));
+         if any(strcmp(class(obj),{'nigeLab.Tank','Tank'}))
+             RmIdx = ismember({childObj.Name},{obj.Children.Name});
+         end
+         
          % assign parent to childObj
          [childObj.Parent] = deal(obj);
-         
+                 
          if nargin < 3
             obj.Children = [obj.Children childObj];
          else
@@ -2479,6 +2488,8 @@ classdef nigelObj < handle & ...
              
          end % if nargin < 3
          
+
+         
          
          for i = 1:numel(childObj)
             obj.ChildListener = [obj.ChildListener, ...
@@ -2497,8 +2508,16 @@ classdef nigelObj < handle & ...
          if strcmp(obj.Type,'Animal') && ~obj.MultiAnimals
             obj.parseProbes();
          end
+         
+         
+         % check if any clones were found
+         childObj = childObj(~RmIdx);
+         if isempty(childObj)
+             return;
+         end
          evt = nigeLab.evt.childAdded(childObj);
          notify(obj,'ChildAdded',evt);
+         
       end
       
       % Check compatibility with current `.Fields` configuration
@@ -5076,7 +5095,8 @@ classdef nigelObj < handle & ...
          if ~any(rmvec)
             return;
          end
-         
+         evt = nigeLab.evt.clonesFound(obj.Children(rmvec));
+         notify(obj,'ClonesFound',evt);
          % cycle through each animal, removing animals and adding any
          % associated blocks to the "kept" animal Blocks property
          ii=1;
@@ -5104,14 +5124,15 @@ classdef nigelObj < handle & ...
          % If no Blocks (or only 1 "non-empty" block) then there are no
          % clones in the array.
          b = obj.Children;
-         if sum(isempty(b)) <= 1
+         if sum(~isempty(b)) <= 1
             return;
          else
             idx = find(~isempty(b));
             b = b(idx);
          end
          
-         cname = {b.Name};
+         cname = b.getKey;
+%          cname = {b.Name};
          
          % look for animals with the same name
          comparisons_cell = cellfun(... % check each element name against

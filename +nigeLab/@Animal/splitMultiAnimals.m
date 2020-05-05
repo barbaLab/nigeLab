@@ -102,33 +102,39 @@ animalNames = arrayfun(@(x) x.AnimalID, [AllSplittedBlocks.Meta],'UniformOutput'
 
 splittedAnimals = [];
 % Main cycle, create all MultiAnimalsLinkedObjects
+Sieblings = animalObj.Parent.Children;
 for ii = 1:numel(SplittedMeta)
     ff=fields(SplittedMeta);
-    an = copy(animalObj);
-    
-    % assign correct meta
-    for jj=1:numel(ff)
-        an.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
-    end %jj
-   
-    % create name from meta
-   str = [];
-   nameCon = an.Pars.Animal.NamingConvention;
-   for kk = 1:numel(nameCon)
-      if isfield(an.Meta,nameCon{kk})
-         str = [str, ...
-            an.Meta.(nameCon{kk}),...
-            an.Pars.Block.Delimiter]; %#ok<AGROW>
-      end
-   end %kk
-    an.Name =  str(1:(end-1));
-    an.Children = [];
-    an.MultiAnimals = 2;
-    an.MultiAnimalsLinkedAnimals(:) = [];
-    an.Output = fullfile(an.SaveLoc,an.Name);
-    an.addChild(AllSplittedBlocks(strcmp(animalNames,an.Name)));
-    
-    an.Key = an.InitKey();
+    if ismember(ff,'AnimalID') && any(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID))
+        an = Sieblings(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID));
+        [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
+    else
+        an = copy(animalObj);
+        
+        % assign correct meta
+        for jj=1:numel(ff)
+            an.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
+        end %jj
+        
+        % create name from meta
+        str = [];
+        nameCon = an.Pars.Animal.NamingConvention;
+        for kk = 1:numel(nameCon)
+            if isfield(an.Meta,nameCon{kk})
+                str = [str, ...
+                    an.Meta.(nameCon{kk}),...
+                    an.Pars.Block.Delimiter]; %#ok<AGROW>
+            end
+        end %kk
+        an.Name =  str(1:(end-1));
+        an.Children = [];
+        an.MultiAnimals = 2;
+        an.MultiAnimalsLinkedAnimals(:) = [];
+        an.Output = fullfile(an.SaveLoc,an.Name);
+        [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
+        
+        an.Key = an.InitKey();
+    end
     splittedAnimals = [splittedAnimals, an];
 end
 animalObj.MultiAnimalsLinkedAnimals = splittedAnimals;

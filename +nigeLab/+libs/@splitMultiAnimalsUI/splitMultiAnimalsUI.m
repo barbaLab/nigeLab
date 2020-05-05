@@ -13,7 +13,8 @@ classdef splitMultiAnimalsUI < handle
    
    properties (Access = private,SetObservable,AbortSet)
       nigelObj                  nigeLab.nigelObj
-      tankObj                   nigeLab.Tank
+      tankObj                   nigeLab.Tank    % original Tank, ie where to add back the splitted animals
+      multiTankObj              nigeLab.Tank    % reduced Tank, only conataining the multi objects
       SplittedAnimals
       SplittedBlocks
    end
@@ -37,7 +38,7 @@ classdef splitMultiAnimalsUI < handle
    end
    
    events
-      SplitCompleted   % Fired once the "splitting" has been finished
+      SplitCompleted   % Fired once the "splitting" procedure has been finished
    end
    
    methods (Access = public)
@@ -79,14 +80,18 @@ classdef splitMultiAnimalsUI < handle
          switch Type{:}
              case 'Tank'
                  obj.tankObj = nigelObj;
+                 obj.multiTankObj = copy(nigelObj);
                  idx = [nigelObj.Children.MultiAnimals];
                  obj.nigelObj = nigelObj.Children(idx);
+                 obj.multiTankObj.Children = obj.nigelObj;
              case 'Animal'
                  
                  if ~isempty(nigelObj(1).Parent)
                      obj.tankObj = nigelObj.Parent;
+                     obj.multiTankObj = copy(nigelObj.Parent);
                  end
                  obj.nigelObj = nigelObj;
+                 obj.multiTankObj.Children = obj.nigelObj;
                  
              case 'Block'
                  obj.nigelObj = nigelObj;
@@ -96,7 +101,7 @@ classdef splitMultiAnimalsUI < handle
          
          obj.initSplittedObjects();
          
-         obj.selectionTree = nigeLab.libs.nigelTree(nigelObj,obj.treePanel);
+         obj.selectionTree = nigeLab.libs.nigelTree(obj.multiTankObj,obj.treePanel);
          obj.selectionTree.Tree.SelectionType = 'single';
          idx = ... find all listeners for ChildAdded in the Tank
             strcmp({obj.selectionTree.Listener.EventName},'ChildAdded')...
@@ -265,8 +270,8 @@ classdef splitMultiAnimalsUI < handle
             'TreeSelectionChanged',...
             @(~,~)obj.rotateTreeVisibility);
 
-        obj.SplitCompletedListener = addlistener(obj,'SplitCompleted',...
-            @(~,~)obj.deleteAnimalWhenEmpty());
+%         obj.SplitCompletedListener = addlistener(obj,'SplitCompleted',...
+%             @(~,~)obj.deleteAnimalWhenEmpty());
       end
       
       % LISTENER CALLBACK: Initialize the splitting process
@@ -284,7 +289,7 @@ classdef splitMultiAnimalsUI < handle
          % them correctly later.
          obj.SplittedAnimals = [obj.nigelObj.MultiAnimalsLinkedAnimals];
          obj.SplittedBlocks = [obj.SplittedAnimals.Children];
-         [obj.SplittedAnimals.Children] = deal([]);
+%          [obj.SplittedAnimals.Children] = deal([]);
          
          % TODO case where only blockobj is initialized
          obj.Tree = obj.buildBlockTrees(obj.nigelObj);
@@ -538,12 +543,7 @@ classdef splitMultiAnimalsUI < handle
          end %kk
       end %dragDropCallback
       
-      function deleteAnimalWhenEmpty(obj)
-         if isvalid(obj.animalObj) && numel(obj.animalObj.Children) == 0
-             delete(obj.animalObj.File);
-            delete(obj.animalObj);
-         end
-      end
+      
    end % methods private
    
    methods (Access = ?nigeLab.libs.nigelProgress)
@@ -574,7 +574,12 @@ classdef splitMultiAnimalsUI < handle
            delete(obj.thisTree);
            an.removeChild(obj.toSplit(ii));
            obj.toSplit(ii)=[];
-           
+           obj.deleteAnimalWhenEmpty(an)
+           if  isempty(obj.multiTankObj.Children)
+               evt = nigeLab.evt.splitCompleted();
+               notify(obj,'SplitCompleted',evt);
+               return;
+           end
            obj.selectionTree.changeTreeSelection([]);
         end
                       
@@ -640,6 +645,16 @@ classdef splitMultiAnimalsUI < handle
          end
          obj = nigeLab.libs.splitMultiAnimalsUI(n);         
       end
+      
+      function flag = deleteAnimalWhenEmpty(animalObj)
+          flag = false;
+         if isvalid(animalObj) && numel(animalObj.Children) == 0
+             delete(animalObj.File);
+            delete(animalObj);
+            flag = true;
+         end
+      end
+      
    end
 end
 

@@ -261,11 +261,13 @@ classdef nigelTree < handle & matlab.mixin.SetGet
                             'Parent',obj.Tree.Root);
                         set(AnNode,'UserData',{thisAnimal.getKey});
                         thisAnimal.TreeNodeContainer = [thisAnimal.TreeNodeContainer, AnNode];
-%                         obj.Listener = [obj.Listener, ...
-%                             addlistener(nigelObj(ii),'ObjectBeingDestroyed',...
-%                             @obj.removeFromTree)];
+                        %                         obj.Listener = [obj.Listener, ...
+                        %                             addlistener(nigelObj(ii),'ObjectBeingDestroyed',...
+                        %                             @obj.removeFromTree)];
                     end
-                    
+                    obj.Listener = [obj.Listener,...
+                        addlistener(thisAnimal,'ChildAdded',...
+                        @(~,evt)obj.addToTree(evt.nigelObj))];
                     addToTree(obj,thisAnimal.Children,false);
                 end
                 case 'nigeLab.Block'
@@ -513,22 +515,18 @@ classdef nigelTree < handle & matlab.mixin.SetGet
             %                  handle array that can be deleted on object
             %                  destruction.
             
-            % Add listeners for 'Completed' or 'Changed' events
+            % Add listeners for 'ChildAdded'
             
-            % Add listeners for Multi-Animals UI tree "pruning"
-%             for a = obj.Tank.Children
-%                 obj.Listener = [obj.Listener,...
-%                     addlistener(a,'ObjectBeingDestroyed',...
-%                     @obj.removeFromTree)];                
-%             end
             
             obj.Listener = [obj.Listener,...
                          addlistener(obj.Tank,'ChildAdded',...
                             @(~,evt)obj.addToTree(evt.nigelObj))];
             
-%             obj.Listener = [obj.Listener, ...
-%                 addlistener(obj.Tank,'ObjectBeingDestroyed',...
-%                 @obj.removeFromTree)];
+%             for a = obj.Tank.Children
+%                 obj.Listener = [obj.Listener,...
+%                     addlistener(a,'ChildAdded',...
+%                     @(~,evt)obj.addToTree(evt.nigelObj))];
+%             end
             
             
         end
