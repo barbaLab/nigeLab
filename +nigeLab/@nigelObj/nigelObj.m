@@ -2422,6 +2422,11 @@ classdef nigelObj < handle & ...
             childData = [];
          end
          
+         if nargin < 3
+            idx = [];
+         end
+         
+
          if ~isscalar(obj) % Require that Parent is scalar
             error(['nigeLab:' mfilename ':BadInputSize'],...
                'obj must be scalar.');
@@ -2466,10 +2471,12 @@ classdef nigelObj < handle & ...
              RmIdx = ismember({childObj.Name},{obj.Children.Name});
          end
          
+         
          % assign parent to childObj
          [childObj.Parent] = deal(obj);
-                 
-         if nargin < 3
+         
+         
+         if isempty(idx)
             obj.Children = [obj.Children childObj];
          else
              % we need to explicitly handle the assignement of empty elements 
@@ -2486,7 +2493,7 @@ classdef nigelObj < handle & ...
              obj.Children = builtin('subsasgn',obj.Children,...
                S,newChildObj);
              
-         end % if nargin < 3
+         end % if isempty(idx)
          
 
          
@@ -5095,8 +5102,7 @@ classdef nigelObj < handle & ...
          if ~any(rmvec)
             return;
          end
-         evt = nigeLab.evt.clonesFound(obj.Children(rmvec));
-         notify(obj,'ClonesFound',evt);
+
          % cycle through each animal, removing animals and adding any
          % associated blocks to the "kept" animal Blocks property
          ii=1;

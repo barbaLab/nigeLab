@@ -50,6 +50,8 @@ classdef nigelTree < handle & matlab.mixin.SetGet
         SelectedItemsType    char                   % 'Type' corresponding to objects
         SelectedBlocks       nigeLab.Block          % Array of nigeLab.Block corresponding to obj
         Position             double = [.01 .01 .98 .98]  % Normalized position of Tree
+        dragCallback                = @(h,e)pause(0.1);
+        dropCallback                = @(h,e)pause(0.1);
     end
     % % % % % % % % % % END PROPERTIES %
     
@@ -132,6 +134,9 @@ classdef nigelTree < handle & matlab.mixin.SetGet
             % Add event listeners
             obj.addAllListeners();
             
+            % Add drag and drop
+            obj.Tree.NodeDraggedCallback = @(h,e)obj.dragCallback(h,e);
+            obj.Tree.NodeDroppedCallback = @(h,e)obj.dropCallback(h,e);
         end
         
         
