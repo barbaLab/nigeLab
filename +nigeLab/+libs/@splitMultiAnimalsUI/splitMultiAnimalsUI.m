@@ -88,8 +88,8 @@ classdef splitMultiAnimalsUI < handle
                  obj.allBlocks = obj.multiTankObj{:,:};
              case 'Animal'                 
                  if ~isempty(nigelObj(1).Parent)
-                     obj.tankObj = nigelObj.Parent;
-                     obj.multiTankObj = copy(nigelObj.Parent);
+                     obj.tankObj = nigelObj(1).Parent;
+                     obj.multiTankObj = copy(obj.tankObj);
                  end
                  obj.nigelObj = nigelObj;
                  obj.multiTankObj.Children = obj.nigelObj;
@@ -330,7 +330,8 @@ classdef splitMultiAnimalsUI < handle
                       return;
                   elseif ~isempty(nigelObj.MultiAnimalsLinkedBlocks)
                       
-                      Tree = arrayfun(@(x)buildBlockTrees(obj,x),nigelObj.MultiAnimalsLinkedBlocks);
+                      Tree = arrayfun(@(x)buildBlockTrees(obj,x),nigelObj.MultiAnimalsLinkedBlocks,'UniformOutput',false);
+                      Tree = [Tree{:}];
                       return;
                   else
                       % finally build a single tree for each splittedBlock
@@ -437,7 +438,7 @@ classdef splitMultiAnimalsUI < handle
             jFrame_fHGxClientW.setAlwaysOnTop(false);
             answer = repmat({nan},1,size(obj.reviedTrees,1));
             for ii=1:size(obj.reviedTrees,1)
-                answer{ii} = questdlg('Are you sure?','Confirm Changes','Yes','No','Yes to all','No');
+                answer{ii} = questdlg(sprintf('Confirm Changes for block:\n%s',obj.toSplit(ii).Name),'Are you sure?','Yes','No','Yes to all','No');
                 if strcmp(answer(ii),'Yes to all')
                    answer = repmat({'Yes'},1,size(obj.reviedTrees,1));
                    break;
@@ -446,7 +447,7 @@ classdef splitMultiAnimalsUI < handle
             
             Idx = strcmp(answer,'Yes');
             Tree_ = obj.reviedTrees(Idx,:);
-            obj.toSplit = obj.allBlocks(Idx);
+            obj.toSplit = obj.toSplit(Idx);
             
             
 
@@ -531,10 +532,10 @@ classdef splitMultiAnimalsUI < handle
                       
                       % For example, assume it always is.
                       % Tree will prevent dropping on itself or existing parent.
-                      dropOk = e.Target.Tree.Parent==e.Source.Tree.Parent;
+                      dropOk = e.Target.Tree.Parent==e.Source(kk).Tree.Parent;
                       
                   elseif strcmpi(e.DropAction,'move')
-                      dropOk = e.Target.Tree.Parent==e.Source.Tree.Parent;
+                      dropOk = e.Target.Tree.Parent==e.Source(kk).Tree.Parent;
                       set(obj.AcceptBtn,'Enable','on');
                       if ~any(ismember(obj.reviedTrees,obj.thisTree))
                           obj.reviedTrees = [obj.reviedTrees;obj.thisTree];
