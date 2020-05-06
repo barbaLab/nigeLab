@@ -1,4 +1,4 @@
-function str = printLinkFieldString(fieldType,field,print_to_window)
+function str = printLinkFieldString(fieldType,field,print_to_window,precursor)
 %% PRINTLINKFIELDSTRING  Standardized Command Window print command for link
 %
 %  str = nigeLab.utils.PRINTLINKFIELDSTRING(fieldType,field);
@@ -12,6 +12,10 @@ function str = printLinkFieldString(fieldType,field,print_to_window)
 %%
 if nargin < 3
    print_to_window = false;
+end
+
+if nargin < 4
+   precursor = 'Linking';
 end
 
 linkStr = '<a href="matlab:doc nigelab.Block/%s">%s</a>';
@@ -38,7 +42,7 @@ switch lower(field)
    otherwise
       fieldStr = field;
 end
-str = sprintf('Linking %s field: %s',fieldTypeStr,fieldStr);
+str = sprintf('%s %s field: %s',precursor,fieldTypeStr,fieldStr);
 if print_to_window
    fprintf(1,['\n' str '...000%%\n']);
 end

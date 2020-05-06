@@ -214,9 +214,9 @@ for kk=1:size(Tree_,1)
       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
-      bl.Move(bl.Paths.SaveLoc);
-      bl.updateStatus('init');
-      bl.linkToData;
+%       bl.Move(bl.Paths.SaveLoc);
+%       bl.updateStatus('init');
+%       bl.linkToData;
       bl.save();
    end
 end

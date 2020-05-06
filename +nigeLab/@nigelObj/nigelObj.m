@@ -3922,7 +3922,7 @@ classdef nigelObj < handle & ...
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
-            p = obj.Children(ii).Paths.Output;
+            p = obj.Children(ii).Output;
             if exist(p,'dir')
                rmdir(p,'s');
             end
@@ -6394,7 +6394,7 @@ classdef nigelObj < handle & ...
                if ~isempty(obj.Children(i))
                   c = obj.Children(i);
                   if isvalid(c)
-                     flag = flag && c.updatePaths(p);
+                     flag = flag && c.updatePaths(p,removeOld);
                   end
                end
             end
@@ -6405,10 +6405,14 @@ classdef nigelObj < handle & ...
          
          % remove old block matfile
          objFile = obj.File;
-         if exist(objFile,'file') && removeOld
-            delete(objFile);
+         parsFile =  obj.getParsFilename();
+         IDfile = obj.FolderIdentifier;
+         if removeOld
+             mode = 'mv';
+             
+         else
+             mode = 'cp';
          end
-
          % Get old paths, removing 'SaveLoc' from the list of Fields
          %  that need Paths found for them.
          OldP = obj.Paths;
@@ -6424,44 +6428,74 @@ classdef nigelObj < handle & ...
          uniqueTypes = unique(obj.FieldType);
          
          % look for old data to move
-         filePaths = [];
+         filePaths = cell(1);
          for jj=1:numel(uniqueTypes)
             if ~isempty(obj.(uniqueTypes{jj}))
                ff = fieldnames(obj.(uniqueTypes{jj})(1));
                
-               fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),...
+               fieldsToMove{jj} = ff(cellfun(@(x) ~isempty(regexp(class(x),...
                   'DiskData.\w', 'once')),...
                   struct2cell(obj.(uniqueTypes{jj})(1))));
-               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))]; %#ok<*AGROW>
-               for hh=1:numel(fieldsToMove)
-                  if all(obj.getStatus(fieldsToMove{hh}))
-                     filePaths = [filePaths; ...
-                        cellfun(@(x)x.getPath,...
-                        {obj.(uniqueTypes{jj})(obj.Mask).(fieldsToMove{hh})},...
-                        'UniformOutput',false)'];
+               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove{jj}))]; %#ok<*AGROW>
+               for hh=1:numel(fieldsToMove{jj})
+                  if all(obj.getStatus(fieldsToMove{jj}{hh}))
+                     filePaths{jj}{hh} = cellfun(@(x)x.getPath,...
+                        {obj.(uniqueTypes{jj})(obj.Mask).(fieldsToMove{jj}{hh})},...
+                        'UniformOutput',false)';
                   end %fi
                end %hh
             end %fi
          end %jj
          
          % moves all the files from folder to folder
-         for ii=1:numel(filePaths)
-            source = filePaths{ii};
-            [~,target] = strsplit(source,'\w*\\\w*.mat',...
-               'DelimiterType', 'RegularExpression');
-            target = fullfile(P.Output,target{1});
-            [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
+         for jj=1:numel(filePaths)
+             for hh=1:numel(filePaths{jj})
+                 for ii =1:numel(filePaths{jj}{hh})
+                     source = filePaths{jj}{hh}{ii};
+                     [~,target] = strsplit(source,'\w*\\\w*.mat',...
+                         'DelimiterType', 'RegularExpression');
+                     target = fullfile(P.Output,target{1});
+                     pct = ii/numel(filePaths{jj}{hh})*100;
+                     switch mode
+                         case 'mv'
+                             [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
+                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Moving');
+                             reportProgress(obj,str,pct,'toWindow','Moving-Channels');
+                         case 'cp'
+                             [~,~] = copyfile(source,target);
+                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Copying');
+                             reportProgress(obj,str,pct,'toWindow','Copying-Channels');
+                     end
+                 end
+             end
          end
          
          % copy all the info files from one folder to the new one
          for jj = 1:numel(OldFN)
             %     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
-            d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
-               {'.','..'}));
+            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,mode);
+            d = dir(OldP.(OldFN{jj}).dir);
+            d = d(~ismember({d.name},{'.','..'}));
             if isempty(d) && exist(OldP.(OldFN{jj}).dir,'dir')
                rmdir(OldP.(OldFN{jj}).dir);
             end
+         end
+         
+         if removeOld
+             if exist(objFile,'file')
+                 delete(objFile);
+             end
+             if exist(parsFile,'file')
+                 delete(parsFile);
+             end
+             if exist(IDfile,'file')
+                 delete(IDfile);
+             end
+             DD = dir(OldP.Output);
+             DD = DD(~arrayfun(@(x) x.name(1)=='.',DD));
+             if  exist(OldP.Output,'dir') && isempty(DD)
+                 rmdir(OldP.Output);
+             end
          end
          flag = true;
          flag = flag && obj.linkToData;

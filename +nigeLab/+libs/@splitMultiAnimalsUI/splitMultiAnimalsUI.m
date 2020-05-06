@@ -86,8 +86,7 @@ classdef splitMultiAnimalsUI < handle
                  obj.nigelObj = nigelObj.Children(idx);
                  obj.multiTankObj.Children = obj.nigelObj;
                  obj.allBlocks = obj.multiTankObj{:,:};
-             case 'Animal'
-                 
+             case 'Animal'                 
                  if ~isempty(nigelObj(1).Parent)
                      obj.tankObj = nigelObj.Parent;
                      obj.multiTankObj = copy(nigelObj.Parent);
@@ -104,7 +103,7 @@ classdef splitMultiAnimalsUI < handle
          
          obj.initSplittedObjects();
          for c=obj.nigelObj
-             addlistener(c,'ObjectBeingDestroyed',@(src,~)obj.assignNULL(obj.multiTankObj,src)),
+             addlistener(c,'ObjectBeingDestroyed',@(src,~)obj.assignNULL(obj.multiTankObj,src));
          end
          obj.selectionTree = nigeLab.libs.nigelTree(obj.multiTankObj,obj.treePanel);
          obj.selectionTree.Tree.SelectionType = 'single';
@@ -603,7 +602,11 @@ classdef splitMultiAnimalsUI < handle
             
            an = thisBlock.Parent;
            obj.tankObj.addChild(an.MultiAnimalsLinkedAnimals);
-                      
+           for ii=1:numel(an.MultiAnimalsLinkedAnimals)
+               saveLoc = an.MultiAnimalsLinkedAnimals(ii).SaveLoc;
+              an.MultiAnimalsLinkedAnimals(ii).updatePaths(saveLoc,true);        
+           end
+           
            delete(Tree_(1,:));
            Tree_(1,:) = [];
            an.removeChild(thisBlock);
@@ -700,8 +703,13 @@ classdef splitMultiAnimalsUI < handle
       function flag = deleteAnimalWhenEmpty(animalObj)
           flag = false;
          if isvalid(animalObj) && numel(animalObj.Children) == 0
-            delete(animalObj.File);
-            delete(animalObj);
+             tankObj = animalObj.Parent;
+             if isempty(tankObj)
+                 delete(animalObj.File);
+                 delete(animalObj);
+             else
+                 tankObj.removeChild(animalObj);
+             end
            
             flag = true;
          end

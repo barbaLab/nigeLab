@@ -106,7 +106,8 @@ Sieblings = animalObj.Parent.Children;
 for ii = 1:numel(SplittedMeta)
     ff=fields(SplittedMeta);
     if ismember(ff,'AnimalID') && any(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID))
-        an = Sieblings(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID));
+        an = copy(Sieblings(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID)));
+        an.Children = [];
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
     else
         an = copy(animalObj);
