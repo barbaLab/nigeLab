@@ -547,21 +547,28 @@ classdef nigelObj < handle & ...
                           n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                   end
               case '.'
-                  switch class(nigelObj)
-                      case 'nigeLab.Block'
-                          if ~isempty(nigelObj(1).Pars)
-                              Ffields = nigelObj(1).Pars.Block.Fields;
-                              idx = strcmpi(Ffields,s(1).subs);
-                              if any(idx)
-                                  n = numel(nigelObj);
+                  if ismethod(nigelObj,s(1).subs)
+                      meta = metaclass(nigelObj);
+                      methods = meta.MethodList;
+                      thisMethod = methods(strcmp({methods.Name},s(1).subs));
+                      n = numel(thisMethod.OutputNames);
+                  else
+                      switch class(nigelObj)
+                          case 'nigeLab.Block'
+                              if ~isempty(nigelObj(1).Pars)
+                                  Ffields = nigelObj(1).Pars.Block.Fields;
+                                  idx = strcmpi(Ffields,s(1).subs);
+                                  if any(idx)
+                                      n = numel(nigelObj);
+                                  else
+                                      n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                                  end
                               else
                                   n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                               end
-                          else
+                          otherwise
                               n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
-                          end
-                      otherwise
-                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                      end
                   end
               otherwise
                   n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
