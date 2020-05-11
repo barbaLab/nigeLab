@@ -12,16 +12,16 @@ classdef splitMultiAnimalsUI < handle
    end
    
    properties (Access = private,SetObservable,AbortSet)
-      allBlocks                 nigeLab.Block
+      allBlocks                 nigeLab.nigelObj
       nigelObj                  nigeLab.nigelObj
-      tankObj                   nigeLab.Tank    % original Tank, ie where to add back the splitted animals
-      multiTankObj              nigeLab.Tank    % reduced Tank, only conataining the multi objects
+      tankObj                   nigeLab.nigelObj    % original Tank, ie where to add back the splitted animals
+      multiTankObj              nigeLab.nigelObj    % reduced Tank, only conataining the multi objects
       SplittedAnimals
       SplittedBlocks
    end
    
    properties (Access = private)
-      toSplit                   nigeLab.Block % object 
+      toSplit                    % object 
       reviedTrees
       thisTree
 
@@ -89,7 +89,7 @@ classdef splitMultiAnimalsUI < handle
              case 'Animal'                 
                  if ~isempty(nigelObj(1).Parent)
                      obj.tankObj = nigelObj(1).Parent;
-                     obj.multiTankObj = copy(obj.tankObj);
+                     obj.multiTankObj = copy(nigelObj(1).Parent);
                  end
                  obj.nigelObj = nigelObj;
                  obj.multiTankObj.Children = obj.nigelObj;
@@ -494,6 +494,7 @@ classdef splitMultiAnimalsUI < handle
          for ii=1:numel(obj.Tree)
             obj.Tree{ii}(completeTreeIdx{ii},:)=[]; 
          end
+         obj.Tree(cellfun(@isempty,obj.Tree))=[];
          obj.applychanges(Tree_); 
       end
        
@@ -574,7 +575,7 @@ classdef splitMultiAnimalsUI < handle
                       
                   end %fi
               end %kk
-          catch
+          catch er
               disp('ooops. Try again.')
           end %try
       end %dragDropCallback
@@ -592,7 +593,6 @@ classdef splitMultiAnimalsUI < handle
          %  Generates a `nigeLab.evt.splitCompleted` event data and
          %  notifies the `MultiAnimalsUI` property of `DashBoard` of the
          %  'splitCompleted' event associated with it.
-         
         while ~isempty(obj.toSplit)
             thisBlock = obj.toSplit(1);
             thisBlock.splitMultiAnimals(Tree_(1,:));
@@ -600,27 +600,24 @@ classdef splitMultiAnimalsUI < handle
             
             % add the splitted blocks back to the splitted animals
             arrayfun(@(B) B.Parent.addChild(B), thisSplittedBlocks);
-            
-           an = thisBlock.Parent;
-           obj.tankObj.addChild(an.MultiAnimalsLinkedAnimals);
-           for ii=1:numel(an.MultiAnimalsLinkedAnimals)
-               saveLoc = an.MultiAnimalsLinkedAnimals(ii).SaveLoc;
-              an.MultiAnimalsLinkedAnimals(ii).updatePaths(saveLoc,true);        
-           end
+           obj.tankObj.addChild([thisSplittedBlocks.Parent]);
+           arrayfun(@(B) B.updatePaths(B.Parent.Output,true), thisSplittedBlocks);
            
+           an = thisBlock.Parent;
            delete(Tree_(1,:));
            Tree_(1,:) = [];
            an.removeChild(thisBlock);
-           obj.toSplit(1) = [];
-           obj.deleteAnimalWhenEmpty(an);
-           
-           if  isempty(obj.multiTankObj.Children)
-               evt = nigeLab.evt.splitCompleted();
-               notify(obj,'SplitCompleted',evt);
-               return;
-           end
-           
+           obj.toSplit(1) = [];  
+           obj.deleteMultiAnimalWhenEmpty(an);
         end
+               
+        
+        if  isempty(obj.multiTankObj.Children)
+            evt = nigeLab.evt.splitCompleted();
+            notify(obj,'SplitCompleted',evt);
+            return;
+        end
+        
         obj.selectionTree.changeTreeSelection([]);
         
       end
@@ -662,6 +659,22 @@ classdef splitMultiAnimalsUI < handle
 %          end
       end % changeVisibility
        
+      function flag = deleteMultiAnimalWhenEmpty(obj,animalObj)
+          flag = false;
+          if isvalid(animalObj) && numel(animalObj.Children) == 0
+              tankObj = animalObj.Parent;
+              if isempty(tankObj)
+                  delete(animalObj.File);
+                  delete(animalObj);
+              else
+                  tankObj.removeChild(animalObj);
+              end
+              Idx = obj.nigelObj == animalObj;
+              obj.nigelObj(Idx)=[];
+              flag = true;
+          end
+      end
+      
    end
    
    
@@ -701,20 +714,7 @@ classdef splitMultiAnimalsUI < handle
          end   
       end
       
-      function flag = deleteAnimalWhenEmpty(animalObj)
-          flag = false;
-         if isvalid(animalObj) && numel(animalObj.Children) == 0
-             tankObj = animalObj.Parent;
-             if isempty(tankObj)
-                 delete(animalObj.File);
-                 delete(animalObj);
-             else
-                 tankObj.removeChild(animalObj);
-             end
-           
-            flag = true;
-         end
-      end
+
       
    end
 end

@@ -135,6 +135,8 @@ for ii = 1:numel(SplittedMeta)
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
         
         an.Key = an.InitKey();
+        an.PropListener = an.PropListener([]);
+        an.ParentListener = an.ParentListener([]);
     end
     splittedAnimals = [splittedAnimals, an];
 end

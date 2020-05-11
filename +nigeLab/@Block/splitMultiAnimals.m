@@ -155,6 +155,10 @@ for ii=1:numel(SplittedMeta)
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    bl.Key = bl.InitKey();
+   bl.PropListener =  bl.PropListener([]);
+   bl.ParentListener = bl.ParentListener([]);
+        
+        
    splittedBlocks(ii) = bl;
 end %ii
 
@@ -215,7 +219,8 @@ for kk=1:size(Tree_,1)
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
 %       bl.Move(bl.Paths.SaveLoc);
-%       bl.updateStatus('init');
+      bl.updateStatus('init');
+      bl.updateStatus('Raw',true(1,bl.NumChannels));
 %       bl.linkToData;
       bl.save();
    end

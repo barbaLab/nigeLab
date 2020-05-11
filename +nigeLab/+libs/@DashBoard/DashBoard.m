@@ -1237,7 +1237,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          recmonths = cellfun(@(x) month(x,'shortname'),recDates,'UniformOutput',false);
          tmp = cellfun(@(x) {strjoin(unique(x),',')},recmonths,'UniformOutput',false);
          tCell(:,strcmp(columnFormatsAndData,'datetime')) = tmp;
-         columnFormatsAndData{strcmp(columnFormatsAndData,'datetime')} = 'cell';
+         if any(strcmp(columnFormatsAndData,'datetime'))
+             columnFormatsAndData{strcmp(columnFormatsAndData,'datetime')} = 'cell';
+         end
          [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Tank');
          
          w = obj.RecapTable;
