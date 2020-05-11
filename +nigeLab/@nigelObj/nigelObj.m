@@ -2475,7 +2475,7 @@ classdef nigelObj < handle & ...
          % assign parent to childObj
          [childObj.Parent] = deal(obj);
          
-         
+         addPropListeners(childObj);
          if isempty(idx)
             obj.Children = [obj.Children childObj];
          else
@@ -5007,20 +5007,32 @@ classdef nigelObj < handle & ...
                addPropListeners(obj(i));
             end
             return;
-         end  
-         switch obj.Type
-            case 'Block'
-               % Does not currently have PropListeners
-            case 'Animal'
-               obj.PropListener = [obj.PropListener, ...
-                  addlistener(obj,'Children','PostSet',...
-                     @obj.checkBlocksForClones)];
-            case 'Tank'
-               obj.PropListener = [obj.PropListener,...
-                  addlistener(obj,'Children','PostSet',...
-                     @obj.checkAnimalsForClones)];
-               
          end
+         switch obj.Type
+             case 'Block'
+                 % Does not currently have PropListeners
+             case 'Animal'
+                 if ~checkForExistingListener(obj.PropListener,'PostSet',@obj.checkBlocksForClones)
+                     obj.PropListener = [obj.PropListener, ...
+                         addlistener(obj,'Children','PostSet',...
+                         @obj.checkBlocksForClones)];
+                 end
+             case 'Tank'
+                 if ~checkForExistingListener(obj.PropListener,'PostSet',@obj.checkAnimalsForClones)
+                     obj.PropListener = [obj.PropListener,...
+                         addlistener(obj,'Children','PostSet',...
+                         @obj.checkAnimalsForClones)];
+                 end
+         end
+         
+          function flag = checkForExistingListener(listeners,EventName,Callback)
+              if isempty(listeners)
+                 flag = false;
+                 return;
+              end
+              flag = ismember({listeners.EventName},EventName) & ...
+                  ismember({func2str(listeners.Callback)},func2str(Callback));
+          end
       end
       
       % Assign default .Pars values (for use in constructor)
