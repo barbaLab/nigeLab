@@ -148,7 +148,7 @@ classdef nigelObj < handle & ...
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
       GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
-      TreeNodeContainer uiw.widget.TreeNode     % Container for handle to Tree nodes in the nigelTree obj
+      TreeNodeContainer                         % Container for handle to Tree nodes in the nigelTree obj
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
       SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
@@ -547,10 +547,11 @@ classdef nigelObj < handle & ...
                           n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                   end
               case '.'
-                  if ismethod(nigelObj,s(1).subs)
-                      meta = metaclass(nigelObj);
-                      methods = meta.MethodList;
-                      thisMethod = methods(strcmp({methods.Name},s(1).subs));
+                  meta = metaclass(nigelObj);
+                  methods = meta.MethodList;
+                  methodIdx = strcmp({methods.Name},s(1).subs);
+                  if any(methodIdx)
+                      thisMethod = methods(methodIdx);
                       n = numel(thisMethod.OutputNames);
                   else
                       switch class(nigelObj)
