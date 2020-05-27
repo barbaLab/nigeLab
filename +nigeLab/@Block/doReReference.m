@@ -60,7 +60,7 @@ for iCh = blockObj.Mask
       iProbe = probe==blockObj.Channels(iCh).probe;
       nChanPb = sum(probe(iProbe) == [blockObj.Channels.probe]);
       data = blockObj.Channels(iCh).Filt(:);
-      refMean(iProbe,:)=refMean(iProbe,:) + data ./ nChanPb;
+      refMean(iProbe==probe,:)=refMean(iProbe==probe,:) + data ./ nChanPb;
    else
       warning('STIM SUPPRESSION method not yet available.');
       return;
@@ -109,7 +109,7 @@ for iCh = blockObj.Mask
    blockObj.Channels(iCh).CAR = nigeLab.libs.DiskData(...
       'MatFile',fName,data,'access','w','overwrite',true);
    lockData(blockObj.Channels(iCh).CAR);
-   blockObj.Channels(iCh).refMean = refMeanFile{blockObj.Channels(iCh).probe};
+   blockObj.Channels(iCh).refMean = refMeanFile{blockObj.Channels(iCh).probe==probe};
    
    % Update user
    
