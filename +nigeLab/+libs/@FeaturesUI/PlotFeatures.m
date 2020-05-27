@@ -1,6 +1,8 @@
 function PlotFeatures(obj)
 %% PLOTFEATURES  Plot cluster features from SORT UI in 3D and 2D.
-
+if ~isvalid(obj.Figure)
+    return
+end
 
 % Loop through each subset of 3 features
 curCh = obj.ChannelSelector.Channel;
@@ -56,7 +58,7 @@ for iC = 1:obj.NCLUS_MAX
             'Visible',state,...
             'UserData',iC);
 
-         line(obj.Features2D,...
+         l=line(obj.Features2D,...
             X(:,1), ...
             X(:,2), ...
             'LineStyle', 'none',...
@@ -97,6 +99,6 @@ for iC = 1:obj.NCLUS_MAX
 end
 
 drawnow;
-obj.ResetFeatureAxes;
-
+% obj.ResetFeatureAxes;
+obj.CountExclusions(obj.ChannelSelector.Channel);
 end

@@ -45,24 +45,34 @@ classdef HighDimsUI < handle
                 'MenuBar','none',...
                 'CloseRequestFcn',@(~,~)obj.closeF,'Name','High-dimensional Navigator','numbertitle', 'off');
             
-            p1 = uipanel( obj.Figure,...
-                'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
-                'Position',[.01 .01 .48 .98],...
-                'BorderType','none');
+            p1 = nigeLab.libs.nigelPanel( obj.Figure,...
+                'PanelColor',nigeLab.defaults.nigelColors(0.1),...
+                'Position',[.01 .22 .48 .78]);
             
-            p2 = uipanel( obj.Figure,...
-                'BackgroundColor',nigeLab.defaults.nigelColors(0.1),...
-                'Position',[.51 .01 .48 .98],...
-                'BorderType','none');
+            p2 = nigeLab.libs.nigelPanel( obj.Figure,...
+                'PanelColor',nigeLab.defaults.nigelColors(0.1),...
+                'Position',[.51 .22 .48 .78]);
+            
+            p3 = nigeLab.libs.nigelPanel( obj.Figure,...
+                'PanelColor',nigeLab.defaults.nigelColors(0.1),...
+                'Position',[.01 .01 .98 .2],...
+                'MinTitleBarHeightPixels',0);
+            btnAx = axes('Position',[0 0 1 1],'Visible','off','XLim',[0 1],'YLim',[0 1]);
+            p3.nestObj(btnAx);
+            btn1 = nigeLab.libs.nigelButton(btnAx,[0.01 0.3 0.2 0.3],'Best proj.',...
+                 {@(~,~)obj.lda_button_Callback},'FontSize',.8 );
             
             for ii = 1:obj.maxDim % max 15 features
-                ax1 = subplot(5,3,ii,'Parent',p1,'UserData',[ii],'xtick',[],'ytick',[],...
+                ax1 = subplot(5,3,ii,'Parent',obj.Figure,'UserData',[ii],'xtick',[],'ytick',[],...
                     'ButtonDownFcn', {@obj.Panel_ButtonDownFcn});
-                ax2 = subplot(5,3,ii,'Parent',p2,'UserData',[15+ii],'xtick',[],'ytick',[],...
-                    'ButtonDownFcn', {@obj.Panel_ButtonDownFcn});
+                p1.nestObj(ax1);
+                ax2 = copy(ax1);
+                ax2.UserData = 15+ii;
+                set(ax2,'ButtonDownFcn', {@obj.Panel_ButtonDownFcn});
+                    p2.nestObj(ax2);
                 ax(ii) = ax1;ax(ii+15) = ax2;
             end
-            obj.panels = ax;
+             obj.panels = ax;
             InitUI(obj);
             obj.update_panels;
             
@@ -325,6 +335,167 @@ classdef HighDimsUI < handle
             end
             delete(obj.Figure);
         end
+        
+    end
+    
+    % Methods to precompute projections
+    methods
+        function lda_button_Callback(obj)
+            % The desired vectors are from Fisher's linear discriminant analysis
+            %
+            % If only two conditions (should only be a one-d projection), qr gives us a
+            % second projection vector (that can be considered random) anyway, so it's
+            % ok
+            
+            D = obj.D;
+            idx = ismember(obj.D.class,find(obj.selected_conds));
+            conditions = unique(D.class(idx));
+            if numel(conditions)==1
+                return;
+            end
+            
+            % TODO trajectories
+%             if (ismember('cluster', {D.type}))
+%                 D = D(ismember({D.type}, 'cluster')); % get rid of any trajs
+%                 
+%                 if (length(conditions) <= 1) % LDA should do nothing for one condition
+%                     return;
+%                 end
+%             else
+%                 if (length(conditions) == 1)  %  goal: only one cond, so make points in the traj far apart
+%                     if (length(D) == 1) % only one trajectory, so LDA will fail
+%                         return;
+%                     end
+%                     newData = [];
+%                     index = 1;
+%                     for itrial = 1:length(D)
+%                         D(itrial).epochStarts = [D(itrial).epochStarts size(D(itrial).data,2)];  %change epochStarts to include the end
+%                         for j = 1:length(D(1).epochStarts)
+%                             newData(index).condition = num2str(j);
+%                             newData(index).data = D(itrial).data(:,D(itrial).epochStarts(j));
+%                             index = index+1;
+%                         end
+%                     end
+%                     D = newData;
+%                     conditions = unique({D.condition});
+%                 end
+%                 % else, just use the full trajectory
+%             end
+%             
+            
+            sigma = zeros(obj.num_dims);
+            m = [];
+            
+            for cond = 1:length(conditions)
+                thisCond = ismember(D.class, conditions(cond));
+                sigma = sigma + cov(D.feat(thisCond,:),1);
+                m(:,cond) = mean(D.feat(ismember(D.class, conditions(cond)),:),1);
+            end
+            
+            Sigma_within = sigma ./ length(conditions);
+            Sigma_between = cov(m',1);
+            
+            [w e] = eig(Sigma_within \ Sigma_between);
+            
+            % LDA does *not* return orthogonal eigenvectors
+            % perform Gram-Schmidt to find nearest 2nd orthogonal vector
+            
+            [q r] = qr(w);
+            
+            rotate_to_desired(obj, q(:,1:2)');
+            
+        end
+        
+        % % Third idea, what GGobi uses
+        function rotate_to_desired(obj, desired_vecs)
+% helper function that modifies the current axes
+%  rotates the current projection vectors by a small angle until that
+%  the current vectors equal the desired vectors
+
+
+
+
+    % idea:
+    %  I found a nice idea in (Section 2.2 Cook, Buja, Lee, and Wickham: Grand Tours,
+    %  Projection Pursuit Guided TOurs and Manual Controls) which
+    %  calculates the principal angles between the projection matrices
+    %
+    % don't use qr here...we need to keep exact vectors, not just the span
+
+    
+    projVecs = obj.FeaturesUI.projVecs;
+    
+
+    
+    % make sure desired_vecs are normalized
+    desired_vecs(1,:) = desired_vecs(1,:) ./ norm(desired_vecs(1,:));
+    desired_vecs(2,:) = desired_vecs(2,:) ./ norm(desired_vecs(2,:));
+    
+    check_desired = desired_vecs(1,:) * desired_vecs(2,:)';
+    if (check_desired > 0) % desired vecs are not orthogonal
+        desired_vecs(2,:) = desired_vecs(2,:) - desired_vecs(1,:)*desired_vecs(2,:)' * desired_vecs(1,:); % subtract the parallel component
+        desired_vecs(2,:) = desired_vecs(2,:) ./ norm(desired_vecs(2,:));
+    end
+
+    check = projVecs * desired_vecs';
+    if (check(1,1) > .99 && check(2,2) > .99) % this is the current view
+        return; % so no need to move, do nothing
+    end
+    
+    
+    % Find shortest path between spaces using SVD
+    [Va lambda Vz] = svd(projVecs * desired_vecs');
+
+
+    % find principal directions in each space
+    Ba = projVecs' * Va;
+    Bz = desired_vecs' * Vz;
+
+
+    % orthonormalize Bz to get B_star, ensuring projections are orthogonal
+    % to Ba
+    % don't use qr...screwed me up, as it negates some vectors
+    B_star(:,1) = Bz(:,1) - Ba(:,1)'*Bz(:,1)*Ba(:,1) - Ba(:,2)'*Bz(:,1)*Ba(:,2);
+    B_star(:,1) = B_star(:,1) ./ norm(B_star(:,1));
+    B_star(:,2) = Bz(:,2) - B_star(:,1)'*Bz(:,2)*B_star(:,1) - Ba(:,1)'*Bz(:,2)*Ba(:,1) - Ba(:,2)'*Bz(:,2)*Ba(:,2);
+    B_star(:,2) = B_star(:,2) ./ norm(B_star(:,2));
+
+    % calculate the principal angles
+    tau = acos(diag(lambda));
+
+    % increment angles
+    for t = linspace(0,1,60)
+        
+        % compute the rotation vector comprised of Ba and B_star
+        % as t-->1, Bt should converge to Bz
+        % also note that projection vectors are always orthogonal
+        Bt = [];
+
+        Bt(:,1) = cos(tau(1)*t)*Ba(:,1) + sin(tau(1)*t)*B_star(:,1);
+        Bt(:,2) = cos(tau(2)*t)*Ba(:,2) + sin(tau(2)*t)*B_star(:,2);
+
+
+
+        % need to rotate principal vectors back to original basis,
+        % so that initial projection begins with the old projection vectors
+        % (if not, you will still get same desired vectors, but the first
+        % projection will start rotated from the original projection)
+        projVecs = Va * Bt';  % transform back into the original coordinates
+
+        % normalize projection vectors
+        projVecs(1,:) = projVecs(1,:) ./ norm(projVecs(1,:));
+        projVecs(2,:) = projVecs(2,:) ./ norm(projVecs(2,:));
+
+        obj.FeaturesUI.projVecs = real(projVecs);
+        obj.FeaturesUI.PlotFeatures;
+    end
+
+%     stop main axes from rotating
+    % Set the projection to exactly the desired vecs
+    obj.update_panels;
+end
+
+
         
     end
 end

@@ -430,7 +430,15 @@ classdef nigelButton < handle & matlab.mixin.SetGet
                b.Label.Color  = b.SelectedColor;
                b.Position = b.SelectedPosition;
                uistack(b.Group,'top');
-               set(b.Figure,'WindowButtonUpFcn',@(obj,~,~)ButtonUpFcn(b));
+               if iscell(b.Figure.WindowButtonUpFcn)
+                   oldfun = b.Figure.WindowButtonUpFcn;
+               else
+                   oldfun = {b.Figure.WindowButtonUpFcn};
+               end
+               fcnList = {oldfun,...
+                   {@(obj,~,~)ButtonUpFcn(b)}};
+               set(b.Figure,'WindowButtonUpFcn',...
+                   {@nigeLab.utils.multiCallbackWrap, fcnList});
             case 'off'
                if strcmp(b.Hovered,'on')
                   b.Hovered = 'off';
@@ -727,11 +735,14 @@ classdef nigelButton < handle & matlab.mixin.SetGet
             return;
          end
          
+         fcnList = b.Figure.WindowButtonUpFcn{2};
+         originalFcn = fcnList{1};
          if strcmpi(b.Selected,'off')
-            set(b.Figure,'WindowButtonUpFcn',[]);
+             % revert the modification to windowbuttonupfcn
+            set(b.Figure,'WindowButtonUpFcn',originalFcn);
             return;
          elseif strcmpi(b.Enable,'off')
-            set(b.Figure,'WindowButtonUpFcn',[]);
+            set(b.Figure,'WindowButtonUpFcn',originalFcn);
             return;
          end
          % If button is released, turn off "highlight border"

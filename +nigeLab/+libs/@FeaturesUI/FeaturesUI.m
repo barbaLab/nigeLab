@@ -83,6 +83,8 @@ classdef FeaturesUI < handle
          [1,0,1];[0.930000000000000,0.690000000000000,0.130000000000000];...
          [0.300000000000000,0.950000000000000,0.950000000000000];...
          [0,0.450000000000000,0.750000000000000]};
+     
+     CurrKeyPress
    end
    
    % PROTECTED
@@ -278,7 +280,10 @@ classdef FeaturesUI < handle
             'Position',[0.050,0.075,0.4,0.450],...
             'Color',nigeLab.defaults.nigelColors('background'),...
             'SizeChangedFcn',@obj.ChangeSize,...
-            'CloseRequestFcn',@(~,~)obj.ExitFeatures);          
+            'WindowScrollWheelFcn',@obj.WindowMouseWheel,...
+            'CloseRequestFcn',@(~,~)obj.ExitFeatures,...
+            'WindowKeyPressFcn',@obj.WindowKeyPress,...
+            'WindowKeyReleaseFcn',@obj.clearKurrKey);
          
          featureComboSelectorPanel = uipanel(obj.Figure, ...
             'Units', 'Normalized', ...
@@ -445,7 +450,7 @@ classdef FeaturesUI < handle
       end
       
       % Initializes mesh map for the 2D featurespace
-      function InitNewMeshMap(obj,nSD,nMeshEdges)
+      function InitNewMeshMap(obj,nMeshEdges,xSpan,ySpan)
          %INITNEWMESHMAP    Initialize mesh for 2D featurespace
          %
          %  obj.InitNewMeshMap(nSD,nMeshEdges);
@@ -455,19 +460,24 @@ classdef FeaturesUI < handle
          %               co-registration with features meeting <x,y> values
          %               for the selected features.
          
+         if nargin < 4
+            ySpan = [-1 1]*obj.SD_MAX_DEF;
+         end
+         
          if nargin < 3
-            nSD = obj.SD_MAX_DEF;
+            xSpan = [-1 1]*obj.SD_MAX_DEF;
          end
          
          if nargin < 2
             nMeshEdges = obj.SD_MESH_PTS_DEF;
          end
          
-         obj.sdMax = nSD;
+         obj.sdMax = obj.SD_MAX_DEF;
          obj.sdMeshPts = nMeshEdges;
-         obj.sdMeshEdges = linspace(-nSD,nSD,nMeshEdges);
-         [obj.sdMesh.X,obj.sdMesh.Y] = meshgrid(obj.sdMeshEdges,...
-            obj.sdMeshEdges);
+         obj.sdMeshEdges.X = linspace(xSpan(1),xSpan(2),nMeshEdges);
+         obj.sdMeshEdges.Y = linspace(ySpan(1),ySpan(2),nMeshEdges);
+         [obj.sdMesh.X,obj.sdMesh.Y] = meshgrid(obj.sdMeshEdges.X,...
+            obj.sdMeshEdges.Y);
          
                   
       end
@@ -513,10 +523,57 @@ classdef FeaturesUI < handle
 %                obj.SetAxesWhereSpikesGo(ax);
             case 'alt'    % Do "cluster cutting" (R-Click)
                obj.GetSpikesToMove(ax);
-            otherwise
-               return;
+             case 'normal' 
          end
          
+      end
+      
+      % CALLBACK: Zoom in or out on featAx by mouse-wheel scroll
+       function WindowMouseWheel(obj,~,evt)
+         %WINDOWMOUSEWHEEL     Zoom in or out on all plots
+         %
+         %  fig.WindowScrollWheelFcn = @obj.WindowMouseWheel;
+         yl = ylim(obj.Features2D);
+         ySpan = diff(yl);
+         xl = xlim(obj.Features2D);
+         xSpan = diff(xl);
+         if strcmp(obj.CurrKeyPress,'alt')
+                 newXSpan = xl;
+                 newYSpan = yl + ySpan*.05*-evt.VerticalScrollCount;
+         elseif strcmp(obj.CurrKeyPress,'control')
+                 newXSpan = xl + xSpan*.05*-evt.VerticalScrollCount;
+                 newYSpan = yl;
+         else
+                 mousepos = get (obj.Features2D, 'CurrentPoint');
+                 % only alt is pressed
+                 x = mousepos(1);
+                 y = mousepos(2);
+                 newSpan = @(x,xl,xSpan) x - ((((x - xl).*[1 -1])./xSpan)...
+                     .*xSpan*0.9^-evt.VerticalScrollCount).*[1 -1];
+                 newYSpan = newSpan(y,yl,ySpan);
+                 newXSpan = newSpan(x,xl,xSpan);
+         end
+
+         
+         ylim(obj.Features2D,newYSpan);
+         xlim(obj.Features2D,newXSpan);
+         obj.InitNewMeshMap(obj.SD_MESH_PTS_DEF,newXSpan,newYSpan);
+       end
+      
+       function flag = clearKurrKey(obj,src,evt)
+           if any(strcmp(evt.Key,{'control','alt'}))
+               obj.CurrKeyPress={};
+           else
+               idx = strcmp(obj.CurrKeyPress,evt.Key);
+               obj.CurrKeyPress(idx) = [];
+           end
+           flag = true;
+       end
+       
+            % CALLBACK: Execute keyboard shortcut on keyboard button press
+      function WindowKeyPress(obj,src,evt)
+         %WINDOWKEYPRESS    Issue different events on keyboard presses
+         obj.CurrKeyPress = [obj.CurrKeyPress {evt.Key}];
       end
       
       % CALLBACK: Rotate button click
@@ -585,14 +642,14 @@ classdef FeaturesUI < handle
          fi = ismember( obj.Data.class{curCh},find(obj.VisibleClusters));
          X = feat*obj.projVecs';
          [~,~,~,binX,binY] = histcounts2(X(:,1),X(:,2),...
-            obj.sdMeshEdges,obj.sdMeshEdges);
+            obj.sdMeshEdges.X,obj.sdMeshEdges.Y);
          
          % Draw polygon
          set(obj.Figure,'Pointer','circle');
          
 %          snipped_region = drawfreehand(ax,'Smoothing',5);
           axes(ax);
-         [h,x,y]=nigeLab.utils.freehanddraw(ax);
+         [h,x,y]=nigeLab.utils.freehanddraw(ax,'color',nigeLab.defaults.nigelColors('onsurface'));
 %          pos = snipped_region.Position;
 %          delete(snipped_region);
          delete(h)

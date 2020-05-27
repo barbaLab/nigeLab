@@ -32,7 +32,4 @@ set(obj.Features2D,...
    'climmode','manual',...
    'clim',[0 1]);
 
-obj.CountExclusions(obj.ChannelSelector.Channel);
-
-
 end

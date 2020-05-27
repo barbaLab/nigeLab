@@ -434,7 +434,6 @@ classdef nigelPanel < handle
          % BUILDTITLEBAR  Build graphics for "nice header box"
          %
          %  obj.buildTitleBar; 
-         
          if isempty(obj.TitleBar)
            obj.TitleBar = struct;
            obj.TitleBar.axes = axes(obj.OutPanel,... % formerly "a"

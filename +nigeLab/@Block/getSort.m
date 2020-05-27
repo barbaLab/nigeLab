@@ -29,7 +29,7 @@ if nargin < 2
 end
 
 if nargin < 3
-    suppressText = false;
+    suppressText =  ~blockObj.Verbose;
 end
 
 %% USE RECURSION TO ITERATE ON MULTIPLE CHANNELS
@@ -73,7 +73,7 @@ elseif exist(fName,'file')~=0       % Technically, files could exist but Status 
             mkdir(blockObj.Paths.Sorted.dir);
         end
         blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
-            fName,data,'access','w');
+            fName,data,'overwrite', true);
         if ~suppressText
             fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
                 blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
@@ -82,44 +82,45 @@ elseif exist(fName,'file')~=0       % Technically, files could exist but Status 
     end
     updateStatus(blockObj,'Sorted',true,ch);
 
-elseif getStatus(blockObj,'Clusters',ch)
-    clusterIndex = blockObj.getClus(ch);
-    ts = getSpikeTimes(blockObj,ch);
-    n = numel(ts);
-    data = [zeros(n,2) clusterIndex ts zeros(n,1)];
-    if exist(blockObj.Paths.Sorted.dir,'dir')==0
-        mkdir(blockObj.Paths.Sorted.dir);
-    end
-    blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
-        fName,data,'access','w');
-    if ~suppressText
-        fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
-            blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
-        
-    end
-    
-    updateStatus(blockObj,'Sorted',true,ch);
-elseif getStatus(blockObj,'Spikes',ch) % but spikes do
-    % initialize the 'Sorted' DiskData file
-    
-    
-    
-    ts = getSpikeTimes(blockObj,ch);
-    n = numel(ts);
-    clusterIndex = zeros(n,1);
-    data = [zeros(n,2) clusterIndex ts zeros(n,1)];
-    if exist(blockObj.Paths.Sorted.dir,'dir')==0
-        mkdir(blockObj.Paths.Sorted.dir);
-    end
-    blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
-        fName,data,'access','w');
-    if ~suppressText
-        fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
-            blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
-        
-    end
 else
-    clusterIndex = [];
+    nigeLab.utils.cprintf('*SystemCommands',true,'*Sorted* data were not found. Using *Clusters* instead.\n');
+    clusterIndex = blockObj.getClus(ch);
+    if ~isempty(clusterIndex)
+        ts = getSpikeTimes(blockObj,ch);
+        n = numel(ts);
+        data = [zeros(n,2) clusterIndex ts zeros(n,1)];
+        if exist(blockObj.Paths.Sorted.dir,'dir')==0
+            mkdir(blockObj.Paths.Sorted.dir);
+        end
+        blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+            fName,data,'access','w');
+        if ~suppressText
+            fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+                blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+            
+        end
+    end
+% elseif getStatus(blockObj,'Spikes',ch) % but spikes do
+%     % initialize the 'Sorted' DiskData file
+%     
+%     
+%     
+%     ts = getSpikeTimes(blockObj,ch);
+%     n = numel(ts);
+%     clusterIndex = zeros(n,1);
+%     data = [zeros(n,2) clusterIndex ts zeros(n,1)];
+%     if exist(blockObj.Paths.Sorted.dir,'dir')==0
+%         mkdir(blockObj.Paths.Sorted.dir);
+%     end
+%     blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+%         fName,data,'access','w');
+%     if ~suppressText
+%         fprintf(1,'Initialized Sorted file for P%d: Ch-%s\n',...
+%             blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
+%         
+%     end
+% else
+%     clusterIndex = [];
 end
 end
 

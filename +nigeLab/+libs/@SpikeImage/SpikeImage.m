@@ -61,8 +61,10 @@ classdef SpikeImage < handle
          'progPctThresh',2,...
          'nImg',11);
       
-      UnconfirmedChanges
+      ConfirmedChanges
       UnsavedChanges
+      
+      CurrKeyPress = {};
    end
    
    % TRANSIENT,PROTECTED
@@ -187,8 +189,8 @@ classdef SpikeImage < handle
          obj.UpdateChannel;
       end
 
-      function flag = checkForUnconfirmedChanges(obj,askUser)
-          % CHECKFORUNCONFIRMEDCHANGES cheacks if there are any unconfirmed changes.
+      function flag = checkForConfirmedChanges(obj,askUser)
+          % CHECKFORConfirmedChanges cheacks if there are any unconfirmed changes.
           % also asks the suer if it's ok to proceed anyway.
           
           % returns true if we unconfirmed changes are present, therefore
@@ -199,7 +201,8 @@ classdef SpikeImage < handle
           flag = false;
 
           % Check if it's okay to lose changes if there are any
-         if obj.UnconfirmedChanges
+         if ~obj.ConfirmedChanges(obj.Parent.UI.ChannelSelector.Channel) && ...
+             obj.UnsavedChanges(obj.Parent.UI.ChannelSelector.Channel)
              if askUser 
                  str = questdlg('Unconfirmed changes will be lost. Proceed anyways?',...
                      'Discard Sorting on this Channel?','Yes','No','Yes');
@@ -223,10 +226,8 @@ classdef SpikeImage < handle
          obj.Flatten;
          
          % Construct figure
-         obj.Build;
-         
-         % New channel; no changes exist here yet
-         obj.UnconfirmedChanges = false; 
+         obj.Build;        
+   
       end
       
       function Refresh(obj)
@@ -234,14 +235,11 @@ classdef SpikeImage < handle
          
          if isa(obj.Parent,'nigeLab.Sort')
             % Set spike classes
-            obj.Assign(obj.Parent.spk.class{obj.Parent.UI.ch});
+            evt = nigeLab.evt.assignClus(1:numel(obj.Spikes.Class),...
+                obj.Parent.spk.class{obj.Parent.UI.ch},...
+                obj.Spikes.Class);
+            obj.UpdateClusterAssignments(nan,evt);
          end
-         
-         % Flatten spike image
-         obj.Flatten;
-         
-         % Construct figure
-         obj.Build;
       end
       
       % Add a listener for cluster assignments
@@ -345,8 +343,8 @@ classdef SpikeImage < handle
          %  fs: Sample rate
          
          % No changes have been made yet
-         obj.UnconfirmedChanges = false;
-         obj.UnsavedChanges = false;
+         obj.ConfirmedChanges = false(1,numel(obj.Parent.UI.ChannelSelector.Menu.String));
+         obj.UnsavedChanges = false(1,numel(obj.Parent.UI.ChannelSelector.Menu.String));
          
          % Add sampling frequency
          obj.Spikes.fs = fs;
@@ -437,11 +435,13 @@ classdef SpikeImage < handle
                       'Color',nigeLab.defaults.nigelColors('background'),...
                       'WindowKeyPressFcn',@obj.WindowKeyPress,...
                       'WindowScrollWheelFcn',@obj.WindowMouseWheel,...
-                      'CloseRequestFcn',@obj.CloseSpikeImageFigure);
+                      'CloseRequestFcn',@obj.CloseSpikeImageFigure,...
+                      'WindowKeyReleaseFcn',@obj.clearKurrKey);
          else
             set(obj.Figure,'CloseRequestFcn',@obj.CloseSpikeImageFigure);
             set(obj.Figure,'WindowScrollWheelFcn',@obj.WindowMouseWheel);
             set(obj.Figure,'WindowKeyPressFcn',@obj.WindowKeyPress);
+            set(obj.Figure,'WindowKeyReleaseFcn',@obj.clearKurrKey);
          end
          % Set figure focus
          figure(obj.Figure);
@@ -477,6 +477,17 @@ classdef SpikeImage < handle
          end
          fprintf(1,'complete.\n\n');
       end
+      
+      function flag = clearKurrKey(obj,src,evt)
+          if any(strcmp(evt.Key,{'control','alt'}))
+               obj.CurrKeyPress={};
+          else
+              idx = strcmp(obj.CurrKeyPress,evt.Key);
+              obj.CurrKeyPress(idx) = [];
+          end
+             flag = true;
+      end
+      
       
       % Initialize checkboxes on axes
       function InitCheckBoxes(obj,iC)
@@ -731,7 +742,7 @@ classdef SpikeImage < handle
          set(obj.Figure,'Pointer','circle');
          
 %          snipped_region = imfreehand(curAxes);
-         [h,x,y]=nigeLab.utils.freehanddraw(curAxes);
+         [h,x,y]=nigeLab.utils.freehanddraw(curAxes,'color',nigeLab.defaults.nigelColors('onsurface'));
 %          pos = getPosition(snipped_region);
 %          delete(snipped_region);
          delete(h);
@@ -770,7 +781,14 @@ classdef SpikeImage < handle
       % CALLBACK: Execute keyboard shortcut on keyboard button press
       function WindowKeyPress(obj,src,evt)
          %WINDOWKEYPRESS    Issue different events on keyboard presses
+         obj.CurrKeyPress = [obj.CurrKeyPress {evt.Key}];
          switch evt.Key
+             case 'h'
+                 thisClass =  obj.Spikes.CurClass;
+                 thisAx = obj.Axes{thisClass}';
+                 val = obj.VisibleToggle{thisClass}.Value;
+                 obj.VisibleToggle{thisClass}.Value = ~val;
+                 obj.SetVisibleFeatures(thisClass,~val);
              case {'n','0'}
                  if strcmpi(evt.Modifier,'control')
                      thisClass =  obj.Spikes.CurClass;
@@ -795,11 +813,18 @@ classdef SpikeImage < handle
                obj.ConfirmChanges;
             case 'z'
                if strcmpi(evt.Modifier,'control')
-                  obj.UndoChanges;
+%                   obj.UndoChanges;
+               uiundo(obj.Figure,'execUndo');
+
                end
+             case 'y'
+                 if strcmpi(evt.Modifier,'control')
+                     uiundo(obj.Figure,'execRedo');
+                 end
             case 's'
                if strcmpi(evt.Modifier,'control')
-                  if obj.UnconfirmedChanges
+                  if obj.UnsavedChanges(obj.Parent.UI.ChannelSelector.Channel) &&...
+                          ~obj.ConfirmedChanges(obj.Parent.UI.ChannelSelector.Channel)
                      str = questdlg('Confirm current changes before save?',...
                         'Use Most Recent Scoring?','Yes','No','Yes');
                   else
@@ -822,7 +847,12 @@ classdef SpikeImage < handle
                if strcmpi(evt.Modifier,'control')
                   obj.Recluster;
                else
-                  obj.Refresh;
+                   ButtonName = questdlg(sprintf('Reload data from disk?\nAll unsaved changes will be lost.'), ...
+                         'Reload', ...
+                         'Yes', 'No', 'No');
+                     if strcmp(ButtonName,'Yes')
+                         obj.Refresh;
+                     end
                end
             case 'q'
                obj.Parent.UI.FeaturesUI.ReopenWindow;
@@ -861,8 +891,15 @@ classdef SpikeImage < handle
          %
          %  obj.SaveChanges();
          
-         notify(obj,'SaveData');
-         obj.UnsavedChanges = false;
+         confirmedChans = find(obj.ConfirmedChanges);
+         if isempty(confirmedChans)
+            fprintf(1,'No changes were done to the scoring.\nNothing was saved!\n');
+             return; 
+         end
+         evt = nigeLab.evt.saveData(confirmedChans);
+         notify(obj,'SaveData',evt);
+         obj.UnsavedChanges(confirmedChans) = false;
+         obj.ConfirmedChanges(confirmedChans) = false;
          disp('Scoring saved.');
       end
       
@@ -877,7 +914,8 @@ classdef SpikeImage < handle
          else
             obj.Spikes.Class = obj.Parent.spk.class{1};
          end
-         obj.UnconfirmedChanges = false;
+         obj.ConfirmedChanges(obj.Parent.UI.ChannelSelector.Channel) = false;
+         obj.UnsavedChanges(obj.Parent.UI.ChannelSelector.Channel) = false;
          obj.Flatten;
          obj.SetPlotNames;
          obj.Draw;
@@ -900,7 +938,7 @@ classdef SpikeImage < handle
          else
             obj.Parent.spk.class{1} = obj.Spikes.Class;
          end
-         obj.UnconfirmedChanges = false;
+         obj.ConfirmedChanges(obj.Parent.UI.ChannelSelector.Channel) = true;
          notify(obj,'ChannelConfirmed');
          fprintf(1,'Scoring for channel %d confirmed.\n',...
             obj.Parent.UI.ChannelSelector.Channel);
@@ -911,39 +949,79 @@ classdef SpikeImage < handle
          %WINDOWMOUSEWHEEL     Zoom in or out on all plots
          %
          %  fig.WindowScrollWheelFcn = @obj.WindowMouseWheel;
-         
-         obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
-         obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
-         obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
+         modifier = obj.CurrKeyPress;         
+         if ~isempty(modifier) && all(strcmp(modifier,'alt'))
+             % only alt is pressed
+             obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
+             obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
+             obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
+             set(gcf,'currentcharacter','.');
+         else
+             offset = 20*evt.VerticalScrollCount;
+             obj.YLim = obj.YLim + offset;
+             obj.Spikes.Y = obj.Spikes.Y + offset;
+         end
          obj.Flatten;
          obj.Draw;
       end
       
       % CALLBACK: Updates cluster assignments
-      function UpdateClusterAssignments(obj,~,evt)
+      function UpdateClusterAssignments(obj,~,evt,logundo)
          %UPDATECLUSTERASSIGNMENTS   Update cluster assigns and notify  
-         
+         if nargin<4
+            logundo = true; 
+         end
          if ~isprop(evt,'subs')
             return;
+         elseif isempty(evt.subs)
+             return;
          end
+         % identify new classes to assign
+         newClasses = unique(evt.class);
+         newClasses = newClasses(:)';
+         % log status quo for undo/redo
+         oldEvt = nigeLab.evt.assignClus(evt.subs,...
+             obj.Spikes.Class(evt.subs),...
+             unique(evt.class));
+      
          % Identify plots to update
          plotsToUpdate = unique(obj.Spikes.Class(evt.subs));
          plotsToUpdate = reshape(plotsToUpdate,1,numel(plotsToUpdate));
-         plotsToUpdate = unique([plotsToUpdate, obj.Spikes.CurClass]); % in case
+         plotsToUpdate = unique([plotsToUpdate, newClasses]); % in case
          if ~isnan(evt.otherClassToUpdate)
             plotsToUpdate = unique([plotsToUpdate, evt.otherClassToUpdate]);
          end
-         % Assign and redo graphics
-         obj.Assign(obj.Spikes.CurClass,evt.subs);
+         for class = newClasses
+             % Assign and redo graphics
+             idx = evt.class == class;
+             obj.Assign(class,evt.subs(idx));
+         end
          obj.SetPlotNames(plotsToUpdate);
          obj.Flatten(plotsToUpdate);
          obj.Draw(plotsToUpdate);
          
          % Indicate that there have been some changes in class ID
-         obj.UnconfirmedChanges = true;
-         obj.UnsavedChanges = true;
+         obj.ConfirmedChanges(obj.Parent.UI.ChannelSelector.Channel) = false;
+         obj.UnsavedChanges(obj.Parent.UI.ChannelSelector.Channel) = true;
          
          notify(obj,'ClassAssigned',evt);
+         
+                  % Add undo redo functionality
+         % Prepare an undo/redo action
+         source = sprintf('%d,',plotsToUpdate);
+         destination = sprintf('%d,',newClasses);
+         cmd.Name = sprintf('Cluster assignment (%g to %g)',source(1:end-1),destination(1:end-1));
+         
+         cmd.Function        = @obj.UpdateClusterAssignments;       % Redo action
+         cmd.Varargin        = {nan,evt,false};
+         cmd.InverseFunction = @obj.UpdateClusterAssignments;        % Undo action
+         
+         cmd.InverseVarargin = {nan,oldEvt,false};
+%          % Register the undo/redo action with the figure
+        if logundo
+            uiundo(obj.Figure,'function',cmd);
+        end
+         
       end
       
       % Assign spikes to a given class

@@ -1,6 +1,8 @@
 function PlotQuality(obj)
 %% PLOTFEATURES  Plot cluster features from SORT UI in 3D and 2D.
-
+if ~isvalid(obj.Figure)
+    return;
+end
 set(obj.Figure,'Pointer','watch');
 obj.UpdateSil;
 % indx = obj.QualityIndx.UserData{2};

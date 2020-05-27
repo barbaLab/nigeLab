@@ -3,7 +3,7 @@ function multiCallbackWrap(ObjH, EventData,fcnList)
 % usage :
 % fcnList = {@myfunc0, @myfunc1, @myfunc2};
 % obj = uicontrol(...
-%     'Callback', {@nigeLab.Utils.multiCallbackWrap, fcnList});
+%     'Callback', );
 %
 % or if input arguments are needed
 %
@@ -14,23 +14,20 @@ function multiCallbackWrap(ObjH, EventData,fcnList)
 % obj = uicontrol(...
 %     'Callback', {@nigeLab.Utils.multiCallbackWrap, fcnList});
 
-if ~isscalar(fcnList)
-   for iFcn = 1:numel(fcnList)
-      nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{iFcn});
-   end
-   return;
+if ~iscell(fcnList)
+   error('nigeLab:BadInput','Third input argument must be a cell array!')
+elseif isempty(fcnList)
+    return;
 elseif iscell(fcnList{1})
-          nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{1});
+     nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList{1});
+     nigeLab.utils.multiCallbackWrap(ObjH,EventData,fcnList(2:end));
+     return;
 end
 
-if iscell(fcnList)
-   thisFunction = fcnList{1};
-   argsIn = fcnList;
-   argsIn(1) = [];
-else
-   thisFunction = fcnList;
-   argsIn = {};
-end
+
+thisFunction = fcnList{1};
+argsIn = fcnList;
+argsIn(1) = [];
 
 % If function handle is empty, continue
 if isempty(thisFunction)
