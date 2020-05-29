@@ -41,6 +41,8 @@ classdef FeaturesUI < handle
       
       HighDimsParams
       Features2D
+      PropLinker
+      
       ClusterQuality
       Silhouette
       QualityIndx
@@ -85,6 +87,7 @@ classdef FeaturesUI < handle
          [0,0.450000000000000,0.750000000000000]};
      
      CurrKeyPress
+     
    end
    
    % PROTECTED
@@ -329,6 +332,8 @@ classdef FeaturesUI < handle
             'Units','Normalized',...
             'FontSmoothing','off',...
             'nextplot','add',...
+            'XLim',[-obj.sdMax obj.sdMax],...
+            'YLim',[-obj.sdMax obj.sdMax],...
             'Position',[0.6 0.125 0.4 0.8],...
             'View',[30 30]);
          
@@ -394,9 +399,13 @@ classdef FeaturesUI < handle
             'Units','Normalized',...
             'nextplot','add',...
             'UserData',1,...
+            'XLim',[-obj.sdMax obj.sdMax],...
+            'YLim',[-obj.sdMax obj.sdMax],...
             'Position',[0.1 0.125 0.4 0.8],...
             'ButtonDownFcn',@obj.ButtonDownFcnSelect2D);
          
+        obj.PropLinker = linkprop([obj.Features2D obj.Features3D],{'XLim','YLim'});
+
          
          rgb2Hex = ( @(rgbColour) reshape( dec2hex( rgbColour, 2 )',1, 6));
          post = '</FONT></HTML>';
@@ -555,8 +564,7 @@ classdef FeaturesUI < handle
          end
 
          
-         ylim(obj.Features2D,newYSpan);
-         xlim(obj.Features2D,newXSpan);
+         set(obj.Features2D,'YLim',newYSpan,'XLim',newXSpan);
          obj.InitNewMeshMap(obj.SD_MESH_PTS_DEF,newXSpan,newYSpan);
        end
       

@@ -11,9 +11,22 @@ cl = obj.Data.class{curCh};
 
 % Get TIME binning vector for plotting features vs time (mins)
 ts = obj.Data.ts{curCh};
+xl = xlim(obj.Features2D);
+yl = ylim(obj.Features2D);
+cla(obj.Features2D);
+set(obj.Features2D,...
+    'XLim',xl,...
+    'YLim',yl);
+
+xl = xlim(obj.Features3D);
+yl = ylim(obj.Features3D);
 
 cla(obj.Features3D);
-cla(obj.Features2D);
+set(obj.Features3D,...
+    'XLim',xl,...
+    'YLim',yl);
+
+obj.PropLinker = linkprop([obj.Features2D obj.Features3D],{'XLim','YLim'});
 
 % randomly select spikes to plot
 obj.rsel = false(size(obj.Data.feat{curCh},1),1);
@@ -94,6 +107,7 @@ for iC = 1:obj.NCLUS_MAX
             'UserData',iC,...
             'ButtonDownFcn',@obj.ButtonDownFcnSelect2D);
       end
+      zlim(obj.Features3D,[0 max([zlim(obj.Features3D),ts(fi)'])]);
    end
    
 end

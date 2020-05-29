@@ -469,6 +469,7 @@ classdef SpikeImage < handle
             end
          end
          
+         
          % Superimpose the image on everything
          fprintf(1,'->\tPlotting spikes');
          for iC = 1:obj.NumClus_Max
@@ -952,14 +953,15 @@ classdef SpikeImage < handle
          modifier = obj.CurrKeyPress;         
          if ~isempty(modifier) && all(strcmp(modifier,'alt'))
              % only alt is pressed
-             obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
-             obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
-             obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
-             set(gcf,'currentcharacter','.');
-         else
              offset = 20*evt.VerticalScrollCount;
              obj.YLim = obj.YLim + offset;
              obj.Spikes.Y = obj.Spikes.Y + offset;
+           
+         else
+             obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
+             obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
+             obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
+             set(gcf,'currentcharacter','.'); 
          end
          obj.Flatten;
          obj.Draw;
