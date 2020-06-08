@@ -62,8 +62,8 @@ if getStatus(blockObj,'Sorted',ch) % If sorting already exists, use those
         clusterIndex = blockObj.getClus(ch);
     end
 elseif exist(fName,'file')~=0       % Technically, files could exist but Status not updated...
-    
-    clusterIndex = getCIFromExistingFile(blockObj,ch);
+    load(fName,'data');
+    clusterIndex = data(:,2);
     if ~any(clusterIndex) % if all indexes are zero
         clusterIndex = blockObj.getClus(ch);
         ts = getSpikeTimes(blockObj,ch);
@@ -79,6 +79,9 @@ elseif exist(fName,'file')~=0       % Technically, files could exist but Status 
                 blockObj.Channels(ch).probe,blockObj.Channels(ch).chStr);
             
         end
+    else
+         blockObj.Channels(ch).Sorted = nigeLab.libs.DiskData(fType,...
+            fName);
     end
     updateStatus(blockObj,'Sorted',true,ch);
 

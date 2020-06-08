@@ -45,7 +45,8 @@ classdef SpikeImage < handle
       VisibleToggle % checkbox for selecting visiblity in the feature panel
       Axes     % Axes containers for images
       Parent   % Only set if called by nigeLab.Sort class object
-   
+      PropLinker  
+      
       PlotCB;
       NumClus_Max = 9;
       CMap;
@@ -477,6 +478,8 @@ classdef SpikeImage < handle
             obj.Draw(iC);
          end
          fprintf(1,'complete.\n\n');
+         obj.PropLinker = [linkprop([obj.Axes{:}],{'YLim'})... 
+             linkprop([obj.Images{:}],{'YData'});];
       end
       
       function flag = clearKurrKey(obj,src,evt)
@@ -533,22 +536,17 @@ classdef SpikeImage < handle
          if nargin < 2
             plotNum = 1:obj.NumClus_Max;
          else
-            plotNum = reshape(plotNum,1,numel(plotNum));
+            plotNum = plotNum(:)';
          end
-            
-         for iPlot = plotNum
-            set(obj.Images{iPlot},'CData',obj.Spikes.C{iPlot});
-            set(obj.Axes{iPlot}.Title,'String',obj.PlotNames{iPlot});
-            if obj.Spikes.CurClass == iPlot
-               obj.SetAxesHighlight(obj.Axes{iPlot},nigeLab.defaults.nigelColors('primary'),20);
-            else
-               obj.SetAxesHighlight(obj.Axes{iPlot},nigeLab.defaults.nigelColors('onsurface'),16);
-            end
-            set(obj.Axes{iPlot},'YLim',obj.YLim);
-            set(obj.Images{iPlot},'YData',obj.YLim);
-            drawnow;
-         end
-         
+         isThisAxes = plotNum == obj.Spikes.CurClass;
+
+         cellfun(@(i,c)set(i,'CData',c),obj.Images(plotNum),obj.Spikes.C(plotNum))
+         cellfun(@(a,t)set(a.Title,'String',t),obj.Axes(plotNum),obj.PlotNames(plotNum))
+         cellfun(@(a)obj.SetAxesHighlight(a,nigeLab.defaults.nigelColors('primary'),20),obj.Axes(plotNum(isThisAxes)));
+         cellfun(@(a)obj.SetAxesHighlight(a,nigeLab.defaults.nigelColors('onsurface'),16),obj.Axes(plotNum(~isThisAxes)));
+         set(obj.Axes{1},'YLim',obj.YLim);
+         set(obj.Images{1},'YData',obj.YLim);
+         drawnow;
       end
       
       % Initializes a given axes (container for `SpikeImage` image)
@@ -619,46 +617,30 @@ classdef SpikeImage < handle
          %FLATTEN   Condense spikes into matrix scaled from 0 to 1
          
          if nargin < 2
-            
+            plotNum = 1:obj.NumClus_Max;
             obj.Spikes.C = cell(obj.NumClus_Max,1); % Colors (spike image)
             obj.Spikes.A = cell(obj.NumClus_Max,1); % Assignments
-            for iC = 1:obj.NumClus_Max
-               % Get bin edges
-               y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints); 
-
-               % Pre-allocate
-               clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
-               obj.Spikes.C{iC} = zeros(obj.YPoints-1,obj.XPoints);
-               obj.Spikes.A{iC} = nan(size(clus));
-               for ii = 1:obj.XPoints
-                  [obj.Spikes.C{iC}(:,ii),~,obj.Spikes.A{iC}(:,ii)] = ...
-                     histcounts(clus(:,ii),y_edge);
-               end
-
-               % Normalize
-               obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
-                  max(max(obj.Spikes.C{iC})); 
-            end
-         else
-            plotNum = reshape(plotNum,1,numel(plotNum));
-            for iC = plotNum
-               % Get bin edges
-               y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints); 
-
-               % Pre-allocate
-               clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
-               obj.Spikes.C{iC} = zeros(obj.YPoints-1,obj.XPoints);
-               obj.Spikes.A{iC} = nan(size(clus));
-               for ii = 1:obj.XPoints
-                  [obj.Spikes.C{iC}(:,ii),~,obj.Spikes.A{iC}(:,ii)] = ...
-                     histcounts(clus(:,ii),y_edge);
-               end
-
-               % Normalize
-               obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
-                  max(max(obj.Spikes.C{iC})); 
-            end
          end
+
+         plotNum = plotNum(:)';
+         % Get bin edges
+         y_edge = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints);
+         
+         for iC = plotNum
+             % Pre-allocate
+             clus = obj.Spikes.Waves(obj.Spikes.Class==iC,:);
+             obj.Spikes.C{iC} = zeros(obj.YPoints-1,obj.XPoints);
+             obj.Spikes.A{iC} = nan(size(clus));
+             for ii = 1:obj.XPoints
+                 [obj.Spikes.C{iC}(:,ii),obj.Spikes.A{iC}(:,ii)] = ...
+                     matlab.internal.math.histcounts(clus(:,ii),y_edge);
+             end
+             
+             % Normalize
+             obj.Spikes.C{iC} = obj.Spikes.C{iC}./...
+                 max(obj.Spikes.C{iC}(:));
+         end
+         
       end
       
       % CALLBACK: Triggered when figure window closes
@@ -838,8 +820,6 @@ classdef SpikeImage < handle
                   obj.SaveChanges;
                   
                end
-            case 'escape'
-               notify(obj,'MainWindowClosed');
             case {'x','c'}
                if strcmpi(evt.Modifier,'control')
                   notify(obj,'MainWindowClosed');
@@ -961,7 +941,6 @@ classdef SpikeImage < handle
              obj.YLim(1) = min(obj.YLim(1) + 20*evt.VerticalScrollCount,-20);
              obj.YLim(2) = max(obj.YLim(2) - 10*evt.VerticalScrollCount,10);
              obj.Spikes.Y = linspace(obj.YLim(1),obj.YLim(2),obj.YPoints-1);
-             set(gcf,'currentcharacter','.'); 
          end
          obj.Flatten;
          obj.Draw;

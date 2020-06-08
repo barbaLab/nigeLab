@@ -69,7 +69,8 @@ if getStatus(blockObj,'Clusters',ch)
       return;
    end
 elseif exist(fName,'file')~=0   
-    clusterIndex = getCIFromExistingFile(blockObj,ch);
+    load(fName,'data');
+    clusterIndex = data(2,:);
     ts = getSpikeTimes(blockObj,ch);
     n = numel(ts);
     if numel(clusterIndex)~=n
@@ -81,6 +82,8 @@ elseif exist(fName,'file')~=0
         clusterIndex = zeros(n,1);
         return;
     end
+    blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
+        fName);
     updateStatus(blockObj,'Clusters',true,ch);
 else % If it doesn't exist
    nigeLab.utils.cprintf('*SystemCommands',true,'[%s Channel %d] *Cluster* data not found.Initializing empty Clusters file.\n',blockObj.Name,ch);

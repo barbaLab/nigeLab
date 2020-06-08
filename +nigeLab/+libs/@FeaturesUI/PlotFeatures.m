@@ -20,11 +20,13 @@ set(obj.Features2D,...
 
 xl = xlim(obj.Features3D);
 yl = ylim(obj.Features3D);
+zl = ylim(obj.Features3D);
 
 cla(obj.Features3D);
 set(obj.Features3D,...
     'XLim',xl,...
-    'YLim',yl);
+    'YLim',yl,...
+    'ZLim',zl);
 
 obj.PropLinker = linkprop([obj.Features2D obj.Features3D],{'XLim','YLim'});
 
