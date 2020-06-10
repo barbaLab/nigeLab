@@ -79,7 +79,7 @@ elseif isnan(clusterIndex)
 elseif strcmpi(clusterIndex,'all')
    ts = getEventData(blockObj,'Spikes','ts',ch);
 else
-   ts = getEventData(blockObj,'Spikes','ts',ch,'tag',clusterIndex);
+   ts = getEventData(blockObj,'Sorted','ts',ch,'value',clusterIndex);
 end
 if isempty(ts)
    ts = zeros(0,1);
