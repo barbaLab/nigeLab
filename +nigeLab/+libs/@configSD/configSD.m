@@ -18,6 +18,7 @@ classdef configSD < handle
        durSlider
        SDBtn
        ARTBtn
+       ZoomBtn
        
        ExBlock
        SDMethods
@@ -129,7 +130,7 @@ classdef configSD < handle
          
          if nargin < 2
             obj.UI.Fig = figure(...
-               'Toolbar','figure',...
+               'Toolbar','none',...
                'MenuBar','none',...
                'NumberTitle','off',...
                'Units','pixels',...
@@ -144,7 +145,17 @@ classdef configSD < handle
          
          
          obj.DataAx = axes(fig,'Units','normalized','Position',[.05 .7   .9 .25],'Box','off');
-
+         obj.ZoomBtn = uicontrol(fig,'Style','togglebutton',...
+             'String','Z',...
+             'Units','normalized','Position',[.05 .96 .03 .03],'Callback',@(~,~)zoom(fig));
+         jh = nigeLab.utils.findjobj(obj.ZoomBtn);
+         jh.setBorderPainted(false);
+         jh.setContentAreaFilled(false);
+         zbtnImgPath = fullfile(matlabroot,'toolbox\matlab\appdesigner\web\release\images\figurefloatingpalette','zoomin_cursor3D.png');
+         if exist(zbtnImgPath,'file')
+             img = imread(zbtnImgPath);
+             set(obj.ZoomBtn,'CData',img);
+         end
          obj.SpikeAx = axes(fig,'Units','normalized','Position',[.75 .35   .2 .28],'Box','off');
          title(obj.SpikeAx,'Spikes','Color',[1 1 1]);
 
@@ -271,6 +282,10 @@ classdef configSD < handle
        end
        
        function StartSD(obj)
+           if isempty(obj.artRejData)
+               obj.StartArtRej;
+           end
+
            AlgName = obj.SDParsPanel.SelectedTab.Title;
            SDFun = ['SD_' AlgName];
            SDPars = obj.Pars.(SDFun);
@@ -302,8 +317,10 @@ classdef configSD < handle
            hold(obj.DataAx,'on');
            fs = obj.ExBlock.SampleRate;
            t = (obj.startIdx:obj.endIdx)./fs;
-           delete(obj.artPlot);
+           delete([obj.artPlot,obj.spkPlot]);
+           cla(obj.SpikeAx);
            obj.artPlot = plot(obj.DataAx,t(art),obj.data(art),'og');
+           legend(obj.DataAx,{'Data','Artifacts'});
        end
        
        function plotSpikes(obj,tIdx,peakAmpl,peakWidth)
@@ -322,9 +339,10 @@ classdef configSD < handle
            hold(obj.DataAx,'on');
            delete(obj.spkPlot);
            obj.spkPlot = plot(obj.DataAx,t(tIdx),peakAmpl,'*r');
-           
+           legend(obj.DataAx,{'Data','Artifacts','Spikes'});
            % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
            tIdx = tIdx(:); % make sure it's vertical
+           cla(obj.SpikeAx);
            if (any(tIdx)) % If there are spikes in the current signal
                snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
                spikes = obj.data(snippetIdx);
