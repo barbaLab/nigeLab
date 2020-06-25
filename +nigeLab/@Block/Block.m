@@ -1214,6 +1214,11 @@ classdef Block < nigeLab.nigelObj
    % SEALED,HIDDEN,PUBLIC
    methods (Sealed,Hidden,Access=public)
       varargout = testbench(blockObj,varargin); % Testbench with access to protected methods
+      
+      function SDargsout = testSD(blockobj,SDFun,data,SDPars)
+          SDargsout = cell(1,nargout(SDFun));
+          [SDargsout{:}] = feval(SDFun,data,SDPars);
+      end
    end
    % % % % % % % % % % END METHODS% % %
 end

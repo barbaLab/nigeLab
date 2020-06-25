@@ -19,7 +19,7 @@ function flag = plotWaves(blockObj)
 
 %% DEFAULTS
 flag = false;
-blockObj.PlotPars = nigeLab.defaults.Plot();
+blockObj.Pars.PlotPars = nigeLab.defaults.Plot();
 
 %% FIGURE OUT WHAT TO PLOT
 str_in = blockObj.getStatus;
