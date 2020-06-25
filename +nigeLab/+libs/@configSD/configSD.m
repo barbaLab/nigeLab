@@ -1,8 +1,15 @@
 classdef configSD < handle
    %% CONFIGSD class. It summons a UI where you can configure the SD parameters prior to SD execution
    properties
+       UI
+       Listeners
+       Channels
+       
        Fig
        DataAx
+       artPlot
+       spkPlot
+       
        SpikeAx
        SDParsPanel
        ArtRejParsPanel
@@ -10,14 +17,18 @@ classdef configSD < handle
        SliderLbl
        durSlider
        SDBtn
+       ARTBtn
        
        ExBlock
        SDMethods
+       ARTMethods
        Pars 
        
        startIdx
        endIdx
-       chanIdx
+       
+       data
+       artRejData
    end
    
    
@@ -37,18 +48,47 @@ classdef configSD < handle
            end
            
            ff = fieldnames(obj.ExBlock.Pars.SD);
-           obj.SDMethods = ff(cellfun(@(fName)numel(fName)>2 && strcmp(fName(1:3),'SD_') ,ff));
-           
+           obj.SDMethods = ff(cellfun(@(fName)numel(fName)>2 && strcmp(fName(1:3),'SD_') ,ff));           
            obj.SDMethods = cellfun(@(MName) MName(4:end),obj.SDMethods, 'UniformOutput',false);
+           
+           obj.ARTMethods = ff(cellfun(@(fName)numel(fName)>2 && strcmp(fName(1:4),'ART_') ,ff));
+           obj.ARTMethods = cellfun(@(MName) MName(5:end),obj.ARTMethods, 'UniformOutput',false);
            
            obj.Pars = obj.ExBlock.Pars.SD;
            
            % Build UI
            obj.buildGUI();
-           obj.Fig.Visible = 'on';
+           
+           obj.Channels.Name = {obj.ExBlock.Channels.name};
+           obj.Channels.Selected = 1;
+           obj.UI.Parent = obj;
+           obj.UI.channel = 1;
+           
+           obj.UI.ChannelSelector = nigeLab.libs.ChannelUI(obj.UI);
+           obj.Listeners = [obj.Listeners, ...
+               addlistener(obj.UI.ChannelSelector,'NewChannel',...
+               @obj.setChannel)];
+           
            
            obj.renderData()
            
+           
+       end
+       
+       function flag = set(~,field,~)
+           % This does not serve any purpose. Just to keep the channel
+           % selector happy. For whatever reason was requiring this to be
+           % in place
+           if strcmp(field,'channel')
+               flag = true;
+           else
+               flag = false;
+           end
+       end
+       
+       function setChannel(obj,src,evt)
+            obj.Channels.Selected = src.Channel;
+            renderData(obj)
        end
        
        function renderData(obj)
@@ -60,15 +100,15 @@ classdef configSD < handle
            MaxSamples = 10*60*fs; % 10 minutes max recording
            obj.startIdx = randi(max(1,L-MaxSamples));           
            obj.endIdx = min(L,obj.startIdx+MaxSamples);
-           obj.chanIdx = randi(thisBlock.NumChannels);
+           chanIdx = obj.Channels.Selected;
            if obj.endIdx == L
                obj.durSlider.Enable = 'off';
               obj.SliderLbl.Enable = 'off'; 
            end
            
            t = (obj.startIdx:obj.endIdx)./fs;
-           data = thisBlock.Channels(obj.chanIdx).Filt(obj.startIdx:obj.endIdx);
-           plot(obj.DataAx,t,data);
+           obj.data = thisBlock.Channels(chanIdx).Filt(obj.startIdx:obj.endIdx);
+           plot(obj.DataAx,t,obj.data);
            xlim(obj.DataAx,[t(1) min(t(1)+60,t(end))]);
            obj.DataAx.YAxis.Color = [1,1,1];obj.DataAx.XAxis.Color = [1,1,1];
            title(obj.DataAx,'Filtered Data','Color',[1 1 1]);
@@ -76,7 +116,8 @@ classdef configSD < handle
        end
        
        function delete(obj)
-           
+           delete(obj.UI.ChannelSelector);
+           delete(obj.UI.Fig);
        end
        
        function buildGUI(obj,fig)
@@ -87,17 +128,18 @@ classdef configSD < handle
          %  fig = obj.buildGUI(fig);  Adds the panels only
          
          if nargin < 2
-            obj.Fig = figure(...
-               'Toolbar','auto',...
+            obj.UI.Fig = figure(...
+               'Toolbar','figure',...
                'MenuBar','none',...
                'NumberTitle','off',...
                'Units','pixels',...
                'Position',[1500 200 800 700],...
                'Color',nigeLab.defaults.nigelColors('bg'),...
-               'Visible','off');
-           fig = obj.Fig;
+               'Visible','on',...
+               'CloseRequestFcn',@(~,~) obj.delete);
+           fig = obj.UI.Fig;
          else
-            obj.Fig = fig; 
+            obj.UI.Fig = fig; 
          end
          
          
@@ -120,10 +162,15 @@ classdef configSD < handle
              'Position',[.1 .8 .8 .15],...
              'Value',1,'Min',1,'Max',10,...
              'Callback',@(hObj,~,~)obj.changeDataLim(hObj));
-         obj.SDBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','Detect!',...
+         obj.SDBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','SD',...
              'Units','normalized',...
              'Position',[.1 .1 .35 .2],...
              'Callback',@(~,~)obj.StartSD);
+         
+         obj.ARTBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','ArtRej',...
+             'Units','normalized',...
+             'Position',[.5 .1 .35 .2],...
+             'Callback',@(~,~)obj.StartArtRej);
          
          obj.SDParsPanel = uitabgroup(fig,...
             'Units','normalized',...
@@ -133,6 +180,7 @@ classdef configSD < handle
             'Units','normalized',...
             'Position',[.05 .05  .65 .18]);
         
+        % fill SD panel
         for ii = 1:numel(obj.SDMethods)
            % Add all uitabs
            thisTab = uitab(obj.SDParsPanel,'Title',obj.SDMethods{ii},'Scrollable','on');
@@ -149,7 +197,7 @@ classdef configSD < handle
                   'Units','pixels',...
                   'Position',[38 + Hoff   215 + Woff   37   18],...
                   'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
-                  'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,obj.SDMethods{ii},thisParsNames{jj}));
+                  'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['SD_' obj.SDMethods{ii}],thisParsNames{jj}));
               
               thisParLbl =  uicontrol('Style','text',...
                   'Parent',thisTab,...
@@ -161,11 +209,42 @@ classdef configSD < handle
            end
         end
          
+        
+        % fill artefact rejection panel
+         for ii = 1:numel(obj.ARTMethods)
+           % Add all uitabs
+           thisTab = uitab(obj.ArtRejParsPanel,'Title',obj.ARTMethods{ii},'Scrollable','on');
+           thisPars = (obj.ExBlock.Pars.SD.(['ART_' obj.ARTMethods{ii}]));
+           thisParsNames = fieldnames(thisPars);
+           thisTab.Units = 'pixels';
+           Width = thisTab.InnerPosition(3);
+           thisTab.Units = 'normalized';
+           for jj=1:numel(thisParsNames)
+               Hoff = floor(Width/3)*mod(jj-1,3);
+               Woff = -40*idivide(int16(jj-1),3);
+             thisParText =  uicontrol('Style','edit',...
+                  'Parent',thisTab,...
+                  'Units','pixels',...
+                  'Position',[38 + Hoff   60 + Woff   37   18],...
+                  'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
+                  'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['ART_' obj.ARTMethods{ii}],thisParsNames{jj}));
+              
+              thisParLbl =  uicontrol('Style','text',...
+                  'Parent',thisTab,...
+                  'Units','pixels',...
+                  'Position',[38 + Hoff  78 + Woff   70   18],...
+                  'String',thisParsNames{jj},...
+                  'HorizontalAlignment','left');
+              
+           end
+         end
+        
+         
        end
        
        function textBoxCallback(obj,hObj,MethodName,ParName)
            val = get(hObj,'String');
-           thiPar = obj.ExBlock.Pars.SD.(['SD_' MethodName]).(ParName);
+           thiPar = obj.ExBlock.Pars.SD.(MethodName).(ParName);
            
            if isnumeric(thiPar)
                convertedVal = str2double(val);
@@ -182,7 +261,7 @@ classdef configSD < handle
                
            end
            
-           obj.Pars.(MethodName).(['SD_' MethodName]) = convertedVal;
+           obj.Pars.(MethodName).(ParName) = convertedVal;
        end
        
        function changeDataLim(obj,hobj)
@@ -196,8 +275,7 @@ classdef configSD < handle
            SDFun = ['SD_' AlgName];
            SDPars = obj.Pars.(SDFun);
            SDPars.fs = obj.ExBlock.SampleRate;
-           data = obj.ExBlock.Channels(obj.chanIdx).Filt(obj.startIdx:obj.endIdx);
-           SDargsout = obj.ExBlock.testSD(SDFun,data,SDPars);
+           SDargsout = obj.ExBlock.testSD(SDFun,obj.artRejData,SDPars);
            
            tIdx        = SDargsout{1};
            peak2peak = SDargsout{2};
@@ -207,14 +285,34 @@ classdef configSD < handle
             plotSpikes(obj,tIdx,peakAmpl,peakWidth)
        end
        
+       function StartArtRej(obj)
+           AlgName = obj.ArtRejParsPanel.SelectedTab.Title;
+
+           ArtFun = ['ART_' AlgName];
+           ArtPars = obj.Pars.(ArtFun);
+           ArtPars.fs =  obj.ExBlock.SampleRate;
+           Artargsout = obj.ExBlock.testSD(ArtFun,obj.data,ArtPars);
+           obj.artRejData = Artargsout{1};
+           artifact = Artargsout{2};
+           
+           plotArt(obj,artifact)
+       end
+       
+       function plotArt(obj,art)
+           hold(obj.DataAx,'on');
+           fs = obj.ExBlock.SampleRate;
+           t = (obj.startIdx:obj.endIdx)./fs;
+           delete(obj.artPlot);
+           obj.artPlot = plot(obj.DataAx,t(art),obj.data(art),'og');
+       end
+       
        function plotSpikes(obj,tIdx,peakAmpl,peakWidth)
            fs = obj.ExBlock.SampleRate;
            t = (obj.startIdx:obj.endIdx)./fs;
            
-           data = obj.ExBlock.Channels(obj.chanIdx).Filt(obj.startIdx:obj.endIdx);
            WindowPreSamples =  obj.Pars.WPre * 1e-3 * fs;
            WindowPostSamples =  obj.Pars.WPost * 1e-3 * fs;
-           out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(data) - WindowPostSamples - 2;
+           out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(obj.data) - WindowPostSamples - 2;
           
            peakAmpl(out_of_record) = [];
            peakWidth(out_of_record) = [];
@@ -222,13 +320,14 @@ classdef configSD < handle
            
            
            hold(obj.DataAx,'on');
-           plot(obj.DataAx,t(tIdx),peakAmpl,'*r')
+           delete(obj.spkPlot);
+           obj.spkPlot = plot(obj.DataAx,t(tIdx),peakAmpl,'*r');
            
            % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
            tIdx = tIdx(:); % make sure it's vertical
            if (any(tIdx)) % If there are spikes in the current signal
                snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
-               spikes = data(snippetIdx);
+               spikes = obj.data(snippetIdx);
                plot(obj.SpikeAx,(-WindowPreSamples : WindowPostSamples)./fs,spikes);
                obj.SpikeAx.YAxis.Color = [1,1,1];obj.SpikeAx.XAxis.Color = [1,1,1];
            end
