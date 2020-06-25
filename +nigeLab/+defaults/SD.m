@@ -14,11 +14,10 @@ function varargout = SD(varargin)
 pars = struct;
 
  
-% %% SPIKE DETECTION PARAMETERS
+% %% OLD SPIKE DETECTION PARAMETERS
 % % Parameters
 % pars.ARTIFACT_THRESH = 450;    % Threshold for artifact
-pars.STIM_TS  = [];            % Pre-specified stim times
-pars.ARTIFACT = [];            % Pre-specified artifact times
+
 % pars.PRE_STIM_BLANKING  = 0.5; % Window to blank before specifieid stim times (ms)
 % pars.POST_STIM_BLANKING = 1.5; % Window to blank after specified stim times (ms)
 % pars.ARTIFACT_SPACE  = 4;    % Window to ignore around artifact (suggest: 4 ms MIN for stim rebound)
@@ -40,29 +39,17 @@ pars.ARTIFACT = [];            % Pre-specified artifact times
 % 
 % 
 % % Parameters
-% pars.N_INTERP_SAMPLES = 250; % Number of interpolated samples for spikes
 % pars.MIN_SPK  = 100;       % Minimum spikes before sorting
 % pars.TEMPSD   = 3.5;      % Cluster template max radius for template matching
 % pars.TSCALE   = 3.5;      % Scaling for timestamps of spikes as a feature
-% pars.USE_TS_FEATURE = false; % Add timestamp as an additional feature for SPC?
-% pars.FEAT     = 'wav';    % 'wav' or 'pca' or 'ica' for spike features
-
-% 
-% 
 
 
 
+%% User defined parameters for spike detection
 
+pars.STIM_TS  = [];            % Pre-specified stim times
+pars.ARTIFACT = [];            % Pre-specified artifact times
 
-
-
-
-
-%% SD  Sets default parameters for spike detection operation
-%
-%  par = nigeLab.defaults.SD();
-
-%% User defined parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Spike Detection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -130,53 +117,3 @@ else
 end
 
 end
-
-
-
-
-% %% PARSE VARARGIN
-% if numel(varargin)==1
-%    varargin = varargin{1};
-%    if numel(varargin) ==1
-%       varargin = varargin{1};
-%    end
-% end
-% 
-% for iV = 1:2:length(varargin)
-%    pars.(upper(varargin{iV}))=varargin{iV+1};
-% end
-
-% %% PARSE OTHER PARAMETERS BASED ON SELECTED PARAMETERS
-% switch pars.PKDETECT
-%    case 'neg'
-%       pars.SD_VER = [pars.FEAT '-neg' num2str(pars.FIXED_THRESH)];
-%    case 'pos'
-%       pars.SD_VER = [pars.FEAT '-pos' num2str(pars.FIXED_THRESH)];
-%    case 'adapt'
-%       pars.SD_VER = [pars.FEAT '-adapt'];
-%    case 'both'
-%       pars.SD_VER = [pars.FEAT '-PT'];
-%    case 'sneo'
-%       pars.SD_VER = [pars.FEAT '-sneo'];
-%    otherwise
-%       pars.SD_VER = [pars.FEAT '-new'];
-% end
-% 
-% 
-% switch pars.FEAT
-%    case 'raw'
-%       pars.FEAT_NAMES = cell(1,2*pars.NINPUT + 1);
-%       for ii = 1:pars.NINPUT
-%          pars.FEAT_NAMES{ii} = sprintf('wav-%02d',ii);
-%       end
-%       for ik = 1:pars.NINPUT
-%          pars.FEAT_NAMES{ii+ik} = sprintf('raw-%02d',ik);
-%       end
-%       pars.FEAT_NAMES{ii+ik+1} = 'raw-mean';
-%    otherwise
-%       pars.FEAT_NAMES = cell(1,pars.NINPUT);
-%       for ii = 1:pars.NINPUT
-%          pars.FEAT_NAMES{ii} = sprintf('%s-%02d',pars.FEAT,ii);
-%       end
-% end
-% 

@@ -6,5 +6,5 @@ pars.SmoothN    = 5;    % Number of samples to use for smoothed nonlinear energy
 pars.NSaround   = 7;    % Number of samples around the peak to "look" for negative peak
 pars.RefrTime   = 0.5;  % [ms] Refractory time. 
 pars.PeakDur    =  1;   % [ms] Peak duration or pulse lifetime period
-
+pars.Polarity   =  -1;
 end

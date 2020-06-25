@@ -1,4 +1,4 @@
-function [spikepos,y] = SD_MTEO(in,k,params)
+function [spikepos,y] = SD_MTEO(f,pars)
 %MTEO computes the timestamps of detected spikes in timedomain using a
 %multiresolution teager energy operator.
 %
@@ -25,34 +25,15 @@ function [spikepos,y] = SD_MTEO(in,k,params)
 %   Author: F. Lieb, September 2016
 
 
-
-s = in.M;
-fs = in.SaRa;
+fs = pars.fs;
+k = pars.k;
 L = length(s);
 
 if size(s, 1) > size(s, 2)
     s = s';
 end
 
-%prefilter signal
-if params.filter
-    if ~isfield(params,'F1')
-        params.Fstop = 100;
-        params.Fpass = 200;
-        Apass = 0.2;
-        Astop = 80;
-        params.F1 = designfilt(   'highpassiir',...
-                                  'StopbandFrequency',params.Fstop ,...
-                                  'PassbandFrequency',params.Fpass,...
-                                  'StopbandAttenuation',Astop, ...
-                                  'PassbandRipple',Apass,...
-                                  'SampleRate',fs,...
-                                  'DesignMethod','butter');
-    end
-    f = filtfilt(params.F1,s);
-else
-    f = s;
-end
+
 
 %make it zero mean
 s2 = f;% - mean(f);

@@ -1,4 +1,4 @@
-function [spikepos,y] = SD_WTEO(in,params)
+function [spikepos,y] = SD_WTEO(s,pars)
 %MTEO computes the timestamps of detected spikes in timedomain using a
 %wavelet based teager energy operator.
 %
@@ -29,8 +29,7 @@ function [spikepos,y] = SD_WTEO(in,params)
 
 
 %parse inputs
-s = in.M;
-fs = in.SaRa;
+fs = pars.fs;
 L = length(s);
 wavLevel = 2;
 wavelet = 'sym7';
@@ -53,26 +52,8 @@ if rem(L,pow) > 0
 end
 
 
-%prefilter signal
-if params.filter
-    if ~isfield(params,'F1')
-        params.Fstop = 100;
-        params.Fpass = 200;
-        Apass = 0.2;
-        Astop = 80;
-        params.F1 = designfilt(   'highpassiir',...
-                                  'StopbandFrequency',params.Fstop ,...
-                                  'PassbandFrequency',params.Fpass,...
-                                  'StopbandAttenuation',Astop, ...
-                                  'PassbandRipple',Apass,...
-                                  'SampleRate',fs,...
-                                  'DesignMethod','butter');
-    end
-    f = filtfilt(params.F1,s);
-else
-    f = s;
-end
 
+f = s;
 
 
 
@@ -101,12 +82,12 @@ out = [o1;  o2];
  %sum over approximation coefficients
 out = sum(out,1);
 y = out;
-switch params.method
+switch pars.method
     case 'numspikes'
-        spikepos = getSpikePositions(out,fs,in.M,params);
+        spikepos = getSpikePositions(out,fs,in.M,pars);
     case 'lambda'
-        thout = wthresh(out,'h',params.lambda);
-        spikepos = getSpikePositions(thout,fs,s,params);
+        thout = wthresh(out,'h',pars.lambda);
+        spikepos = getSpikePositions(thout,fs,s,pars);
     otherwise
         error('unknown method specified');
 end

@@ -180,7 +180,7 @@ flag = true;
       SDPars = pars.(SDFun);
       SDPars.fs = pars.fs;
       SDargsout = cell(1,nargout(SDFun));
-      [SDargsout{:}] = feval(SDFun,data_ART,SDPars,art_idx);
+      [SDargsout{:}] = feval(SDFun,data_ART,SDPars);
       
       tIdx        = SDargsout{1};
       peak2peak = SDargsout{2};

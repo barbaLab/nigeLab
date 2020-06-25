@@ -1,4 +1,4 @@
-function [ts,p2pamp,pmin,pW,E] = SD_SNEO(data,pars,art_idx)
+function [ts,p2pamp,pmin,pW,E] = SD_SNEO(data,pars)
 %% SNEOTHRESHOLD   Smoothed nonlinear energy operator thresholding detect
 %
 %  [ts,p2pamp,pmin,pW,E] = SNEOTHRESHOLD(data,pars,art_idx)
@@ -49,9 +49,9 @@ Zs = fliplr( conv( fliplr(conv(Z,kern,'same')) ,kern,'same')); % the same as the
 clear('Z','Y','Yb','Yf');
 %% CREATE THRESHOLD FILTER
 tmpdata = data;
-tmpdata(art_idx) = [];
+% tmpdata(art_idx) = [];
 tmpZ = Zs;
-tmpZ(art_idx) = [];
+% tmpZ(art_idx) = [];
 
 th = pars.MultCoeff * median(abs(tmpZ));
 data_th = pars.MultCoeff * median(abs(tmpdata));
@@ -79,11 +79,12 @@ z = zeros(size(data));
 %%%%%%%%%%%%%%%% FB, 5/28/2019 optimized for speed.  The above process took 2.9s 
 %%%%%%%%%%%%%%%%  now it takes more or less 0.85s. Same result
 pkloc = conv(pk,ones(1,pars.NSaround*2+1),'same')>0;
-z(pkloc) = data(pkloc);
+z(pkloc) = pars.Polarity .* data(pkloc);
 
 
 minTime = 1e-3*pars.RefrTime; % parameter in milliseconds
-[ts,pmin] = nigeLab.libs.peakseek(-z,minTime*pars.fs,data_th);
+[ts,pmin] = nigeLab.libs.peakseek(z,minTime*pars.fs,data_th);
+pmin = pmin .* pars.Polarity;
 E = Zs(ts);            
 
 

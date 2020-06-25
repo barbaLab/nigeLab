@@ -1,4 +1,4 @@
-function [p2pamp,ts,pmin,dt] = SD_AdaptThresh(data,pars)
+function [ts,p2pamp,pmin,pW] = SD_AdaptThresh(data,pars)
 %% ADAPTIVE_THRESHOLD   Set adaptive threshold based on local noise
 %
 %  [pwpamp,ts,pmin,dt] = ADAPTIVE_THRESHOLD(data,pars,art_idx)
@@ -46,40 +46,26 @@ end
 
 %% REDUCE CONSECUTIVE CROSSINGS TO SINGLE POINTS
 z = zeros(size(data));
-z(pk) = data(pk);
-[pmin,ts] = findpeaks(-z);
+z(pk) = pars.Polarity * data(pk);
+[pmin,ts] = findpeaks(z);
+pmin = pmin * pars.Polarity;
 
-%% GET PEAK-TO-PEAK VALUES
 %% GET PEAK-TO-PEAK VALUES
 PLP = pars.PeakDur*1e-3*pars.fs; % from ms to samples
 tloc = repmat(ts,2*PLP+1,1) + (-PLP:PLP).';
 tloc(tloc < 1) = 1;
 tloc(tloc > numel(data)) = numel(data);
-pmax = max(data(tloc));
-
+[pmax,Imax] = max(data(tloc));
+pW = abs(Imax-PLP);
 p2pamp = pmax + pmin;
+
 %% EXCLUDE VALUES OF PMAX <= 0
 pm_ex = pmax<=0;
 ts(pm_ex) = [];
 p2pamp(pm_ex) = [];
 pmax(pm_ex) = [];
 pmin(pm_ex) = [];
-
-%% GET TIME DIFFERENCES
-dt = [diff(ts), round(median(diff(ts)))];
-
-% %% PERFORM SECONDARY EXCLUSIONS
-% a = p2pamp/(2*pars.ARTIFACT_THRESH);
-% b = pmin/pars.ARTIFACT_THRESH;
-% c = dt/pars.FS;
-% 
-% dt_ex = c <= pars.ART_RATE & b >= (pars.M.*a + pars.B);
-% 
-% ts(dt_ex) = [];
-% p2pamp(dt_ex) = [];
-% pmax(dt_ex) = [];
-% pmin(dt_ex) = [];
-% dt(dt_ex) = [];
+pW(pm_ex) = [];
 
 
 
