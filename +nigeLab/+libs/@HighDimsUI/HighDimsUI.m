@@ -10,6 +10,8 @@ classdef HighDimsUI < handle
         Figure  matlab.ui.Figure
         panels
         
+        btnPanel
+        
         alpha
         num_dims
         selected_conds
@@ -58,9 +60,15 @@ classdef HighDimsUI < handle
                 'Position',[.01 .01 .98 .2],...
                 'MinTitleBarHeightPixels',0);
             btnAx = axes('Position',[0 0 1 1],'Visible','off','XLim',[0 1],'YLim',[0 1]);
-            p3.nestObj(btnAx);
-            btn1 = nigeLab.libs.nigelButton(btnAx,[0.01 0.3 0.2 0.3],'Best proj.',...
-                 {@(~,~)obj.lda_button_Callback},'FontSize',.8 );
+            p3.nestObj(btnAx,'btnAx');
+            btn1 = nigeLab.libs.nigelButton(btnAx,[0.01 0.1 0.2 0.3],'Best proj.',...
+                 {@(~,~)obj.setViewCallback},'FontSize',.8 );
+            dropdown = uicontrol('Style','popupmenu',...
+                'Units','normalized',...
+                'Position',[0.02 0.5 0.18 0.3],...
+                'String',{'LDA','PCA','Random'});
+            
+            p3.nestObj(dropdown,'projDropDown');
             
             for ii = 1:obj.maxDim % max 15 features
                 ax1 = subplot(5,3,ii,'Parent',obj.Figure,'UserData',[ii],'xtick',[],'ytick',[],...
@@ -78,7 +86,8 @@ classdef HighDimsUI < handle
             
             obj.FeaturesUI.FeatX.Enable = 'off';
             obj.FeaturesUI.FeatY.Enable = 'off';
-
+    
+            obj.btnPanel = p3;
         end
         
         function InitUI(obj)
@@ -336,11 +345,7 @@ classdef HighDimsUI < handle
             delete(obj.Figure);
         end
         
-    end
-    
-    % Methods to precompute projections
-    methods
-        function lda_button_Callback(obj)
+        function SetLDAproj(obj)
             % The desired vectors are from Fisher's linear discriminant analysis
             %
             % If only two conditions (should only be a one-d projection), qr gives us a
@@ -355,33 +360,33 @@ classdef HighDimsUI < handle
             end
             
             % TODO trajectories
-%             if (ismember('cluster', {D.type}))
-%                 D = D(ismember({D.type}, 'cluster')); % get rid of any trajs
-%                 
-%                 if (length(conditions) <= 1) % LDA should do nothing for one condition
-%                     return;
-%                 end
-%             else
-%                 if (length(conditions) == 1)  %  goal: only one cond, so make points in the traj far apart
-%                     if (length(D) == 1) % only one trajectory, so LDA will fail
-%                         return;
-%                     end
-%                     newData = [];
-%                     index = 1;
-%                     for itrial = 1:length(D)
-%                         D(itrial).epochStarts = [D(itrial).epochStarts size(D(itrial).data,2)];  %change epochStarts to include the end
-%                         for j = 1:length(D(1).epochStarts)
-%                             newData(index).condition = num2str(j);
-%                             newData(index).data = D(itrial).data(:,D(itrial).epochStarts(j));
-%                             index = index+1;
-%                         end
-%                     end
-%                     D = newData;
-%                     conditions = unique({D.condition});
-%                 end
-%                 % else, just use the full trajectory
-%             end
-%             
+            %             if (ismember('cluster', {D.type}))
+            %                 D = D(ismember({D.type}, 'cluster')); % get rid of any trajs
+            %
+            %                 if (length(conditions) <= 1) % LDA should do nothing for one condition
+            %                     return;
+            %                 end
+            %             else
+            %                 if (length(conditions) == 1)  %  goal: only one cond, so make points in the traj far apart
+            %                     if (length(D) == 1) % only one trajectory, so LDA will fail
+            %                         return;
+            %                     end
+            %                     newData = [];
+            %                     index = 1;
+            %                     for itrial = 1:length(D)
+            %                         D(itrial).epochStarts = [D(itrial).epochStarts size(D(itrial).data,2)];  %change epochStarts to include the end
+            %                         for j = 1:length(D(1).epochStarts)
+            %                             newData(index).condition = num2str(j);
+            %                             newData(index).data = D(itrial).data(:,D(itrial).epochStarts(j));
+            %                             index = index+1;
+            %                         end
+            %                     end
+            %                     D = newData;
+            %                     conditions = unique({D.condition});
+            %                 end
+            %                 % else, just use the full trajectory
+            %             end
+            %
             
             sigma = zeros(obj.num_dims);
             m = [];
@@ -406,6 +411,51 @@ classdef HighDimsUI < handle
             
         end
         
+        function SetRandProj(obj)
+            %  rotates to a random set of projection vectors
+            
+           
+            [q r] = qr(randn(obj.num_dims));
+            
+            rotate_to_desired(obj, q(:,1:2)');
+            
+        end
+        
+        
+        function SetPCAProj(obj)
+            %  The desired vectors are the first two PCs of the data
+            %  (trajectories' datapoints are concatenated)
+            
+            D = obj.D;
+            
+            idx = ismember(obj.D.class,find(obj.selected_conds));
+            
+            [u] = pca([D.feat(idx,:)]);
+            
+            rotate_to_desired(obj, u(:,1:2)');
+            
+        end
+        
+        
+    end
+    
+    % Methods to precompute projections
+    methods
+        
+        function setViewCallback(obj)
+            dropdown = obj.btnPanel.Children{strcmp(obj.btnPanel.ChildName,'projDropDown')};
+            switch dropdown.String{dropdown.Value}
+                case 'LDA'
+                    SetLDAproj(obj);
+                case 'Random'
+                    SetRandProj(obj)
+                case 'PCA'
+                    SetPCAProj(obj)
+            end
+            
+        end
+        
+
         % % Third idea, what GGobi uses
         function rotate_to_desired(obj, desired_vecs)
 % helper function that modifies the current axes
