@@ -161,7 +161,7 @@ classdef Sort < handle
                   return;
                end
                
-               if checkForUnconfirmedChanges(sortObj.UI.SpikeImage,true)
+               if checkForConfirmedChanges(sortObj.UI.SpikeImage,true)
                    return;
                end
                
@@ -209,7 +209,7 @@ classdef Sort < handle
    methods (Access=public)
       setChannel(sortObj,~,~) % Set the current channel in the UI
       setClass(sortObj,class) % Set the current sort class
-      saveData(sortObj)       % Save the sorting
+      saveData(sortObj,ch)       % Save the sorting
    end
    
    % PROTECTED

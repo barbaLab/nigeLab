@@ -1,6 +1,8 @@
 function PlotFeatures(obj)
 %% PLOTFEATURES  Plot cluster features from SORT UI in 3D and 2D.
-
+if ~isvalid(obj.Figure)
+    return
+end
 
 % Loop through each subset of 3 features
 curCh = obj.ChannelSelector.Channel;
@@ -9,9 +11,24 @@ cl = obj.Data.class{curCh};
 
 % Get TIME binning vector for plotting features vs time (mins)
 ts = obj.Data.ts{curCh};
+xl = xlim(obj.Features2D);
+yl = ylim(obj.Features2D);
+cla(obj.Features2D);
+set(obj.Features2D,...
+    'XLim',xl,...
+    'YLim',yl);
+
+xl = xlim(obj.Features3D);
+yl = ylim(obj.Features3D);
+zl = ylim(obj.Features3D);
 
 cla(obj.Features3D);
-cla(obj.Features2D);
+set(obj.Features3D,...
+    'XLim',xl,...
+    'YLim',yl,...
+    'ZLim',zl);
+
+obj.PropLinker = linkprop([obj.Features2D obj.Features3D],{'XLim','YLim'});
 
 % randomly select spikes to plot
 obj.rsel = false(size(obj.Data.feat{curCh},1),1);
@@ -56,7 +73,7 @@ for iC = 1:obj.NCLUS_MAX
             'Visible',state,...
             'UserData',iC);
 
-         line(obj.Features2D,...
+         l=line(obj.Features2D,...
             X(:,1), ...
             X(:,2), ...
             'LineStyle', 'none',...
@@ -92,11 +109,12 @@ for iC = 1:obj.NCLUS_MAX
             'UserData',iC,...
             'ButtonDownFcn',@obj.ButtonDownFcnSelect2D);
       end
+      zlim(obj.Features3D,[0 max([zlim(obj.Features3D),ts(fi)'])]);
    end
    
 end
 
 drawnow;
-obj.ResetFeatureAxes;
-
+% obj.ResetFeatureAxes;
+obj.CountExclusions(obj.ChannelSelector.Channel);
 end
