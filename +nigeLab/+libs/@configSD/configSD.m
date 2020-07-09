@@ -21,6 +21,8 @@ classdef configSD < handle
        ZoomBtn
        ResampleBtn
        
+       AllTextBoxes
+       
        ExBlock
        SDMethods
        ARTMethods
@@ -72,7 +74,7 @@ classdef configSD < handle
                @obj.setChannel)];
            
            
-           obj.renderData()
+           obj.sampleData()
            
            
        end
@@ -94,27 +96,45 @@ classdef configSD < handle
        end
        
        function renderData(obj)
+          cla(obj.DataAx);
+          cla(obj.SpikeAx);
           
            thisBlock = obj.ExBlock;
-           
-           L = thisBlock.Samples;
            fs = thisBlock.SampleRate;
-           MaxSamples = 10*60*fs; % 10 minutes max recording
-           obj.startIdx = randi(max(1,L-MaxSamples));           
-           obj.endIdx = min(L,obj.startIdx+MaxSamples);
-           chanIdx = obj.Channels.Selected;
-           if obj.endIdx == L
-               obj.durSlider.Enable = 'off';
-              obj.SliderLbl.Enable = 'off'; 
-           end
-           
            t = (obj.startIdx:obj.endIdx)./fs;
-           obj.data = thisBlock.Channels(chanIdx).Filt(obj.startIdx:obj.endIdx);
+
+           
            plot(obj.DataAx,t,obj.data);
            xlim(obj.DataAx,[t(1) min(t(1)+60,t(end))]);
            obj.DataAx.YAxis.Color = [1,1,1];obj.DataAx.XAxis.Color = [1,1,1];
-           title(obj.DataAx,'Filtered Data','Color',[1 1 1]);
+           title(obj.DataAx,sprintf('Filtered Data, %.2f minutes',numel(t)./fs./60),'Color',[1 1 1]);
 
+       end
+       
+       function sampleData(obj)
+           
+           waitFig = plotWaitFigure(obj,'Sampling data...');
+           lockedObjs = obj.lockUnlockGui([],'off');
+           
+           thisBlock = obj.ExBlock;
+
+           L = thisBlock.Samples;
+           fs = thisBlock.SampleRate;
+           Samples = floor(obj.durSlider.Value*60*fs); % length of ther selected recording
+           obj.startIdx = randi(max(1,L-Samples));
+           obj.endIdx = min(L,obj.startIdx+Samples);
+           chanIdx = obj.Channels.Selected;
+           if L<60*fs
+               obj.durSlider.Enable = 'off';
+               obj.SliderLbl.Enable = 'off';
+               obj.SliderLbl.String = 'less then 1min data.';
+           end
+           
+           obj.data = thisBlock.Channels(chanIdx).Filt(obj.startIdx:obj.endIdx);
+           renderData(obj);
+           
+           obj.lockUnlockGui(lockedObjs,'on');
+           delete(waitFig);
        end
        
        function delete(obj)
@@ -173,11 +193,11 @@ classdef configSD < handle
              'Units','normalized',...
              'Position',[.1 .8 .8 .15],...
              'Value',1,'Min',1,'Max',10,...
-             'Callback',@(hObj,~,~)obj.changeDataLim(hObj));
+             'Callback',@(hObj,~,~)set(obj.SliderLbl,'String',sprintf('%.2f Min',hObj.Value)));
          obj.ResampleBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','Resample',...
              'Units','normalized',...
-             'Position',[.5 .55 .35 .2]);
-%              'Callback',@(~,~)obj.StartArtRej);
+             'Position',[.5 .55 .35 .2],...
+             'Callback',@(~,~)obj.sampleData());
          
          
          obj.SDBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','SD',...
@@ -282,10 +302,51 @@ classdef configSD < handle
            obj.Pars.(MethodName).(ParName) = convertedVal;
        end
        
-       function changeDataLim(obj,hobj)
-           val = hobj.Value;
-           obj.DataAx.XLim(2) = obj.DataAx.XLim(1) + val*60;
-           obj.SliderLbl.String = sprintf('%.2f Min',val);
+       function AllObjs = lockUnlockGui(obj,objs,status)
+           if nargin<2
+               % no additional inputs. Looks for all objs and toggles the
+               % status
+               AllObjs = findobj(obj.UI.Fig,'type','uicontrol');
+               lockUnlockGui(obj,AllObjs);
+           
+           elseif nargin <3
+               % All inputs are provided. Sets the enabled property of the
+               % objs provided to status 
+               onObjs = findobj(objs,'type','uicontrol','enable','on');
+               offObjs = findobj(objs,'type','uicontrol','enable','off');
+               lockUnlockGui(obj,onObjs,'off');
+               lockUnlockGui(obj,offObjs,'on');
+                AllObjs = [onObjs(:);offObjs(:)];
+           elseif nargin <4 && isempty(objs)
+               % Second input is []. Looks for all objs with enable =
+               % ~status and sets the status to status. 
+               % Ex obj.lockUnlockGui([],'on') enables all disabled controls
+               switch status
+                   case {true,'on'}
+                       Currentstatus = 'off';
+                   case {false,'off'}
+                       Currentstatus = 'on';
+               end
+               AllObjs = findobj(obj.UI.Fig,'type','uicontrol','enable',Currentstatus);
+               lockUnlockGui(obj,AllObjs,status); 
+           else
+               switch status
+                   case {true,'on'}
+                       status = 'on';
+                   case {false,'off'}
+                       status = 'off';
+               end
+               set(objs,'Enable',status);
+           end
+       end
+       
+       function waitFig = plotWaitFigure(obj,message)
+           waitFig = figure('Units','pixels','MenuBar','none','ToolBar','none','NumberTitle','off','CloseRequestFcn',[]);
+           waitFig.Position = [obj.UI.Fig.Position(1:2) + obj.UI.Fig.Position(3:4)./2 272 40];
+           waitFig.Name = 'Wait! I''m thinking...';
+           uicontrol(waitFig,'Style','text','Units','normalized','String',message,'Position',[.05 .05 .9 .9]);
+           drawnow;
+           figAlwaysOnTop(obj,waitFig,true)
        end
        
        function StartSD(obj)
@@ -293,6 +354,9 @@ classdef configSD < handle
                obj.StartArtRej;
            end
 
+           waitFig = plotWaitFigure(obj,'Detecting spikes...');
+           lockedObjs = obj.lockUnlockGui([],'off');
+           
            AlgName = obj.SDParsPanel.SelectedTab.Title;
            SDFun = ['SD_' AlgName];
            SDPars = obj.Pars.(SDFun);
@@ -305,9 +369,15 @@ classdef configSD < handle
            peakWidth = SDargsout{4};
            
             plotSpikes(obj,tIdx,peakAmpl,peakWidth)
+            
+            obj.lockUnlockGui(lockedObjs,'on');
+           delete(waitFig);
        end
        
        function StartArtRej(obj)
+           waitFig = plotWaitFigure(obj,'Detecting artefacts...');
+           lockedObjs = obj.lockUnlockGui([],'off');
+           
            AlgName = obj.ArtRejParsPanel.SelectedTab.Title;
 
            ArtFun = ['ART_' AlgName];
@@ -318,6 +388,10 @@ classdef configSD < handle
            artifact = Artargsout{2};
            
            plotArt(obj,artifact)
+           
+           
+           obj.lockUnlockGui(lockedObjs,'on');
+           delete(waitFig);
        end
        
        function plotArt(obj,art)
@@ -357,8 +431,36 @@ classdef configSD < handle
                obj.SpikeAx.YAxis.Color = [1,1,1];obj.SpikeAx.XAxis.Color = [1,1,1];
            end
            
-           title(obj.SpikeAx,'Spikes','Color',[1 1 1]);
+           title(obj.SpikeAx,sprintf('%d spikes',size(spikes,1)),'Color',[1 1 1]);
 
+       end
+       
+       function figAlwaysOnTop(obj,fig,mode)
+           if nargin < 2
+               mode = false;
+           end
+           % toggle figure alway on top. Has to be changed before
+         % the visibility property
+         %                     drawnow;
+         warningTag = 'MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame';
+         warning('off',warningTag);
+         
+         jFrame = get(handle(fig),'JavaFrame');
+         jFrame_fHGxClient = jFrame.fHG2Client;
+         jFrame_fHGxClientW=jFrame_fHGxClient.getWindow;
+         tt = tic;
+         while(isempty(jFrame_fHGxClientW))
+             if toc(tt) > 5
+                 % this is not critical, no need to lock everythong here if
+                 % it's not working
+                 warning('on',warningTag);
+                 return;
+             end
+            jFrame_fHGxClientW=jFrame_fHGxClient.getWindow;
+         end
+
+         jFrame_fHGxClientW.setAlwaysOnTop(mode);
+         warning('on',warningTag);
        end
        
    end
