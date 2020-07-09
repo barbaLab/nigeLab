@@ -46,7 +46,7 @@ pow = 2^pars.wavLevel;
 if rem(L,pow) > 0
     Lok = ceil(L/pow)*pow;
     Ldiff = Lok - L;
-    data = [data; zeros(Ldiff,c)];
+    data = [data; zeros(Ldiff,1)];
 end
 
 

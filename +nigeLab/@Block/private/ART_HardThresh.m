@@ -37,7 +37,7 @@ function [data_ART,art_idx] = ART_HardThresh(data,pars)
 % Kelly RM    v1.0  11/04/2015  Original version.
 
 %% FIND THRESHOLD CROSSINGS
-segm = find(abs(data) >= pars.Thresh);
+segm = find(pars.Polarity*data >= pars.Thresh);
 art_idx = [];
 Nsamples = double(floor(pars.Samples*1e-3*pars.fs)); % from ms to samples
 

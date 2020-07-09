@@ -19,6 +19,7 @@ classdef configSD < handle
        SDBtn
        ARTBtn
        ZoomBtn
+       ResampleBtn
        
        ExBlock
        SDMethods
@@ -173,6 +174,12 @@ classdef configSD < handle
              'Position',[.1 .8 .8 .15],...
              'Value',1,'Min',1,'Max',10,...
              'Callback',@(hObj,~,~)obj.changeDataLim(hObj));
+         obj.ResampleBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','Resample',...
+             'Units','normalized',...
+             'Position',[.5 .55 .35 .2]);
+%              'Callback',@(~,~)obj.StartArtRej);
+         
+         
          obj.SDBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','SD',...
              'Units','normalized',...
              'Position',[.1 .1 .35 .2],...
@@ -194,7 +201,7 @@ classdef configSD < handle
         % fill SD panel
         for ii = 1:numel(obj.SDMethods)
            % Add all uitabs
-           thisTab = uitab(obj.SDParsPanel,'Title',obj.SDMethods{ii},'Scrollable','on');
+           thisTab = uitab(obj.SDParsPanel,'Title',obj.SDMethods{ii});
            thisPars = (obj.ExBlock.Pars.SD.(['SD_' obj.SDMethods{ii}]));
            thisParsNames = fieldnames(thisPars);
            thisTab.Units = 'pixels';
@@ -224,7 +231,7 @@ classdef configSD < handle
         % fill artefact rejection panel
          for ii = 1:numel(obj.ARTMethods)
            % Add all uitabs
-           thisTab = uitab(obj.ArtRejParsPanel,'Title',obj.ARTMethods{ii},'Scrollable','on');
+           thisTab = uitab(obj.ArtRejParsPanel,'Title',obj.ARTMethods{ii});
            thisPars = (obj.ExBlock.Pars.SD.(['ART_' obj.ARTMethods{ii}]));
            thisParsNames = fieldnames(thisPars);
            thisTab.Units = 'pixels';
