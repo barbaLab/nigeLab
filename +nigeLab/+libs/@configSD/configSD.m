@@ -125,6 +125,9 @@ classdef configSD < handle
            obj.endIdx = min(L,obj.startIdx+Samples);
            chanIdx = obj.Channels.Selected;
            if L<60*fs
+               % removing durSlider from the list of objs to reenable
+               lockedObjs(lockedObjs == obj.durSlider) = [];
+               lockedObjs(lockedObjs == obj.SliderLbl) = [];
                obj.durSlider.Enable = 'off';
                obj.SliderLbl.Enable = 'off';
                obj.SliderLbl.String = 'less then 1min data.';
@@ -429,6 +432,8 @@ classdef configSD < handle
                spikes = obj.data(snippetIdx);
                plot(obj.SpikeAx,(-WindowPreSamples : WindowPostSamples)./fs,spikes);
                obj.SpikeAx.YAxis.Color = [1,1,1];obj.SpikeAx.XAxis.Color = [1,1,1];
+           else
+               spikes = [];
            end
            
            title(obj.SpikeAx,sprintf('%d spikes',size(spikes,1)),'Color',[1 1 1]);

@@ -11,7 +11,7 @@ if iscell(in1)
     return;
 end
 
-if isnumeric(in1)
+if isnumeric(in1) ||  islogical(in1)
     str = num2str(in1);
 
 elseif isa(in1,'function_handle')
