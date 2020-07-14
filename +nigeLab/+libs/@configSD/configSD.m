@@ -20,6 +20,7 @@ classdef configSD < handle
        ARTBtn
        ZoomBtn
        ResampleBtn
+       ExportBtn
        
        AllTextBoxes
        
@@ -205,13 +206,18 @@ classdef configSD < handle
          
          obj.SDBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','SD',...
              'Units','normalized',...
-             'Position',[.1 .1 .35 .2],...
+             'Position',[.1 .3 .35 .2],...
              'Callback',@(~,~)obj.StartSD);
          
          obj.ARTBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','ArtRej',...
              'Units','normalized',...
-             'Position',[.5 .1 .35 .2],...
+             'Position',[.5 .3 .35 .2],...
              'Callback',@(~,~)obj.StartArtRej);
+         
+         obj.ExportBtn = uicontrol(obj.BtnPanel,'Style','pushbutton','String','Export',...
+             'Units','normalized',...
+             'Position',[.1 .05 .75 .2],...
+             'Callback',@(~,~)obj.ExportPars);
          
          obj.SDParsPanel = uitabgroup(fig,...
             'Units','normalized',...
@@ -281,6 +287,17 @@ classdef configSD < handle
          end
         
          
+       end
+       
+       function ExportPars(obj)
+           SDAlgName = obj.SDParsPanel.SelectedTab.Title;
+           ArtRejAlgName = obj.ArtRejParsPanel.SelectedTab.Title;
+
+          obj.Pars.ArtefactRejMethodName = ArtRejAlgName;
+          obj.Pars.SDMethodName = SDAlgName;
+
+           obj.ExBlock.Pars.SD = obj.Pars;
+           obj.ExBlock.saveParams;
        end
        
        function textBoxCallback(obj,hObj,MethodName,ParName)
