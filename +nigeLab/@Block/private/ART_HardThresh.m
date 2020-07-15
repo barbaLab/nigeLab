@@ -60,7 +60,7 @@ if any(segm)
 else 
     data_ART = data;
 
-    art_idx = 0;
+    art_idx = [];
 end 
 
 end
