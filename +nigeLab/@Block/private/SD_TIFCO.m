@@ -279,3 +279,26 @@ W(:,cn+windowcenter2:end)= fliplr( W(:,cn-numfn+2*windowcenter2:cn+windowcenter2
 
 %do convolution
 W2 = (conv2(W,neigh,'valid')).^(1/factor);
+
+function out = findFreqIndx_helper(io,iu,M)
+%FINDFREQINDX_HELPER helper function for findFreqIndx
+%
+% looks for an equidistant discretization of the intervall [iu io] with M
+% elements or some number close to M.
+%
+% Author: F. Lieb, February 2016
+%
+
+isize = io-iu;
+
+%alldiv(isize)
+d=isize./(isize:-1:2);
+d=d(d==round(d));
+
+tmp = isize./d + 1;
+
+%find element closest to M
+[~,idx] = min(abs(tmp-M));
+out = tmp(idx(1));
+
+
