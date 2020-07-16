@@ -60,6 +60,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
       TimeStampValues  double = []  % Times (seconds) for any timestamps       
       Now                           % Vertical line, "current time" indicator
       TimeStamps                    % Lines indicating times of different events
+      TrialIndex  (1,1) double  = nan  % Current trial index
       ScrollLeftBtn                 % Patch to scroll left
       ScrollRightBtn                % Patch to scroll right
    end
@@ -536,7 +537,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
             'Clipping','on',...
             'PickableParts','none');
          obj.BoundsIndicator.UserData = struct(...
-            'x',obj.BoundsIndicator.XData);
+            'x',obj.BoundsIndicator.Vertices(:,1));
          obj.BoundsIndicator.Annotation.LegendInformation.IconDisplayStyle = 'off';
       end
       
@@ -718,6 +719,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          
          % Fix axis limits
          checkAxesLimits(obj);
+         
+         % Check trial
+         if (obj.TrialIndex ~= obj.Block.TrialIndex) && ~isempty(obj.BehaviorInfoObj)
+            obj.TrialIndex = obj.Block.TrialIndex;
+            flagLabelState(obj.BehaviorInfoObj);
+            refreshGraphics(obj.BehaviorInfoObj,obj.Block.TrialIndex);
+         end
       end
       
       % Reset stream XData
@@ -738,11 +746,13 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          for i = 1:numel(obj.dig)
             obj.dig(i).h.XData = obj.dig(i).h.UserData.x - offset;
          end
-         obj.BoundaryIndicators.XData = ...
-            obj.BoundaryIndicators.UserData.x - offset;
+         obj.BoundsIndicator.Vertices(:,1) = ...
+            obj.BoundsIndicator.UserData.x - offset;
          if obj.ZoomLevel > 0
             updateEventTime(obj,obj.TimeStampNames,obj.TimeStampValues - offset);
          end
+         obj.TrialIndex = obj.Block.TrialIndex;
+         drawnow;
       end
       
       % Set timestamps (make new objects)
@@ -845,6 +855,7 @@ classdef TimeScrollerAxes < matlab.mixin.SetGet
          end
          obj.TimeStampValues(idx) = ts;
          obj.TimeStamps(idx).XData = ones(1,2).*ts;
+         drawnow;
       end
       
       % Update timestamps (only set times): TRIALS

@@ -682,6 +682,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          end
       end
       
+      % Set obj.NeedsLabels to true
+      function flagLabelState(obj)
+         %FLAGLABELSTATE Sets obj.NeedsLabels to true
+         %
+         %  flagLabelState(obj);
+         
+         obj.NeedsLabels = true;
+      end
+      
       % Returns data for current trial AND updates obj.Value
       function data = getTrialData(obj,curTrial)
          % GETCURRENTTRIALDATA  Return single-trial data from DiskData 
@@ -790,47 +799,15 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          if ~isempty(obj.TimeAxes)
             updateTimeAxesIndicators(obj);
          end
+         
          if ~isempty(obj.VidGraphics)
+            set(obj.VidGraphics.DataLabel,...
+               'String',sprintf('Trial: %g',curTrial),...
+               'Color',obj.TrialButtonArray(curTrial).EdgeColor);
             set(obj.VidGraphics.TrialOffsetLabel,'String',...
-               sprintf('Trial Offset: %6.3f sec ||  FPS: %6.2 Hz',...
-               obj.VidGraphics.TrialOffset,obj.VidGraphics.FPS));
+               sprintf('Trial Offset: %6.3f sec ||  FPS: %6.2f Hz',...
+                  obj.VidGraphics.TrialOffset,obj.VidGraphics.FPS));
          end
-      end
-      
-      % Toggle mask status for this trial
-      function toggleTrialMask(obj,state)
-         % TOGGLETRIALMASK  Remove a trial entry
-         %
-         %  removeTrial(obj); Removes current trial from the array
-         
-         if nargin < 2
-            state = 1 - obj.Mask(obj.TrialIndex);
-         end
-         
-         % Toggle Mask based on current state
-         obj.Mask(obj.TrialIndex) = state;
-         if state==0
-            obj.TrialButtonArray(obj.TrialIndex).Enable = 'off';
-         else
-            obj.TrialButtonArray(obj.TrialIndex).Enable = 'on';
-         end
-         
-         updateMetaCompletionStatus(obj);
-         updateEventTimeCompletionStatus(obj);
-         
-         % Update graphics of this trial
-         refreshGraphics(obj,obj.TrialIndex);
-         
-         if state == 0 % If trial was removed, go to next
-            % Increment trial if possible without going over
-            iCapped = min(obj.TrialIndex+1,obj.NTotal);         
-
-            if obj.TrialIndex == iCapped   % Then we didn't move
-               return;
-            else % Otherwise, update TrialIndex and get new data
-               setTrial(obj,obj.VidGraphics,iCapped);
-            end
-         end % Otherwise trial was enabled: stay on this trial
       end
       
       % Save blockObj with scoring
@@ -948,7 +925,6 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          if obj.Block.HasVideoTrials
             obj.Block.VideoIndex = newTrialIndex;
             obj.Block.TrialIndex = newTrialIndex;
-%             obj.VidGraphicsObj.SeriesIndex = obj.Block.
          end
          
          % Add "selected" highlight to new button
@@ -1052,6 +1028,42 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
          obj.misc.(miscFieldName) = value;
       end
       
+      % Toggle mask status for this trial
+      function toggleTrialMask(obj,state)
+         % TOGGLETRIALMASK  Remove a trial entry
+         %
+         %  removeTrial(obj); Removes current trial from the array
+         
+         if nargin < 2
+            state = 1 - obj.Mask(obj.TrialIndex);
+         end
+         
+         % Toggle Mask based on current state
+         obj.Mask(obj.TrialIndex) = state;
+         if state==0
+            obj.TrialButtonArray(obj.TrialIndex).Enable = 'off';
+         else
+            obj.TrialButtonArray(obj.TrialIndex).Enable = 'on';
+         end
+         
+         updateMetaCompletionStatus(obj);
+         updateEventTimeCompletionStatus(obj);
+         
+         % Update graphics of this trial
+         refreshGraphics(obj,obj.TrialIndex);
+         
+         if state == 0 % If trial was removed, go to next
+            % Increment trial if possible without going over
+            iCapped = min(obj.TrialIndex+1,obj.NTotal);         
+
+            if obj.TrialIndex == iCapped   % Then we didn't move
+               return;
+            else % Otherwise, update TrialIndex and get new data
+               setTrial(obj,obj.VidGraphics,iCapped);
+            end
+         end % Otherwise trial was enabled: stay on this trial
+      end
+      
       % Updates 'EventTimes' DiskFile .Complete attribute
       function updateEventTimeCompletionStatus(obj,idx)
          %UPDATEEVENTTIMECOMPLETIONSTATUS  Updates 'EventTimes' DiskFile 
@@ -1104,7 +1116,8 @@ classdef behaviorInfo < matlab.mixin.SetGetExactNames
             setTimeStamps(obj.TimeAxes,ts,'off');
             obj.NeedsLabels = true;
          else
-            ts = obj.Value(obj.Type==1) + obj.Block.NeuOffset;
+            data = getTrialData(obj,obj.Block.TrialIndex);
+            ts = data(obj.Type==1) + obj.Block.NeuOffset;
             if obj.NeedsLabels
                setTimeStamps(obj.TimeAxes,ts,'on',obj.EventNames{:});
                obj.NeedsLabels = false;

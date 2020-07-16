@@ -63,9 +63,10 @@ VideoOffset = [];
 nSource = numel(uSource);
 keyIndex = 0;
 
+cvar = blockObj.Pars.Video.CameraSourceVar;
+
 for i = 1:nSource
    % Create "camera" object for each source, and iterate to export trials
-   
    Series = FromSame(blockObj.Videos,uSource{i});
    sourceIndex = find(strcmp(blockObj.Meta.Video.(cvar),uSource{i}),1,'first');
    if ~Series(1).Masked
