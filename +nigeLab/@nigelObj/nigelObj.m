@@ -3167,13 +3167,28 @@ classdef nigelObj < handle & ...
                % Get the current "Spike Detection method," which gets
                % added onto the front part of the _Spikes and related
                % folders
+               
+               % default. No attribute in teh name
+               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                   '');
                if ~isfield(obj.HasParsInit,'SD')
                   obj.updateParams('SD');
                elseif ~obj.HasParsInit.SD
                   obj.updateParams('SD');
                end
-               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
-                  obj.Pars.SD.ID.(F{iF}));
+               
+               % Look for ID in Pars
+               ParsFields = fieldnames(obj.Pars);
+               ParsWithID = find(cellfun(@(F) isfield(obj.Pars.(F),'ID'),ParsFields))';
+               for ii=ParsWithID
+                   if isfield(obj.Pars.(ParsFields{ii}).ID,(F{iF}))
+                       % if found put the ID in the foldername path
+                       p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                           obj.Pars.(ParsFields{ii}).ID.(F{iF}));
+                       break;
+                   end
+               end
+                             
             end
             
             % Set folder name for this particular Field

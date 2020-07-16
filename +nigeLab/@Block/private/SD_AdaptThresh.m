@@ -1,4 +1,4 @@
-function [p2pamp,ts,pmin,dt] = AdaptiveThreshold(data,pars)
+function [ts,p2pamp,pmin,pW] = SD_AdaptThresh(data,pars)
 %% ADAPTIVE_THRESHOLD   Set adaptive threshold based on local noise
 %
 %  [pwpamp,ts,pmin,dt] = ADAPTIVE_THRESHOLD(data,pars,art_idx)
@@ -13,7 +13,7 @@ function [p2pamp,ts,pmin,dt] = AdaptiveThreshold(data,pars)
 %     pars      :       Parameters structure from SPIKEDETECTCLUSTER with
 %                       the following fields:
 %
-%       -> ADPT_N \\ Number of samples in local noise detection filter
+%       -> FilterLength \\ Number of samples in local noise detection filter
 %
 %   --------
 %    OUTPUT
@@ -29,12 +29,12 @@ function [p2pamp,ts,pmin,dt] = AdaptiveThreshold(data,pars)
 % By: Max Murphy    1.0    12/13/2017  Original version (R2017b)
 
 %% CREATE THRESHOLD FILTER
-n = round((pars.ADPT_N/1e3)*pars.FS);
-th = fastsmooth(abs(data),pars.ADPT_N,'abs_med',1);
-th(th<pars.ADPT_MIN) = pars.ADPT_MIN;
+n = round((pars.FilterLength/1e3)*pars.fs);
+th = nigeLab.utils.fastsmooth(abs(data),pars.FilterLength,'abs_med',1);
+th(th<pars.MinThresh) = pars.MinThresh;
 
 %% PERFORM THRESHOLDING
-pk = (-data) > (th * pars.MULTCOEFF);
+pk = (pars.Polarity * data) > (th * pars.MultCoeff);
 
 if sum(pk) <= 1
    p2pamp = [];
@@ -46,13 +46,17 @@ end
 
 %% REDUCE CONSECUTIVE CROSSINGS TO SINGLE POINTS
 z = zeros(size(data));
-z(pk) = data(pk);
-[pmin,ts] = findpeaks(-z);
+z(pk) = pars.Polarity * data(pk);
+[pmin,ts] = findpeaks(z);
+pmin = pmin * pars.Polarity;
 
 %% GET PEAK-TO-PEAK VALUES
-tloc = repmat(ts,pars.PLP,1) + (1:pars.PLP).';
-pmax = max(data(tloc));
-
+PLP = pars.PeakDur*1e-3*pars.fs; % from ms to samples
+tloc = repmat(ts,2*PLP+1,1) + (-PLP:PLP).';
+tloc(tloc < 1) = 1;
+tloc(tloc > numel(data)) = numel(data);
+[pmax,Imax] = max(data(tloc));
+pW = abs(Imax-PLP);
 p2pamp = pmax + pmin;
 
 %% EXCLUDE VALUES OF PMAX <= 0
@@ -61,22 +65,7 @@ ts(pm_ex) = [];
 p2pamp(pm_ex) = [];
 pmax(pm_ex) = [];
 pmin(pm_ex) = [];
-
-%% GET TIME DIFFERENCES
-dt = [diff(ts), round(median(diff(ts)))];
-
-%% PERFORM SECONDARY EXCLUSIONS
-a = p2pamp/(2*pars.ARTIFACT_THRESH);
-b = pmin/pars.ARTIFACT_THRESH;
-c = dt/pars.FS;
-
-dt_ex = c <= pars.ART_RATE & b >= (pars.M.*a + pars.B);
-
-ts(dt_ex) = [];
-p2pamp(dt_ex) = [];
-pmax(dt_ex) = [];
-pmin(dt_ex) = [];
-dt(dt_ex) = [];
+pW(pm_ex) = [];
 
 
 

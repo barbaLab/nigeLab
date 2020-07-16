@@ -32,8 +32,8 @@ if ~genPaths(blockObj)
    return;
 end
 
-[~,pars] = blockObj.updateParams('SD');
-pars.FS = blockObj.SampleRate;
+[~,pars] = blockObj.updateParams('SD','KeepPars');
+pars.fs = blockObj.SampleRate;
 
 % UPDATE STATUS FOR THESE STAGES
 blockObj.updateStatus('Spikes',false,blockObj.Mask);
@@ -51,9 +51,6 @@ blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = blockObj.Mask
    curCh = curCh + 1;
-   % Parse file-name information
-   pNum  = num2str(blockObj.Channels(iCh).probe);
-   chNum = blockObj.Channels(iCh).chStr;
    
    % No longer need check for CAR since checkActionIsValid does this
    data = blockObj.Channels(iCh).CAR(:);
@@ -140,21 +137,22 @@ flag = true;
       % Adapted by: MAECI 2018 Collaboration (Federico Barban & Max Murphy)
       
       % CONVERT PARAMETERS
-      pars.w_pre       =   double(round(pars.W_PRE / 1000 * pars.FS));        % Samples before spike
-      pars.w_post      =   double(round(pars.W_POST / 1000 * pars.FS));       % Samples after spike
-      pars.ls          =   double(pars.w_pre+pars.w_post);                    % Length of spike
-      pars.art_dist    =   double(pars.ART_DIST*pars.FS);                     % Maximum Stimulation frequency
-      pars.PLP         =   double(floor(pars.PKDURATION*1e-3*pars.FS));       % Pulse lifetime period [samples]
-      pars.RP          =   double(floor(pars.REFRTIME*1e-3*pars.FS));         % Refractory period  [samples]
-      pars.nc_artifact =   double(floor(pars.ARTIFACT_SPACE*1e-3*pars.FS));   % PLP [samples]
-      pars.npoints     =   double(length(data));                               % Sample length of record
-      if pars.PRESCALED
-         pars.th_artifact = pars.ARTIFACT_THRESH;
-      else
-         pars.th_artifact = pars.ARTIFACT_THRESH * 1e-6;
-      end
+%       pars.w_pre       =   double(round(pars.W_PRE / 1000 * pars.FS));        % Samples before spike
+%       pars.w_post      =   double(round(pars.W_POST / 1000 * pars.FS));       % Samples after spike
+%       pars.ls          =   double(pars.w_pre+pars.w_post);                    % Length of spike
+%       pars.art_dist    =   double(pars.ART_DIST*pars.FS);                     % Maximum Stimulation frequency
+%       pars.PLP         =   double(floor(pars.PKDURATION*1e-3*pars.FS));       % Pulse lifetime period [samples]
+%       pars.RP          =   double(floor(pars.REFRTIME*1e-3*pars.FS));         % Refractory period  [samples]
+%       pars.npoints     =   double(length(data));                               % Sample length of record
+%       if pars.PRESCALED
+%          pars.th_artifact = pars.ARTIFACT_THRESH;
+%       else
+%          pars.th_artifact = pars.ARTIFACT_THRESH * 1e-6;
+%       end
       
-      % REMOVE ARTIFACT
+
+
+%             REMOVE ARTIFACT
       if ~isempty(pars.STIM_TS)
          data_ART = RemoveStimPeriods(data,pars);
       else
@@ -166,174 +164,189 @@ flag = true;
       else
          art_idx = [];
       end
-      [data_ART,artifact] = HardArtifactRejection(data_ART,pars);
       
+      ArtFun = ['ART_' pars.ArtefactRejMethodName];
+      ArtPars = pars.(ArtFun);
+      ArtPars.fs = pars.fs;
+      Artargsout = cell(1,nargout(ArtFun));
+      [Artargsout{:}] = feval(ArtFun,data_ART,ArtPars);
+      data_ART = Artargsout{1};
+      artifact = Artargsout{2};
+      
+
+      
+      
+      SDFun = ['SD_' pars.SDMethodName];
+      SDPars = pars.(SDFun);
+      SDPars.fs = pars.fs;
+      SDargsout = cell(1,nargout(SDFun));
+      [SDargsout{:}] = feval(SDFun,data_ART,SDPars);
+      
+      tIdx        = SDargsout{1};
+      peak2peak = SDargsout{2};
+      peakAmpl  = SDargsout{3};
+      peakWidth = SDargsout{4};
+      
+      if numel(SDargsout)>4
+          pTransformed = SDargsout{5};
+      end
+      dt = [diff(tIdx), round(median(diff(tIdx)))];
+
       % COMPUTE SPIKE THRESHOLD AND DO DETECTION
       % SpikeDetection_PTSD_core.cpp;
-      if mod(pars.PLP,2)>0
-         pars.PLP = pars.PLP + 1; % PLP must be even or doesn't work...
-      end
-      data_ART = double(data_ART);
-      
-      switch pars.PKDETECT
-         case 'both' % (old, probably not using any more -MM 8/3/2017)
-            tmpdata = data_ART;
-            tmpdata(art_idx) = [];
-            pars.thresh = PreciseTimingThreshold(tmpdata,pars);
-            [spkValues, spkTimeStamps] = SpikeDetection_PTSD_core(data_ART, ...
-               pars.thresh, ...
-               pars.PLP, ...
-               pars.RP, ...
-               pars.ALIGNFLAG);
-            
-            % +1 added to accomodate for zero- (c) or one-based (matlab) array indexing
-            ts  = 1 + spkTimeStamps( spkTimeStamps > 0);
-            p2pamp = spkValues( spkTimeStamps > 0);
-            pw = nan(size(p2pamp));
-            pp = nan(size(p2pamp));
-            
-            clear spkValues spkTimeStamps;
-            
-         case 'neg' % (probably use this in future -MM 8/3/2017)
-            
-            pars.thresh = pars.FIXED_THRESH;
-            
-            [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,-1);
-            
-         case 'pos'
-            
-            pars.thresh = pars.FIXED_THRESH;
-            
-            [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,1);
-            
-         case 'adapt' % Use findpeaks in conjunction w/ adaptive thresh -12/13/17
-            pars.thresh = pars.MULTCOEFF;
-            [p2pamp,ts,pw,pp] = AdaptiveThreshold(data_ART,pars);
-            
-         case 'sneo' % Use findpeaks in conjunction w/ SNEO - 1/4/17
-            pars.thresh = pars.MULTCOEFF;
-            [p2pamp,ts,pw,pp,E] = SNEOThreshold(data_ART,pars,art_idx);
-         otherwise
-            error('Invalid PKDETECT specification.');
-      end
+%       if mod(pars.PLP,2)>0
+%          pars.PLP = pars.PLP + 1; % PLP must be even or doesn't work...
+%       end
+%       data_ART = double(data_ART);
+%       
+%       switch pars.PKDETECT
+%          case 'both' % (old, probably not using any more -MM 8/3/2017)
+%             tmpdata = data_ART;
+%             tmpdata(art_idx) = [];
+%             pars.thresh = PreciseTimingThreshold(tmpdata,pars);
+%             [spkValues, spkTimeStamps] = SpikeDetection_PTSD_core(data_ART, ...
+%                pars.thresh, ...
+%                pars.PLP, ...
+%                pars.RP, ...
+%                pars.ALIGNFLAG);
+%             
+%             % +1 added to accomodate for zero- (c) or one-based (matlab) array indexing
+%             ts  = 1 + spkTimeStamps( spkTimeStamps > 0);
+%             p2pamp = spkValues( spkTimeStamps > 0);
+%             pw = nan(size(p2pamp));
+%             pp = nan(size(p2pamp));
+%             
+%             clear spkValues spkTimeStamps;
+%             
+%          case 'neg' % (probably use this in future -MM 8/3/2017)
+%             
+%             pars.thresh = pars.FIXED_THRESH;
+%             
+%             [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,-1);
+%             
+%          case 'pos'
+%             
+%             pars.thresh = pars.FIXED_THRESH;
+%             
+%             [p2pamp,ts,pw,pp] = ThresholdDetection(data_ART,pars,1);
+%             
+%          case 'adapt' % Use findpeaks in conjunction w/ adaptive thresh -12/13/17
+%             pars.thresh = pars.MULTCOEFF;
+%             [p2pamp,ts,pw,pp] = AdaptiveThreshold(data_ART,pars);
+%             
+%          case 'SNEO' % Use findpeaks in conjunction w/ SNEO - 1/4/17
+%             
+% %             [p2pamp,ts,pw,pp,E] = SNEOThreshold(data_ART,pars,art_idx);
+%          otherwise
+%             error('Invalid PKDETECT specification.');
+%       end
       % ENSURE NO SPIKES REMAIN FROM ARTIFACT PERIODS
       if any(artifact)
-         [ts,ia]=setdiff(ts,(artifact./pars.FS));
-         p2pamp=p2pamp(ia);
-         pw = pw(ia);
-         pp = pp(ia);
-         if exist('E','var')~=0
-            E = E(ia);
+         [tIdx,ia]=setdiff(tIdx,(artifact./pars.fs));
+         peak2peak=peak2peak(ia);
+         peakAmpl = peakAmpl(ia);
+         peakWidth = peakWidth(ia);
+         if exist('pTransformed','var')~=0
+            pTransformed = pTransformed(ia);
          end
       end
       
       % EXCLUDE SPIKES THAT WOULD GO OUTSIDE THE RECORD
-      out_of_record = ts <= pars.w_pre+1 | ts >= pars.npoints-pars.w_post-2;
-      p2pamp(out_of_record) = [];
-      pw(out_of_record) = [];
-      pp(out_of_record) = [];
-      ts(out_of_record) = [];
-      if exist('E','var')~=0
-         E(out_of_record) = [];
+      WindowPreSamples = pars.WPre * 1e-3 * pars.fs; 
+      WindowPostSamples = pars.WPost * 1e-3 * pars.fs; 
+      out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(data) - WindowPostSamples - 2;
+      peak2peak(out_of_record) = [];
+      peakAmpl(out_of_record) = [];
+      peakWidth(out_of_record) = [];
+      tIdx(out_of_record) = [];
+      if exist('pTransformed','var')~=0
+         pTransformed(out_of_record) = [];
       end
       
       % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
-      if (any(ts)) % If there are spikes in the current signal
+      tIdx = tIdx(:); % make sure it's vertical 
+      if (any(tIdx)) % If there are spikes in the current signal
+         snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
+         spikes = data(snippetIdx);
+%          [peak_train,spikes] = BuildSpikeArray(data,ts,peak2peak,pars);
          
-         [peak_train,spikes] = BuildSpikeArray(data,ts,p2pamp,pars);
+%          %No interpolation in this case
+%          if length(spikes) > 1
+%             %eliminates borders that were introduced for interpolation
+%             spikes(:,end-1:end)=[];
+%             spikes(:,1:2)=[];
+%          end
          
-         %No interpolation in this case
-         if length(spikes) > 1
-            %eliminates borders that were introduced for interpolation
-            spikes(:,end-1:end)=[];
-            spikes(:,1:2)=[];
+         %% Extract spike features
+         features = [];
+         pars.FEAT_NAMES = {};
+         if ~strcmp(pars.FeatureExtractionMethodName,{'none',''})
+             
+             %Interpolate spikes
+             pars.InterpSamples = max(size(spikes,2),pars.InterpSamples);
+             Ispikes = interp1(1:size(spikes,2),...
+                 spikes.',...
+                 linspace(1,size(spikes,2),pars.InterpSamples),...
+                 'spline').';
+             
+             FeatFun = ['FEAT_' pars.FeatureExtractionMethodName];
+             FeatPars = pars.(FeatFun);
+             FeatPars.fs = pars.fs;
+             Featargsout = cell(1,nargout(FeatFun));
+             [Featargsout{:}] = feval(FeatFun,Ispikes,FeatPars);
+             features = Featargsout{1};
+             if nargout(FeatFun) == 1
+                 % if feature labels are not provided just use the method
+                 % name and numbers
+                 pars.FEAT_NAMES = arrayfun(@(ii)...
+                     sprintf('%s-%.2d',...
+                     pars.FeatureExtractionMethodName, ii),...
+                     1:size(features,2),...
+                     'UniformOutput',false);
+             else
+                 pars.FEAT_NAMES = Featargsout{2};
+             end
          end
          
-         % Extract spike features
-         if size(spikes,1) > pars.MIN_SPK % Need minimum number of spikes
-            features = WaveFeatures(spikes,pars);
-            features = features./std(features);
-            if ~any(isnan(p2pamp))
-               tmp = (reshape(p2pamp,size(features,1),1)./max(p2pamp)-0.5)*3.0;
-               features = [features, tmp];
-               if ~ismember({'pk-amp'},pars.FEAT_NAMES)
-                  pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-amp'}];
-               end
-            else
-               tmp = rand(size(features,1),1);
-               features = [features, tmp];
-            end
-            if ~any(isnan(pp))
-               tmp = (reshape(pp,size(features,1),1)./max(pp)-0.5)*3.0;
-               features = [features, tmp];
-               if ~ismember({'pk-prom'},pars.FEAT_NAMES)
-                  pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-prom'}];
-               end
-            else
-               tmp = rand(size(features,1),1);
-               features = [features, tmp];
-            end
-            if ~any(isnan(pw))
-               tmp = (reshape(pw,size(features,1),1)./max(pw)-0.5)*3.0;
-               features = [features, tmp];
-               if ~ismember({'pk-width'},pars.FEAT_NAMES)
-                  pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-width'}];
-               end
-            else
-               tmp = rand(size(features,1),1);
-               features = [features, tmp];
-            end
-            if exist('E','var')~=0
-               tmp = (reshape(E,size(features,1),1)./max(E)-0.5)*3.0;
-               features = [features, tmp];
-               if ~ismember({'pk-energy'},pars.FEAT_NAMES)
-                  pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-energy'}];
-               end
-            else
-               tmp = rand(size(features,1),1);
-               features = [features, tmp];
-            end
-         else
-            
-            if ~ismember({'pk-amp'},pars.FEAT_NAMES)
-               pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-amp'}];
-            end
-            
-            
-            if ~ismember({'pk-prom'},pars.FEAT_NAMES)
-               pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-prom'}];
-            end
-            
-            
-            if ~ismember({'pk-width'},pars.FEAT_NAMES)
-               pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-width'}];
-            end
-            
-            
-            if ~ismember({'pk-energy'},pars.FEAT_NAMES)
-               pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-energy'}];
-            end
-            
-            % Just make features reflect poor quality of (small) cluster
-            features = randn(size(spikes,1),numel(pars.FEAT_NAMES)) * 10;
+         
+         normalize = @(x)(x - mean(x))./std(x,[],1);
+         features = [features, normalize(peakAmpl(:))];
+         if ~ismember({'pk-amp'},pars.FEAT_NAMES)
+             pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-amp'}];
          end
+         
+         features = [features, normalize(peak2peak(:))];
+         if ~ismember({'pk-prom'},pars.FEAT_NAMES)
+             pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-prom'}];
+         end
+         
+         features = [features, normalize(peakWidth(:))];
+         if ~ismember({'pk-width'},pars.FEAT_NAMES)
+             pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-width'}];
+         end
+         
+         
+         features = [features, normalize(pTransformed(:))];
+         if ~ismember({'pk-energy'},pars.FEAT_NAMES)
+             pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-energy'}];
+         end
+         
          
       else % If there are no spikes in the current signal
-         peak_train = sparse(double(pars.npoints) + double(pars.w_post), double(1));
-         spk = ones(0,pars.ls + 4);
+         spk = ones(0,-WindowPreSamples + WindowPostSamples + 4);
          feat = ones(0,numel(pars.FEAT_NAMES)+4);
          art = ones(0,5);
          return;
       end
       
       % GENERATE OUTPUT VECTORS
-      tIdx = find(peak_train);
-      tIdx = reshape(tIdx,numel(tIdx),1);
+%       tIdx = find(peak_train);
+%       tIdx = reshape(tIdx,numel(tIdx),1);
       
       type = zeros(size(tIdx));
       value = tIdx; % Store in value for now
       tag = zeros(size(tIdx));
-      ts = tIdx./pars.FS; % Get values in seconds
+      ts = tIdx./pars.fs; % Get values in seconds
       
       % CONCATENATE OUTPUT MATRICES
       if isempty(spikes)
@@ -352,17 +365,15 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
-          artifact = artifact(:); % make sure is column oriented
+         artifact = artifact(:); % make sure is column oriented
          iStart = artifact([true, diff(artifact)' ~= 1]);
          iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));
          
-         artifact = reshape(artifact,numel(artifact),1);
-
          value = reshape(iStart,numel(iStart),1);
          tag = reshape(iStop,numel(iStop),1);
          type = zeros(size(value));
-         ts = value./pars.FS;
-         snippet = tag./pars.FS;
+         ts = value./pars.fs;
+         snippet = tag./pars.fs;
 
          art = [type,value,tag,ts,snippet];
       end
