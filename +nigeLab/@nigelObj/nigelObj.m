@@ -4489,8 +4489,9 @@ classdef nigelObj < handle & ...
          if numel(obj) > 1
             flag = true;
             for i = 1:numel(obj)
-               flag = flag && obj.updateParams(paramType,method,p);
+               flag = flag && updateParams(obj(i),paramType,method,p);
             end
+            return;
          else
             flag = false;
          end
@@ -4520,7 +4521,7 @@ classdef nigelObj < handle & ...
          end % iscell(paramType)
 
          % Handle the behavior for "special" non-paramType commands
-         [~,p_miss,p_all] = obj.listInitializedParams();
+         [~,p_miss,p_all] = listInitializedParams(obj);
          switch lower(paramType)
             case 'all' %Update all parameters using "method" method
                flag = obj.updateParams(p_all,method);
