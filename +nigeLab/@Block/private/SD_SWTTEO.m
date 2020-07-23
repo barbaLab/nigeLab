@@ -52,7 +52,7 @@ end
 
 
 %vectorized version:
-lo_D = pars.lo_D;
+lo_D = wfilters(pars.waveName);
 out_ = zeros(size(data));
 ss = data;
 for k=1:pars.wavLevel
