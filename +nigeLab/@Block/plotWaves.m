@@ -1,4 +1,4 @@
-function flag = plotWaves(blockObj)
+function flag = plotWaves(blockObj,field,idx)
 %% PLOTWAVES  Plot multi-channel waveform snippets for BLOCK
 %
 %  flag = PLOTWAVES(blockObj);
@@ -19,70 +19,79 @@ function flag = plotWaves(blockObj)
 
 %% DEFAULTS
 flag = false;
-blockObj.Pars.PlotPars = nigeLab.defaults.Plot();
-
+% blockObj.Pars.PlotPars = nigeLab.defaults.Plot();
 %% FIGURE OUT WHAT TO PLOT
 str_in = blockObj.getStatus;
-[~,idx] = nigeLab.utils.uidropdownbox('Choose Wave Type',...
-   'Select type of waveform to plot:',...
-   str_in);
+if nargin < 2
+    [~,idx] = nigeLab.utils.uidropdownbox('Choose Wave Type',...
+        'Select type of waveform to plot:',...
+        str_in);
+    field = str_in{idx};
+end
 
-str = str_in{idx};
-if strcmp(str,'Spikes')
+if strcmp(field,'Spikes')
    warning('Spikes overlay not yet supported.');
    return;
 end
 
 %% GET INDEXING VECTOR
-if strcmp(str,'LFP')
-   fs = blockObj.LFPPars.DownSampledRate;
+if strcmp(field,'LFP')
+    fs = blockObj.LFPPars.DownSampledRate;
 else
-   fs = blockObj.SampleRate;
+    fs = blockObj.SampleRate;
 end
-tStart = (blockObj.PlotPars.DefTime - blockObj.PlotPars.PreAlign)/1000;
-iStart = max(1,round(tStart * fs));
 
-tStop = (blockObj.PlotPars.DefTime + blockObj.PlotPars.PostAlign)/1000;
-iStop = min(blockObj.Samples,round(tStop * fs));
-
-vec = iStart:iStop;
-t = linspace(tStart,tStop,numel(vec));
+if nargin < 3    
+    tStart = (blockObj.PlotPars.DefTime - blockObj.PlotPars.PreAlign)/1000;
+    iStart = max(1,round(tStart * fs));
+    
+    tStop = (blockObj.Pars.Plot.DefTime + blockObj.Pars.Plot.PostAlign)/1000;
+    iStop = min(blockObj.Samples,round(tStop * fs));
+    
+    idx = iStart:iStop;
+end
+t = linspace(idx(1)./fs,idx(end)./fs,numel(idx));
 dt = mode(diff(t));
 
+
+
+
+
+
 %% ASSIGN CHANNEL COLORS BASED ON RMS
-load(blockObj.PlotPars.ColorMapFile,'cm');
+load(blockObj.Pars.Plot.ColorMapFile,'cm');
 if isempty(blockObj.RMS)
    analyzeRMS(blockObj);
-elseif ~ismember(str,blockObj.RMS.Properties.VariableNames)
+elseif ~ismember(field,blockObj.RMS.Properties.VariableNames)
    analyzeRMS(blockObj);
 end
-r = blockObj.RMS.(str);
+r = blockObj.RMS.(field);
 ic = assignColors(r); 
 
 %% MAKE FIGURE AND PLOT
-fig = figure('Name',sprintf('Multi-Channel %s Snippets',str), ...
+fig = figure('Name',sprintf('Multi-Channel %s Snippets',field), ...
    'Units','Normalized', ...
    'Position',[0.05*rand+0.1,0.05*rand+0.1,0.8,0.8],...
-   'Color','w');
+   'Color','w','NumberTitle','off');
 
 ax = axes(fig,'NextPlot','add');
 tickLabs = cell(blockObj.NumChannels,1);
-tickLocs = 0:blockObj.PlotPars.VertOffset:(blockObj.PlotPars.VertOffset*(...
-   blockObj.NumChannels-1));
+tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
+   blockObj.NumChannels));
 for iCh = 1:blockObj.NumChannels
    tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
-   y = blockObj.Channels(iCh).(str)(vec)+tickLocs(iCh);
-   plot(ax,t,y, ...
+   y = blockObj.Channels(iCh).(field)(idx)+tickLocs(iCh);
+   line(ax,t,y, ...
       'Color',cm(ic(iCh),:), ...
       'LineWidth',1.75,...
       'UserData',iCh); %#ok<NODEF>
    
-   text(ax,max(t)+dt,tickLocs(iCh),...
+   text(ax,max(t)*1.01,tickLocs(iCh),...
          sprintf('RMS: %.3g',r(iCh)),...
          'FontName','Arial',...
          'FontWeight','bold',...
          'Color','k',...
-         'FontSize',14,...
+         'FontSize',10,...
          'UserData',iCh);
    
 end
@@ -90,15 +99,17 @@ ax.YTick = tickLocs;
 ax.YTickLabel = tickLabs;
 xlabel('Time (sec)','FontName','Arial','FontSize',14,'Color','k');
 ylabel('Channel','FontName','Arial','FontSize',14,'Color','k');
-title(sprintf('Multi-Channel %s Snippets',str),'FontName','Arial',...
+title(sprintf('Multi-Channel %s Snippets',field),'FontName','Arial',...
    'Color','k','FontSize',20);
 
-fname = fullfile(blockObj.paths.TW,...
-   [blockObj.Name sprintf(blockObj.PlotPars.SnippetString,str)]);
-
-savefig(fig,[fname '.fig']);
-saveas(fig,[fname '.png']);
-blockObj.Graphics.Waves = fig; 
+xlim(ax,t([1,end]))
+ylim(ax,tickLocs([1,end])+ diff(tickLocs([1,end]))*[-.05 .05])
+% fname = fullfile(blockObj.paths.TW,...
+%    [blockObj.Name sprintf(blockObj.Pars.Plot.SnippetString,str)]);
+% 
+% savefig(fig,[fname '.fig']);
+% saveas(fig,[fname '.png']);
+% blockObj.Graphics.Waves = fig; 
 flag = true;
 
 
