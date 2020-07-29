@@ -1,4 +1,4 @@
-function flag = plotWaves(blockObj,field,idx)
+function flag = plotWaves(blockObj,ax,field,idx)
 %% PLOTWAVES  Plot multi-channel waveform snippets for BLOCK
 %
 %  flag = PLOTWAVES(blockObj);
@@ -22,7 +22,24 @@ flag = false;
 % blockObj.Pars.PlotPars = nigeLab.defaults.Plot();
 %% FIGURE OUT WHAT TO PLOT
 str_in = blockObj.getStatus;
-if nargin < 2
+
+%% Parse first input for axes reference
+if isa(ax,'matlab.graphics.axis.Axes')
+    fig = ax.Parent;
+    nargs = nargin-1;
+else
+    nargs = nargin;
+
+    fig = figure('Name',sprintf('Multi-Channel %s Snippets',field), ...
+        'Units','Normalized', ...
+        'Position',[0.05*rand+0.1,0.05*rand+0.1,0.8,0.8],...
+        'Color','w','NumberTitle','off');
+    
+    ax = axes(fig,'NextPlot','add');
+end
+
+%%
+if nargs < 2
     [~,idx] = nigeLab.utils.uidropdownbox('Choose Wave Type',...
         'Select type of waveform to plot:',...
         str_in);
@@ -41,7 +58,7 @@ else
     fs = blockObj.SampleRate;
 end
 
-if nargin < 3    
+if nargs < 3    
     tStart = (blockObj.PlotPars.DefTime - blockObj.PlotPars.PreAlign)/1000;
     iStart = max(1,round(tStart * fs));
     
@@ -69,12 +86,6 @@ r = blockObj.RMS.(field);
 ic = assignColors(r); 
 
 %% MAKE FIGURE AND PLOT
-fig = figure('Name',sprintf('Multi-Channel %s Snippets',field), ...
-   'Units','Normalized', ...
-   'Position',[0.05*rand+0.1,0.05*rand+0.1,0.8,0.8],...
-   'Color','w','NumberTitle','off');
-
-ax = axes(fig,'NextPlot','add');
 tickLabs = cell(blockObj.NumChannels,1);
 tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
    blockObj.NumChannels));
