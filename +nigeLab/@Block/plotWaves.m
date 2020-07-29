@@ -71,7 +71,9 @@ t = linspace(idx(1)./fs,idx(end)./fs,numel(idx));
 dt = mode(diff(t));
 
 
-
+if nargs < 4
+    computeRMS = false;
+end
 
 
 

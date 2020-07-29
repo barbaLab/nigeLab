@@ -137,7 +137,7 @@ classdef DataScrollerAxis < handle
             obj.sigLenght = obj.ThisBlock.Samples;
            
             data = obj.ThisBlock.Channels(obj.Channels.Selected).(obj.Field)(:);
-            if ~isempty(obj.ThisBlock.Time)
+            if obj.ThisBlock.getStatus('Time') && ~isempty(obj.ThisBlock.Time)
                 tt = obj.ThisBlock.Time(:);
             else
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
