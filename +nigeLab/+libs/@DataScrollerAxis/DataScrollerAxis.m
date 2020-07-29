@@ -10,6 +10,8 @@ classdef DataScrollerAxis < handle
         sigLenght
         fs
         ROIpos = zeros(1,4)
+        LinePlotExplorer
+        ReducedPlot
         
         Listeners
     end
@@ -72,7 +74,7 @@ classdef DataScrollerAxis < handle
             obj.UI.Fig = figure('Units','normalized',...
                 'Position',[.1 .1 .8 .25],...
                 'DeleteFcn',@(~,~)obj.delete,...
-                'MenuBar','none',...
+                'MenuBar','figure',...
                 'NumberTitle','off',...
                 'WindowButtonUpFcn',@(~,~)obj.RoiChanged);
             
@@ -141,10 +143,17 @@ classdef DataScrollerAxis < handle
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
             end
             
+            if isempty(tt)
+                %failsafe
+                tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
+            end
             [x_reduced, y_reduced] = nigeLab.utils.reduce_to_width(tt, data, obj.MainAxPixelSize ,[tt(1) tt(end)]);
             cla(obj.UI.MainAx);
-            line(obj.UI.MainAx,x_reduced,y_reduced);
+            L = line(obj.UI.MainAx,x_reduced,y_reduced);
+            obj.ReducedPlot = nigeLab.utils.LinePlotReducer(L,tt,data);
             xlim(obj.UI.MainAx,[tt(1) tt(end)]);
+%             obj.LinePlotExplorer = nigeLab.utils.LinePlotExplorer(obj.UI.Fig);
+            
         end
         
         function RoiChanged(obj)

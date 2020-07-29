@@ -1,4 +1,4 @@
-function flag = plotWaves(blockObj,ax,field,idx)
+function flag = plotWaves(blockObj,ax,field,idx,computeRMS)
 %% PLOTWAVES  Plot multi-channel waveform snippets for BLOCK
 %
 %  flag = PLOTWAVES(blockObj);
@@ -77,22 +77,37 @@ dt = mode(diff(t));
 
 %% ASSIGN CHANNEL COLORS BASED ON RMS
 load(blockObj.Pars.Plot.ColorMapFile,'cm');
-if isempty(blockObj.RMS)
-   analyzeRMS(blockObj);
-elseif ~ismember(field,blockObj.RMS.Properties.VariableNames)
-   analyzeRMS(blockObj);
+if isempty(blockObj.RMS) && computeRMS
+    analyzeRMS(blockObj);
+    r = blockObj.RMS.(field);
+    ic = assignColors(r);
+elseif ~ismember(field,blockObj.RMS.Properties.VariableNames) && computeRMS
+    analyzeRMS(blockObj);
+    r = blockObj.RMS.(field);
+    ic = assignColors(r);
+else
+    %Multicolored version
+%     cm = nigeLab.defaults.nigelColors(1:blockObj.NumChannels,'cubehelix');
+%     ic = 1:blockObj.NumChannels;
+
+    %Monochrome version
+    cm = nigeLab.defaults.nigelColors('primary');
+    ic = ones(1,blockObj.NumChannels);
+    
+    r = nan(1,blockObj.NumChannels);
 end
-r = blockObj.RMS.(field);
-ic = assignColors(r); 
+
 
 %% MAKE FIGURE AND PLOT
 tickLabs = cell(blockObj.NumChannels,1);
 tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
    blockObj.NumChannels));
+pixelPos = getpixelposition(ax);
 for iCh = 1:blockObj.NumChannels
    tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
    y = blockObj.Channels(iCh).(field)(idx)+tickLocs(iCh);
-   line(ax,t,y, ...
+   [t_reduced, y_reduced] = nigeLab.utils.reduce_to_width(t, y, pixelPos(end) ,[t(1) t(end)]);
+   line(ax,t_reduced,y_reduced, ...
       'Color',cm(ic(iCh),:), ...
       'LineWidth',1.75,...
       'UserData',iCh); %#ok<NODEF>

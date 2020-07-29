@@ -88,6 +88,7 @@ switch nargin
             warning('%s is not a recognized nigelColors option.',input);
       end
    case 2
+       maxColorSteps = 25;
       switch source
          case 'cubehelix'
             if not(isnumeric(input))
@@ -95,8 +96,13 @@ switch nargin
                Col = [];
                return;
             else
-               Clrs = cubehelix(25,2.8,1.9,1.45,0.6,[0.05 0.95],[0 .7]);
-               Col = Clrs(input,:);
+                idx = 1:maxColorSteps;
+                while numel(idx) < numel(input)
+                    idx = [idx fliplr(idx(1:end-1))];
+                end
+                idx = idx(1:numel(input));
+               Clrs = cubehelix(maxColorSteps,1.45,1.57,2.20,0.78,[0.25 0.57],[0.28 .82]);
+               Col = Clrs(idx,:);
             end
       end
 end

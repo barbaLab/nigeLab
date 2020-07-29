@@ -32,7 +32,11 @@ for iCh = blockObj.Mask
       x.(type{iT}) = rms(data);
       rms_out(iCh).(type{iT}) = rms(data(sampleIndices));
    end
-   blockObj.RMS = [blockObj.RMS; struct2table(x)];
+   if isempty(blockObj.RMS)
+       blockObj.RMS = [struct2table(x)];
+   else
+       blockObj.RMS = [blockObj.RMS; struct2table(x)];
+   end
    pct = 100 * (iCh / blockObj.NumChannels);
    fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(pct))
 end
