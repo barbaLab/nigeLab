@@ -19,7 +19,7 @@ function flag = plotWaves(blockObj,ax,field,idx,computeRMS)
 
 %% DEFAULTS
 flag = false;
-% blockObj.Pars.PlotPars = nigeLab.defaults.Plot();
+% blockObj.Pars.Pars.Plot = nigeLab.defaults.Plot();
 %% FIGURE OUT WHAT TO PLOT
 str_in = blockObj.getStatus;
 
@@ -28,6 +28,7 @@ if isa(ax,'matlab.graphics.axis.Axes')
     fig = ax.Parent;
     nargs = nargin-1;
 else
+    field = ax;
     nargs = nargin;
 
     fig = figure('Name',sprintf('Multi-Channel %s Snippets',field), ...
@@ -38,7 +39,7 @@ else
     ax = axes(fig,'NextPlot','add');
 end
 
-%%
+%% Parse field input and change options accordingly
 if nargs < 2
     [~,idx] = nigeLab.utils.uidropdownbox('Choose Wave Type',...
         'Select type of waveform to plot:',...
@@ -46,20 +47,27 @@ if nargs < 2
     field = str_in{idx};
 end
 
-if strcmp(field,'Spikes')
-   warning('Spikes overlay not yet supported.');
-   return;
+plotSpikesOverlay = false;
+switch field
+    case 'LFP'
+        fs = blockObj.LFPPars.DownSampledRate;
+    case 'Spikes'
+        fs = blockObj.SampleRate;
+        plotSpikesOverlay = true;
+       if  all(blockObj.getStatus({'CAR'}))
+           field = 'CAR';
+       elseif  all(blockObj.getStatus({'Filt'}))
+           field = 'Filt';
+       else
+           error('CAR or Filt are needed to overlay spikes!');
+       end
+    otherwise
+        fs = blockObj.SampleRate;
 end
 
-%% GET INDEXING VECTOR
-if strcmp(field,'LFP')
-    fs = blockObj.LFPPars.DownSampledRate;
-else
-    fs = blockObj.SampleRate;
-end
-
+%% Get correct index
 if nargs < 3    
-    tStart = (blockObj.PlotPars.DefTime - blockObj.PlotPars.PreAlign)/1000;
+    tStart = (blockObj.Pars.Plot.DefTime - blockObj.Pars.Plot.PreAlign)/1000;
     iStart = max(1,round(tStart * fs));
     
     tStop = (blockObj.Pars.Plot.DefTime + blockObj.Pars.Plot.PostAlign)/1000;
@@ -70,7 +78,7 @@ end
 t = linspace(idx(1)./fs,idx(end)./fs,numel(idx));
 dt = mode(diff(t));
 
-
+%% RMS input
 if nargs < 4
     computeRMS = false;
 end
@@ -113,6 +121,33 @@ for iCh = 1:blockObj.NumChannels
       'Color',cm(ic(iCh),:), ...
       'LineWidth',1.75,...
       'UserData',iCh); %#ok<NODEF>
+  
+  if plotSpikesOverlay
+      fs = blockObj.SampleRate;
+      Wpre =  blockObj.Pars.SD.WPre * 1e-3;
+      Wpost =  blockObj.Pars.SD.WPost * 1e-3;
+      
+      tSpk = blockObj.getSpikeTimes(iCh);            
+      spkToKeep = tSpk < t(end) & tSpk > t(1);
+      tSpk = tSpk(spkToKeep,:);
+      tSpk = (-Wpre : 1/fs : Wpost) + tSpk;
+      spkIndex = logical(sum( ...
+          tSpk(:,1) <= t_reduced &  tSpk(:,end) >= t_reduced, 1));
+      
+      spkBound = conv(spkIndex,[-1 1],'same')>0;
+      spkBound(end) = false;
+      
+      tSpk = t_reduced;
+      tSpk(~spkIndex) = nan;
+      
+      spk = y_reduced;
+      spk(~spkIndex) = nan;
+      
+      line(ax,tSpk,spk, ...
+          'Color','k', ...
+          'LineWidth',1.75,...
+          'UserData',iCh); %#ok<NODEF>
+  end
    
    text(ax,max(t)*1.01,tickLocs(iCh),...
          sprintf('RMS: %.3g',r(iCh)),...
