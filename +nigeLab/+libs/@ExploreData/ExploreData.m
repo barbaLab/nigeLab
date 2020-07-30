@@ -119,7 +119,21 @@ classdef ExploreData < handle
         function changeDataTyoe(obj)
             idx = obj.UI.DataSelector.Value;
             Field = obj.UI.DataSelector.String{idx};
+            
+            switch Field
+                case 'Spikes'
+                    if  all(obj.ThisBlock.getStatus({'CAR'}))
+                        Field = 'CAR';
+                    elseif  all(obj.ThisBlock.getStatus({'Filt'}))
+                        Field = 'Filt';
+                    else
+                        error('CAR or Filt are needed to overlay spikes!');
+                    end
+                otherwise
+                    ... do nothing for now
+            end
             obj.UI.DataScroller.changeDataType(Field);
+
             obj.plotData();
         end
         
@@ -128,7 +142,7 @@ classdef ExploreData < handle
             
             idx = obj.UI.DataSelector.Value;
             Field = obj.UI.DataSelector.String{idx};
-            cla(obj.UI.MainAx);
+            cla(obj.UI.MainAx,'reset');
             obj.UI.Fig.Name = sprintf('Multi-Channel %s Snippets',Field);
             obj.ThisBlock.plotWaves(obj.UI.MainAx,...
                 Field,obj.ROI(1):obj.ROI(2));
