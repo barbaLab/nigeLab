@@ -31,16 +31,18 @@ function [ts,p2pamp,pmin,pW] = SD_AdaptThresh(data,pars)
 %% CREATE THRESHOLD FILTER
 n = round((pars.FilterLength/1e3)*pars.fs);
 th = nigeLab.utils.fastsmooth(abs(data),pars.FilterLength,'abs_med',1);
+th = th * pars.MultCoeff;
 th(th<pars.MinThresh) = pars.MinThresh;
 
 %% PERFORM THRESHOLDING
-pk = (pars.Polarity * data) > (th * pars.MultCoeff);
+pk = (pars.Polarity * data) > th;
 
 if sum(pk) <= 1
    p2pamp = [];
    ts = [];
    pmin = [];
    dt = [];
+   pW = [];
    return
 end
 

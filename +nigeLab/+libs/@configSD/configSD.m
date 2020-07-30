@@ -93,12 +93,13 @@ classdef configSD < handle
        
        function setChannel(obj,src,evt)
             obj.Channels.Selected = src.Channel;
+            sampleData(obj);
             renderData(obj)
        end
        
        function renderData(obj)
-          cla(obj.DataAx);
-          cla(obj.SpikeAx);
+          cla(obj.DataAx,'reset');
+          cla(obj.SpikeAx,'reset');
           
            thisBlock = obj.ExBlock;
            fs = thisBlock.SampleRate;
@@ -118,7 +119,9 @@ classdef configSD < handle
            lockedObjs = obj.lockUnlockGui([],'off');
            
            thisBlock = obj.ExBlock;
-
+           obj.data = [];
+           obj.artRejData = [];
+           
            L = thisBlock.Samples;
            fs = thisBlock.SampleRate;
            Samples = floor(obj.durSlider.Value*60*fs); % length of ther selected recording
@@ -134,7 +137,15 @@ classdef configSD < handle
                obj.SliderLbl.String = 'less then 1min data.';
            end
            
-           obj.data = thisBlock.Channels(chanIdx).Filt(obj.startIdx:obj.endIdx);
+           isCar = thisBlock.getStatus('CAR');
+           isFilt = thisBlock.getStatus('Filt');
+           if isCar
+               obj.data = thisBlock.Channels(chanIdx).CAR(obj.startIdx:obj.endIdx);
+           elseif isFilt
+               obj.data = thisBlock.Channels(chanIdx).Filt(obj.startIdx:obj.endIdx);
+           else
+               error('Niether Filt nor Car detected.%cYou need to have ate least your signal filtered for spike detection!',newline);
+           end
            renderData(obj);
            
            obj.lockUnlockGui(lockedObjs,'on');
@@ -255,7 +266,8 @@ classdef configSD < handle
               
            end
         end
-         
+         obj.SDParsPanel.SelectedTab = findobj(obj.SDParsPanel,...
+             'Title',obj.Pars.SDMethodName);
         
         % fill artefact rejection panel
          for ii = 1:numel(obj.ARTMethods)
@@ -285,7 +297,8 @@ classdef configSD < handle
               
            end
          end
-        
+         obj.ArtRejParsPanel.SelectedTab = findobj(obj.ArtRejParsPanel,...
+             'Title',obj.Pars.ArtefactRejMethodName);
          
        end
        

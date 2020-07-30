@@ -56,8 +56,8 @@ pars.ARTIFACT = [];            % Pre-specified artifact times
 pars.WPre = 0.4;  % Pre-spike window  (ms)
 pars.WPost = 0.8;  % Post-spike window (ms)
 
-pars.SDMethodName = 'SNEO';
-pars.ID.Spikes = 'SNEO';                % implemented to date (2020/06/16):
+pars.SDMethodName = 'SWTTEO';
+pars.ID.Spikes = 'SWTTEO';                % implemented to date (2020/06/16):
                                         % SNEO, SWTTEO, WTEO, TIFCO, SWT, 
                                         % PTSD, fixed and variable Threshold.
                                         % See documentation for references.
