@@ -1,5 +1,5 @@
 classdef Sort < handle
-%SORT  User interface for "cluster-cutting" to manually classify spikes
+%SORT User interface for "cluster-cutting" to manually classify spikes
 %
 %  nigeLab.Sort;
 %  sortObj = nigeLab.Sort;

@@ -1,7 +1,5 @@
 classdef Animal < nigeLab.nigelObj
-% ANIMAL  Create an animal object that manages recordings from a
-%           single animal. These could be from the same session,
-%           or across multiple days.
+% ANIMAL  Object that manages recordings from a single animal. These could be from the same session, or across multiple days.
 %
 %  animalObj = nigeLab.Animal();
 %     --> prompts using UI

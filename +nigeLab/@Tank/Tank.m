@@ -1,5 +1,5 @@
 classdef Tank < nigeLab.nigelObj
-%TANK  Construct Tank Class object
+%TANK  Object that contains all data for a given experiment.
 %
 %  tankObj = nigeLab.Tank();
 %     --> prompts for locations using UI

@@ -1,5 +1,5 @@
 classdef Block < nigeLab.nigelObj
-   % BLOCK    Creates datastore for an electrophysiology recording.
+   % BLOCK    Object containing all data for a single experimental recording.
    %
    %  blockObj = nigeLab.Block();
    %     --> select Block path information from UI
