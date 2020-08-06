@@ -93,8 +93,9 @@ if ~strcmp(class_,class(value))
    value = cast(value,class_);
 end
 
-
-unlockData(blockObj.Events.(fieldName)(idx).data);
+if ~isempty(blockObj.Events.(fieldName)(idx).data)
+   unlockData(blockObj.Events.(fieldName)(idx).data);
+end
 blockObj.Events.(fieldName)(idx).data = subsasgn(...
    blockObj.Events.(fieldName)(idx).data,...
    S,...       % substruct (for indexing)

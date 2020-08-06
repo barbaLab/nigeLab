@@ -14,6 +14,7 @@ function defaultHotkeyFcn(evt,v,b)
 %                 'escape' (closes the window).
 %                 'h' (lists current keypress commands).
 
+ts = v.TimeAxes.CameraObj.NeuTime_;
 switch evt.Key
    case 'backquote' % set all "unset" values to preset values
       varName = b.Variable;
@@ -25,6 +26,13 @@ switch evt.Key
          end
          setValue(b,varName{i},def_value(i));
       end
+      % If 'Init' was removed, then toggle mask value to false
+      if ismember('Init',varName)
+         val = getValue(b,'Init');
+         if isinf(val)
+            toggleTrialMask(b,0);
+         end
+      end
       % Last, advance to the next trial
       setTrial(b,nan,b.TrialIndex+1);
    case 'comma' % not a stereotyped trial (default)
@@ -32,27 +40,27 @@ switch evt.Key
    case 'period' % set as stereotyped trial
       setValue(b,'Stereotyped',1);
    case 'i' % set "initial" trial frame
-      setTimeStampValue(b,v,evt,'Init',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Init',ts);
    case 'o' % clear "initial" trial frame
       setTimeStampValue(b,v,evt,'Init',inf);
    case 't' % set reach frame
-      setTimeStampValue(b,v,evt,'Reach',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Reach',ts);
    case 'r' % set no reach for trial
       setTimeStampValue(b,v,evt,'Reach',inf);
    case 'g' % set grasp frame
-      setTimeStampValue(b,v,evt,'Grasp',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Grasp',ts);
    case 'f' % set no grasp for trial
       setTimeStampValue(b,v,evt,'Grasp',inf);
    case 'b' % set "both" (support) frame
-      setTimeStampValue(b,v,evt,'Support',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Support',ts);
    case 'v' % (next to 'b') -> no "support" for this trial
       setTimeStampValue(b,v,evt,'Support',inf);
    case 'n' % set "nose" frame (nose poke through reach slot
-      setTimeStampValue(b,v,evt,'Nose',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Nose',ts);
    case 'm' % (next to 'm') -> no "nose" for this trial
       setTimeStampValue(b,v,evt,'Nose',inf);
    case 'multiply' % set trial Complete frame
-      setTimeStampValue(b,v,evt,'Complete',v.NeuTime);
+      setTimeStampValue(b,v,evt,'Complete',ts);
    case 'divide' % set "no" trial Complete frame (i.e. he never
       % brought paw back into box before reaching on next
       % trial)
@@ -135,6 +143,8 @@ switch evt.Key
       toggleTrialMask(b,0);
    case 'backslash'
       toggleTrialMask(b,1);
+   case 'f1' % "debug"
+      printTimingData(v,evt);
    case 'space'
       playPauseVid(v);
 end
@@ -157,9 +167,9 @@ end
       
       if isempty(evt.Modifier)
          setValue(b,eventName,value);
-      else
+      else % If `shift` is pressed, skip to the timestamp
          switch evt.Modifier{1}
-            case 'shift'
+            case 'shift' % Retrieve neural time for that event
                tNeu = getValue(b,eventName);
                if isnan(tNeu) || isinf(tNeu)
                   return;

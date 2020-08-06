@@ -30,7 +30,6 @@ function defaultVideoScoringShortcutFcn(obj,curVarIndex,updatedValue)
 %     a different behavior is performed as a shortcut, depending on what
 %     the value ('val') is.
 
-
 switch obj.Variable{curVarIndex}
    case 'Grasp'
       obj.VariableIndex = curVarIndex;

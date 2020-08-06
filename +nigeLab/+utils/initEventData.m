@@ -94,15 +94,19 @@ for iV = 1:nargo
    % Initialize 'tag' (3rd column) as mask that indicates the values should
    % be used: since they will be defaulted to "auto" or "NaN" values, then
    % this should only be flipped to ones (true) when the value
-   % corresponding to that specific trial has been scored. Otherwise, this
-   % vector can serve as an indicator that the value has never been scored,
-   % so that if `doEventDetection` is re-run, it is okay to overwrite (the
-   % non-scored) value since we won't be ruining somebody's behavior
-   % scoring...
+   % corresponding to that specific trial has been scored. 
    varargout{iV}(:,3) = zeros(nEvent,1);
    varargout{iV}(:,4) = ts(:,iV); % Fourth column is timestamps
+   
+   % If this is "type-1" event, then we know it is 'EventTimes' data so the
+   % second column should correspond to the trial index and the 'snippet'
+   % (5th column) should be a secondary mask indicating if the timestamp
+   % has been "touched" while scoring. We can use this in subsequent
+   % "re-initializations" to indicate that a value has already been scored
+   % and we don't want to overwrite it with some automated process:
    if type == 1
       varargout{iV}(:,2) = (1:nEvent).';
+      varargout{iV}(:,5) = zeros(nEvent,1);
    end
 end
 

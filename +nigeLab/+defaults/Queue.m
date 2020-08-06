@@ -26,7 +26,7 @@ pars.Remote.RecRoot = 'P:/Recorded_Data';
 pars.Remote.SaveRoot = 'P:/Processed_Data';
 
 % pars.ClusterList = {'CPLMJS';'CPLMJS2';'CPLMJS3'};
-pars.ClusterList = {'CPLMJS';'CPLMJS2'};
+pars.ClusterList = {'CPLMJS3'};
 pars.NWorkerMinMax = [1,1]; % Min & Max # workers to assign to a job
 pars.WaitTimeSec = 1; % Time to wait between checking for new cluster
 pars.InitTimeSec = 5; % Time to wait when initializing cluster
@@ -34,8 +34,9 @@ pars.InitTimeSec = 5; % Time to wait when initializing cluster
 % pars.RemoteRepoPath = '';
 % pars.RemoteRepoPath = ...
 %    {'C:\Users\fbarban\Documents\MATLAB\ePhys_packages'}; % FB
-pars.RemoteRepoPath = ...
-   {'T:\Communal_Code\nigeLab'}; % MM (KUMC Isilon)
+% pars.RemoteRepoPath = ...
+%    {'T:\Communal_Code\nigeLab'}; % (KUMC Isilon; generically)
+pars.RemoteRepoPath = {'T:\Communal_Code\MurphyThesis'}; % MM Thesis EKF data
 % Note: if using older versions (such as v1.1.0-alpha), you will need to
 % install the package on the remote repository as well, and set that path
 % here (in pars.RemoteRepoPath)

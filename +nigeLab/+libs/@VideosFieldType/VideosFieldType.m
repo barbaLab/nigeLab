@@ -24,10 +24,12 @@ classdef VideosFieldType < handle ...
       NumFrames         double   % Total number of frames
       ROI               cell     % Region of interest ({iRow, iCol})
       Source            char     % Camera "view" (e.g. Door, Top, etc...)
+      TrialIndex  (1,1) double   % Index for this "Trial Video," (or obj.Block.TrialIndex, if no VideoTrials)
       TrialOffset (1,1) double   % Trial/camera-specific offset
       Width             double   % Width of video frame (pixels)
       VarType           double   % 'Type' for each metadata variable
       VideoIndex  (1,1) double   % Index of this video within array
+      VideoSourceIndex  double   % Index of this video SOURCE (different than VideoIndex for TRIALS)
       fs                double   % Sample rate
    end
    
@@ -52,6 +54,7 @@ classdef VideosFieldType < handle ...
       ScoringField_     char 
       V_                             % VideoReader object
       VideoIndex_       double       % Stored index
+      VideoSourceIndex_ 
       store_   (1,1)    struct = nigeLab.libs.VideosFieldType.initStore(); % struct to store parsed properties
    end
    
@@ -313,6 +316,39 @@ classdef VideosFieldType < handle ...
          end
       end
       
+      % [DEPENDENT]  Returns .HasVideoTrials property (Parent block)
+      function value = get.HasVideoTrials(obj)
+         %GET.HASVIDEOTRIALS  Returns .HasVideoTrials if they've been
+         %                    exported.
+         %
+         %  value = get(obj,'HasVideoTrials');
+         value = false;
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         elseif ~isempty(obj.HasVideoTrials_)
+            value = obj.HasVideoTrials_;
+            return;
+         elseif isempty(obj.Block)
+            return;
+         end
+%          if isfield(obj.Block.IDInfo,'HasVideoTrials')
+%             value = logical(str2double(obj.Block.IDInfo.HasVideoTrials));
+%          else
+%             value = obj.Block.HasVideoTrials;
+%          end
+         value = obj.Block.HasVideoTrials;
+         obj.HasVideoTrials_ = value;
+      end
+      function set.HasVideoTrials(~,~)
+         %SET.HASVIDEOTRIALS  Cannot set
+         warning(['nigeLab:' mfilename ':ReadOnlyProperty'],...
+            ['\n\t\t->\t<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
+            'Cannot set <strong>READ-ONLY</strong> property: ' ...
+            '`HasVideoTrials`\n']);
+      end
+      
       % [DEPENDENT]  Returns .Height property
       function value = get.Height(obj)
          %GET.HEIGHT  Returns .Height property
@@ -435,18 +471,20 @@ classdef VideosFieldType < handle ...
       function value = get.Masked(obj)
          %GET.MASKED  References "Header" diskfile (column 3: 'Tag')
          value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
-         if isnan(value(obj.VideoIndex))
-            doEventDetection(obj.Block);
-            value = getEventData(obj.Block,obj.ScoringField_,'tag','Header');
-            value = logical(value(obj.VideoIndex));
+         vIdx = obj.VideoSourceIndex;
+         
+         if isnan(value(vIdx))
+            value = false;
+            setEventData(obj.Block,obj.ScoringField_,'tag','Header',0,vIdx);
          else
-            value = logical(value(obj.VideoIndex));
+            value = logical(value(vIdx));
          end
       end
       function set.Masked(obj,value)
          %SET.MASKED  References "Header" diskfile (column 3: 'Tag')
-         setEventData(obj.Block,obj.ScoringField_,...
-            'tag','Header',value,obj.VideoIndex);
+         
+         vIdx = obj.VideoSourceIndex;
+         setEventData(obj.Block,obj.ScoringField_,'tag','Header',value,vIdx);
       end
       
       % [DEPENDENT]  Returns .Meta property
@@ -537,11 +575,12 @@ classdef VideosFieldType < handle ...
          %  --> Returns the offset that is obj.GrossOffset -
          %  obj.VideoOffset
          
-         if obj.Block.HasVideoTrials
-            value = obj.GrossOffset;
-         else
-            value = obj.GrossOffset - obj.VideoOffset;
-         end
+         value = obj.GrossOffset - obj.VideoOffset;
+%          if obj.Block.HasVideoTrials
+%             value = obj.GrossOffset;
+%          else
+%             value = obj.GrossOffset - obj.VideoOffset;
+%          end
       end
       function set.NeuOffset(obj,value)
          %SET.NEUOFFSET  Assign corresponding video of linked Block   
@@ -552,11 +591,12 @@ classdef VideosFieldType < handle ...
          %  Where tSpecific is the "Trial-Specific" and "Camera-Specific"
          %  offset.
          
-         if obj.Block.HasVideoTrials
-            obj.GrossOffset = value;
-         else
-            obj.GrossOffset = value + obj.VideoOffset;
-         end
+         obj.GrossOffset = value + obj.VideoOffset;
+%          if obj.Block.HasVideoTrials
+%             obj.GrossOffset = value;
+%          else
+%             obj.GrossOffset = value + obj.VideoOffset;
+%          end
 %          % Since times are relative to the VIDEO record, any time a NEURAL
 %          % or TRIAL offset is changed, then change the event times
 %          obj.Block.Trial = obj.Block.Trial - value;
@@ -789,6 +829,60 @@ classdef VideosFieldType < handle ...
          
          value = obj.store_.Source;
       end
+      function set.StreamNames(obj,value)
+         %SET.STREAMNAMES  Sets .StreamNames property
+         %
+         %  set(obj,'StreamNames',value);
+         
+         obj.store_.Source = value;
+      end
+      
+      % [DEPENDENT] Returns .TrialIndex property 
+      function value = get.TrialIndex(obj)
+         %GET.TRIALINDEX  Return index of current video or Block
+         %
+         %  value = get(obj,'TrialIndex');
+         %  --> Depends on state of obj.Block.HasVideoTrials
+         
+         value = 1;
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         elseif isempty(obj.Block)
+            return;
+         end
+         
+         if obj.Block.HasVideoTrials
+            idVar = obj.Pars.MovieIndexVar;
+            value = str2double(obj.Meta.(idVar){:});
+         else
+            value = obj.Block.TrialIndex;
+         end
+      end
+      function set.TrialIndex(obj,value)
+         %SET.TRIALINDEX  Assign index of current video or Block
+         %
+         %  set(obj,'TrialIndex',value);
+         %  --> Depends on state of obj.Block.HasVideoTrials
+         
+         if isempty(obj)
+            return;
+         elseif ~isvalid(obj)
+            return;
+         elseif isempty(obj.Block)
+            return;
+         elseif isempty(obj.Block.Meta)
+            return;
+         end
+         
+         if obj.Block.HasVideoTrials
+            idVar = obj.Pars.MovieIndexVar;
+            obj.Meta.(idVar) = {sprintf('%03g',value)};
+         else
+            obj.Block.TrialIndex = value;
+         end
+      end
       
       % [DEPENDENT] Returns .TrialOffset property (from linked Block)
       function value = get.TrialOffset(obj)
@@ -798,12 +892,13 @@ classdef VideosFieldType < handle ...
          %  --> Returns Trial/Camera-specific offset for current trial
          
          if ~isfield(obj.Block.Meta,'Video')
-            value = nan;
+            value = 0;
             return;
          end
-         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         sources = obj.Block.Meta.Video.(obj.Pars.CameraSourceVar);
+         iRow = find(strcmp(sources,obj.Source),1,'first');
          if obj.Block.HasVideoTrials
-            iCol = str2double(obj.Meta.MovieID{:});
+            iCol = str2double(obj.Meta.(obj.Pars.MovieIndexVar){:});
             obj.Block.TrialIndex = iCol;
          else
             iCol = obj.Block.TrialIndex;
@@ -823,9 +918,10 @@ classdef VideosFieldType < handle ...
          elseif ~isfield(obj.Block.Meta,'Video')
             return;
          end
-         iRow = find(ismember(obj.Block.Meta.Video.View,obj.Source),1,'first');
+         sources = obj.Block.Meta.Video.(obj.Pars.CameraSourceVar);
+         iRow = find(strcmp(sources,obj.Source),1,'first');
          if obj.Block.HasVideoTrials
-            iCol = str2double(obj.Meta.MovieID{:});
+            iCol = str2double(obj.Meta.(obj.Pars.MovieIndexVar){:});
             obj.Block.TrialIndex = iCol;
          else
             iCol = obj.Block.TrialIndex;
@@ -881,27 +977,40 @@ classdef VideosFieldType < handle ...
          
          f = obj.ScoringField_;
          nMeta = getEventData(obj.Block,f,'value','Header');
-         nMeta = nMeta(obj.VideoIndex);
+         nMeta = nMeta(obj.VideoSourceIndex);
          
          value = getEventData(obj.Block,f,'snippet','Header');
-         value = value(obj.VideoIndex,1:nMeta);
+         value = value(obj.VideoSourceIndex,1:nMeta);
       end
       function set.VarType(obj,value)
          %SET.VARTYPE  References "Header" diskfile (column 5: 'Snippet')
          
+         % First, update the "Number of Metadata fields" value indicated by
+         % 'Header' property --> 'value'
          f = obj.ScoringField_;
          nMeta = numel(value);
-         setEventData(obj.Block,f,'value','Header',nMeta,obj.VideoIndex);
+         vIdx = obj.VideoSourceIndex;
+         setEventData(obj.Block,f,'value','Header',nMeta,vIdx);
          
+         % Next, get all the data from the 'Header' file, since it may have
+         % to be shuffled around if we are adding new variables for a given
+         % camera.
          data = getEventData(obj.Block,f,'data','Header');
          nTrial = size(data,1);
+         
+         % We should evaluate to see if the new data "block" we will need
+         % to write will cause the data matrix in 'Event' DiskData type to
+         % expand; in this case we will need to overwrite by creating a new
+         % DiskData object that has the correct number of columns (where
+         % some of the "unused" columns, if they exist, are just NaN values
+         % for the corresponding camera source)
          N = nTrial + 4 + nMeta;
          dSz = N-size(data,2);
          nColPrev = size(data,2);
          if nColPrev <  N % Then take old data and overwrite
             data = horzcat(data,nan(nTrial,dSz));
             % Slide old "row" of trial offsets over
-            data(obj.VideoIndex,(5+dSz):N) = data(obj.VideoIndex,5:nColPrev);
+            data(vIdx,(5+dSz):N) = data(vIdx,5:nColPrev);
             hIdx = getEventsIndex(obj.Block,f,'Header');
             
             % Overwrite old diskfile
@@ -914,7 +1023,7 @@ classdef VideosFieldType < handle ...
                'Index',1);
          else % Otherwise just update old diskfile
             setEventData(obj.Block,f,'snippet','Header',value,...
-               obj.VideoIndex,1:nMeta);
+               vIdx,1:nMeta);
          end
       end
       
@@ -935,6 +1044,35 @@ classdef VideosFieldType < handle ...
       function set.VideoIndex(obj,value)
          %SET.VIDEOINDEX  Assign .VideoIndex_ store
          obj.VideoIndex_ = value;
+      end
+      
+      % [DEPENDENT]  Returns .VideoSourceIndex property 
+      function value = get.VideoSourceIndex(obj)
+         %GET.VIDEOINDEX  Returns .VideoSourceIndex property (index to this obj)
+         %
+         %  value = get(obj,'VideoSourceIndex');
+         %  --> Returns array index to the SOURCE video (same as VideoIndex
+         %        for non-trial videos, but different for trial videos)
+         
+         if ~obj.Block.HasVideoTrials
+            value = obj.VideoIndex;
+            return;
+         end
+         
+         if ~isempty(obj.VideoSourceIndex_)
+            value = obj.VideoSourceIndex_;
+            return;
+         end
+
+         cvar = obj.Pars.CameraSourceVar;
+         value = find(...
+            strcmp(obj.Source,obj.Block.Meta.Video.(cvar)),1,'first');
+         obj.VideoSourceIndex_ = value;
+      end
+      function set.VideoSourceIndex(obj,value)
+         %SET.VIDEOINDEX  Assign .VideoSourceIndex_ store
+         
+         obj.VideoSourceIndex_ = value;
       end
       
       % [DEPENDENT]  Returns .Width property
@@ -992,24 +1130,12 @@ classdef VideosFieldType < handle ...
             value = sprintf(expr,obj.Source,sName,'mat');
          end
       end
-      function value = get.HasVideoTrials(obj)
-         value = false;
-         if isempty(obj)
-            return;
-         elseif ~isvalid(obj)
-            return;
-         elseif ~isempty(obj.HasVideoTrials_)
-            value = obj.HasVideoTrials_;
-            return;
-         elseif isempty(obj.Block)
-            return;
-         end
-         if isfield(obj.Block.IDInfo,'HasVideoTrials')
-            value = logical(str2double(obj.Block.IDInfo.HasVideoTrials));
-         else
-            value = obj.Block.HasVideoTrials;
-         end
-         obj.HasVideoTrials_ = value;
+      function set.fname_t(~,~)
+         %SET.FNAME_T  Cannot set
+         warning(['nigeLab:' mfilename ':ReadOnlyProperty'],...
+            ['\n\t\t->\t<strong>[VIDEOSFIELDTYPE]</strong>: ' ...
+            'Cannot set <strong>READ-ONLY</strong> property: ' ...
+            '`fname_t`\n']);
       end
       
       % [DEPENDENT]  Returns .fs property
@@ -1172,7 +1298,7 @@ classdef VideosFieldType < handle ...
          obj.V = []; % This deletes obj.V_ due to [Dependent] property .V
       end
       
-      % Returns Max timestamp from videos in objArray
+      % Returns Max (non-offset; series) timestamp from videos in objArray
       function tMax = Max(objArray)
          %MAX  Return maximum timestamp value from videos in objArray
          %
@@ -1180,7 +1306,19 @@ classdef VideosFieldType < handle ...
          
          tMax = -inf;
          for i = 1:numel(objArray)
-            tMax = max(tMax,max(objArray(i).tVid));
+            tMax = max(tMax,objArray(i).tVid(end));
+         end
+      end
+      
+      % Returns Min (non-offset; series) timestamp from videos in objArray
+      function tMin = Min(objArray)
+         %MIN  Return minimum timestamp value from videos in objArray
+         %
+         %  tMin = Min(objArray);
+         
+         tMin = inf;
+         for i = 1:numel(objArray)
+            tMin = min(tMin,objArray(i).tVid(1));
          end
       end
       
@@ -1303,7 +1441,7 @@ classdef VideosFieldType < handle ...
                obj(i).Streams.at(idx(i)).diskdata.data];
          end
          stream.fs = obj.at(idx).fs;
-         stream.t  = obj.tNeu;
+         stream.t  = obj.tVid;
          stream.data = nigeLab.utils.applyScaleOpts(stream.data,scaleOpts);
          
       end

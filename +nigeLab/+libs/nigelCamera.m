@@ -17,7 +17,6 @@ classdef nigelCamera < matlab.mixin.SetGet
       Index    (1,1) double = 1     % Index to current object within obj.Series
       Parent                        % Parent nigeLab.libs.TimeScrollerAxes object
       SeriesTime_ (1,1) double = 0  % "Dependent" container for .Time
-      VideoOffset (1,1) double = 0  % Video offset of current video 
    end
    
    % TRANSIENT,HIDDEN,PUBLIC
@@ -34,7 +33,6 @@ classdef nigelCamera < matlab.mixin.SetGet
       SeriesList_                      % Container of .Series
       SeriesTime__   (1,1) double = 0  % Container of .SeriesTime_ property
       Source_              char        % Container of .Source property
-      VideoIndex_    (1,1) double = 1  % Index of current video from obj.Block_.Videos
    end
    % % % % % % % % % % END PROPERTIES %
    
@@ -56,11 +54,7 @@ classdef nigelCamera < matlab.mixin.SetGet
          obj.SeriesIndex_ = value;
          
          % Get offsets for current video
-         if obj.Block_.HasVideoTrials
-            videoOffset = obj.SeriesList_(value).TrialOffset;
-         else
-            videoOffset = obj.SeriesList_(value).VideoOffset;
-         end
+         videoOffset = obj.SeriesList_(value).VideoOffset;
          neuOffset = obj.SeriesList_(value).NeuOffset;
          
          % Get sample rate
@@ -77,8 +71,8 @@ classdef nigelCamera < matlab.mixin.SetGet
          seriesTime = frameTime + videoOffset;
          
          obj.SeriesTime_ = seriesTime;
-         obj.VideoIndex_ = obj.SeriesList_(value).VideoIndex;
-         obj.Block_.VideoIndex = obj.VideoIndex_;
+         % Note: the following will set .TrialIndex (if needed)
+         obj.Block_.VideoIndex = obj.SeriesList_(value).VideoIndex;
          
          VG = obj.TimeAxesObj_.VidGraphicsObj; 
          VG.SeriesIndex_ = value;
@@ -179,14 +173,6 @@ classdef nigelCamera < matlab.mixin.SetGet
          % Set Index (dependent property that updates the rest)
          obj.Index = idx;
       end
-      
-      % [DEPENDENT]  .VideoOffset  offset time relative to series start
-      function value = get.VideoOffset(obj)
-         value = obj.SeriesList_(obj.SeriesIndex_).VideoOffset;
-      end
-      function set.VideoOffset(obj,value)
-         obj.SeriesList_(obj.SeriesIndex_).VideoOffset = value;
-      end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
       
       % % % (NON-DEPENDENT) SET.PROPERTY METHODS % % % % % % % % % % % % 
@@ -269,10 +255,10 @@ classdef nigelCamera < matlab.mixin.SetGet
             return;
          end
          
-         obj.Time_ = zeros(numel(obj.Series),3);
+         obj.Time_ = inf(numel(obj.Series),1) * [1 -1];
          for i = 1:numel(obj.Series)
-            t = obj.Series(i).tVid;
-            obj.Time_(i,:) = [obj.Series(i).Masked, min(t), max(t)];
+            obj.Time_(i,:) = ...
+               [obj.Series(i).tVid(1), obj.Series(i).tVid(end)];
          end
       end
    end
@@ -303,8 +289,8 @@ classdef nigelCamera < matlab.mixin.SetGet
          
          % Disregards mask:
          idx = find( ...
-                   (seriesTimeInfo(:,2) <= seriesTime) & ...
-                   (seriesTimeInfo(:,3) > seriesTime),1,'last');
+                   (seriesTimeInfo(:,1) <= seriesTime) & ...
+                   (seriesTimeInfo(:,2) >= seriesTime),1,'last');
                 % Note: in case of overlap in times, use "later" video.
       end
    end

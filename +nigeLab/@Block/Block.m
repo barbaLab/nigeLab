@@ -102,8 +102,10 @@ classdef Block < nigeLab.nigelObj
    
    % HIDDEN,ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
    properties (AbortSet,Hidden,Dependent,Transient,Access=public)
+      NeuOffset      (1,1) double = 0  % Neural offset for current video
       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
       VideoIndex     (1,1) double = 1  % Current "Video Index" for analyses
+      VideoSourceIndex     double
    end
    
    % HIDDEN,TRANSIENT,PROTECTED
@@ -311,6 +313,36 @@ classdef Block < nigeLab.nigelObj
       function set.HasROI(~,~)
          %SET.HASROI  Cannot set READ-ONLY property
          warning('Cannot set READ-ONLY property: <strong>HASROI</strong>');
+      end
+      
+      % [DEPENDENT] Returns current neural offset from video (seconds)
+      function value = get.NeuOffset(blockObj)
+         %GET.NEUOFFSET  Returns current neural offset from video (seconds)
+         %
+         %  value = get(blockObj,'NeuOffset');
+         value = 0;
+         if isempty(blockObj)
+            return;
+         elseif ~isvalid(blockObj)
+            return;
+         elseif isempty(blockObj.Videos)
+            return;
+         end
+         value = blockObj.Videos(blockObj.VideoIndex).NeuOffset;         
+      end
+      function set.NeuOffset(blockObj,value)
+         %SET.NEUOFFSET  Assign neural offset value to current video (sec)
+         %
+         %  value = set(blockObj,'NeuOffset',value);
+         
+         if isempty(blockObj)
+            return;
+         elseif ~isvalid(blockObj)
+            return;
+         elseif isempty(blockObj.Videos)
+            return;
+         end
+         blockObj.Videos(blockObj.VideoIndex).NeuOffset = value;
       end
       
       % [DEPENDENT] Returns .NumChannels property
@@ -657,7 +689,38 @@ classdef Block < nigeLab.nigelObj
             'Index',int8(value));
          if s
             blockObj.VideoIndex_ = value;
+            if blockObj.HasVideoTrials
+               blockObj.TrialIndex = blockObj.Videos(value).TrialIndex;
+            end
          end
+      end
+      
+      % [DEPENDENT]  Interact with "Header" Event file to get "Index" attr
+      function value = get.VideoSourceIndex(blockObj)
+         %GET.VIDEOINDEX  Interact with "Header" file to get "Index" attr
+         %
+         %  value = get(blockObj,'VideoSourceIndex');
+         %  --> Returns 'Trials' attribute: Index
+         
+         value = [];
+         if isempty(blockObj.Videos)
+            return;
+         elseif isempty(blockObj.VideoIndex)
+            return;
+         end
+         source = blockObj.Videos(blockObj.VideoIndex).Source;
+         cvar = blockObj.Pars.Video.CameraSourceVar;
+         value = find(...
+            strcmp(blockObj.Meta.Video.(cvar),source),1,'first');
+      end
+      function set.VideoSourceIndex(~,~)
+         %SET.VIDEOINDEX  Interact with "Header" file to set "Index" attr
+         %
+         %  set(blockObj,'VideoSourceIndex',value);
+         warning(['nigeLab:' mfilename ':ReadOnlyProperty'],...
+            ['\n\t\t->\t<strong>[BLOCK]</strong>: ' ...
+            'Cannot set <strong>READ-ONLY</strong> property: ' ...
+            '`VideoSourceIndex`\n']);
       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
@@ -936,7 +999,8 @@ classdef Block < nigeLab.nigelObj
    end
    
    % RESTRICTED:nigeLab.libs.VideosFieldType
-   methods (Access=?nigeLab.libs.VideosFieldType)
+%    methods (Access=?nigeLab.libs.VideosFieldType)
+   methods (Hidden,Sealed,Access=public)
       s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
       index = parseVidFileName(blockObj,fName,keyIndex,forceTrials)  % Add to Block.Meta.Video table and return corresponding index
    end
@@ -986,7 +1050,7 @@ classdef Block < nigeLab.nigelObj
       flag = doRawExtraction(blockObj)       % Extract raw data to Matlab BLOCK
       flag = doReReference(blockObj)         % Do virtual common-average re-reference
       flag = doSD(blockObj)                  % Do spike detection for extracellular field
-      flag = doTrialVidExtraction(blockObj)  % Extract "chunks" of video frames as trial videos
+      flag = doTrialVidExtraction(blockObj,isExtracted)  % Extract "chunks" of video frames as trial videos
       flag = doUnitFilter(blockObj)          % Apply multi-unit activity bandpass filter
       flag = doVidInfoExtraction(blockObj,vidFileName,forceParamsUpdate) % Get video information
       flag = doVidSyncExtraction(blockObj)   % Get sync info from video
@@ -1136,6 +1200,36 @@ classdef Block < nigeLab.nigelObj
                lockData(blockObj.(fieldType).(f)(j).data);
             end
          end
+      end
+      
+      function resetVideos(blockObj)
+         %RESETVIDEOS  Reset (original) videos if Trials were extracted
+         %
+         %  resetVideos(blockObj);
+         %  --> Primarily for debug purposes, in case something went wrong
+         %        during extraction, etc.
+         
+         if ~isfield(blockObj.Paths.V,'Orig')
+            error(['nigeLab:' mfilename ':ImproperState'],...
+               ['\n\t\t->\t<strong>[BLOCK/RESETVIDEOS]:</strong> '...
+               'Method call indicates that Block has extracted trials, ' ...
+               'but corresponding Paths field is not present.\n']);
+         end
+         
+         if ~blockObj.HasVideoTrials
+            error(['nigeLab:' mfilename ':ImproperState'],...
+               ['\n\t\t->\t<strong>[BLOCK/RESETVIDEOS]:</strong> '...
+               'Method call indicates that Block has extracted trials, ' ...
+               'but corresponding `HasVideoTrials` property does not.\n']);
+         end
+         
+         blockObj.HasVideoTrials = false;
+         % Remove current videos
+         delete(blockObj.Videos);
+         blockObj.Videos(:) = [];
+         % Re-initialize "old" videos
+         blockObj.Paths.V = blockObj.Paths.V.Orig;
+         blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
       end
       
       function unlockData(blockObj,fieldType)
