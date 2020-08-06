@@ -1,31 +1,38 @@
 function flag = linkProbe(blockObj)
-%% LINKPROBE  Connect probe metadata saved on the disk to the structure
+%LINKPROBE  Connect probe metadata saved on the disk to the structure
 %
-%  b = nigeLab.Block;
-%  flag = LINKPROBE(b);
+%  blockObj = nigeLab.Block;
+%  flag = linkProbe(blockObj);
 %
 % flag returns true if blockObj.Probes is empty.
+%
+% See also: nigeLab, nigeLab.Block, nigeLab.Block/takeNotes,
+%           nigeLab.Block/parseNotes
 
-%% PARSE PROBE INFORMATION
+% Check that the block is set up to parse Probe metadata
 blockObj.checkCompatibility('Probes');
 
 % Get probe ane notes info structs
-probe = nigeLab.defaults.Probe();
-blockObj.updateParams('Probe');
+updateParams(blockObj,'Probe');
+probe = blockObj.Pars.Probe;
 
 % Initialize the update flags
 flag = false;
 updateFlag = false(1,blockObj.NumChannels);
+if isempty(get(blockObj,'Probes'))
+   blockObj.Probes = struct;
+end
 
 if isfield(blockObj.Notes,'Probes')
-   nigeLab.utils.printLinkFieldString(blockObj.getFieldType('Probes'),'Probes');
+   nigeLab.utils.printLinkFieldString(...
+      blockObj.getFieldType('Probes'),'Probes',true);
    probePorts = fieldnames(blockObj.Notes.Probes);
    % Get the correct file associated with this recording in terms of
    % experimental probes. 
    for ii = 1:numel(probePorts)
       probeName = blockObj.Notes.Probes.(probePorts{ii}).name;
       probeFile = sprintf(probe.Str,probeName);
-      fName = fullfile(blockObj.Paths.Probes.dir,[blockObj.Name ...
+      fName = fullfile(blockObj.Output,[blockObj.Name ...
                         probe.Delimiter probeFile]);
       if exist(fName,'file')==0
          % If the electrode file doesn't exist from default location
@@ -49,7 +56,7 @@ if isfield(blockObj.Notes,'Probes')
    % For each channel, update metadata from probe config file
    for iCh = blockObj.Mask
 
-      if isempty(blockObj.Probes)
+      if numel(fieldnames(blockObj.Probes))==0
          flag = true;
       else
          curCh = blockObj.Channels(iCh).chip_channel;
@@ -78,8 +85,8 @@ if isfield(blockObj.Notes,'Probes')
       end
       
 
-      fraction_done = 100 * (iCh / blockObj.NumChannels);
-      fprintf(1,'\b\b\b\b\b%.3d%%\n',floor(fraction_done))
+      fraction_done = 100 * (iCh / max(blockObj.Mask));
+      fprintf(1,'\b\b\b\b\b%.3d%%\n',round(fraction_done))
    end
 end
 

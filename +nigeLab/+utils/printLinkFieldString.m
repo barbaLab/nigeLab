@@ -1,5 +1,5 @@
 function str = printLinkFieldString(fieldType,field,print_to_window)
-%% PRINTLINKFIELDSTRING  Standardized Command Window print command for link
+%PRINTLINKFIELDSTRING  Standardized Command Window print command for link
 %
 %  str = nigeLab.utils.PRINTLINKFIELDSTRING(fieldType,field);
 %
@@ -9,7 +9,6 @@ function str = printLinkFieldString(fieldType,field,print_to_window)
 %  str: If used in fprintf, reproduces the printed statement without
 %  leading and trailing '\n' and trailing percentage.
 
-%%
 if nargin < 3
    print_to_window = false;
 end

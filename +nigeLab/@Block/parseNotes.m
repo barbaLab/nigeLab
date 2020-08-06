@@ -1,13 +1,16 @@
 function parseNotes(blockObj,str)
-%% PARSENOTES  Update metadata using notes
+%PARSENOTES  Update metadata using "notes" string.
 %
 %  blockObj.parseNotes(str);
 %
-% By: Max Murphy  v1.0  08/27/2017  Original version (R2017a)
-%                 v1.1  12/11/2018  Bugfixes
+% See also: nigeLab, nigeLab.Block, nigeLab.libs, nigeLab.libs.NotesUI
 
-%% PARSE EXPERIMENTAL METADATA
+%Parse experimental metadata
 probes = struct;
+if isempty(blockObj.Notes)
+   blockObj.Notes = struct;
+end
+
 for ii = 1:size(str,1)
    % Catch whitespace errors
    if isempty(str{ii})
@@ -17,13 +20,27 @@ for ii = 1:size(str,1)
    end
    
    % Split based on Experiment Parameters
-   info = strsplit(str{ii},blockObj.ExperimentPars.Delimiter);
-   blockObj.Notes.(strtrim(info{1})) = strtrim(info{2});
-   probes = parseProbeName(probes,info{1},info{2},...
-                           blockObj.ProbePars.ProbeIndexParseFcn);
-   
+   info = strsplit(str{ii},blockObj.Pars.Experiment.Delimiter);
+   varName = strtrim(info{1});
+   varValue = strtrim(info{2});
+   if contains(varName,'.')
+      varNameParts = strsplit(varName,'.');
+      tmp = varValue;
+      tmp2 = struct;
+      for ik = numel(varNameParts):-1:1
+         tmp2.(varNameParts{ik}) = tmp;
+         tmp = tmp2;
+      end
+      blockObj.Notes.(varNameParts{1}) = tmp;
+   else
+      blockObj.Notes.(varName) = varValue;
+      probes = parseProbeName(probes,varName,varValue,...
+         blockObj.Pars.Probe.ProbeIndexParseFcn);
+   end
 end
+
 blockObj.Notes.Probes = probes;
+
 
    function probes = parseProbeName(probes,varName,varValue,idxParseFcn)
       strParts = strsplit(varName,'_');
