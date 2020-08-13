@@ -30,7 +30,7 @@ for iCh = blockObj.Mask
    for iT = 1:numel(type)
       data = blockObj.Channels(iCh).(type{iT})(:);
       x.(type{iT}) = rms(data);
-      rms_out(iCh).(type{iT}) = rms(data(sampleIndices));
+      rms_out(iCh).(type{iT}) = rms(data);
    end
    if isempty(blockObj.RMS)
        blockObj.RMS = [struct2table(x)];
