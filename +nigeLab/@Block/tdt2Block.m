@@ -8,7 +8,13 @@ else % Otherwise, it was run via a "q" command
 end
 
 if nargin < 2
-   recFile = blockObj.RecFile;
+    recFile = blockObj.RecFile;
+    if ~isfolder(recFile)
+        [path,~,ext] = fileparts(recFile);
+        if any(strcmp(ext,{'.Tbk','.Tdx','.tev','.tnt','.tsq'}))
+            recFile = path;
+        end
+    end
 end
 tic;
 TDTNaming =  nigeLab.defaults.TDT();
@@ -36,16 +42,30 @@ end
 % preallocates matfiles for varible that otherwise would require
 % nChannles*nSamples matrices
 
-diskPars = struct('format',blockObj.SaveFormat,...
+diskPars = struct(...
+    'format','MatFile',...
    'name',[],...
    'size',[1 num_raw_samples],...
    'access','w',...
-   'class','int32');
-Files = struct;
+   'class','int32',...
+   'verbose',blockObj.Verbose && ~blockObj.OnRemote);
+
+Files = struct('Standard',struct,'Time',[],'Other',struct);
+
 
 fprintf(1, 'Allocating memory for data...\n');
 diskPars.name = fullfile(paths.Time.info);
 Files.Time = nigeLab.utils.makeDiskFile(diskPars);
+
+
+
+diskPars = struct(...
+    'format','MatFile',...
+    'name',[],...
+    'size',[1 num_raw_samples],...
+    'access','w',...
+    'class','single',...
+    'verbose',blockObj.Verbose && ~blockObj.OnRemote);
 
 if (num_raw_channels > 0)
    reportProgress(blockObj,'Raw info', 0);
@@ -53,14 +73,14 @@ if (num_raw_channels > 0)
    infoname = fullfile(paths.Raw.info);
    save(fullfile(infoname),'info','-v7.3');
    % One file per probe and channel
-   amplifier_dataFile = cell(num_raw_channels,1);
+   Files.Standard.AmplifierDataFile = cell(num_raw_channels,1);
    for iCh = 1:num_raw_channels
       pNum  = num2str(raw_channels(iCh).port_number);
       chNum = raw_channels(iCh).custom_channel_name(regexp(raw_channels(iCh).custom_channel_name, '\d'));
       fName = sprintf(strrep(paths.Raw.file,'\','/'), pNum, chNum);
       if exist(fName,'file'),delete(fName);end
-      amplifier_dataFile{iCh} = nigeLab.libs.DiskData(blockObj.SaveFormat,fullfile(fName),...
-         'class','single','size',[1 num_raw_samples],'access','w');
+      diskPars.name = fName;
+      Files.Standard.AmplifierDataFile{iCh} = nigeLab.utils.makeDiskFile(diskPars,zeros(1,num_raw_samples,'single'));
       fraction_done = 100 * (iCh / num_raw_channels);
    end
 end
@@ -77,8 +97,9 @@ end
            pb = raw_channels(iCh).port_number;
            block = TDTbin2mat(recFile,'TYPE',{'STREAMS'},'CHANNEL',ch,'VERBOSE',false);
            data = single(block.streams.(TDTNaming.WaveformName{pb}).data * 10^6);  %#ok<*NASGU>
-           amplifier_dataFile{iCh}.append(data);
-           blockObj.Channels(iCh).Raw = lockData(amplifier_dataFile{iCh});
+           Files.Standard.AmplifierDataFile{iCh}(1,1:num_raw_samples) = (data);
+           lockData(Files.Standard.AmplifierDataFile{iCh});
+           blockObj.Channels(iCh).Raw = Files.Standard.AmplifierDataFile{iCh};
            fraction_done = 100 * (iCh / num_raw_channels);
            reportProgress(blockObj,'Raw', fraction_done);
        end
@@ -135,7 +156,7 @@ end
 %    fprintf(1, '\t->Extracting snips info...%.3d%%\n',0);
 %    if any(strcmp('snips',dataType))     % usually sorted spike snippets. 30 samples
 %    end
-   
+   blockObj.Events.TDTEvents = events;
    flag = true;
 end
 

@@ -8,43 +8,27 @@ function header = ReadTDTHeader(name,verbose)
 %%
 acqsys = 'TDT';
 
-acqsys = 'TDT';
-
 if nargin < 1
-   verbose = false;
-elseif nargin < 2
-   verbose = true;
-end
-
-if exist('FID','var')
+    [path] = ...
+      uigetdir('Select a TDT block folder');
    
-   [name,~,~,~] = fopen(FID); %#ok<NODEF>
-   if isempty(name)
-      error('Must provide a valid file pointer.');
-   end
-elseif exist('NAME', 'var')
-   
-   % If a pre-specified path exists, must be a valid path.
-   if exist(name,'file')==0
-      error('Must provide a valid RHD2000 Data File and Path.');
-   else
-      FID = fopen(name, 'r');
-   end
-else    % Must select a directory and a file
-   
-   
-   [path] = ...
-      uigetdir('Select a TDT block folder', ...
-      'MultiSelect', 'off');
-   
-   if file == 0 % Must select a file
+   if path == 0 % Must select a file
       error('Must select a TDT block folder.');
    end
    
    name = path;
-   FID = fopen(name, 'r');
-   
-   
+end
+
+
+if nargin < 2
+   verbose = false;
+end
+
+if ~isfolder(name) 
+    [path,~,ext] = fileparts(name);
+    if any(strcmp(ext,{'.Tbk','.Tdx','.tev','.tnt','.tsq'}))
+       name = path; 
+    end
 end
 
 s = dir(name);
@@ -95,7 +79,7 @@ end
 
 num_probes = length(wav_data);
 probes = char((1:num_probes) -1 + double('A')); % nice
-raw_channels = nigeLab.utils.initChannelStruct('Channels',1);
+raw_channels = nigeLab.utils.initChannelStruct('Channels',0);
 for pb = 1:num_probes
    Chans = unique(heads.stores.(wav_data{pb}).chan);
    for iCh = 1:numel(Chans)

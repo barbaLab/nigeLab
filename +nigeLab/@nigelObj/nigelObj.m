@@ -6073,7 +6073,7 @@ classdef nigelObj < handle & ...
                obj.RecType=recType;
                return;
                
-            case ''
+            case {'','Unknown'}
                files = dir(nigeLab.utils.getUNCPath(obj.RecFile));
                files = files(~[files.isdir]);
                if isempty(files)
@@ -6084,10 +6084,11 @@ classdef nigelObj < handle & ...
                [~,~,ext] = fileparts(files(1).name);
                switch ext
                   case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
-                     recType = 'TDT';
-                     obj.RecType=recType;
-                     obj.FileExt = ext;
-                     
+                      recType = 'TDT';
+                      obj.RecType=recType;
+                      obj.RecSystem = nigeLab.utils.AcqSystem('TDT');
+                      obj.FileExt = ext;
+                      
                   case '.nigelBlock'
                      recType = 'nigelBlock';
                      obj.RecType=recType;
@@ -6096,8 +6097,20 @@ classdef nigelObj < handle & ...
                   case '.mat'
                      recType = 'Matfile';
                      obj.RecType=recType;
-                     obj.FileExt = '.mat';
+                     obj.FileExt = ext;
                      
+                   case '.rhd'
+                       recType = 'Intan';
+                       obj.RecType=recType;
+                       obj.RecSystem = nigeLab.utils.AcqSystem('RHD');
+                       obj.FileExt = ext;
+
+                   case '.rhs'
+                       recType = 'Intan';
+                       obj.RecType=recType;
+                       obj.RecSystem = nigeLab.utils.AcqSystem('RHS');
+                       obj.FileExt = ext;
+
                   otherwise
                      recType = 'other';
                      obj.RecType=recType;

@@ -843,7 +843,7 @@ classdef Block < nigeLab.nigelObj
                meta.RecDate = [YY MM DD];
             else
                meta.RecDate = 'YYMMDD';
-               if obj.Verbose
+               if blockObj.Verbose
                   [fmt,idt] = getDescriptiveFormatting(blockObj);
                   nigeLab.utils.cprintf('Errors*','%s[BLOCK/PARSE]: ',idt);
                   nigeLab.utils.cprintf(fmt,...
