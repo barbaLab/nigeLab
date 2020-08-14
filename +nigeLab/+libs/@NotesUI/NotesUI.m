@@ -126,6 +126,9 @@ classdef NotesUI < matlab.apps.AppBase
          app.NotesTextArea.Position = [left*.05 bottom*.25 width*.9 height*.65];
          if app.loadNotes
             app.NotesTextArea.Value = app.Notes.String;
+         else
+            [~,f,~] = fileparts(app.Notes.File);
+            fprintf(1,'\b Blank note (<strong>%s</strong>) created.\n',f);
          end
          
          % Create SaveButton
@@ -194,11 +197,24 @@ classdef NotesUI < matlab.apps.AppBase
                end
                fclose(fid);
             else
-               disp('Notes file not found.');
+               fprintf(1,'\n\tNotes file not found.\n');
+               p = fileparts(app.Notes.File);
+               fname = fullfile(p,'.nigelBlock');
+               if exist(fname,'file')~=0
+                  fid = fopen(fname,'r');
+                  app.Notes.String = textscan(fid,'%s','delimiter','\n');  
+                  if ~isempty(app.Notes.String)
+                     app.Notes.String = app.Notes.String{1}; 
+                  end
+                  fclose(fid);
+                  fprintf(1,...
+                     '\b Using <strong>.nigelBlock</strong> contents instead.\n');
+                  flag = true;
+               end
                return;
             end
          else
-            disp('No notes file specified.');
+            fprintf(1,'\n\tNo notes file specified.\n');
             return;
          end  
          flag = true;

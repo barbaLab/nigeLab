@@ -1,12 +1,32 @@
-function h = takeNotes(blockObj)
-%% TAKENOTES   View or update notes on current BLOCK.
+function h = takeNotes(blockObj,fname)
+%TAKENOTES  View or update notes on current BLOCK.
 %
-%  h = blockObj.TAKENOTES
+%  h = takeNotes(blockObj);
+%  h = takeNotes(blockObj,fname);
 %
-% By: Max Murphy  v1.0  08/27/2017  Original version (R2017a)
-%                 v1.1  12/11/2018  Bugfixes
+% Inputs
+%  blockObj - nigeLab.Block object
+%  fname    - 'notes.txt' (default) | Any char vector filename
+%
+% Output
+%  h        - nigeLab.libs.NotesUI handle (can be used to block advance of
+%              script until the notes have been entered)  
+%
+% See also: nigeLab, nigeLab.libs, nigeLab.libs.NotesUI
 
-%%
-h = nigeLab.libs.NotesUI(blockObj.Paths.Notes.name,blockObj);
+if nargin < 2
+   fname = 'notes.txt';
+end
+
+if numel(blockObj) > 1
+   for i = 1:numel(blockObj)
+      h = takeNotes(blockObj(i),fname);
+      waitfor(h);
+   end
+   return;
+end
+
+filename = fullfile(blockObj.Output,fname);
+h = nigeLab.libs.NotesUI(filename,blockObj);
 
 end

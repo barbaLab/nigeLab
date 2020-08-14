@@ -9,9 +9,11 @@ pars.File = 'Probes.xlsx';
 pars.Str = '%s.xlsx';
 pars.Delimiter = '_';
 pars.ElectrodesFolder = 'K:\Rat\Electrodes';
-pars.ProbeIndexParseFcn = @(str)(str2double(str(2))-1);
+pars.ProbeIndexParseFcn = @(str)(str2double(str(2))-1); % Current syntax: 'Probe_A1' | 'Probe_A2' | 'Probe_B1' | 'Probe_B2' | etc.
+% Note: for Intan, the probe number (after '_A') corresponds to 
+%        [board_stream + 1]. 
 
-%% Parse output
+% Parse output
 if nargin < 1
    varargout = {pars};
 else
