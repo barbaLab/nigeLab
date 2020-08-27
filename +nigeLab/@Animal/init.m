@@ -17,7 +17,7 @@ supportedFormats = animalObj.Pars.Experiment.SupportedFormats;
 
 %GET BLOCKS
 % Remove other folder names
-Recordings = cellfun(@(x) dir(fullfile(animalObj.RecDir,['*' x])),supportedFormats,'UniformOutput',false);
+Recordings = cellfun(@(x) dir(fullfile(animalObj.RecDir,['**/*' x])),supportedFormats,'UniformOutput',false);
 Recordings = cat(1,Recordings{:});
 animalObj.checkParallelCompatibility();
 skipVec = false([1,numel(Recordings)]);

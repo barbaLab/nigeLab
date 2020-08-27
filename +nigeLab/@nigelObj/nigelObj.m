@@ -54,8 +54,9 @@ classdef nigelObj < handle & ...
 
    % PUBLIC/PROTECTED
    properties (GetAccess=public,SetAccess=protected)
-      Fields            cell = nigeLab.nigelObj.Default('Fields')     % Specific things to record
-      FieldType         cell = nigeLab.nigelObj.Default('FieldType')  % "Types" corresponding to Fields elements
+      Fields            cell                    % Specific things to record
+      FieldType         cell                    % "Types" corresponding to Fields elements
+      ViableFieldTypes  cell
       IDInfo      (1,1) struct                  % Struct parsed from ID file
       HasParsFile (1,1) logical=false           % Flag --> True if _Pars.mat exists
       HasParsInit (1,1) struct                  % Flag struct --> .param is True if obj.updateParams('param') has been run
@@ -67,7 +68,7 @@ classdef nigelObj < handle & ...
    properties (Constant,Access=protected)
       FileExpr         char = '_%s.mat'     % Expression for _Block or _Animal or _Tank file
       ParamsExpr       char = '%s_Pars.mat' % Expression for parameters file
-      ViableFieldTypes cell = nigeLab.nigelObj.Default('ViableFieldTypes') % Valid entries for 'Fields'
+        % Valid entries for 'Fields'
    end
    
    % DEPENDENT,PUBLIC
@@ -346,6 +347,9 @@ classdef nigelObj < handle & ...
          end
          
          obj.Type = Type;
+         obj.ViableFieldTypes = nigeLab.nigelObj.Default('ViableFieldTypes');
+         obj.FieldType        = nigeLab.nigelObj.Default('FieldType');
+         obj.Fields           = nigeLab.nigelObj.Default('Fields');
          % Construct Empty output
          if isnumeric(inPath)
             dims = inPath;
