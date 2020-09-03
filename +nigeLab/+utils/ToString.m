@@ -4,6 +4,8 @@ function str =  ToString(in1)
 if iscell(in1)
     if isscalar(in1)
         str = {nigeLab.utils.ToString(in1{1})};
+    elseif isempty(in1)
+        str = '';
     else
         str = [{nigeLab.utils.ToString(in1{1})},...
             nigeLab.utils.ToString(in1(2:end))];

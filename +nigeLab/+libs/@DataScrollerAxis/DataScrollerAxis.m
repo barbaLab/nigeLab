@@ -143,11 +143,11 @@ classdef DataScrollerAxis < handle
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
             end
             
-            if isempty(tt)
+            if isempty(tt) || length(tt)~=obj.sigLenght
                 %failsafe
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
             end
-            [x_reduced, y_reduced] = nigeLab.utils.reduce_to_width(tt, data, obj.MainAxPixelSize ,[tt(1) tt(end)]);
+            [x_reduced, y_reduced] = nigeLab.utils.reduce_to_width(tt, data, obj.MainAxPixelSize(4) ,[tt(1) tt(end)]);
             cla(obj.UI.MainAx);
             L = line(obj.UI.MainAx,x_reduced,y_reduced);
             obj.ReducedPlot = nigeLab.utils.LinePlotReducer(L,tt,data);
