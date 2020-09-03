@@ -111,7 +111,7 @@ switch class(target)
                attachedFiles{jj}=getUNCPath(attachedFiles{jj});
             end
          else
-            p = qPars.RemoteRepoPath;
+            p = nigeLab.utils.getUNCPath(qPars.RemoteRepoPath);
             db_p = nPars.DBLoc;
             % Create a worker config file that adds the remote repository,
             % then loads the corresponding block matfile and runs the

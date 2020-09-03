@@ -433,7 +433,9 @@ classdef configSD < handle
            t = (obj.startIdx:obj.endIdx)./fs;
            delete([obj.artPlot,obj.spkPlot]);
            cla(obj.SpikeAx);
-           obj.artPlot = plot(obj.DataAx,t(art),obj.data(art),'og');
+           dat = obj.data;
+           dat(setdiff(1:length(t),art)) = nan;
+           obj.artPlot = line(obj.DataAx,t,dat,'LineStyle','-','LineWidth',2,'Color','g');
            legend(obj.DataAx,{'Data','Artifacts'});
        end
        
@@ -456,12 +458,24 @@ classdef configSD < handle
            legend(obj.DataAx,{'Data','Artifacts','Spikes'});
            % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
            tIdx = tIdx(:); % make sure it's vertical
-           cla(obj.SpikeAx);
+           cla(obj.SpikeAx,'reset');
            if (any(tIdx)) % If there are spikes in the current signal
                snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
                spikes = obj.data(snippetIdx);
-               plot(obj.SpikeAx,(-WindowPreSamples : WindowPostSamples)./fs,spikes);
-               obj.SpikeAx.YAxis.Color = [1,1,1];obj.SpikeAx.XAxis.Color = [1,1,1];
+               
+               nBins = 300;
+               y_edge = linspace(min(spikes(:)),max(spikes(:))*1.2,nBins);
+               C = zeros(nBins-1,size(spikes,2));
+               A = zeros(nBins,size(spikes,2));
+               for ii = 1:size(spikes,2)
+                   [C(:,ii),A(:,ii)] = histcounts(spikes(:,ii),y_edge);
+               end
+               im = imagesc(obj.SpikeAx,(-WindowPreSamples : WindowPostSamples)./fs,y_edge(1:end-1) ,(C./size(spikes,1))); 
+               colormap(obj.SpikeAx,'hot');
+               box(obj.SpikeAx,'off');
+               
+%                plot(obj.SpikeAx,(-WindowPreSamples : WindowPostSamples)./fs,spikes);
+               obj.SpikeAx.YAxis.Color = [1,1,1];obj.SpikeAx.XAxis.Color = [1,1,1];obj.SpikeAx.YDir = 'normal';
            else
                spikes = [];
            end
