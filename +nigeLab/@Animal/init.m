@@ -44,15 +44,22 @@ for bb=1:numel(Recordings)
    end
    % Cases where block is to be added will toggle this flag
    addThisBlock = false;
-   if Recordings(bb).isdir
-      % handling tdt case
-      if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev')))
-         addThisBlock = true;
-         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
-         RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
+   if any(strcmp(ext,supportedFormats))
+       addThisBlock = true;
+       RecFile = nigeLab.utils.getUNCPath(Recordings(bb).folder,...
+           Recordings(bb).name);
+   elseif Recordings(bb).isdir
+       % handling tdt case
+%       if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev')))
+%          addThisBlock = true;
+%          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*.tev'));
+%          RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
+%          
+%          RecFile = nigeLab.utils.getUNCPath(Recordings(bb).folder,...
+%          Recordings(bb).name);
          
          % handling already-extracted to matfile case
-      elseif ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
+      if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
          addThisBlock = true;
          tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
          RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
@@ -93,10 +100,7 @@ for bb=1:numel(Recordings)
          end
       end
       
-   elseif any(strcmp(ext,supportedFormats))
-      addThisBlock = true;
-      RecFile = nigeLab.utils.getUNCPath(Recordings(bb).folder,...
-         Recordings(bb).name);
+   
       
    elseif strcmp(ext,'.mat')
       if endsWith(Recordings(bb).name,'_Block.mat')

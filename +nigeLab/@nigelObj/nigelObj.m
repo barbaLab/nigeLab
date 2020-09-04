@@ -5935,13 +5935,13 @@ classdef nigelObj < handle & ...
          regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
             pars.IncludeChar,pars.DiscardChar);
          splitStr = regexp(pars.DynamicVarExp,regExpStr,'match');
-         splitStr = [splitStr{:}];
+         
          
          % Find which delimited elements correspond to variables that
          % should be included by looking at the leading character from the
          % defaults.Block template string:
-         incVarIdx = find(cellfun(@(x) x(1)==pars.IncludeChar,splitStr));
-         incVarIdx = reshape(incVarIdx,1,numel(incVarIdx));
+         incVarIdx = find(~cellfun(@isempty,splitStr));
+         splitStr = [splitStr{:}];
          
          % Find which set of variables (the total number available from the
          % name, or the number set to be read dynamically from the naming
@@ -5954,8 +5954,7 @@ classdef nigelObj < handle & ...
          % 'nameParts,' because variable assignment should be decided by
          % the string in namingConvention property.
          for ii=1:nMin
-            splitStrIdx = incVarIdx(ii);
-            varName = deblank( splitStr{splitStrIdx}(2:end));
+            varName = deblank( splitStr{ii}(2:end));
             meta.(varName) = nameParts{incVarIdx(ii)};
          end
          f = fieldnames(meta);
@@ -6061,7 +6060,7 @@ classdef nigelObj < handle & ...
                obj.RecSystem = nigeLab.utils.AcqSystem('RHS');
                return;
                
-            case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+            case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq','.tdt'}
                recType = 'TDT';
                obj.RecType=recType;
                obj.RecSystem = nigeLab.utils.AcqSystem('TDT');
@@ -6087,7 +6086,7 @@ classdef nigelObj < handle & ...
                end
                [~,~,ext] = fileparts(files(1).name);
                switch ext
-                  case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq'}
+                  case {'.Tbk', '.Tdx', '.tev', '.tnt', '.tsq','.tdt'}
                       recType = 'TDT';
                       obj.RecType=recType;
                       obj.RecSystem = nigeLab.utils.AcqSystem('TDT');

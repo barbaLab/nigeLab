@@ -110,6 +110,16 @@ switch class(target)
             for jj=1:numel(attachedFiles)
                attachedFiles{jj}=getUNCPath(attachedFiles{jj});
             end
+         elseif ~qPars.UseRemote
+             p = nigeLab.utils.getNigelPath('UNC');
+            db_p = nPars.DBLoc;
+            % Create a worker config file that adds the remote repository,
+            % then loads the corresponding block matfile and runs the
+            % desired operation.
+            add_debug_outputs = nPars.DebugOn;
+            [c,w] = buildWorkerConfigScript('fromLocal',p,operation,db_p,...
+               add_debug_outputs);
+            attachedFiles = {c, w};
          else
             p = nigeLab.utils.getUNCPath(qPars.RemoteRepoPath);
             db_p = nPars.DBLoc;

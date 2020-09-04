@@ -21,7 +21,7 @@ pars.File = 'Experiment.txt';
 pars.Delimiter = '|';
 pars.StandardPortNames = {'A','B','C','D'};
 pars.DefaultAcquisitionSystem = 'RHD';  % Important if things go wrong
-pars.SupportedFormats = {'.rhs','.rhd','.tev'};
+pars.SupportedFormats = {'.rhs','.rhd','.tdt'};
 pars.User = ''; % Default user is now parsed from local machine
 
 %% Parse output
