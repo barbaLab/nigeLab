@@ -730,7 +730,7 @@ flag = true;
       Offset = Step(2:2:end); % even sample multiples always "offset"
       nStim = numel(Onset);
       midPt = round((Onset + Offset)/2);
-      sz_ = 10 + numel(iTrigCh); % # columns
+      sz_ = 10 + size(iTrigCh,2); % # columns
       if  nStim~=0
          % If there is a single unique pulse width, do this way
          pw = (Offset-Onset)./fs;
@@ -746,7 +746,7 @@ flag = true;
          stim_data_sc(:,8) = charge_recovery_data(midPt); % Is charge-recovery on?
          stim_data_sc(:,9) = amp_settle_data(midPt); % Is amp settle on?
          stim_data_sc(:,10) = stim_polarity(midPt); % Polarity of current
-         stim_data_sc(:,11:sz_) = iTrigCh; % trigger channel
+         stim_data_sc(:,11:sz_) = ones(nStim,1)*iTrigCh; % trigger channel
       else
          stim_data_sc = zeros(0,sz_);
       end
