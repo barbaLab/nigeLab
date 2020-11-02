@@ -57,8 +57,8 @@ for iCh = blockObj.Mask
    curCh = curCh + 1;
    if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
-      iProbe = blockObj.Channels(iCh).probe;
-      nChanPb = sum(iProbe == [blockObj.Channels.probe]);
+      iProbe = probe==blockObj.Channels(iCh).probe;
+      nChanPb = sum(probe(iProbe) == [blockObj.Channels.probe]);
       data = blockObj.Channels(iCh).Filt(:);
       refMean(iProbe,:)=refMean(iProbe,:) + data ./ nChanPb;
    else
@@ -93,10 +93,11 @@ else
 end
 curCh = 0;
 for iCh = blockObj.Mask
+    iProbe = probe==blockObj.Channels(iCh).probe;
    curCh = curCh + 1;
    % Do re-reference
    data = doCAR(blockObj.Channels(iCh),...
-      refMean(blockObj.Channels(iCh).probe));
+      refMean(iProbe,:));
    
    % Get filename
    pNum  = num2str(blockObj.Channels(iCh).probe);
@@ -108,7 +109,7 @@ for iCh = blockObj.Mask
    blockObj.Channels(iCh).CAR = nigeLab.libs.DiskData(...
       'MatFile',fName,data,'access','w','overwrite',true);
    lockData(blockObj.Channels(iCh).CAR);
-   blockObj.Channels(iCh).refMean = refMeanFile{blockObj.Channels(iCh).probe};
+   blockObj.Channels(iCh).refMean = refMeanFile{iProbe};
    
    % Update user
    

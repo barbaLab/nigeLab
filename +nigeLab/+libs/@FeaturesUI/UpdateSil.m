@@ -11,6 +11,7 @@ measuretype = obj.QualityIndx.UserData{1};
                                                         % are also zero 
 % sil = zeros(numel(activeToUpdate),length(feat));
 % for ii=1:numel(activeToUpdate)
+NNoiseIdx = cl(obj.rsel);
    scores = silhouette(feat(obj.rsel,:),cl(obj.rsel),measuretype{indx});
 % end
 

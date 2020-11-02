@@ -34,14 +34,14 @@ function flag = plotSpikes(blockObj,ch,class)
 
 %% PARSE INPUT ARGUMENTS
 flag = false;
-if ~ismember('Spikes',blockObj.Fields(blockObj.Status))
+if ~all(blockObj.getStatus('Spikes'))
    warning('No spikes detected yet.');
    return;
 end
 
 if nargin < 3
    class = nan;
-elseif ~ismember('Sorted',blockObj.Fields(blockObj.Status))
+elseif ~all(blockObj.getStatus('Sorted')) || ~all(blockObj.getStatus('Clusters'))
    class = nan;
 end
 

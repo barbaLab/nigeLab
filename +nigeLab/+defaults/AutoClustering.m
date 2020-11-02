@@ -5,8 +5,15 @@ function varargout = AutoClustering(varargin)
 
 %% PARAMS YOU MIGHT CHANGE
 pars = struct;
-pars.MethodName = 'KMEANS'; % Can be: 'KMEANS' or 'SPC'
-pars.NMaxClus = 9;          % Maximum # of clusters
+pars.MethodName     = 'KMEANS';     % Can be: 'KMEANS' or 'SPC'
+pars.NMaxClus       = 9;            % Maximum # of clusters
+pars.ID.Clusters    = 'kmeans';      % Attached to the cluster folder
+
+
+
+
+
+
 
 %% UNLIKELY TO CHANGE
 % Parameters for each type stored as individual files in ~/+Autoclusters

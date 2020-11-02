@@ -1,4 +1,4 @@
-function [data_ART,art_idx] = HardArtifactRejection(data,pars)
+function [data_ART,art_idx] = ART_HardThresh(data,pars)
 %% HARDARTIFACTREJECTION  Automatically changes data to zero on samples and samples within a pre-specified window around it upon crossing a pre-specified threshold.
 %
 %   --------
@@ -10,9 +10,9 @@ function [data_ART,art_idx] = HardArtifactRejection(data,pars)
 %     pars      :       Parameter structure from SPIKEDETECTCLUSTER with
 %                       the following fields:
 %       
-%       ->  th_artifact \\ Artifact threshold (micro-volts).
+%       ->  Thresh \\ Artifact threshold (micro-volts).
 %
-%       ->  nc_artifact \\ Number of samples around threshold to replace 
+%       ->  Samples \\ Number of samples around threshold to replace 
 %                          with zeros to cancel out any ripple effects of 
 %                          amplifier saturation and rebound.
 %
@@ -37,14 +37,15 @@ function [data_ART,art_idx] = HardArtifactRejection(data,pars)
 % Kelly RM    v1.0  11/04/2015  Original version.
 
 %% FIND THRESHOLD CROSSINGS
-segm = find(abs(data) >= pars.th_artifact);
+segm = find(pars.Polarity*data >= pars.Thresh);
 art_idx = [];
+Nsamples = double(floor(pars.Samples*1e-3*pars.fs)); % from ms to samples
 
 %% REMOVE (ZERO) SECTIONS AROUND ARTIFACT
 if any(segm)    
-    if (pars.nc_artifact)
-         rm_pre = max(segm - pars.nc_artifact,1);             % Start index >= 1
-         rm_post = min(length(data),segm + pars.nc_artifact); % End index <= total samples in data
+    if (Nsamples)
+         rm_pre = max(segm - Nsamples,1);             % Start index >= 1
+         rm_post = min(length(data),segm + Nsamples); % End index <= total samples in data
          
          for in = 1:length(segm) 
 %               art_idx = [art_idx ,rm_pre(in):segm(in)];
@@ -59,7 +60,7 @@ if any(segm)
 else 
     data_ART = data;
 
-    art_idx = 0;
+    art_idx = [];
 end 
 
 end

@@ -148,7 +148,7 @@ classdef nigelObj < handle & ...
       ChildContainer                            % Container for .Children Dependent property
       ChildListener     event.listener          % Listens for changes in object Children
       GUIContainer      nigeLab.libs.DashBoard  % Container for handle to GUI (nigeLab.libs.DashBoard)
-      TreeNodeContainer uiw.widget.TreeNode     % Container for handle to Tree nodes in the nigelTree obj
+      TreeNodeContainer                         % Container for handle to Tree nodes in the nigelTree obj
       ParentListener    event.listener          % Listens for changes in object Parent
       PropListener      event.listener          % Listens for changes in properties of this object
       SortGUIContainer  nigeLab.Sort            % Container for handle to Spike Sorting GUI (nigeLab.Sort)
@@ -547,21 +547,29 @@ classdef nigelObj < handle & ...
                           n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                   end
               case '.'
-                  switch class(nigelObj)
-                      case 'nigeLab.Block'
-                          if ~isempty(nigelObj(1).Pars)
-                              Ffields = nigelObj(1).Pars.Block.Fields;
-                              idx = strcmpi(Ffields,s(1).subs);
-                              if any(idx)
-                                  n = numel(nigelObj);
+                  meta = metaclass(nigelObj);
+                  methods = meta.MethodList;
+                  methodIdx = strcmp({methods.Name},s(1).subs);
+                  if any(methodIdx)
+                      thisMethod = methods(methodIdx);
+                      n = numel(thisMethod.OutputNames);
+                  else
+                      switch class(nigelObj)
+                          case 'nigeLab.Block'
+                              if ~isempty(nigelObj(1).Pars)
+                                  Ffields = nigelObj(1).Pars.Block.Fields;
+                                  idx = strcmpi(Ffields,s(1).subs);
+                                  if any(idx)
+                                      n = numel(nigelObj);
+                                  else
+                                      n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                                  end
                               else
                                   n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
                               end
-                          else
+                          otherwise
                               n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
-                          end
-                      otherwise
-                          n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
+                      end
                   end
               otherwise
                   n = builtin('numArgumentsFromSubscript',nigelObj,s,indexingContext);
@@ -3159,13 +3167,28 @@ classdef nigelObj < handle & ...
                % Get the current "Spike Detection method," which gets
                % added onto the front part of the _Spikes and related
                % folders
+               
+               % default. No attribute in teh name
+               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                   '');
                if ~isfield(obj.HasParsInit,'SD')
                   obj.updateParams('SD');
                elseif ~obj.HasParsInit.SD
                   obj.updateParams('SD');
                end
-               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
-                  obj.Pars.SD.ID.(F{iF}));
+               
+               % Look for ID in Pars
+               ParsFields = fieldnames(obj.Pars);
+               ParsWithID = find(cellfun(@(F) isfield(obj.Pars.(F),'ID'),ParsFields))';
+               for ii=ParsWithID
+                   if isfield(obj.Pars.(ParsFields{ii}).ID,(F{iF}))
+                       % if found put the ID in the foldername path
+                       p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                           obj.Pars.(ParsFields{ii}).ID.(F{iF}));
+                       break;
+                   end
+               end
+                             
             end
             
             % Set folder name for this particular Field

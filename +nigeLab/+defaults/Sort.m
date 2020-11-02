@@ -7,9 +7,12 @@ function varargout = Sort(varargin)
 pars = struct;                   % carries all parameter variables
 
 % Defaults for UI usability
-pars.InFileFilt = {'*_Block.mat';'*_Animal.mat';'*_Tank.mat'};
-pars.InFilePrompt = 'Select BLOCK(S), ANIMAL(S), or TANK';
-pars.InFileDefDir = 'P:\Rat';     
+pars.InFileFilt     = {'*_Block.mat';'*_Animal.mat';'*_Tank.mat'};
+pars.InFilePrompt   = 'Select BLOCK(S), ANIMAL(S), or TANK';
+pars.InFileDefDir   = 'P:\Rat';
+
+pars.ID.Sorted      = 'Manual'; % Label attached to the Sorted folder 
+
 pars.ForceNext = false; % Automatically jump to next channel on "confirm"
 pars.Debug = false;  % Set to TRUE to move handles to base workspace
 

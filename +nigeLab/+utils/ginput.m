@@ -297,7 +297,7 @@ function crossHair = createCrossHair(fig)
 % Create thin uicontrols with black backgrounds to simulate fullcrosshair pointer.
 % 1: horizontal left, 2: horizontal right, 3: vertical bottom, 4: vertical top
 for k = 1:4
-    crossHair(k) = uicontrol(fig, 'Style', 'text', 'Visible', 'off', 'Units', 'pixels', 'BackgroundColor', [0 0 0], 'HandleVisibility', 'off', 'HitTest', 'off'); %#ok<AGROW>
+    crossHair(k) = uicontrol(fig, 'Style', 'text', 'Visible', 'off', 'Units', 'pixels', 'BackgroundColor', nigeLab.defaults.nigelColors('onsecondary'), 'HandleVisibility', 'off', 'HitTest', 'off'); %#ok<AGROW>
 end
 end
 

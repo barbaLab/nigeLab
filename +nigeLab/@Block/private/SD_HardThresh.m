@@ -1,4 +1,4 @@
-function [v,ts,w,p] = ThresholdDetection(data,pars,polarity)
+function [ts,p2pamp,pmin,pW]  = SD_HardThresh(data,pars)
 %% THRESHOLDDETECTION  Use monopolar threshold-crossing to get spike times
 %
 %   [v,ts,w,p] = THRESHOLDDETECTION(data,thresh,PLP,RP,polarity)
@@ -45,19 +45,37 @@ function [v,ts,w,p] = ThresholdDetection(data,pars,polarity)
 %                   v1.0    08/02/2017  Original version (R2017a)
 
 %% SET THRESHOLD
-% Min of flat threshold or adaptive from Quiroga 2004
-pars.thresh = min(pars.FIXED_THRESH,...
-                  pars.MULTCOEFF*median(abs(data))/0.6745);
 
-%% JUST USE FINDPEAKS...
-[v,ts,w,p] = findpeaks(polarity*data, ...
-                      'MinPeakHeight',pars.thresh, ...
-                      'MinPeakProminence',pars.thresh,...
-                      'MaxPeakWidth',pars.PLP/3, ... 
-                      'WidthReference','halfheight', ...
-                      'MinPeakDistance',pars.RP);
-                  
-%% MAKE SURE SIGN IS CORRECT
-v = v * polarity;
+pk = pars.Polarity * data > pars.Thresh;
+
+%% REDUCE CONSECUTIVE CROSSINGS TO SINGLE POINTS
+z = zeros(size(data));
+pkloc = conv(pk,ones(1,pars.NSaround*2+1),'same')>0;
+z(pkloc) = pars.Polarity .* data(pkloc);
+
+
+minTime = 1e-3*pars.RefrTime; % parameter in milliseconds
+[ts,pmin] = nigeLab.libs.peakseek(z,minTime*pars.fs,pars.Thresh);
+pmin = pmin .* pars.Polarity;
+
+
+%% GET PEAK-TO-PEAK VALUES
+PLP = pars.PeakDur*1e-3*pars.fs; % from ms to samples
+tloc = repmat(ts,2*PLP+1,1) + (-PLP:PLP).';
+tloc(tloc < 1) = 1;
+tloc(tloc > numel(data)) = numel(data);
+[pmax,Imax] = max(data(tloc));
+pW = abs(Imax-PLP);
+p2pamp = pmax + pmin;
+
+%% EXCLUDE VALUES OF PMAX <= 0
+pm_ex = pmax<=0;
+ts(pm_ex) = [];
+p2pamp(pm_ex) = [];
+pmax(pm_ex) = [];
+pmin(pm_ex) = [];
+pW(pm_ex) = [];
+
+
 
 end
