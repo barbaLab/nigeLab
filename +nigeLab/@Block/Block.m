@@ -1021,7 +1021,7 @@ classdef Block < nigeLab.nigelObj
       rms_out = analyzeRMS(blockObj,type,sampleIndices)  % Compute RMS for channels
       
       % Methods for visualizing data:
-      flag = plotWaves(blockObj)          % Plot stream snippets
+      flag = plotWaves(blockObj,ax,field,idx,computeRMS)          % Plot stream snippets
       flag = plotSpikes(blockObj,ch)      % Show spike clusters for a single channel
       flag = plotOverlay(blockObj)        % Plot overlay of values on skull
       
