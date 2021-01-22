@@ -365,7 +365,7 @@ classdef nigelTree < handle & matlab.mixin.SetGet
                 case 'nigeLab.Tank'
                     sel = [1 0 0];
                 case 'nigeLab.Animal'
-                    sel = [ones(numel(value),1), find(ismember(obj.Tank.Children,value))', zeros(numel(value),1)];
+                    sel = [ones(numel(value),1), find(ismember(obj.Tank.Children,value,'legacy'))', zeros(numel(value),1)];
                     
                 case 'nigeLab.Block'
                     % cycle through the blocks
@@ -375,12 +375,12 @@ classdef nigelTree < handle & matlab.mixin.SetGet
                     aa=1;
                     while ~isempty(value)
                         Bl = An(aa).Children;
-                        Idx = find(ismember(Bl,value));
+                        Idx = find(ismember(Bl,value,'legacy'));
                         numMatches = numel(Idx);
                         sel(count:count+numMatches-1,:) = [ones(numMatches,1) aa*ones(numMatches,1) Idx(:)];
                         count = count+numMatches;
                         aa = aa+1;
-                        value(ismember(value,Bl)) = [];
+                        value(ismember(value,Bl,'legacy')) = [];
                         if isempty(value)
                             sel(~any(sel,2),:)=[];
                             
