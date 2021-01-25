@@ -89,7 +89,7 @@ E = Zs(ts);
 
 
 %% GET PEAK-TO-PEAK VALUES
-PLP = pars.PeakDur*1e-3*pars.fs; % from ms to samples
+PLP = floor(pars.PeakDur*1e-3*pars.fs); % from ms to samples
 tloc = repmat(ts,2*PLP+1,1) + (-PLP:PLP).';
 tloc(tloc < 1) = 1;
 tloc(tloc > numel(data)) = numel(data);
