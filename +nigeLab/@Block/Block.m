@@ -977,6 +977,7 @@ classdef Block < nigeLab.nigelObj
       [csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
       
       % Methods for data extraction:
+      sig  = suppressStim(blockObj,nChan,varargin)          % removes stimulation pulses from raw signal and returns a cleaned one
       flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
       flag = doAutoClustering(blockObj,chan,unit,useSort)   % Do automatic spike clustiring
       flag = doBehaviorSync(blockObj)                       % Get sync from neural data for external triggers
@@ -1052,6 +1053,7 @@ classdef Block < nigeLab.nigelObj
       str = reportProgress(blockObj,str_expr,pct,notification_mode,tag_str) % Update the user of progress
       checkMask(blockObj) % Just to double-check that empty channels are masked appropriately
       idx = matchProbeChannel(blockObj,channel,probe); % Match Channels struct index to channel/probe combo
+      flag = clearSpace(blockObj,ask,Choice);
    end
    
    % HIDDEN,PUBLIC

@@ -47,7 +47,7 @@ APASS  = 0.1;        % Passband Ripple (dB)
 METHOD = 'ellip';    % filter type
 ORDER = 4;
 
-STIM_SUPPRESS = false;  % set true to do stimulus artifact suppression
+STIM_SUPPRESS = true;  % set true to do stimulus artifact suppression
 STIM_BLANK = [1 3];     % milliseconds prior and after to blank on stims
 STIM_P_CH = [nan, nan]; % [probe #, channel #] for channel delivering stims
 

@@ -7,6 +7,9 @@ function varargout = LFP(varargin)
 pars = struct;
 pars.DecimateCascadeM=[5 3 2]; % Decimation factor
 pars.DecimateCascadeN=[3 5 5]; % Chebyshev LPF order
+pars.STIM_SUPPRESS = true;
+pars.ReReference = true;
+pars.NotchF = 50;
 
 %% DO NOT CHANGE
 pars.DecimationFactor=prod(pars.DecimateCascadeM);
