@@ -1,9 +1,9 @@
 function [ts,p2pamp,pmin,pW] = SD_PTSD(data,pars)
 
-
+Thresh = pars.MultCoeff*median(abs(data(:))./0.6745);
 
 % PRECISION TIMINIG SPIKE DETECTION
-[spkValues, spkTimeStamps] = SpikeDetection_PTSD_core( double(data(:)), pars.Thresh , pars.PeakDur, pars.RefrTime, pars.AlignFlag);
+[spkValues, spkTimeStamps] = SpikeDetection_PTSD_core( double(data(:)), Thresh , pars.PeakDur, pars.RefrTime, pars.AlignFlag);
 
 % %%%%%%%%%%%%%%% Valentina - end
 ts  = 1 + spkTimeStamps( spkTimeStamps > 0 )'; % +1 added to accomodate for zero- (c) or one-based (matlab) array indexing
