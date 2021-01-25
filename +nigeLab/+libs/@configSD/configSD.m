@@ -443,8 +443,8 @@ classdef configSD < handle
            fs = obj.ExBlock.SampleRate;
            t = (obj.startIdx:obj.endIdx)./fs;
            
-           WindowPreSamples =  obj.Pars.WPre * 1e-3 * fs;
-           WindowPostSamples =  obj.Pars.WPost * 1e-3 * fs;
+           WindowPreSamples =  floor(obj.Pars.WPre * 1e-3 * fs);
+           WindowPostSamples =  floor(obj.Pars.WPost * 1e-3 * fs);
            out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(obj.data) - WindowPostSamples - 2;
           
            peakAmpl(out_of_record) = [];
@@ -460,7 +460,7 @@ classdef configSD < handle
            tIdx = tIdx(:); % make sure it's vertical
            cla(obj.SpikeAx,'reset');
            if (any(tIdx)) % If there are spikes in the current signal
-               snippetIdx = floor((-WindowPreSamples : WindowPostSamples) + tIdx);
+               snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
                spikes = obj.data(snippetIdx);
                
                nBins = 300;

@@ -56,7 +56,7 @@ for iCh = blockObj.Mask
    data = blockObj.Channels(iCh).CAR(:);
    
    % Do the detection:
-   if (iCh == 1)
+   if (curCh == 1)
       [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars);
    else
       [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD);
@@ -252,8 +252,8 @@ flag = true;
       end
       
       % EXCLUDE SPIKES THAT WOULD GO OUTSIDE THE RECORD
-      WindowPreSamples = pars.WPre * 1e-3 * pars.fs; 
-      WindowPostSamples = pars.WPost * 1e-3 * pars.fs; 
+      WindowPreSamples = floor(pars.WPre * 1e-3 * pars.fs); 
+      WindowPostSamples = floor(pars.WPost * 1e-3 * pars.fs); 
       out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(data) - WindowPostSamples - 2;
       peak2peak(out_of_record) = [];
       peakAmpl(out_of_record) = [];
@@ -325,12 +325,13 @@ flag = true;
              pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-width'}];
          end
          
-         
-         features = [features, normalize(pTransformed(:))];
-         if ~ismember({'pk-energy'},pars.FEAT_NAMES)
-             pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-energy'}];
+         if exist('pTransformed','var')~=0
+             features = [features, normalize(pTransformed(:))];
+             
+             if ~ismember({'pk-energy'},pars.FEAT_NAMES)
+                 pars.FEAT_NAMES = [pars.FEAT_NAMES, {'pk-energy'}];
+             end
          end
-         
          
       else % If there are no spikes in the current signal
          spk = ones(0,-WindowPreSamples + WindowPostSamples + 4);
