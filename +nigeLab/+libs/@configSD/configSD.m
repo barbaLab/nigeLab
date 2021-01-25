@@ -460,7 +460,7 @@ classdef configSD < handle
            tIdx = tIdx(:); % make sure it's vertical
            cla(obj.SpikeAx,'reset');
            if (any(tIdx)) % If there are spikes in the current signal
-               snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
+               snippetIdx = floor(-WindowPreSamples : WindowPostSamples) + tIdx);
                spikes = obj.data(snippetIdx);
                
                nBins = 300;
