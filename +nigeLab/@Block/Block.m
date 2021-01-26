@@ -977,7 +977,7 @@ classdef Block < nigeLab.nigelObj
       [csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
       
       % Methods for data extraction:
-      sig  = suppressStim(blockObj,nChan,varargin)          % removes stimulation pulses from raw signal and returns a cleaned one
+      sig  = execStimSuppression(blockObj,nChan)          % removes stimulation pulses from raw signal and returns a cleaned one
       flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
       flag = doAutoClustering(blockObj,chan,unit,useSort)   % Do automatic spike clustiring
       flag = doBehaviorSync(blockObj)                       % Get sync from neural data for external triggers
