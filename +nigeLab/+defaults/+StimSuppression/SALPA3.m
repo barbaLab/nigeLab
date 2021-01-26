@@ -8,7 +8,9 @@ function varargout = SALPA3(varargin)
 
 
 
-
+pars.d = 5;
+pars.hw_blank = 20;
+pars.sig_V = [];
 
 %% Parse output
 if nargin < 1

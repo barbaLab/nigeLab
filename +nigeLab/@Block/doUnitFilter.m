@@ -61,8 +61,7 @@ for iCh = blockObj.Mask
    if ~pars.STIM_SUPPRESS
        data = blockObj.Channels(iCh).Raw(:);
    else
-       data = blockObj.suppressStim(iCh,'method','softpoly');
-%       warning('STIM SUPPRESSION method not yet available.');
+       data = blockObj.execStimSuppression(iCh);
    end
       % Filter and and save amplifier_data by probe/channel
       pNum  = num2str(blockObj.Channels(iCh).probe);

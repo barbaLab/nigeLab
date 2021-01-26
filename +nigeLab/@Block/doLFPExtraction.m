@@ -60,7 +60,7 @@ for iCh=blockObj.Mask
        % Get the values from Raw DiskData, and decimate:
        data=double(blockObj.Channels(iCh).Raw(:));
    else
-       data=double(blockObj.suppressStim(iCh,'method','softpoly'));
+       data=double(blockObj.execStimSuppression(iCh));
    end
    
    if isfield(pars,'NotchF') &&~isempty(pars.NotchF)
@@ -88,7 +88,7 @@ for iCh=blockObj.Mask
    pct = round(curCh/nCh*50);
    blockObj.reportProgress(str,pct,'toWindow');
    blockObj.reportProgress('Decimating.',pct,'toEvent');
-   if ~pars.ReReference
+     if ~pars.ReReference
        lockData(blockObj.Channels(iCh).LFP);
        blockObj.updateStatus('LFP',true,iCh);
    end
