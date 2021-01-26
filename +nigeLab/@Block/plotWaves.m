@@ -50,7 +50,7 @@ end
 plotSpikesOverlay = false;
 switch field
     case 'LFP'
-        fs = blockObj.LFPPars.DownSampledRate;
+        fs = blockObj.Pars.LFP.DownSampledRate;
     case 'Spikes'
         fs = blockObj.SampleRate;
         plotSpikesOverlay = true;
@@ -113,7 +113,7 @@ tickLabs = cell(blockObj.NumChannels,1);
 tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
    blockObj.NumChannels));
 pixelPos = getpixelposition(ax);
-for iCh = 1:blockObj.NumChannels
+for iCh = blockObj.Mask
    tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
    y = blockObj.Channels(iCh).(field)(idx)+tickLocs(iCh);
    [t_reduced, y_reduced] = nigeLab.utils.reduce_to_width(t, y, pixelPos(end) ,[t(1) t(end)]);

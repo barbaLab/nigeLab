@@ -31,7 +31,14 @@ classdef ExploreData < handle
         end
         
         function plotSnippets(obj,src,evt)
-            fs = obj.ThisBlock.SampleRate;
+            dataType = obj.UI.DataSelector.String{obj.UI.DataSelector.Value};
+            
+            switch dataType
+                case 'LFP'
+                    fs = obj.ThisBlock.Pars.LFP.DownSampledRate;
+                otherwise
+                    fs = obj.ThisBlock.SampleRate;
+            end
             obj.ROI = cumsum(floor(evt.ROI([1 3])*fs))+1;
             plotData(obj);
         end
@@ -121,6 +128,9 @@ classdef ExploreData < handle
             Field = obj.UI.DataSelector.String{idx};
             
             switch Field
+                case 'LFP'
+                    obj.ROI = obj.ROI ./  (obj.ThisBlock.SampleRate ./ obj.ThisBlock.Pars.LFP.DownSampledRate);
+                    obj.ROI = ceil(obj.ROI);
                 case 'Spikes'
                     if  all(obj.ThisBlock.getStatus({'CAR'}))
                         Field = 'CAR';

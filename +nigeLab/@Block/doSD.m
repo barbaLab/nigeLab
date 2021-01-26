@@ -265,7 +265,7 @@ flag = true;
       
       % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
       tIdx = tIdx(:); % make sure it's vertical 
-      if (any(tIdx)) % If there are spikes in the current signal
+      if (numel(tIdx)>pars.MinSpikes) % If there are spikes in the current signal
          snippetIdx = (-WindowPreSamples : WindowPostSamples) + tIdx;
          spikes = data(snippetIdx);
 %          [peak_train,spikes] = BuildSpikeArray(data,ts,peak2peak,pars);
@@ -334,8 +334,9 @@ flag = true;
          end
          
       else % If there are no spikes in the current signal
+          FeatFun = ['FEAT_' pars.FeatureExtractionMethodName];
          spk = ones(0,-WindowPreSamples + WindowPostSamples + 4);
-         feat = ones(0,numel(pars.FEAT_NAMES)+4);
+         feat = ones(0,pars.(FeatFun).NOut+4);
          art = ones(0,5);
          return;
       end

@@ -49,7 +49,7 @@ pars = struct;
 
 pars.STIM_TS  = [];            % Pre-specified stim times
 pars.ARTIFACT = [];            % Pre-specified artifact times
-
+pars.MinSpikes = 100;          % Minimum number of spikes to compute feature detection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%% Spike Detection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

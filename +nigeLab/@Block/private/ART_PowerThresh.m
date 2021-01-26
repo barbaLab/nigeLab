@@ -37,7 +37,11 @@ function [data_ART,art_idx] = ART_PowerThresh(data,pars)
 % Kelly RM    v1.0  11/04/2015  Original version.
 
 %% FIND THRESHOLD CROSSINGS
+fs = pars.fs;
+W = window(pars.winType, pars.winL*fs ,pars.winPars{:})./pars.winL*fs;
 if pars.Polarity > 0
+%     PP = conv(data,W,'same');
+%     PP(PP<0)=0;
     PP = (data*1e-6).^2;
     PP(data<0) = 0;
 elseif pars.Polarity < 0
@@ -46,8 +50,6 @@ elseif pars.Polarity < 0
 else
     PP = (data*1e-6).^2;
 end
-fs = pars.fs;
-W = window(pars.winType, pars.winL*fs ,pars.winPars{:})./pars.winL*fs;
 PP = conv(PP,W,'same');
 segm = find(PP >= pars.MultCoeff*median(PP));
 art_idx = [];

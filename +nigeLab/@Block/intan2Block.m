@@ -131,6 +131,9 @@ for f = fields_to_extract
          group = info(1).signal.Group;
          Files.Standard.(curDataField).(group) = cell(blockObj.NumChannels,1);
          nCh.Standard.(curDataField).(group) = header.(['Num' curDataField 'Channels']);
+         if header.DCAmpDataSaved
+             nCh.Standard.DC.Data = blockObj.NumChannels;
+         end
          % Assume data has same # samples per channel
          data = zeros(1,info(1).signal.Samples,'single');
          reportProgress(blockObj,'Header parsed.','clc');
@@ -467,7 +470,7 @@ for iChunk=1:nChunkMax
       field_ = 'Stim';
       chMask = buffer.Standard.(field_)(1:dataPointsToRead) == iCh;
       inData = single(dataBuffer(chMask)); 
-      outData = single(scaleStimData(inData,stimCurr,blockObj.SampleRate,iCh,trigCh));
+      outData = single(scaleStimData(inData,stimCurr,blockObj.SampleRate,iCh,trigCh,t));
       append(Files.Standard.Stim,outData);
    end
    
@@ -660,7 +663,7 @@ flag = true;
    end
 
    % Retrieves correct stimulation data from buffer
-   function stim_data_sc = scaleStimData(stim_data,stim_step_size,fs,iCh,iTrigCh)
+   function stim_data_sc = scaleStimData(stim_data,stim_step_size,fs,iCh,iTrigCh,t)
       %SCALESTIMDATA  Retrieves correct stimulation data from buffer.
       %  
       %  stim_data_sc = scaleStimData(stim_data,stim_step_size,fs,iCh);
@@ -685,7 +688,8 @@ flag = true;
       %
       %  stim_data_sc : Matrix version of stims compatible with 'Event'
       %                 DiskData format
-      
+      %  t : vector of times corresponding to the input data stim_data
+      origData = stim_data;
       compliance_limit_data = stim_data >= 2^15;
       stim_data = stim_data - (compliance_limit_data * 2^15);
       charge_recovery_data = stim_data >= 2^14;
@@ -697,7 +701,7 @@ flag = true;
       stim_polarity = 1 - 2 * stim_polarity; % convert (0 = pos, 1 = neg) to +/-1
       stim_data = stim_data .* stim_polarity;
       % Convert to micro-amps
-      stim_curr =   stim_step_size / 1.0e-6; 
+      stim_curr =   stim_data.*stim_step_size .* 1.0e6; 
       StimDataBin = (stim_data~=0); % find pulses
       % fill the gaps and anticipates the pulse by one sample
       %  --> (corrected later)
@@ -726,7 +730,7 @@ flag = true;
       StimDataConv = conv(StimDataBin,[0,1,-1],'same');
       Step = find(StimDataConv); % finds edges (gets negative values also)
       Onset = Step(1:2:end); % odd sample multiples are always "onset"
-      ts = Onset ./ fs;      
+      ts = double( t( Onset)) ./ fs;      
       Offset = Step(2:2:end); % even sample multiples always "offset"
       nStim = numel(Onset);
       midPt = round((Onset + Offset)/2);
@@ -740,7 +744,7 @@ flag = true;
          stim_data_sc(:,2) = iCh;   % "value" is the channel
 %             stim_data_sc(:,3) % Reserve for # pulses?
          stim_data_sc(:,4) = ts;    % ts == onset (seconds)
-         stim_data_sc(:,5) = stim_curr; % Current level
+         stim_data_sc(:,5) = stim_curr(midPt); % Current level
          stim_data_sc(:,6) = pw; % Pulse-width (seconds) 
          stim_data_sc(:,7) = compliance_limit_data(midPt); % Is compliance-limit reached?
          stim_data_sc(:,8) = charge_recovery_data(midPt); % Is charge-recovery on?

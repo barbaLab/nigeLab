@@ -104,6 +104,7 @@ classdef DataScrollerAxis < handle
 
             obj.UI.ROI = imrect(obj.UI.MainAx,obj.ROIpos,...
                 'PositionConstraintFcn',@obj.roiResizeFcn); %#ok<IMRECT>
+            setColor(obj.UI.ROI,nigeLab.defaults.nigelColors('red'));
             ylim(obj.UI.MainAx,yl);
 
         end
@@ -134,9 +135,11 @@ classdef DataScrollerAxis < handle
         
         function plotData(obj)
             obj.fs = obj.ThisBlock.SampleRate;
-            obj.sigLenght = obj.ThisBlock.Samples;
-           
+           if strcmp(obj.Field,'LFP')
+               obj.fs = obj.ThisBlock.Pars.LFP.DownSampledRate;
+           end
             data = obj.ThisBlock.Channels(obj.Channels.Selected).(obj.Field)(:);
+            obj.sigLenght = numel(data);
             if obj.ThisBlock.getStatus('Time') && ~isempty(obj.ThisBlock.Time)
                 tt = obj.ThisBlock.Time(:);
             else
