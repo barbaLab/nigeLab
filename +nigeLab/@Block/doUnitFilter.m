@@ -59,6 +59,10 @@ for iCh = blockObj.Mask
       continue; % It should leave the updateFlag as false for this channel
    end
    if ~pars.STIM_SUPPRESS
+       data = blockObj.Channels(iCh).Raw(:);
+   else
+       data = blockObj.execStimSuppression(iCh);
+   end
       % Filter and and save amplifier_data by probe/channel
       pNum  = num2str(blockObj.Channels(iCh).probe);
       chNum = blockObj.Channels(iCh).chStr;   
@@ -68,7 +72,6 @@ for iCh = blockObj.Mask
       % bank of filters. This is necessary when the designed filter is high
       % order SOS. Otherwise L should be one. See the filter definition
       % params in default.Filt
-      data = blockObj.Channels(iCh).Raw(:);
       for ii=1:L
          data = (ff(b,a,data,nfact,zi));
       end
@@ -81,10 +84,7 @@ for iCh = blockObj.Mask
          'overwrite',true);
       
       lockData(blockObj.Channels(iCh).Filt);
-   else
-      warning('STIM SUPPRESSION method not yet available.');
-      return;
-   end
+
    
    blockObj.updateStatus('Filt',true,iCh);
    pct = round(curCh/nCh * 90);

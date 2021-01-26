@@ -34,38 +34,18 @@ nSamples = length(blockObj.Channels(1).Filt);
 nProbes = numel(probe);
 refMean = zeros(nProbes,nSamples);
 
-doSuppression = blockObj.Pars.Filt.STIM_SUPPRESS;
-stimProbeChannel     = blockObj.Pars.Filt.STIM_P_CH;
-
-if doSuppression % Note: this part is probably deprecated
-   if isnan(stimProbeChannel(1))
-      error('STIM Probe Number not specified (''STIM_P_CH(1)'')');
-   elseif isnan(stimProbeChannel(2))
-      error('STIM Channel Number not specified (''STIM_P_CH(2)'')');
-   end
-end
-
-if (~isnan(stimProbeChannel(1)) && ~isnan(stimProbeChannel(2)))
-   doSuppression = true;
-end
-
 % COMPUTE THE MEAN FOR EACH PROBE
 blockObj.reportProgress('Computing-CAR',0,'toWindow');
 curCh = 0;
 nCh = numel(blockObj.Mask);
 for iCh = blockObj.Mask
    curCh = curCh + 1;
-   if ~doSuppression
       % Filter and and save amplifier_data by probe/channel
       iProbe = probe==blockObj.Channels(iCh).probe;
       nChanPb = sum(probe(iProbe) == [blockObj.Channels.probe]);
       data = blockObj.Channels(iCh).Filt(:);
       refMean(iProbe,:)=refMean(iProbe,:) + data ./ nChanPb;
-   else
-      warning('STIM SUPPRESSION method not yet available.');
-      return;
-   end
-   
+
    PCT = round(20*curCh/nCh);
    blockObj.reportProgress('Computing-CAR',PCT,'toWindow');
    blockObj.reportProgress('Computing-CAR',PCT,'toEvent','Computing-CAR');
