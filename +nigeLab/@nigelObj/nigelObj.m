@@ -94,17 +94,17 @@ classdef nigelObj < handle & ...
    
    % DEPENDENT,HIDDEN,PROTECTED (Old properties go here)
    properties (Dependent,Hidden,Access=protected)
-      AnimalLoc  char                     % Saving path of extracted/processed animal
-      Animals                             % (nigeLab.Animal)  "Child" Animal objects
-      Blocks                              % (nigeLab.Block)   "Child" Block objects
+%       AnimalLoc  char                     % Saving path of extracted/processed animal
+%       Animals                             % (nigeLab.Animal)  "Child" Animal objects
+%       Blocks                              % (nigeLab.Block)   "Child" Block objects
       FileExt    char                     % .rhd, .rhs, or other (for this recording) -- Block only
       RecType    char                     % Intan / TDT / other
       KeyPair                             % (struct) .Public, .Private random alphanumeric id
-      RecDir     char                     % Tank or Animal INPUT folder
-      RecFile    char                     % Full filename of raw binary recording file
+%       RecDir     char                     % Tank or Animal INPUT folder
+%       RecFile    char                     % Full filename of raw binary recording file
       RecSystem                           % (nigeLab.utils.AcqSystem) 'RHS', 'RHD', or 'TDT' (must be one of those)
-      SaveLoc    char                     % Top-level OUTPUT folder
-      TankLoc    char                     % directory for saving Animal
+%       SaveLoc    char                     % Top-level OUTPUT folder
+%       TankLoc    char                     % directory for saving Animal
    end
    
    % DEPENDENT,HIDDEN,PUBLIC
@@ -581,149 +581,7 @@ classdef nigelObj < handle & ...
       end
       
       % % % (DEPENDENT) GET/SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT]  .AnimalLoc (backwards compatibility)
-      function value = get.AnimalLoc(obj)
-         %GET.ANIMALLOC  Dependent property for backwards compatibility
-         %
-         %  value = get(obj,'AnimalLoc');
-         %  --> Returns value of obj.Out.Animal instead
-         
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         if isfield(obj.Out,'Animal')
-            value = nigeLab.utils.getUNCPath(obj.Out.Animal);
-            value = strrep(value,'\','/');
-         else
-            value = '';
-         end
-      end
-      function set.AnimalLoc(obj,value)
-         %SET.ANIMALLOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'AnimalLoc',value);
-         %  --> Sets value of obj.Out.Animal instead
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.Out.Animal = value;
-      end
-      
-      % [DEPENDENT]  Reference child .Animals (backwards compatibility)
-      function value = get.Animals(obj)
-         %GET.ANIMALS  Returns .Children of Tank (backwards compatibility)
-         %
-         %  value = get(obj,'Animals');
-         %  --> Returns obj.Children
-         
-         value = nigeLab.Animal.Empty();
-         if numel(obj) > 1
-            for i = 1:numel(obj)
-               if isempty(obj(i))
-                  continue;
-               end
-               if ~isvalid(obj(i))
-                  continue;
-               end
-               if ~isempty(obj(i).Children)
-                  value = [value, obj(i).Children];
-               end
-            end
-         else
-            if isempty(obj)
-               return;
-            end
-            if ~isvalid(obj)
-               return;
-            end
-            if all(isempty(obj.Children))
-               value = nigeLab.Animal.Empty();
-            else
-               value = obj.Children;
-            end
-         end
-      end
-      function set.Animals(obj,value)
-         %SET.ANIMALS  Sets .Children of Tank (backwards compatibility)
-         %
-         %  set(obj,'Animals',animalObj);
-         %  --> Sets (Tank) obj.Children to elements of animalObj array
-         
-         if numel(obj) > 1
-            error(['nigeLab:' mfilename ':BadSize'],...
-               'Cannot set .Animals of multiple tankObj simultaneously.');
-         end
-         
-         % Make sure obj.Children is nigeLab.Animal object
-         if all(isempty(value))
-            obj.Children = nigeLab.Animal.Empty();
-         else
-            obj.Children = value;
-         end
-      end
-      
-      % [DEPENDENT]  .Blocks (backwards compatibility)
-      function value = get.Blocks(obj)
-         %GET.BLOCKS  Returns .Children of Animal (backwards compatibility)
-         %
-         %  value = get(obj,'Blocks');
-         %  --> Returns obj.Children
-         
-         value = nigeLab.Block.Empty();
-         if numel(obj) > 1
-            
-            for i = 1:numel(obj)
-               if isempty(obj(i))
-                  continue;
-               end
-               if ~isvalid(obj(i))
-                  continue;
-               end
-               if ~isempty(obj(i).Children)
-                  value = [value, obj(i).Children];
-               end
-            end
-         else
-            if isempty(obj)
-               return;
-            end
-            if ~isvalid(obj)
-               return;
-            end
-            if all(isempty(obj.Children))
-               value = nigeLab.Block.Empty();
-            else
-               value = obj.Children;
-            end
-         end
-      end
-      function set.Blocks(obj,value)
-         %SET.BLOCKS  Sets .Children of Animal (backwards compatibility)
-         %
-         %  set(obj,'Blocks',blockObj);
-         %  --> Sets (Animal) obj.Children to elements of blockObj array
-         
-         if numel(obj) > 1
-            error(['nigeLab:' mfilename ':BadSize'],...
-               'Cannot set .Blocks of multiple animalObj simultaneously.');
-         end
-         
-         % Make sure .Children is nigeLab.Block object
-         if all(isempty(value))
-            obj.Children = nigeLab.Block.Empty();
-         else
-            obj.Children = value;
-         end
-      end
-      
+           
       % [DEPENDENT]  .Children (handles Empty case)
       function value = get.Children(obj)
          %GET.CHILDREN Get method for .Children (handles Empty case)
@@ -1228,14 +1086,14 @@ classdef nigelObj < handle & ...
                   obj.Output = a;
                   obj.loadIDFile();
                   if isfield(obj.IDInfo,'RecFile')
-                     obj.RecFile = obj.IDInfo.RecFile;
+                     obj.In.Block = obj.IDInfo.RecFile;
                   else
                      error(['nigeLab:' mfilename ':BadNigelFile'],...
                         ['Missing line: RecFile|%s in .nigelBlock\n' ...
                          '->\tEither add manually or init from recording']);
                   end
                   if isfield(obj.IDInfo,'RecDir')
-                     obj.RecDir = obj.IDInfo.RecDir;
+                     obj.In.Animal = obj.IDInfo.RecDir;
                   else
                      error(['nigeLab:' mfilename ':BadNigelFile'],...
                         ['Missing line: RecDir|%s in .nigelBlock\n' ...
@@ -1248,27 +1106,26 @@ classdef nigelObj < handle & ...
                         ['Missing line: FileExt|%s in .nigelBlock\n' ...
                          '->\tEither add manually or init from recording']);
                   end
-                  [~,obj.In.BlockName,~] = fileparts(obj.RecFile);
+                  [~,obj.In.BlockName,~] = fileparts(obj.In.Block);
                elseif ~isempty(ext)
-                  % obj.In.Block = value; % same as line below
-                  obj.RecFile = value;
+                  obj.In.Block = value; % same as line below
+%                   obj.RecFile = value;
                   obj.In.FileExt = ext;
-                  % obj.In.Animal = a; % same as line below
-                  obj.RecDir = a;
+                  obj.In.Animal = a; % same as line below
+%                   obj.RecDir = a;
                   obj.In.BlockName = b;
                end               
                [obj.In.Tank,obj.In.AnimalName,~] = fileparts(obj.In.Animal);
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.BlockName;
             case 'Animal'
-               % obj.In.Animal = value; % same as line below
-               obj.RecDir = value;
+               obj.In.Animal = value; % same as line below
+%                obj.RecDir = value;
                [obj.In.Tank,obj.In.AnimalName,~] = fileparts(value);
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(obj.In.Tank);
                obj.In.Name = obj.In.AnimalName;
             case 'Tank'
-               % obj.In.Tank = value; % same as line below
-               obj.RecDir = value;
+               obj.In.Tank = value; % same as line below
                [obj.In.Experiment,obj.In.TankName,~] = fileparts(value);
                obj.In.Name = obj.In.TankName;
             otherwise
@@ -1480,14 +1337,14 @@ classdef nigelObj < handle & ...
             return;
          end
 
-         p = obj.SaveLoc;
+         p = obj.Paths.SaveLoc;
          if isempty(p)
             if ~obj.getSaveLocation
                value = ''; % Could not return correctly
                warning('Save location (%s) is not set.',obj.Type);
                return;
             else
-               p = obj.SaveLoc;
+               p = obj.Paths.SaveLoc;
             end
          end
          
@@ -1547,7 +1404,7 @@ classdef nigelObj < handle & ...
                end
                obj.Out.Block = value;
                [obj.Out.Animal,obj.Out.BlockName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Animal;
+               obj.Paths.SaveLoc = obj.Out.Animal;
                [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(obj.Out.Animal);
                [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
             case 'Animal'
@@ -1560,12 +1417,12 @@ classdef nigelObj < handle & ...
                end
                obj.Out.Animal = value;
                [obj.Out.Tank,obj.Out.AnimalName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Tank;
+               obj.Paths.SaveLoc = obj.Out.Tank;
                [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(obj.Out.Tank);
             case 'Tank'
                obj.Out.Tank = value;
                [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(value);
-               obj.SaveLoc = obj.Out.Experiment;
+               
             otherwise
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
@@ -1693,100 +1550,370 @@ classdef nigelObj < handle & ...
          
       end
       
-      % [DEPENDENT]  .RecDir (backwards compatibility)
-      function value = get.RecDir(obj)
-         %GET.RECDIR  Dependent property for backwards compatibility
-         %
-         %  value = get(obj,'RecDir');
-         %  --> Returns value of obj.Paths.RecDir; if empty prompts user to
-         %      input this value.
-
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         value = obj.Input;
-         if isempty(value)
-            p = obj.getRecLocation('Folder');
-            if isempty(p)
-               value = '';
-               nigeLab.utils.cprintf('Errors*','No selection\n');
-            end
-            obj.Input = nigeLab.utils.getUNCPath(p);
-         end
-         value = nigeLab.utils.getUNCPath(obj.Input);
-         value = strrep(value,'\','/');
-      end
-      function set.RecDir(obj,value)
-         %GET.RECDIR  Dependent property for backwards compatibility
-         %
-         %  set(obj,'RecDir',value);
-         %  --> Sets value of obj.In.Animal if obj is Block
-         %  --> Sets value of obj.In.Tank if obj is Animal
-         %  --> Sets value of obj.In.Experiment if obj is Tank
-         
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         switch obj.Type
-            case 'Block'
-               obj.In.Animal = value;
-            otherwise
-               obj.In.(obj.Type) = value;
-         end
-         obj.Paths.RecDir = value;
-      end
+      % Deprecated methods, willtotally remove in the future
+      
+%       % [DEPENDENT]  .RecDir (backwards compatibility)
+%       function value = get.RecDir(obj)
+%          %GET.RECDIR  Dependent property for backwards compatibility
+%          %
+%          %  value = get(obj,'RecDir');
+%          %  --> Returns value of obj.Paths.RecDir; if empty prompts user to
+%          %      input this value.
+% 
+%          value = '';
+%          if isempty(obj)
+%             return;
+%          end
+%          if ~isvalid(obj)
+%             return;
+%          end
+%          value = obj.Input;
+%          if isempty(value)
+%             p = obj.getRecLocation('Folder');
+%             if isempty(p)
+%                value = '';
+%                nigeLab.utils.cprintf('Errors*','No selection\n');
+%             end
+%             obj.Input = nigeLab.utils.getUNCPath(p);
+%          end
+%          value = nigeLab.utils.getUNCPath(obj.Input);
+%          value = strrep(value,'\','/');
+%       end
+%       function set.RecDir(obj,value)
+%          %GET.RECDIR  Dependent property for backwards compatibility
+%          %
+%          %  set(obj,'RecDir',value);
+%          %  --> Sets value of obj.In.Animal if obj is Block
+%          %  --> Sets value of obj.In.Tank if obj is Animal
+%          %  --> Sets value of obj.In.Experiment if obj is Tank
+%          
+%          if isempty(value)
+%             return;
+%          end
+%          if ~ischar(value)
+%             return;
+%          end
+%          switch obj.Type
+%             case 'Block'
+%                obj.In.Animal = value;
+%             otherwise
+%                obj.In.(obj.Type) = value;
+%          end
+%          obj.Paths.RecDir = value;
+%       end
       
       % [DEPENDENT]  .RecFile (backwards compatibility)
-      function value = get.RecFile(obj)
-         %GET.RECFILE  Dependent property for backwards compatibility
-         %
-         %  value = get(obj,'RecFile');
-         %  --> Returns value of obj.In.Block instead
-         
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         value = obj.Input;
-         if isempty(value)
-            [p,f] = obj.getRecLocation('File');
-            if isempty(f)
-               value = '';
-               nigeLab.utils.cprintf('Errors*','No selection\n');
-               return;
-            end
-            obj.Input = nigeLab.utils.getUNCPath(p,f);
-         else
-            return;
-         end
-         value = nigeLab.utils.getUNCPath(obj.Input);
-         value = strrep(value,'\','/');
-      end
-      function set.RecFile(obj,value)
-         %SET.RECFILE  Dependent property for backwards compatibility
-         %
-         %  set(obj,'RecFile',value);
-         %  --> Sets value of obj.In.Block instead
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.In.Block = value;
-         obj.Paths.RecFile = value;
-      end
+%       function value = get.RecFile(obj)
+%          %GET.RECFILE  Dependent property for backwards compatibility
+%          %
+%          %  value = get(obj,'RecFile');
+%          %  --> Returns value of obj.In.Block instead
+%          
+%          value = '';
+%          if isempty(obj)
+%             return;
+%          end
+%          if ~isvalid(obj)
+%             return;
+%          end
+%          value = obj.Input;
+%          if isempty(value)
+%             [p,f] = obj.getRecLocation('File');
+%             if isempty(f)
+%                value = '';
+%                nigeLab.utils.cprintf('Errors*','No selection\n');
+%                return;
+%             end
+%             obj.Input = nigeLab.utils.getUNCPath(p,f);
+%          else
+%             return;
+%          end
+%          value = nigeLab.utils.getUNCPath(obj.Input);
+%          value = strrep(value,'\','/');
+%       end
+%       function set.RecFile(obj,value)
+%          %SET.RECFILE  Dependent property for backwards compatibility
+%          %
+%          %  set(obj,'RecFile',value);
+%          %  --> Sets value of obj.In.Block instead
+%          if isempty(value)
+%             return;
+%          end
+%          if ~ischar(value)
+%             return;
+%          end
+%          obj.In.Block = value;
+%          obj.Paths.RecFile = value;
+%       end
+%       
+
+% 
+%       % [DEPENDENT]  .SaveLoc (backwards compatibility)
+%       function value = get.SaveLoc(obj)
+%          %GET.SAVELOC  Dependent property for backwards compatibility
+%          %
+%          %  NOTE: .SaveLoc should ALWAYS be the folder that CONTAINS the
+%          %        Output folder tree. Therefore it is always one level
+%          %        "higher" than nigeLab.nigelObj.Output.
+%          %
+%          %  value = get(obj,'SaveLoc');
+%          %  --> Returns value of obj.Out.Animal if obj is Block
+%          %  --> Returns value of obj.Out.Tank if obj is Animal
+%          %  --> Returns value of obj.Out.Experiment if obj is Tank
+% 
+%          value = '';
+%          if isempty(obj)
+%             return;
+%          end
+%          if ~isvalid(obj)
+%             return;
+%          end
+%          switch obj.Type
+%             case 'Block'
+%                if isfield(obj.Out,'Animal')
+%                   value = obj.Out.Animal;
+%                end
+%             case 'Animal'
+%                if isfield(obj.Out,'Tank')
+%                   value = obj.Out.Tank;
+%                end
+%             case 'Tank'
+%                if isfield(obj.Out,'Experiment')
+%                   value = obj.Out.Experiment;
+%                end
+%          end
+% 
+%          if isempty(value)
+%             if ~isfield(obj.Paths,'SaveLoc')
+%                value = '';
+%                return;
+%             else
+%                value = obj.Paths.SaveLoc;
+%                if isstruct(value)
+%                   value = value.dir;
+%                end
+%             end
+%          end
+%          value = nigeLab.utils.getUNCPath(value);
+%          value = strrep(value,'\','/');
+%       end
+%       function set.SaveLoc(obj,value)
+%          %SET.SAVELOC  Dependent property for backwards compatibility
+%          %
+%          %  set(obj,'SaveLoc',value);
+%          %  --> Sets value of obj.Out.Animal if obj is Block
+%          %  --> Sets value of obj.Out.Tank if obj is Animal
+%          %  --> Sets value of obj.Out.Experiment if obj is Tank
+%          
+%          if isempty(value)
+%             return;
+%          end
+%          
+%          if ~ischar(value)
+%             return;
+%          end
+%          
+%          if exist(fullfile(value,obj.FolderIdentifier),'file')==0
+%             obj.Paths.SaveLoc = value;
+%             switch obj.Type
+%                case 'Block'
+%                   obj.Out.Animal = value;
+%                case 'Animal'
+%                   obj.Out.Tank = value;
+%                case 'Tank'
+%                   obj.Out.Experiment = value;
+%             end
+%          else
+%             [~,idt,type] = obj.getDescriptiveFormatting();
+%             dbstack;
+%             nigeLab.utils.cprintf('Errors*',...
+%                '%s[INVALID]: Tried to set bad [%s] SaveLoc.\n',...
+%                idt,type);
+%             nigeLab.utils.cprintf('Errors',...
+%                '\t%sAssigned ''%s'', which contains ID File (%s)\n',...
+%                idt,nigeLab.utils.shortenedPath(value),obj.FolderIdentifier);
+%          end
+%       end
+%       
+% 
+%  % [DEPENDENT]  .AnimalLoc (backwards compatibility)
+%       function value = get.AnimalLoc(obj)
+%          %GET.ANIMALLOC  Dependent property for backwards compatibility
+%          %
+%          %  value = get(obj,'AnimalLoc');
+%          %  --> Returns value of obj.Out.Animal instead
+%          
+%          value = '';
+%          if isempty(obj)
+%             return;
+%          end
+%          if ~isvalid(obj)
+%             return;
+%          end
+%          if isfield(obj.Out,'Animal')
+%             value = nigeLab.utils.getUNCPath(obj.Out.Animal);
+%             value = strrep(value,'\','/');
+%          else
+%             value = '';
+%          end
+%       end
+%       function set.AnimalLoc(obj,value)
+%          %SET.ANIMALLOC  Dependent property for backwards compatibility
+%          %
+%          %  set(obj,'AnimalLoc',value);
+%          %  --> Sets value of obj.Out.Animal instead
+%          
+%          if isempty(value)
+%             return;
+%          end
+%          if ~ischar(value)
+%             return;
+%          end
+%          obj.Out.Animal = value;
+%       end
       
+%       % [DEPENDENT]  Reference child .Animals (backwards compatibility)
+%       function value = get.Animals(obj)
+%          %GET.ANIMALS  Returns .Children of Tank (backwards compatibility)
+%          %
+%          %  value = get(obj,'Animals');
+%          %  --> Returns obj.Children
+%          
+%          value = nigeLab.Animal.Empty();
+%          if numel(obj) > 1
+%             for i = 1:numel(obj)
+%                if isempty(obj(i))
+%                   continue;
+%                end
+%                if ~isvalid(obj(i))
+%                   continue;
+%                end
+%                if ~isempty(obj(i).Children)
+%                   value = [value, obj(i).Children];
+%                end
+%             end
+%          else
+%             if isempty(obj)
+%                return;
+%             end
+%             if ~isvalid(obj)
+%                return;
+%             end
+%             if all(isempty(obj.Children))
+%                value = nigeLab.Animal.Empty();
+%             else
+%                value = obj.Children;
+%             end
+%          end
+%       end
+%       function set.Animals(obj,value)
+%          %SET.ANIMALS  Sets .Children of Tank (backwards compatibility)
+%          %
+%          %  set(obj,'Animals',animalObj);
+%          %  --> Sets (Tank) obj.Children to elements of animalObj array
+%          
+%          if numel(obj) > 1
+%             error(['nigeLab:' mfilename ':BadSize'],...
+%                'Cannot set .Animals of multiple tankObj simultaneously.');
+%          end
+%          
+%          % Make sure obj.Children is nigeLab.Animal object
+%          if all(isempty(value))
+%             obj.Children = nigeLab.Animal.Empty();
+%          else
+%             obj.Children = value;
+%          end
+%       end
+%       
+%       % [DEPENDENT]  .Blocks (backwards compatibility)
+%       function value = get.Blocks(obj)
+%          %GET.BLOCKS  Returns .Children of Animal (backwards compatibility)
+%          %
+%          %  value = get(obj,'Blocks');
+%          %  --> Returns obj.Children
+%          
+%          value = nigeLab.Block.Empty();
+%          if numel(obj) > 1
+%             
+%             for i = 1:numel(obj)
+%                if isempty(obj(i))
+%                   continue;
+%                end
+%                if ~isvalid(obj(i))
+%                   continue;
+%                end
+%                if ~isempty(obj(i).Children)
+%                   value = [value, obj(i).Children];
+%                end
+%             end
+%          else
+%             if isempty(obj)
+%                return;
+%             end
+%             if ~isvalid(obj)
+%                return;
+%             end
+%             if all(isempty(obj.Children))
+%                value = nigeLab.Block.Empty();
+%             else
+%                value = obj.Children;
+%             end
+%          end
+%       end
+%       function set.Blocks(obj,value)
+%          %SET.BLOCKS  Sets .Children of Animal (backwards compatibility)
+%          %
+%          %  set(obj,'Blocks',blockObj);
+%          %  --> Sets (Animal) obj.Children to elements of blockObj array
+%          
+%          if numel(obj) > 1
+%             error(['nigeLab:' mfilename ':BadSize'],...
+%                'Cannot set .Blocks of multiple animalObj simultaneously.');
+%          end
+%          
+%          % Make sure .Children is nigeLab.Block object
+%          if all(isempty(value))
+%             obj.Children = nigeLab.Block.Empty();
+%          else
+%             obj.Children = value;
+%          end
+%       end
+% 
+% % [DEPENDENT]  .TankLoc (backwards compatibility)
+%       function value = get.TankLoc(obj)
+%          %GET.TANKLOC  Dependent property for backwards compatibility
+%          %
+%          %  value = get(obj,'TankLoc');
+%          %  --> Returns value of obj.Out.Tank instead
+%          
+%          value = '';
+%          if isempty(obj)
+%             return;
+%          end
+%          if ~isvalid(obj)
+%             return;
+%          end
+%          value = nigeLab.utils.getUNCPath(obj.Out.Tank);
+%          value = strrep(value,'\','/');
+%       end
+%       function set.TankLoc(obj,value)
+%          %SET.TANKLOC  Dependent property for backwards compatibility
+%          %
+%          %  set(obj,'TankLoc',value);
+%          %  --> Sets value of obj.Out.Tank instead
+%          if isempty(value)
+%             return;
+%          end
+%          if ~ischar(value)
+%             return;
+%          end
+%          obj.Out.Tank = value;
+%       end
+
+
+
+
+
       % [DEPENDENT]  .RecSystem
       function value = get.RecSystem(obj)
          %GET.RECSYSTEM  Returns value .RecSystem property
@@ -1864,93 +1991,6 @@ classdef nigelObj < handle & ...
          obj.In.RecType = value;
       end
       
-      % [DEPENDENT]  .SaveLoc (backwards compatibility)
-      function value = get.SaveLoc(obj)
-         %GET.SAVELOC  Dependent property for backwards compatibility
-         %
-         %  NOTE: .SaveLoc should ALWAYS be the folder that CONTAINS the
-         %        Output folder tree. Therefore it is always one level
-         %        "higher" than nigeLab.nigelObj.Output.
-         %
-         %  value = get(obj,'SaveLoc');
-         %  --> Returns value of obj.Out.Animal if obj is Block
-         %  --> Returns value of obj.Out.Tank if obj is Animal
-         %  --> Returns value of obj.Out.Experiment if obj is Tank
-
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         switch obj.Type
-            case 'Block'
-               if isfield(obj.Out,'Animal')
-                  value = obj.Out.Animal;
-               end
-            case 'Animal'
-               if isfield(obj.Out,'Tank')
-                  value = obj.Out.Tank;
-               end
-            case 'Tank'
-               if isfield(obj.Out,'Experiment')
-                  value = obj.Out.Experiment;
-               end
-         end
-
-         if isempty(value)
-            if ~isfield(obj.Paths,'SaveLoc')
-               value = '';
-               return;
-            else
-               value = obj.Paths.SaveLoc;
-               if isstruct(value)
-                  value = value.dir;
-               end
-            end
-         end
-         value = nigeLab.utils.getUNCPath(value);
-         value = strrep(value,'\','/');
-      end
-      function set.SaveLoc(obj,value)
-         %SET.SAVELOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'SaveLoc',value);
-         %  --> Sets value of obj.Out.Animal if obj is Block
-         %  --> Sets value of obj.Out.Tank if obj is Animal
-         %  --> Sets value of obj.Out.Experiment if obj is Tank
-         
-         if isempty(value)
-            return;
-         end
-         
-         if ~ischar(value)
-            return;
-         end
-         
-         if exist(fullfile(value,obj.FolderIdentifier),'file')==0
-            obj.Paths.SaveLoc = value;
-            switch obj.Type
-               case 'Block'
-                  obj.Out.Animal = value;
-               case 'Animal'
-                  obj.Out.Tank = value;
-               case 'Tank'
-                  obj.Out.Experiment = value;
-            end
-         else
-            [~,idt,type] = obj.getDescriptiveFormatting();
-            dbstack;
-            nigeLab.utils.cprintf('Errors*',...
-               '%s[INVALID]: Tried to set bad [%s] SaveLoc.\n',...
-               idt,type);
-            nigeLab.utils.cprintf('Errors',...
-               '\t%sAssigned ''%s'', which contains ID File (%s)\n',...
-               idt,nigeLab.utils.shortenedPath(value),obj.FolderIdentifier);
-         end
-      end
-      
       % [DEPENDENT]  .ShortFile (short char array for printing names)
       function value = get.ShortFile(obj)
          %GET.SHORTFILE  Get shortened _Obj.mat file name
@@ -2020,38 +2060,7 @@ classdef nigelObj < handle & ...
 
             obj.setChildProp('SortGUI',value);
          end
-      end
-
-      % [DEPENDENT]  .TankLoc (backwards compatibility)
-      function value = get.TankLoc(obj)
-         %GET.TANKLOC  Dependent property for backwards compatibility
-         %
-         %  value = get(obj,'TankLoc');
-         %  --> Returns value of obj.Out.Tank instead
-         
-         value = '';
-         if isempty(obj)
-            return;
-         end
-         if ~isvalid(obj)
-            return;
-         end
-         value = nigeLab.utils.getUNCPath(obj.Out.Tank);
-         value = strrep(value,'\','/');
-      end
-      function set.TankLoc(obj,value)
-         %SET.TANKLOC  Dependent property for backwards compatibility
-         %
-         %  set(obj,'TankLoc',value);
-         %  --> Sets value of obj.Out.Tank instead
-         if isempty(value)
-            return;
-         end
-         if ~ischar(value)
-            return;
-         end
-         obj.Out.Tank = value;
-      end
+      end  
       
       % [DEPENDENT]  .Type (ensure returns good .Type)
       function value = get.Type(obj)
@@ -3513,15 +3522,15 @@ classdef nigelObj < handle & ...
             % Make sure it's a valid directory, as it could be provided through
             % second input argument:
             if ~obj.genPaths(tmp)
-               mkdir(obj.SaveLoc);
+               mkdir(obj.Paths.SaveLoc);
                if ~obj.genPaths(tmp)
                   warning('Still no valid save location.');
                else
-                  obj.SaveLoc = tmp;
+                  obj.Paths.SaveLoc = tmp;
                   flag = true;
                end
             else
-               obj.SaveLoc = tmp;
+               obj.Paths.SaveLoc = tmp;
                flag = true;
             end
          end
@@ -5535,7 +5544,7 @@ classdef nigelObj < handle & ...
          % animals), the path to use in combination with id_ext can be
          % changed.
          if nargin < 2
-            pname = obj.SaveLoc;
+            pname = obj.Paths.SaveLoc;
          end
          
          if isempty(pname)
@@ -5560,13 +5569,13 @@ classdef nigelObj < handle & ...
             return;
          end
          
-         if isempty(obj.SaveLoc)
+         if isempty(obj.Paths.SaveLoc)
             error(['nigelab:' mfilename ':BadSaveLoc'],...
                ['[%s/GETPARSFILENAME]: Tried to save parameters ' ...
                'before SaveLoc was set.'],upper(obj.Type));
          end
 
-         fname = nigeLab.utils.getUNCPath(obj.SaveLoc,...
+         fname = nigeLab.utils.getUNCPath(obj.Output,...
                sprintf(obj.ParamsExpr,obj.Name));
          fname = strrep(fname,'\','/');
       end
@@ -5796,10 +5805,10 @@ classdef nigelObj < handle & ...
                         return;
                      else
                         obj.Input = p;
-                     end
-               end
-            end
-         else
+                     end %if isempty p
+               end % switch
+            end %fi isempty(obj.Input)
+         else% fi isempty(inPath)
             obj.Input  = inPath;                 
          end
          flag = true;
@@ -6027,14 +6036,14 @@ classdef nigelObj < handle & ...
          
          flag = false;
          if isempty(savePath)
-            if isempty(obj.SaveLoc)
+            if isempty(obj.Output)
                if ~obj.getSaveLocation()
                   nigeLab.utils.cprintf('Errors*','No selection\n');
                   return;
                end
             end
          else
-            obj.SaveLoc = savePath;
+            obj.Output = savePath;
          end
          flag = true;
       end
@@ -6077,7 +6086,7 @@ classdef nigelObj < handle & ...
                return;
                
             case {'','Unknown'}
-               files = dir(nigeLab.utils.getUNCPath(obj.RecFile));
+               files = dir(nigeLab.utils.getUNCPath(obj.Paths.RecFile));
                files = files(~[files.isdir]);
                if isempty(files)
                   recType = 'nigelBlock';
@@ -6123,7 +6132,7 @@ classdef nigelObj < handle & ...
                      
                end
                % Ensure that RecFile is a file, not a folder
-               obj.RecFile = fullfile(files(1).folder,files(1).name);
+%                obj.RecFile = fullfile(files(1).folder,files(1).name);
                return;
                
             otherwise
@@ -6161,7 +6170,7 @@ classdef nigelObj < handle & ...
          end
          
          if strcmp(obj.Type,'Block')
-            if isempty(obj.RecFile)
+            if isempty(obj.Input)
                return;
             end
          end
@@ -6206,7 +6215,7 @@ classdef nigelObj < handle & ...
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            fprintf(fid,'RecDir|%s\n',obj.RecDir);
+            fprintf(fid,'RecDir|%s\n',obj.Paths.RecDir);
             fprintf(fid,'User|%s\n', obj.User);
             for i = 1:numel(propList)
                fprintf(fid,'%s|%s\n',...
@@ -6370,7 +6379,7 @@ classdef nigelObj < handle & ...
          
          flag = false;
          if nargin < 2
-            saveLoc = obj.SaveLoc;
+            saveLoc = obj.Paths.SaveLoc;
             removeOld = false;
          elseif nargin < 3
              removeOld = false;
