@@ -50,8 +50,8 @@ else % otherwise just make sure it is correct orientation
 end
 
 %PARSE HEADER
-fid = fopen(blockObj.RecFile, 'r');
-s = dir(blockObj.RecFile);
+fid = fopen(blockObj.Input, 'r');
+s = dir(blockObj.Input);
 if isempty(s)
    blockObj.reportProgress(...
       '<strong>No files found!</strong> Extraction canceled ::',...

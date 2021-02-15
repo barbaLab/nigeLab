@@ -17,7 +17,7 @@ elseif nargin < 2
 end
 
 if nargin == 3
-   [name,~,~,~] = fopen(FID);
+   [name,~,~] = fopen(FID);
    if isempty(name)
       error('Must provide a valid file pointer.');
    end

@@ -4842,7 +4842,7 @@ classdef nigelObj < handle & ...
          
          flag = false;
          if nargin < 2
-            SaveLoc = obj.SaveLoc;
+            SaveLoc = obj.Path.SaveLoc;
             if isempty(SaveLoc)
                [fmt,idt,type] = obj.getDescriptiveFormatting();
                dbstack;
