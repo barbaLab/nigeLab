@@ -138,8 +138,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          obj.Color = nigeLab.libs.DashBoard.initColors();
          
          % Init B_split
-         An = obj.Tank.Animals;
-         obj.B_split = [An([An.MultiAnimals]).Blocks];
+         An = obj.Tank.Children;
+         obj.B_split = [An([An.MultiAnimals]).Children];
          
          % Build figure and all container panels 
          obj.nigelGUI = buildGUI(obj);

@@ -3944,7 +3944,7 @@ classdef nigelObj < handle & ...
              case 'double'
                  ...Nothing really to do here
              case {'nigeLab.Block','nigeLab.Animal','nigeLab.nigelObj'}
-                    ind = find(ismember( obj.Children,ind));
+                    ind = find(ismember( obj.Children,ind,"legacy"));
              otherwise
          end
          ind = sort(ind,'descend');
@@ -4868,7 +4868,7 @@ classdef nigelObj < handle & ...
          
          flag = false;
          if nargin < 2
-            SaveLoc = obj.Path.SaveLoc;
+            SaveLoc = obj.Paths.SaveLoc;
             if isempty(SaveLoc)
                [fmt,idt,type] = obj.getDescriptiveFormatting();
                dbstack;
@@ -6254,7 +6254,7 @@ classdef nigelObj < handle & ...
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            fprintf(fid,'RecDir|%s\n',obj.Paths.RecDir);
+            fprintf(fid,'RecDir|%s\n',obj.Output);
             fprintf(fid,'User|%s\n', obj.User);
             for i = 1:numel(propList)
                fprintf(fid,'%s|%s\n',...
@@ -6511,11 +6511,11 @@ classdef nigelObj < handle & ...
                      switch mode
                          case 'mv'
                              [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
-                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Moving');
+                             str = strrep(nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false),'Linking','Moving');
                              reportProgress(obj,str,pct,'toWindow','Moving-Channels');
                          case 'cp'
                              [~,~] = copyfile(source,target);
-                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Copying');
+                             str = strrep(nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false),'Linking','Copying');
                              reportProgress(obj,str,pct,'toWindow','Copying-Channels');
                      end
                  end

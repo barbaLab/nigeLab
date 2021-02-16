@@ -151,7 +151,7 @@ for ii=1:numel(SplittedMeta)
    
 %    bl.NumProbes = 0;
    bl.Mask = [];
-   bl.Output = fullfile(bl.SaveLoc,bl.Name);
+   bl.Output = fullfile(bl.Paths.SaveLoc,bl.Name);
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    bl.Key = bl.InitKey();

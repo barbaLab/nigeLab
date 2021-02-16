@@ -131,7 +131,7 @@ for ii = 1:numel(SplittedMeta)
         an.Children = [];
         an.MultiAnimals = 2;
         an.MultiAnimalsLinkedAnimals(:) = [];
-        an.Output = fullfile(an.SaveLoc,an.Name);
+        an.Output = fullfile(an.Paths.SaveLoc,an.Name);
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
         
         an.Key = an.InitKey();

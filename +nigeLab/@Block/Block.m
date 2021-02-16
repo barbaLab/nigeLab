@@ -878,7 +878,7 @@ classdef Block < nigeLab.nigelObj
          %     * 'RecFile'
          %     * 'HasVideoTrials'
          
-         BLOCK_PROPS = {'FileExt', 'RecType', 'RecFile', 'HasVideoTrials'};
+         BLOCK_PROPS = {'FileExt', 'RecType', 'Input', 'HasVideoTrials'};
          flag = saveIDFile@nigeLab.nigelObj(blockObj,BLOCK_PROPS);
          if ~flag
             % Missing RecFile or IDFile
