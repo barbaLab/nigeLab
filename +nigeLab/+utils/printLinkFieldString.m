@@ -13,6 +13,10 @@ if nargin < 3
    print_to_window = false;
 end
 
+if nargin < 4
+   precursor = 'Linking';
+end
+
 linkStr = '<a href="matlab:doc nigelab.Block/%s">%s</a>';
 fieldTypeStr = sprintf(linkStr,fieldType,fieldType);
 switch lower(field)
@@ -37,7 +41,7 @@ switch lower(field)
    otherwise
       fieldStr = field;
 end
-str = sprintf('Linking %s field: %s',fieldTypeStr,fieldStr);
+str = sprintf('%s %s field: %s',precursor,fieldTypeStr,fieldStr);
 if print_to_window
    fprintf(1,['\n' str '...000%%\n']);
 end

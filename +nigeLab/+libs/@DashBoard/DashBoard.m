@@ -1237,7 +1237,9 @@ classdef DashBoard < handle & matlab.mixin.SetGet
          recmonths = cellfun(@(x) month(x,'shortname'),recDates,'UniformOutput',false);
          tmp = cellfun(@(x) {strjoin(unique(x),',')},recmonths,'UniformOutput',false);
          tCell(:,strcmp(columnFormatsAndData,'datetime')) = tmp;
-         columnFormatsAndData{strcmp(columnFormatsAndData,'datetime')} = 'cell';
+         if any(strcmp(columnFormatsAndData,'datetime'))
+             columnFormatsAndData{strcmp(columnFormatsAndData,'datetime')} = 'cell';
+         end
          [tCell, columnFormatsAndData] = uxTableFormat(columnFormatsAndData(not(StatusIndx)),tCell,'Tank');
          
          w = obj.RecapTable;
@@ -1556,14 +1558,11 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                 end
  
             case 'stop'
-               
-               % TODO reenable nodes without multiAnimal flag!
-               if any([obj.Tank.Children.MultiAnimals])
-                  obj.splitMultiAnimalsUI.toggleVisibility;
-               else
+                            
                   delete( obj.splitMultiAnimalsUI.Fig);
                   delete(obj.splitMultiAnimalsUI);
-               end
+                  obj.nigelButtons.Tree.getButton('Split').Enable = 'off';
+               
                
             case 'init'
                % First, make sure the Tank contains multiAnimals
@@ -1577,7 +1576,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                end % if ~MultiAnimals
                
                obj.splitMultiAnimalsUI = nigeLab.libs.splitMultiAnimalsUI(an);
-               
+               addlistener(obj.splitMultiAnimalsUI,'SplitCompleted',@(~,~)toggleSplitMultiAnimalsUI(obj,'stop'));
          end % switch mode
       end
       

@@ -5,22 +5,33 @@ classdef splitMultiAnimalsUI < handle
 %  obj.splitMultiAnimalsUI(DashObj);
 
 
-   properties (GetAccess = ?nigeLab.libs.DashBoard,SetAccess = immutable)
-      Fig                        matlab.ui.Figure
+
+   properties(SetObservable,GetAccess=public,SetAccess=protected)
+       Fig             matlab.ui.Figure     % matlab.ui.Figure handle to user interface figure
+       Color                struct               % Struct referencing colors
    end
    
    properties (Access = private,SetObservable,AbortSet)
-      animalObj                  % nigeLab.Animal object
+      allBlocks                 nigeLab.nigelObj
+      nigelObj                  nigeLab.nigelObj
+      tankObj                   nigeLab.nigelObj    % original Tank, ie where to add back the splitted animals
+      multiTankObj              nigeLab.nigelObj    % reduced Tank, only conataining the multi objects
+      SplittedAnimals
+      SplittedBlocks
    end
    
    properties (Access = private)
-      blockObj                   % nigeLab.Block object or array
-      DashObj                    % nigeLab.libs.DashBoard object
+      toSplit                    % object 
+      reviedTrees
+      thisTree
+
       AcceptBtn                  matlab.ui.control.UIControl % pushbutton
       ApplyToAllBtn              matlab.ui.control.UIControl % pushbutton
       Tree                       % uiw.widget.Tree
-      panel                      matlab.ui.container.Panel
+      panel                      nigeLab.libs.nigelPanel
       btnPanel                   matlab.ui.container.Panel
+      treePanel                  nigeLab.libs.nigelPanel
+      selectionTree
       
       PropListener                  event.listener  % Array of listeners
       SelectionChangedListener      event.listener
@@ -28,12 +39,12 @@ classdef splitMultiAnimalsUI < handle
    end
    
    events
-      SplitCompleted   % Fired once the "splitting" has been finished
+      SplitCompleted   % Fired once the "splitting" procedure has been finished
    end
    
    methods (Access = public)
       % Class constructor for split multi animals UI
-      function obj = splitMultiAnimalsUI(DashObj)
+      function obj = splitMultiAnimalsUI(nigelObj)
          % SPLITMULTIANIMALSUI  Class constructor for UI to split
          %                       multi-animals recording blocks.
          %
@@ -47,8 +58,8 @@ classdef splitMultiAnimalsUI < handle
          if nargin < 1
             obj = nigeLab.libs.splitMultiAnimalsUI.empty([0,0]);
             return;
-         elseif isnumeric(DashObj)
-            n = DashObj;
+         elseif isnumeric(nigelObj)
+            n = nigelObj;
             if numel(n) < 2
                n = [zeros(1,2-numel(n)),n];
             else
@@ -57,22 +68,63 @@ classdef splitMultiAnimalsUI < handle
             obj = repmat(obj,n);
             return;
          end
-         
-         obj.DashObj = DashObj;
-         
+                
          % Build user interface figure and panels
          obj.Fig = obj.buildGUI();
          
          % Create buttons
          obj.addButtons();
+
+         % build the selectionTree. If only a block is passed this is
+         % unnecessary
+         Type = unique({nigelObj.Type});
+         switch Type{:}
+             case 'Tank'
+                 obj.tankObj = nigelObj;
+                 obj.multiTankObj = copy(nigelObj);
+                 idx = [nigelObj.Children.MultiAnimals];
+                 obj.nigelObj = nigelObj.Children(idx);
+                 obj.multiTankObj.Children = obj.nigelObj;
+                 obj.allBlocks = obj.multiTankObj{:,:};
+             case 'Animal'                 
+                 if ~isempty(nigelObj(1).Parent)
+                     obj.tankObj = nigelObj(1).Parent;
+                     obj.multiTankObj = copy(nigelObj(1).Parent);
+                 end
+                 obj.nigelObj = nigelObj;
+                 obj.multiTankObj.Children = obj.nigelObj;
+                 obj.allBlocks = obj.multiTankObj{:,:};
+
+             case 'Block'
+                 obj.nigelObj = nigelObj;
+                 ...
+             otherwise
+         end
          
+         obj.initSplittedObjects();
+         for c=obj.nigelObj
+             addlistener(c,'ObjectBeingDestroyed',@(src,~)obj.assignNULL(obj.multiTankObj,src));
+         end
+         obj.selectionTree = nigeLab.libs.nigelTree(obj.multiTankObj,obj.treePanel);
+         obj.selectionTree.Tree.SelectionType = 'single';
+         idx = ... find all listeners for ChildAdded in the Tank
+            strcmp({obj.selectionTree.Listener.EventName},'ChildAdded')...
+            & ...
+            strcmp(...
+                    cellfun(@(source) class(source),...
+                        [obj.selectionTree.Listener.Source],...
+                        'UniformOutput',false), ...
+                    'nigeLab.Tank');
+                obj.selectionTree.Listener(idx).Enabled = false;
+         % Assign the close request function since init has worked
+         obj.Fig.CloseRequestFcn = ...
+            @(~,~)toggleVisibility(obj,'off');
+         
+                 
          % define useful event listeners
          obj.addListeners();
          
-         % Assign the close request function since init has worked
-         obj.Fig.CloseRequestFcn = ...
-            {@(~,~,str)obj.DashObj.toggleSplitMultiAnimalsUI(str),'stop'};
-         
+        
       end % function splitMultiAnimalsUI
       
       % Overload to ensure figure destruction and listener deletion
@@ -128,6 +180,17 @@ classdef splitMultiAnimalsUI < handle
                   drawnow;
                   figAlwaysOnTop(obj,true);
             end
+         else
+             switch vis_mode  
+         % Set visibility of figure
+               case 'off'
+                  figAlwaysOnTop(obj,false);
+                  obj.Fig.Visible = vis_mode;
+               case 'on'
+                  obj.Fig.Visible = vis_mode;
+                  drawnow;
+                  figAlwaysOnTop(obj,true);
+            end
          end
 
          
@@ -137,14 +200,14 @@ classdef splitMultiAnimalsUI < handle
             return;
          end
 
-         changeVisibility(obj);
+         rotateTreeVisibility(obj);
          
                
       end % function toggleVisibility
       
    end % methods public
    
-   methods (Access=private)
+   methods (Access = private)
        function figAlwaysOnTop(obj,mode)
            if nargin < 2
                mode = false;
@@ -207,18 +270,16 @@ classdef splitMultiAnimalsUI < handle
          %
          %  obj.addListeners();  Should be called once in constructor
          
-         obj.SelectionChangedListener = addlistener(obj.DashObj,...
+         obj.SelectionChangedListener = addlistener(obj.selectionTree,...
             'TreeSelectionChanged',...
-            @(~,~)obj.changeVisibility);
-         obj.SelectionChangedListener.Enabled = false;
-         obj.PropListener = addlistener(obj,'animalObj','PostSet',...
-            @(~,~)obj.beginSplit);
-        obj.SplitCompletedListener = addlistener(obj,'SplitCompleted',...
-            @(~,~)obj.deleteAnimalWhenEmpty());
+            @(~,~)obj.rotateTreeVisibility);
+
+%         obj.SplitCompletedListener = addlistener(obj,'SplitCompleted',...
+%             @(~,~)obj.deleteAnimalWhenEmpty());
       end
       
       % LISTENER CALLBACK: Initialize the splitting process
-      function beginSplit(obj)
+      function initSplittedObjects(obj)
          % BEGINSPLIT  Initialize the splitting process
          %
          %  obj.beginSplit(); 
@@ -226,60 +287,82 @@ classdef splitMultiAnimalsUI < handle
          %  Syntax:
          %  obj.PropListener = addlistener(obj,'animalObj','PostSet',...
          %                       @(~,~)obj.beginSplit);
-         obj.animalObj.splitMultiAnimals('init');
-
-         % TODO case where only blockobj is initialized
-         obj.Tree = obj.buildBlockTrees();
-         obj.AcceptBtn.UserData.reviewedBlocks = false(1,...
-            numel(obj.animalObj.Children));
+         obj.nigelObj.splitMultiAnimals('init');
          
+         % Store Splitted Animals and block in the UI properties to assign
+         % them correctly later.
+         obj.SplittedAnimals = [obj.nigelObj.MultiAnimalsLinkedAnimals];
+         obj.SplittedBlocks = [obj.SplittedAnimals.Children];
+%          [obj.SplittedAnimals.Children] = deal([]);
+         
+         % TODO case where only blockobj is initialized
+         obj.Tree = obj.buildBlockTrees(obj.nigelObj);
+%          obj.AcceptBtn.UserData.reviewedBlocks = false(1,...
+%             numel(obj.animalObj.Children));
+         populateTree(obj.Tree);
+
       end
       
       % Build trees for individual block properties to "drag" to each other
-      function Tree = buildBlockTrees(obj)
-         % BUILDBLOCKTREES  Builds trees for individual block properties to
-         %                    "drag" to each other.
-         %
-         %  Tree = obj.buildBlockTrees();
-         
-         Tree = gobjects(numel(obj.animalObj.Children),...
-                         numel(obj.blockObj.MultiAnimalsLinkedBlocks));
+      function Tree = buildBlockTrees(obj,nigelObj)
+          % BUILDBLOCKTREES  Builds trees for individual block properties to
+          %                    "drag" to each other.
+          %
+          %  Tree = obj.buildBlockTrees();
+          Type = unique({nigelObj.Type});
+          switch Type{:}
+              case 'Animal'
+                  if isscalar(nigelObj)
+                      % crete tree matrix and incapsulate it in a cell
+                      Tree = {buildBlockTrees(obj,nigelObj.Children)};
+                      return;
+                  else
+                      % recursively call the function on all elements
+                      Tree = [buildBlockTrees(obj,nigelObj(1:end-1)),...
+                          buildBlockTrees(obj,nigelObj(end))];
+                      return;
+                  end
+              case 'Block'
+                  if ~isscalar(nigelObj)
+                      % the tree matrix has size nBlocks x nMultiAnimals
+                      Tree = [buildBlockTrees(obj,nigelObj(1:end-1));...
+                          buildBlockTrees(obj,nigelObj(end))];
+                      return;
+                  elseif ~isempty(nigelObj.MultiAnimalsLinkedBlocks)
                       
-         for jj = 1:numel(obj.animalObj.Children)
-            thisBlock = obj.animalObj.Children(jj);
-            if thisBlock == obj.blockObj
-               visible = 'on';
-            else
-               visible = 'off';
-            end
-            
-            for ii=1:numel(obj.blockObj.MultiAnimalsLinkedBlocks)
-               Tree(jj,ii)= uiw.widget.Tree(...
-                  'Parent',obj.panel,...
-                  'Label', thisBlock.MultiAnimalsLinkedBlocks(ii).Meta.AnimalID, ...
-                  'LabelLocation','top',...
-                  'LabelHeight',18,...
-                  'Units', 'normalized', ...
-                  'Position', [0.01+(ii-1)*0.5 0.01 0.45 0.95],...
-                  'UserData',thisBlock.MultiAnimalsLinkedBlocks(ii),...
-                  'SelectionType','discontiguous',...
-                  'ForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
-                  'LabelForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
-                  'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
-                  'TreePaneBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
-                  'TreeBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
-                  'SelectionBackgroundColor',nigeLab.defaults.nigelColors('primary'),...
-                  'SelectionForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
-               
-               Tree(jj,ii).Visible = visible;
-               Tree(jj,ii).Units = 'normalized';
-               Tree(jj,ii).RootVisible = false;
-               Tree(jj,ii).DndEnabled = true;
-               Tree(jj,ii).NodeDraggedCallback = @(h,e)obj.dragDropCallback(h,e);
-               Tree(jj,ii).NodeDroppedCallback = @(h,e)obj.dragDropCallback(h,e);
-            end
-         end
-         populateTree(Tree);
+                      Tree = arrayfun(@(x)buildBlockTrees(obj,x),nigelObj.MultiAnimalsLinkedBlocks,'UniformOutput',false);
+                      Tree = [Tree{:}];
+                      return;
+                  else
+                      % finally build a single tree for each splittedBlock
+                      Tree = uiw.widget.Tree(...
+                          'Label', nigelObj.Parent.Name, ...
+                          'LabelLocation','top',...
+                          'LabelHeight',18,...
+                          'Units', 'normalized', ...
+                          'SelectionType','discontiguous',...
+                          'ForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
+                          'LabelForegroundColor',nigeLab.defaults.nigelColors('onsfc'),...
+                          'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+                          'TreePaneBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+                          'TreeBackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
+                          'SelectionBackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+                          'SelectionForegroundColor',nigeLab.defaults.nigelColors('onprimary'));
+                      
+                      Tree.UserData = nigelObj;
+                      obj.panel.nestObj(Tree);
+                      Tree.Visible = 'off';
+                      Tree.Units = 'normalized';
+                      Tree.RootVisible = false;
+                      Tree.DndEnabled = true;
+                      
+                      Tree.NodeDraggedCallback = @(h,e)obj.dragDropCallback(h,e);
+                      Tree.NodeDroppedCallback = @(h,e)obj.dragDropCallback(h,e);
+                      return;
+                  end
+          end
+          %                            
+          
       end
       
       % Build the graphical interface
@@ -302,23 +385,40 @@ classdef splitMultiAnimalsUI < handle
          end
          
          % Add a panel that will display the actual block data trees
-         obj.panel = uipanel(fig,...
-            'Tag','DataPanel',...
-            'UserData',obj.blockObj,...
-            'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
-            'Units','normalized',...
-            'Position',[.01 .1 .98 .85]);
-         jp=nigeLab.utils.findjobj(obj.panel);
-         jp.setBorder(javax.swing.BorderFactory.createEmptyBorder)
-         
+         str    = {'DataPanels'};
+         strSub = {''};
+         Tag      = 'DataPanel';
+         Position = [.25,.11,.75,.88];
+         obj.panel = nigeLab.libs.nigelPanel(fig,...
+            'String',str,'Tag',Tag,'Position',Position,...
+            'PanelColor',nigeLab.defaults.nigelColors('sfc'),...
+            'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
+            'TitleBarPosition',[0.000 0.9725 1.000 0.0275]);
+%         
+%          jp=nigeLab.utils.findjobj(obj.panel);
+%          jp.setBorder(javax.swing.BorderFactory.createEmptyBorder)
+%          
          % Add a panel for interface control buttons
          obj.btnPanel = uipanel(fig,...
             'Tag','ButtonPanel',...
-            'UserData',obj.blockObj,...
             'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
-            'Units','normalized','Position',[.01 0 .98 .1]);
+            'Units','normalized','Position',[.25 .01 .75 .1]);
          jp=nigeLab.utils.findjobj(obj.btnPanel);
          jp.setBorder(javax.swing.BorderFactory.createEmptyBorder);
+         
+         % Create "Tree" panel (nodes are: Tank > Animal > Block)
+         str    = {'TreePanel'};
+         strSub = {''};
+         Tag      = 'TreePanel';
+         Position = [.01,.01,.23,.98];
+         %[left bottom width height] (normalized [0 to 1])
+         obj.treePanel = nigeLab.libs.nigelPanel(fig,...
+            'String',str,'Tag',Tag,'Position',Position,...
+            'PanelColor',nigeLab.defaults.nigelColors('sfc'),...
+            'TitleBarColor',nigeLab.defaults.nigelColors('primary'),...
+            'TitleColor',nigeLab.defaults.nigelColors('onprimary'),...
+            'TitleBarPosition',[0.000 0.9725 1.000 0.0275]);
          
       end
       
@@ -330,73 +430,74 @@ classdef splitMultiAnimalsUI < handle
          %
          %  obj.AcceptBtn.Callback = @ApplyCallback;
          
-         if ~h.UserData.yesToAll
-            warning('off','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
+         
             jFrame = get(handle(obj.Fig),'JavaFrame');
-            warning('on','MATLAB:HandleGraphics:ObsoletedProperty:JavaFrame');
             jFrame_fHGxClient = jFrame.fHG2Client;
             jFrame_fHGxClientW=jFrame_fHGxClient.getWindow;
             
             jFrame_fHGxClientW.setAlwaysOnTop(false);
-            answer = questdlg('Are you sure?','Confirm Changes','Yes','No','Yes to all','No');
-            if strcmp(answer,'No'),return;
-            elseif strcmp(answer,'Yes to all')% apllies changes to all blocks
-               h.UserData.YesToAll=true;
-               indx = h.UserData.reviewedBlocks;
-            elseif strcmp(answer,'Yes') % find displayed block
-               indx = strcmp({obj.Tree(:,1).Visible},'on');
+            answer = repmat({nan},1,size(obj.reviedTrees,1));
+            for ii=1:size(obj.reviedTrees,1)
+                answer{ii} = questdlg(sprintf('Confirm Changes for block:\n%s',obj.toSplit(ii).Name),'Are you sure?','Yes','No','Yes to all','No');
+                if strcmp(answer(ii),'Yes to all')
+                   answer = repmat({'Yes'},1,size(obj.reviedTrees,1));
+                   break;
+                end
             end
-            jFrame_fHGxClientW.setAlwaysOnTop(true);
-         end
-         set(h,'Enable','off');
+            
+            Idx = strcmp(answer,'Yes');
+            Tree_ = obj.reviedTrees(Idx,:);
+            obj.toSplit = obj.toSplit(Idx);
+            
+            
+
          
-         RawFlag = all(obj.blockObj.getStatus('Raw'));
-         % TODO, if Raw not extracted yet do extraction.
-         if ~RawFlag % if raw not extracted
-            if ~isempty(obj.DashObj) % if in the gui mode
-               operation = 'doRawExtraction';
-               bar = obj.DashObj.qOperations(operation,obj.blockObj,{obj.animalObj.getKey,obj.blockObj.getKey});
-               if bar.IsParallel
-                  bar.FinishedFun = [bar.FinishedFun,...
-                                    {{@(~,~)obj.applychanges}}];
-                  return;
-               end
+
+         DashObj = obj.tankObj.GUI;
+         RawFlag = (obj.toSplit.getStatus('Raw'));
+         if ~any(RawFlag) % if raw not extracted
+            if ~isempty(obj.tankObj) && ~isempty(DashObj) % if in the gui mode
+                question = sprintf(['Looks like some of the blocks you want to split were not extracted properly.\n',...
+                    'Do you want me to rerun the extraction on those blocks?']);
+                title = 'Unextracted blocks';
+                answer = questdlg(question,title,'Yes','No','Yes');
+                switch answer
+                    case 'Yes'
+                        operation = 'doRawExtraction';
+                        for ii=find(~RawFlag(:))'
+                            blockObj = obj.toSplit(ii);
+                            bar = DashObj.qOperations(operation,blockObj,{blockObj.Parent.getKey,blockObj.getKey});
+   
+                        end
+                        msgbox('Done. Come back when the extraction is finished.')
+                        set(h,'Enable','on');
+                        jFrame_fHGxClientW.setAlwaysOnTop(true);
+                        obj.toggleVisibility('off');
+                    case 'No'
+                        uiwait(msgbox('As you wish, human.'));
+                        jFrame_fHGxClientW.setAlwaysOnTop(true);
+                end %switch
+                return;
                
             else % in  command line mode
-               obj.blockObj.doRawExtraction;
+                for ii=find(~RawFlag(:))'
+                    obj.toSplit(ii).doRawExtraction;
+                end
+                jFrame_fHGxClientW.setAlwaysOnTop(true);
             end %fi ~isempty(dashObj)
          end % fi ~RawFlag
-         
+%          
+         set(h,'Enable','off');
          % apply changes to blocks
-         obj.applychanges(obj.Tree(indx,:));
-      end
-      
-      % Applies changes to the tree
-      function applychanges(obj,Tree_)
-         % APPLYCHANGES  Applies any changes to the tree, such as dragging
-         %                 elements from a branch of one tree to the other.
-         %
-         %  obj.applychanges(Tree_);
-         %
-         %  Generates a `nigeLab.evt.splitCompleted` event data and
-         %  notifies the `MultiAnimalsUI` property of `DashBoard` of the
-         %  'splitCompleted' event associated with it.
-         
-         if ~isempty(obj.animalObj)
-            obj.animalObj.splitMultiAnimals(Tree_);
-            splitCompletedEvt = nigeLab.evt.splitCompleted(...
-               obj.animalObj.MultiAnimalsLinkedAnimals);
-         else
-            obj.blockObj.splitMultiAnimals(Tree_);
-            splitCompletedEvt = nigeLab.evt.splitCompleted(...
-               obj.blockObj.MultiAnimalsLinkedBlocks);
+         obj.reviedTrees(Idx,:) = [];
+         completeTreeIdx = cellfun(@(x)ismember(x(:,1),Tree_(:,1) ),obj.Tree,'UniformOutput',false);
+         for ii=1:numel(obj.Tree)
+            obj.Tree{ii}(completeTreeIdx{ii},:)=[]; 
          end
-         populateTree(Tree_);
-         notify(obj,'SplitCompleted',splitCompletedEvt);
-         % if an animal obj is available, move everything to the correct
-         % animal
+         obj.Tree(cellfun(@isempty,obj.Tree))=[];
+         obj.applychanges(Tree_); 
       end
-      
+       
       % Copy changes to everything
       function copyChangesToAll(obj,h,e)
          % COPYCHANGESTOALL   Copy changes to everything?
@@ -408,99 +509,174 @@ classdef splitMultiAnimalsUI < handle
       
       % Callback for both "Drag" and "Drop" interactions
       function dropOk = dragDropCallback(obj,~,e)
-         % DRAGDROPCALLBACK   Callback invoked for both "dragging" or
-         %                    "dropping" things onto the tree. 
-         
-         % Is this the drag or drop part?
-         doDrop = ~(nargout); % The drag callback expects an output, drop does not
-
-         for kk = 1:numel(e.Source)
-            % Get the source and destination
-            srcNode = e.Source(kk);
-            dstNode = e.Target;
-            
-            % If source is not yet assigned a Block, do not drop
-            if ~srcNode.UserData
-               dropOk = false;
-               continue;
-            end
-            
-            % If drop is allowed
-            if ~doDrop % --> drag part
-               % Is dstNode a valid drop location?
-               
-               % For example, assume it always is. 
-               % Tree will prevent dropping on itself or existing parent.
-               dropOk = true;               
-               
-            elseif strcmpi(e.DropAction,'move')
-               blockID = (obj.blockObj==obj.animalObj.Children);
-               set(obj.AcceptBtn,'Enable','on');
-               obj.AcceptBtn.UserData.reviewedBlocks(blockID) = true;
-               
-               NewNode = copy(srcNode);
-               Node = srcNode;
-               k=1;
-               while ~any(strcmp(Node.Name,{'Channels','Events','Streams'}))
-                  OldNode = NewNode;
-                  NewNode=uiw.widget.TreeNode('Name',Node.Parent.Name,...
-                     'Parent',[],'UserData',Node.Parent.UserData);
-                  OldNode.Parent = NewNode;
+          % DRAGDROPCALLBACK   Callback invoked for both "dragging" or
+          %                    "dropping" things onto the tree.
+          
+          dropOk = false;
+          % Is this the drag or drop part?
+          doDrop = ~(nargout); % The drag callback expects an output, drop does not
+          try
+              for kk = 1:numel(e.Source)
+                  % Get the source and destination
+                  srcNode = e.Source(kk);
+                  dstNode = e.Target;
                   
-                  Node=Node.Parent;
-               end
-               % De-parent
-               srcNode.Parent = [];
-               
-               % Then get index of destination
-               dstLevelNodes = [dstNode.Tree.Root.Children];
-               dstIndex = strcmp(NewNode.Name,{dstLevelNodes.Name});
-               
-               % Re-order children and re-parent
-               targetParent = dstLevelNodes(dstIndex);
-               while  any(ismember({targetParent.Children.Name},{NewNode.Children.Name}))
-                  targetIndx = strcmp({targetParent.Children.Name},{NewNode.Children.Name});
-                  targetParent = targetParent.Children(targetIndx);
-                  NewNode = NewNode.Children;
-               end
-               NewNode.Children.expand();
-               while ~isempty(NewNode.Children)
-                  NewNode.Children(end).Parent = targetParent;
-               end
-               dstLevelNodes(dstIndex).expand();
-               
-            end
-         end %kk
+                  % If source is not yet assigned a Block, do not drop
+                  if ~srcNode.UserData
+                      dropOk = false;
+                      continue;
+                  end
+                  
+                  % If drop is allowed
+                  if ~doDrop % --> drag part
+                      % Is dstNode a valid drop location?
+                      
+                      % For example, assume it always is.
+                      % Tree will prevent dropping on itself or existing parent.
+                      dropOk = e.Target.Tree.Parent==e.Source(kk).Tree.Parent;
+                      
+                  elseif strcmpi(e.DropAction,'move')
+                      dropOk = e.Target.Tree.Parent==e.Source(kk).Tree.Parent;
+                      set(obj.AcceptBtn,'Enable','on');
+                      if ~any(ismember(obj.reviedTrees,obj.thisTree))
+                          obj.reviedTrees = [obj.reviedTrees;obj.thisTree];
+                          obj.toSplit = [obj.toSplit,obj.selectionTree.SelectedItems];
+                      end
+                      NewNode = copy(srcNode);
+                      Node = srcNode;
+                      k=1;
+                      while ~any(strcmp(Node.Name,{'Channels','Events','Streams'}))
+                          OldNode = NewNode;
+                          NewNode=uiw.widget.TreeNode('Name',Node.Parent.Name,...
+                              'Parent',[],'UserData',Node.Parent.UserData);
+                          OldNode.Parent = NewNode;
+                          
+                          Node=Node.Parent;
+                      end
+                      % De-parent
+                      srcNode.Parent = [];
+                      
+                      % Then get index of destination
+                      dstLevelNodes = [dstNode.Tree.Root.Children];
+                      dstIndex = strcmp(NewNode.Name,{dstLevelNodes.Name});
+                      
+                      % Re-order children and re-parent
+                      targetParent = dstLevelNodes(dstIndex);
+                      while  any(ismember({targetParent.Children.Name},{NewNode.Children.Name}))
+                          targetIndx = strcmp({targetParent.Children.Name},{NewNode.Children.Name});
+                          targetParent = targetParent.Children(targetIndx);
+                          NewNode = NewNode.Children;
+                      end
+                      NewNode.Children.expand();
+                      while ~isempty(NewNode.Children)
+                          NewNode.Children(end).Parent = targetParent;
+                      end
+                      dstLevelNodes(dstIndex).expand();
+                      
+                  end %fi
+              end %kk
+          catch er
+              disp('ooops. Try again.')
+          end %try
       end %dragDropCallback
       
-      % Changes the visibility of a given set of blocks or animals
-      function changeVisibility(obj)
+   end % methods private
+   
+   methods (Access = ?nigeLab.libs.nigelProgress)
+            % Applies changes to the tree
+      function applychanges(obj,Tree_)
+         % APPLYCHANGES  Applies any changes to the tree, such as dragging
+         %                 elements from a branch of one tree to the other.
+         %
+         %  obj.applychanges(Tree_);
+         %
+         %  Generates a `nigeLab.evt.splitCompleted` event data and
+         %  notifies the `MultiAnimalsUI` property of `DashBoard` of the
+         %  'splitCompleted' event associated with it.
+        while ~isempty(obj.toSplit)
+            thisBlock = obj.toSplit(1);
+            thisBlock.splitMultiAnimals(Tree_(1,:));
+            thisSplittedBlocks = thisBlock.MultiAnimalsLinkedBlocks;
+            
+            % add the splitted blocks back to the splitted animals
+            arrayfun(@(B) B.Parent.addChild(B), thisSplittedBlocks);
+           obj.tankObj.addChild([thisSplittedBlocks.Parent]);
+           arrayfun(@(B) B.updatePaths(B.Parent.Output,true), thisSplittedBlocks);
+           
+           an = thisBlock.Parent;
+           delete(Tree_(1,:));
+           Tree_(1,:) = [];
+           an.removeChild(thisBlock);
+           obj.toSplit(1) = [];  
+           obj.deleteMultiAnimalWhenEmpty(an);
+        end
+               
+        
+        if  isempty(obj.multiTankObj.Children)
+            evt = nigeLab.evt.splitCompleted();
+            notify(obj,'SplitCompleted',evt);
+            return;
+        end
+        
+        obj.selectionTree.changeTreeSelection([]);
+        
+      end
+      
+   end
+   
+   methods (Access = protected)
+            % Changes the visibility of a given set of blocks or animals
+      function rotateTreeVisibility(obj)
          % CHANGEVISIBILITY  Invoked when `toggleVisibility` is set to 'on'
          %
          %  obj.changeVisibility();
          %
          %  Get all the currently selected animals and blocks from
          %  DashBoard, so that they can be used in the splitting interface.
-         
-         [obj.blockObj,obj.animalObj]= obj.DashObj.getSelectedItems;
-         indx = obj.animalObj.Children == obj.blockObj;
-         
-         [obj.Tree(:).Visible] = deal('off');
-         [obj.Tree(indx,:).Visible] = deal('on');
-         if obj.AcceptBtn.UserData.reviewedBlocks(indx)
-            obj.AcceptBtn.Enable = 'on';
-         else
-            obj.AcceptBtn.Enable = 'off';
-         end
+         switch obj.selectionTree.SelectedItemsType
+             case {'Tank','Animal'}
+                 thisNode = obj.selectionTree.Tree.SelectedNodes;
+                 newNode = thisNode.Children(1);
+                 obj.selectionTree.changeTreeSelection(newNode)
+                 rotateTreeVisibility(obj);
+                 return             
+             case 'Block'
+                 thisNode = obj.selectionTree.Tree.SelectedNodes;
+                 keys = thisNode.UserData;
+                 blockObj = obj.selectionTree.SelectedItems;
+         end 
+         cellfun(@(x) arrayfun(@(y) set(y,'Visible','off') ,x) ,obj.Tree);
+
+         Animal = findByKey(obj.nigelObj,keys(1));
+         anIdx = obj.nigelObj == Animal;
+         blIdx = Animal.Children == blockObj; 
+         obj.thisTree = obj.Tree{anIdx}(blIdx,:);
+         [obj.thisTree(:).Visible] = deal('on');
+%          if obj.AcceptBtn.UserData.reviewedBlocks(indx)
+%             obj.AcceptBtn.Enable = 'on';
+%          else
+%             obj.AcceptBtn.Enable = 'off';
+%          end
       end % changeVisibility
-      
-      function deleteAnimalWhenEmpty(obj)
-         if isvalid(obj.animalObj) && numel(obj.animalObj.Children) == 0
-             delete(obj.animalObj.File);
-            delete(obj.animalObj);
-         end
+       
+      function flag = deleteMultiAnimalWhenEmpty(obj,animalObj)
+          flag = false;
+          if isvalid(animalObj) && numel(animalObj.Children) == 0
+              tankObj = animalObj.Parent;
+              if isempty(tankObj)
+                  delete(animalObj.File);
+                  delete(animalObj);
+              else
+                  tankObj.removeChild(animalObj);
+              end
+              Idx = obj.nigelObj == animalObj;
+              obj.nigelObj(Idx)=[];
+              flag = true;
+          end
       end
-   end % methods private
+      
+   end
+   
    
    methods (Static,Access=public)
       % Create empty nigeLab.libs.splitMultiAnimalsUI object
@@ -519,6 +695,27 @@ classdef splitMultiAnimalsUI < handle
          end
          obj = nigeLab.libs.splitMultiAnimalsUI(n);         
       end
+      
+      function assignNULL(Parent,childObj)
+         % ASSIGNNULL  Does null assignment to remove a block of a
+         %             corresponding index from the obj.Children
+         %             property array, for example, if that Block is
+         %             destroyed or moved to a different obj. Useful
+         %             as a callback for an event listener handle.
+         
+         idx = ~isvalid(Parent.Children);
+         if sum(idx) >= 1
+            Parent.Children(idx) = [];
+         else
+            [~,idx] = findByKey(Parent.Children,childObj);
+            if sum(idx) >= 1
+               Parent.Children(idx) = [];
+            end
+         end   
+      end
+      
+
+      
    end
 end
 

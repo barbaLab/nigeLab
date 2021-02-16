@@ -497,6 +497,10 @@ classdef nigelObj < handle & ...
             end
          end
          
+         if ~isempty(obj.TreeNodeContainer)
+             delete(obj.TreeNodeContainer);
+         end
+         
          if ~isempty(obj.GUI)
             if isvalid(obj.GUI)
                delete(obj.GUI);
@@ -2431,6 +2435,11 @@ classdef nigelObj < handle & ...
             childData = [];
          end
          
+         if nargin < 3
+            idx = [];
+         end
+         
+
          if ~isscalar(obj) % Require that Parent is scalar
             error(['nigeLab:' mfilename ':BadInputSize'],...
                'obj must be scalar.');
@@ -2470,10 +2479,17 @@ classdef nigelObj < handle & ...
             end % switch obj.Type
          end % if isempty
          
+         RmIdx = false(1,numel(childObj));
+         if any(strcmp(class(obj),{'nigeLab.Tank','Tank'}))
+             RmIdx = ismember({childObj.Name},{obj.Children.Name});
+         end
+         
+         
          % assign parent to childObj
          [childObj.Parent] = deal(obj);
          
-         if nargin < 3
+         addPropListeners(childObj);
+         if isempty(idx)
             obj.Children = [obj.Children childObj];
          else
              % we need to explicitly handle the assignement of empty elements 
@@ -2490,7 +2506,9 @@ classdef nigelObj < handle & ...
              obj.Children = builtin('subsasgn',obj.Children,...
                S,newChildObj);
              
-         end % if nargin < 3
+         end % if isempty(idx)
+         
+
          
          
          for i = 1:numel(childObj)
@@ -2507,11 +2525,19 @@ classdef nigelObj < handle & ...
                      @(~,~)obj.parseProbes)];
             end
          end % i
-         if strcmp(obj.Type,'Animal')
+         if strcmp(obj.Type,'Animal') && ~obj.MultiAnimals
             obj.parseProbes();
+         end
+         
+         
+         % check if any clones were found
+         childObj = childObj(~RmIdx);
+         if isempty(childObj)
+             return;
          end
          evt = nigeLab.evt.childAdded(childObj);
          notify(obj,'ChildAdded',evt);
+         
       end
       
       % Check compatibility with current `.Fields` configuration
@@ -3924,7 +3950,7 @@ classdef nigelObj < handle & ...
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
-            p = obj.Children(ii).Paths.Output;
+            p = obj.Children(ii).Output;
             if exist(p,'dir')
                rmdir(p,'s');
             end
@@ -5009,20 +5035,32 @@ classdef nigelObj < handle & ...
                addPropListeners(obj(i));
             end
             return;
-         end  
-         switch obj.Type
-            case 'Block'
-               % Does not currently have PropListeners
-            case 'Animal'
-               obj.PropListener = [obj.PropListener, ...
-                  addlistener(obj,'Children','PostSet',...
-                     @obj.checkBlocksForClones)];
-            case 'Tank'
-               obj.PropListener = [obj.PropListener,...
-                  addlistener(obj,'Children','PostSet',...
-                     @obj.checkAnimalsForClones)];
-               
          end
+         switch obj.Type
+             case 'Block'
+                 % Does not currently have PropListeners
+             case 'Animal'
+                 if ~checkForExistingListener(obj.PropListener,'PostSet',@obj.checkBlocksForClones)
+                     obj.PropListener = [obj.PropListener, ...
+                         addlistener(obj,'Children','PostSet',...
+                         @obj.checkBlocksForClones)];
+                 end
+             case 'Tank'
+                 if ~checkForExistingListener(obj.PropListener,'PostSet',@obj.checkAnimalsForClones)
+                     obj.PropListener = [obj.PropListener,...
+                         addlistener(obj,'Children','PostSet',...
+                         @obj.checkAnimalsForClones)];
+                 end
+         end
+         
+          function flag = checkForExistingListener(listeners,EventName,Callback)
+              if isempty(listeners)
+                 flag = false;
+                 return;
+              end
+              flag = ismember({listeners.EventName},EventName) & ...
+                  ismember({func2str(listeners.Callback)},func2str(Callback));
+          end
       end
       
       % Assign default .Pars values (for use in constructor)
@@ -5104,7 +5142,7 @@ classdef nigelObj < handle & ...
          if ~any(rmvec)
             return;
          end
-         
+
          % cycle through each animal, removing animals and adding any
          % associated blocks to the "kept" animal Blocks property
          ii=1;
@@ -5132,14 +5170,15 @@ classdef nigelObj < handle & ...
          % If no Blocks (or only 1 "non-empty" block) then there are no
          % clones in the array.
          b = obj.Children;
-         if sum(isempty(b)) <= 1
+         if sum(~isempty(b)) <= 1
             return;
          else
             idx = find(~isempty(b));
             b = b(idx);
          end
          
-         cname = {b.Name};
+         cname = b.getKey;
+%          cname = {b.Name};
          
          % look for animals with the same name
          comparisons_cell = cellfun(... % check each element name against
@@ -6407,7 +6446,7 @@ classdef nigelObj < handle & ...
                if ~isempty(obj.Children(i))
                   c = obj.Children(i);
                   if isvalid(c)
-                     flag = flag && c.updatePaths(p);
+                     flag = flag && c.updatePaths(p,removeOld);
                   end
                end
             end
@@ -6418,10 +6457,14 @@ classdef nigelObj < handle & ...
          
          % remove old block matfile
          objFile = obj.File;
-         if exist(objFile,'file') && removeOld
-            delete(objFile);
+         parsFile =  obj.getParsFilename();
+         IDfile = obj.FolderIdentifier;
+         if removeOld
+             mode = 'mv';
+             
+         else
+             mode = 'cp';
          end
-
          % Get old paths, removing 'SaveLoc' from the list of Fields
          %  that need Paths found for them.
          OldP = obj.Paths;
@@ -6437,44 +6480,74 @@ classdef nigelObj < handle & ...
          uniqueTypes = unique(obj.FieldType);
          
          % look for old data to move
-         filePaths = [];
+         filePaths = cell(1);
          for jj=1:numel(uniqueTypes)
             if ~isempty(obj.(uniqueTypes{jj}))
                ff = fieldnames(obj.(uniqueTypes{jj})(1));
                
-               fieldsToMove = ff(cellfun(@(x) ~isempty(regexp(class(x),...
+               fieldsToMove{jj} = ff(cellfun(@(x) ~isempty(regexp(class(x),...
                   'DiskData.\w', 'once')),...
                   struct2cell(obj.(uniqueTypes{jj})(1))));
-               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove))]; %#ok<*AGROW>
-               for hh=1:numel(fieldsToMove)
-                  if all(obj.getStatus(fieldsToMove{hh}))
-                     filePaths = [filePaths; ...
-                        cellfun(@(x)x.getPath,...
-                        {obj.(uniqueTypes{jj})(obj.Mask).(fieldsToMove{hh})},...
-                        'UniformOutput',false)'];
+               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove{jj}))]; %#ok<*AGROW>
+               for hh=1:numel(fieldsToMove{jj})
+                  if all(obj.getStatus(fieldsToMove{jj}{hh}))
+                     filePaths{jj}{hh} = cellfun(@(x)x.getPath,...
+                        {obj.(uniqueTypes{jj})(obj.Mask).(fieldsToMove{jj}{hh})},...
+                        'UniformOutput',false)';
                   end %fi
                end %hh
             end %fi
          end %jj
          
          % moves all the files from folder to folder
-         for ii=1:numel(filePaths)
-            source = filePaths{ii};
-            [~,target] = strsplit(source,'\w*\\\w*.mat',...
-               'DelimiterType', 'RegularExpression');
-            target = fullfile(P.Output,target{1});
-            [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
+         for jj=1:numel(filePaths)
+             for hh=1:numel(filePaths{jj})
+                 for ii =1:numel(filePaths{jj}{hh})
+                     source = filePaths{jj}{hh}{ii};
+                     [~,target] = strsplit(source,'\w*\\\w*.mat',...
+                         'DelimiterType', 'RegularExpression');
+                     target = fullfile(P.Output,target{1});
+                     pct = ii/numel(filePaths{jj}{hh})*100;
+                     switch mode
+                         case 'mv'
+                             [~,~] = nigeLab.utils.FileRename.FileRename(source,target);
+                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Moving');
+                             reportProgress(obj,str,pct,'toWindow','Moving-Channels');
+                         case 'cp'
+                             [~,~] = copyfile(source,target);
+                             str = nigeLab.utils.printLinkFieldString(uniqueTypes{jj},fieldsToMove{jj}{hh},false,'Copying');
+                             reportProgress(obj,str,pct,'toWindow','Copying-Channels');
+                     end
+                 end
+             end
          end
          
          % copy all the info files from one folder to the new one
          for jj = 1:numel(OldFN)
             %     moveFiles(OldP.(OldFN{jj}).file, P.(OldFN{jj}).file);
-            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,'mv');
-            d = dir(OldP.(OldFN{jj}).dir);d=d(~ismember({d.name},...
-               {'.','..'}));
+            moveFilesAround(OldP.(OldFN{jj}).info,P.(OldFN{jj}).info,mode);
+            d = dir(OldP.(OldFN{jj}).dir);
+            d = d(~ismember({d.name},{'.','..'}));
             if isempty(d) && exist(OldP.(OldFN{jj}).dir,'dir')
                rmdir(OldP.(OldFN{jj}).dir);
             end
+         end
+         
+         if removeOld
+             if exist(objFile,'file')
+                 delete(objFile);
+             end
+             if exist(parsFile,'file')
+                 delete(parsFile);
+             end
+             if exist(IDfile,'file')
+                 delete(IDfile);
+             end
+             DD = dir(OldP.Output);
+             DD = DD(~arrayfun(@(x) x.name(1)=='.',DD));
+             if  exist(OldP.Output,'dir') && isempty(DD)
+                 rmdir(OldP.Output);
+             end
          end
          flag = true;
          flag = flag && obj.linkToData;
@@ -6610,7 +6683,7 @@ classdef nigelObj < handle & ...
                if ~isempty(b.Videos)
                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
                elseif b.Pars.Video.HasVideo
-                  b.Videos = nigeLab.libs.VideosFieldType.empty();
+                   b.Videos = nigeLab.libs.VideosFieldType.empty();
                else
                end
                
@@ -6654,7 +6727,7 @@ classdef nigelObj < handle & ...
                  
              case{'Tank'}
                  b.PropListener(1).Enabled = false;
-               % Adds Children if it finds them
+                 % Adds Children if it finds them
                  [C,varName] = b.searchForChildren();
                  DataMoved = false;
                if isempty(C)                                      
@@ -6678,7 +6751,7 @@ classdef nigelObj < handle & ...
             '%s\b\b\b[LOAD]: %s (%s) loaded successfully!\n',...
             idt,b.Name,type);
       end
-      
+           
       % Print detailed description to Command Window
       function DisplayCurrent(obj,displayStyle)
          %DISPLAYCURRENT  Print detailed description to Command Window

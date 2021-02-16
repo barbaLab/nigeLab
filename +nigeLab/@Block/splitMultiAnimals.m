@@ -58,9 +58,9 @@ switch nargin
             elseif strcmpi(varargin{1},'Gui')
                ...
             elseif strcmpi(varargin{1},'init')
-            if ~isempty(blockObj.MultiAnimalsLinkedBlocks)
-                return;
-            end
+%             if ~isempty(blockObj.MultiAnimalsLinkedBlocks)
+%                 return;
+%             end
             CreateChildrenBlocks(blockObj);
             assignPropsToFirstChild(blockObj);
             end
@@ -136,9 +136,7 @@ for ii=1:numel(SplittedMeta)
    bl.Name = str(1:(end-1));
    
    % Channels needs to be empty
-   Chf = fieldnames(bl.Channels)';
-   Chf{2,1} = {};
-   bl.Channels = struct(Chf{:});
+   bl.Channels = bl.Channels([]);
    
    % Events needs to be empty
    bl.initEvents;
@@ -157,7 +155,10 @@ for ii=1:numel(SplittedMeta)
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    bl.Key = bl.InitKey();
-   bl.save;
+   bl.PropListener =  bl.PropListener([]);
+   bl.ParentListener = bl.ParentListener([]);
+        
+        
    splittedBlocks(ii) = bl;
 end %ii
 
@@ -217,13 +218,13 @@ for kk=1:size(Tree_,1)
       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
-      bl.Move(bl.Paths.SaveLoc);
+%       bl.Move(bl.Paths.SaveLoc);
       bl.updateStatus('init');
-      bl.linkToData;
+      bl.updateStatus('Raw',true(1,bl.NumChannels));
+%       bl.linkToData;
       bl.save();
    end
 end
-% populateTree(Tree_);
 end
 
 % Fix ports and numbering that are messed up due to splitting
@@ -241,7 +242,7 @@ function fixPortsAndNumbers(bl)
 % PN = num2cell((PN'==OldPN)*NewPn');
 % [bl.Channels.port_number]=deal(PN{:});
 % bl.NumProbes = numel(OldPN);
-% bl.NumChannels = numel(bl.Channels);
+bl.NumChannels = numel(bl.Channels);
 if isempty(bl.Mask)
    bl.Mask=1:bl.NumChannels;
 else
