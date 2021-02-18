@@ -25,7 +25,7 @@ if isempty(blockObj.RecSystem)
    % blockObj.RecFile is a folder or who knows
    switch blockObj.RecType      
       case 'Matfile'
-         header = blockObj.MatFileWorkflow.ReadFcn(blockObj.RecFile); 
+         header = blockObj.MatFileWorkflow.ReadFcn(blockObj.Input); 
 
       case 'nigelBlock'
          header = parseHierarchy(blockObj);
@@ -43,18 +43,18 @@ else
    switch blockObj.RecSystem.Name
       case 'RHD'
          if nargin < 2
-            [header,fid] = ReadRHDHeader(blockObj.RecFile,blockObj.Verbose);
+            [header,fid] = ReadRHDHeader(blockObj.Input,blockObj.Verbose);
          else
             header = ReadRHDHeader([],blockObj.Verbose,fid);
          end
       case 'RHS'
          if nargin < 2
-            [header,fid] = ReadRHSHeader(blockObj.RecFile,blockObj.Verbose); 
+            [header,fid] = ReadRHSHeader(blockObj.Input,blockObj.Verbose); 
          else
             header = ReadRHSHeader([],blockObj.Verbose,fid);
          end
       case 'TDT'
-         header = ReadTDTHeader(blockObj.RecFile,blockObj.Verbose);
+         header = ReadTDTHeader(blockObj.Input,blockObj.Verbose);
       otherwise
          error(['nigeLab:' mfilename ':missingCase'],...
             'blockObj.RecSystem.Name == ''%s'' not yet handled.',...

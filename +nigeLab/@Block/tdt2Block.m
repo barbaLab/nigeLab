@@ -8,7 +8,7 @@ else % Otherwise, it was run via a "q" command
 end
 
 if nargin < 2
-    recFile = blockObj.RecFile;
+    recFile = blockObj.Input;
     if ~isfolder(recFile)
         [path,~,ext] = fileparts(recFile);
         if any(strcmp(ext,{'.Tbk','.Tdx','.tev','.tnt','.tsq'}))

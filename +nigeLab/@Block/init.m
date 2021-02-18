@@ -25,8 +25,8 @@ end
 % blockObj.AnimalLoc is empty [] at this point, if no output path was given
 % to the constructor as an input argument. this will bring up
 % a UI to point to the block save directory:
-if ~isempty(blockObj.SaveLoc)
-   outLoc = blockObj.SaveLoc;
+if ~isempty(blockObj.Output)
+   outLoc = blockObj.Output;
 else
    outLoc = blockObj.AnimalLoc;
 end

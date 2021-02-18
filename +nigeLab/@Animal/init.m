@@ -17,7 +17,7 @@ supportedFormats = animalObj.Pars.Experiment.SupportedFormats;
 
 %GET BLOCKS
 % Remove other folder names
-Recordings = cellfun(@(x) dir(fullfile(animalObj.RecDir,['**/*' x])),supportedFormats,'UniformOutput',false);
+Recordings = cellfun(@(x) dir(fullfile(animalObj.Input,['**/*' x])),supportedFormats,'UniformOutput',false);
 Recordings = cat(1,Recordings{:});
 animalObj.checkParallelCompatibility();
 skipVec = false([1,numel(Recordings)]);
@@ -59,20 +59,20 @@ for bb=1:numel(Recordings)
 %          Recordings(bb).name);
          
          % handling already-extracted to matfile case
-      if ~isempty(dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat')))
+      if ~isempty(dir(fullfile(animalObj.Input,Recordings(bb).name,'*Info.mat')))
          addThisBlock = true;
-         tmp = dir(fullfile(animalObj.RecDir,Recordings(bb).name,'*Info.mat'));
+         tmp = dir(fullfile(animalObj.Input,Recordings(bb).name,'*Info.mat'));
          RecFile = nigeLab.utils.getUNCPath(tmp(1).folder,tmp(1).name);
          
          % handling already-extracted in nigelFormat case
       else
          RecFile = nigeLab.utils.getUNCPath(...
-            animalObj.RecDir,Recordings(bb).name,...
+            animalObj.Input,Recordings(bb).name,...
             animalObj.Pars.Block.FolderIdentifier);
          if exist(RecFile,'file')~=0
             addThisBlock = true;
             RecFile = nigeLab.utils.getUNCPath(...
-               animalObj.RecDir,Recordings(bb).name);
+               animalObj.Input,Recordings(bb).name);
             blockFileName = [Recordings(bb).name '_Block.mat'];
             tmpName = {Recordings.name};
             idx = ismember(tmpName,blockFileName);
@@ -90,11 +90,11 @@ for bb=1:numel(Recordings)
             idx = ismember(tmpName,blockFileName);
             skipVec(idx) = true;
             if any(idx)
-               load(nigeLab.utils.getUNCPath(animalObj.RecDir,...
+               load(nigeLab.utils.getUNCPath(animalObj.Input,...
                   blockFileName),'blockObj');
                RecFile = blockObj;
             else
-               RecFile = nigeLab.utils.getUNCPath(animalObj.RecDir,...
+               RecFile = nigeLab.utils.getUNCPath(animalObj.Input,...
                   Recordings(bb).name);
             end
          end

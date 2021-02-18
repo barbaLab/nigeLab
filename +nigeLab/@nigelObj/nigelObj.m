@@ -1341,6 +1341,7 @@ classdef nigelObj < handle & ...
             return;
          end
 
+        
          p = obj.Paths.SaveLoc;
          if isempty(p)
             if ~obj.getSaveLocation
@@ -1426,12 +1427,12 @@ classdef nigelObj < handle & ...
             case 'Tank'
                obj.Out.Tank = value;
                [obj.Out.Experiment,obj.Out.TankName,~] = fileparts(value);
-               
+               obj.Paths.SaveLoc = obj.Out.Experiment;
             otherwise
                error(['nigeLab:' mfilename ':BadType'],...
                   'nigelObj has bad Type (%s)',obj.Type);
          end
-         obj.saveIDFile();
+%          obj.saveIDFile();
          
       end
       
@@ -3882,7 +3883,7 @@ classdef nigelObj < handle & ...
          %  --> Similar to calling "updatePaths(newLocation)"
          
          if nargin < 2
-            newLocation = uigetdir(obj.SaveLocation,obj.OutPrompt);
+            newLocation = uigetdir(obj.Output,obj.OutPrompt);
             if newLocation == 0
                nigeLab.utils.cprintf('Errors','No selection\n');
                return;
@@ -5583,7 +5584,7 @@ classdef nigelObj < handle & ...
          % animals), the path to use in combination with id_ext can be
          % changed.
          if nargin < 2
-            pname = obj.Paths.SaveLoc;
+            pname = fileparts(obj.Output);
          end
          
          if isempty(pname)
@@ -6203,6 +6204,18 @@ classdef nigelObj < handle & ...
          %  propList : Cell array of char vectors that are names of
          %             properties of nigelObj to save in .nigelFile
          
+         
+         %%%%%To be removed, just for debug!!!!
+%          flag = true;
+%          return
+      %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+         
+         
+         
+         
+         
+         
+         
          flag = false;
          if nargin < 2
             propList = {};
@@ -6254,7 +6267,7 @@ classdef nigelObj < handle & ...
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            fprintf(fid,'RecDir|%s\n',obj.Output);
+            fprintf(fid,'RecDir|%s\n',obj.Input);
             fprintf(fid,'User|%s\n', obj.User);
             for i = 1:numel(propList)
                fprintf(fid,'%s|%s\n',...

@@ -796,7 +796,7 @@ classdef Block < nigeLab.nigelObj
          %    meta         :     Metadata struct parsed from name
          
          if nargin < 2
-            fName = blockObj.RecFile;
+            fName = blockObj.Input;
          end
          
          if nargin < 3

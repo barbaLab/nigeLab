@@ -7,7 +7,7 @@ function flag = mat2Block(blockObj)
 
 %%
 flag = false;
-paths.SaveLoc = fullfile(fileparts(fileparts(blockObj.RecFile)));
+paths.SaveLoc = fullfile(fileparts(fileparts(blockObj.Input)));
 paths = blockObj.getFolderTree(paths);
 for iCh = 1:blockObj.NumChannels
    chName = blockObj.Channels(iCh).chStr;

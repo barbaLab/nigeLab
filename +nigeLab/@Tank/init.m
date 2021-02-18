@@ -9,7 +9,7 @@ flag = false;
 tankObj.saveIDFile();
 
 % Ensure that only ANIMAL FOLDERS are used here
-AnimalsNames=dir(tankObj.RecDir);
+AnimalsNames=dir(tankObj.Input);
 AnimalsNames=AnimalsNames(~ismember({AnimalsNames.name},{'.','..'})); 
 AnimalsNames=AnimalsNames([AnimalsNames.isdir]);
 tankObj.checkParallelCompatibility(true);

@@ -6,7 +6,7 @@ saveLoc = fullfile(fold,'expmpl');
 recFileName = fullfile(fold,'exmpl','R18-04_Basal1_180525_135852.rhs');
 
 %% MAKE BLOCK AND EXTRACT
-b = nigeLab.Block('RecFile',recFileName,'SaveLoc',saveLoc);
+b = nigeLab.Block(recFileName,saveLoc);
 
 rawTic = tic; doRawExtraction(b);  rawToc = toc(rawTic);
 filtTic = tic; doUnitFilter(b); filtToc = toc(filtTic);     
