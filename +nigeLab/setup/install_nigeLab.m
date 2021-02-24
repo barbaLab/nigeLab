@@ -39,6 +39,9 @@ installedToolbox = matlab.addons.toolbox.installToolbox(toolboxFile);
 cd ..
 cd ..
 addpath(pwd)
-disp('ePhys_packages and thus nigeLab added to path')
+disp('Repository folder (and thus +nigeLab) added to path')
 % Add that folder plus all subfolders to the path.
 % addpath(genpath(setup_folder));
+
+%% copy `demo_nigeLab.m` to top-level and rename
+copyfile(fullfile(pwd,'+nigeLab','setup','demo','demo_nigeLab.m'),fullfile(pwd,'demo.m'),'f');

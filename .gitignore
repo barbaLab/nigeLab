@@ -1,4 +1,6 @@
 *.asv
+demo.m
+flags/*.yaml
 
 nigelCARperf\.pdf
 

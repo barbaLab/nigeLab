@@ -1,4 +1,4 @@
-%% nigeLab - Demo command line
+%%DEMO Script to run `nigeLab` demonstration/test
 clear
 clc
 
