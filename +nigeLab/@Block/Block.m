@@ -132,6 +132,7 @@ classdef Block < nigeLab.nigelObj
       Mask           {logical,double}        % Vector of indices of included elements of Channels
       Notes          struct                  % Notes from text file
       Probes         struct                  % Probe configurations associated with saved recording
+      Paths          struct                  % Struct containing all paths for data
       RMS            table                   % RMS noise table for different waveforms
       SampleRate     double                  % Recording sample rate
       Samples        double                  % Total number of samples in original record
@@ -943,28 +944,6 @@ classdef Block < nigeLab.nigelObj
    
    % PUBLIC
    methods (Access=public)
-% Start Deprecated % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-%       setProp(blockObj,varargin) % Set property for all blocks in array
-%       --> Deprecated (inherited from `nigelObj`)
-%       [blockObj,idx] = findByKey(blockObjArray,keyStr,keyType); % Find block from block array based on public or private hash
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = updatePaths(blockObj,SaveLoc)     % updates the path tree and moves all the files
-%       --> Deprecated (inherited from `nigelObj`)
-%       [flag,p] = updateParams(blockObj,paramType,forceFromDefaults) % Update parameters
-%       --> Deprecated (inherited from `nigelObj`)
-%       fieldIdx = checkCompatibility(blockObj,requiredFields) % Checks if this block is compatible with required field names
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = checkParallelCompatibility(blockObj,isUpdated) % Check if parallel can be run
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = linkToData(blockObj,suppressWarning) % Link to existing data
-%       --> Deprecated (inherited from `nigelObj`) 
-%       fileType = getFileType(blockObj,field) % Get file type corresponding to field
-%       --> Deprecated (inherited from `nigelObj`) 
-%       [fieldType,n] = getFieldType(blockObj,field) % Get type corresponding to field
-%       --> Deprecated (inherited from `nigelObj`) 
-%       [fieldIdx,n] = getFieldTypeIndex(blockObj,fieldType) % Get index of all fields of a given type
-%       --> Deprecated (inherited from `nigelObj`) 
-% % % % % % % % % % % % % % % % % % % % % % % % % % End Deprecated % % % %
 
       % Scoring videos:
       fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
@@ -1036,6 +1015,99 @@ classdef Block < nigeLab.nigelObj
       flag = linkTime(blockObj)     % Link Time stream
       flag = linkNotes(blockObj)    % Link notes metadata
       flag = linkProbe(blockObj)    % Link probe metadata
+      function flag = linkToData(blockObj, suppressWarning)
+         flag = false;
+         
+          % Local function to return folder path
+          parseFolder = @(idx) nigeLab.utils.getUNCPath(blockObj.Paths.(blockObj.Fields{idx}).dir);
+            % PARSEFOLDER  Local function to return correct folder location
+           
+         
+         switch class(suppressWarning)
+            case 'char'
+               field = {suppressWarning};
+               f = intersect(field,blockObj.Fields);
+               if isempty(f)
+                  error(['nigeLab:' mfilename ':BadInputChar'],...
+                     'Invalid field: %s (%s)',field{:},blockObj.Name);
+               end
+               field = f;
+               suppressWarning = true;
+            case 'cell'
+               field = suppressWarning;
+               f = intersect(field,blockObj.Fields);
+               if isempty(f)
+                  error(['nigeLab:' mfilename ':BadInputChar'],...
+                     'Invalid field: %s (%s)',field{:},blockObj.Name);
+               end
+               field = f;
+               suppressWarning = true;
+            case 'logical'
+               field = blockObj.Fields;
+            otherwise
+               error(['nigeLab:' mfilename ':BadInputClass'],...
+                  'Unexpected class for ''suppressWarning'': %s',...
+                  class(suppressWarning));
+         end
+         
+         % ITERATE ON EACH FIELD AND LINK THE CORRECT DATA TYPE
+         N = numel(field);
+         warningRef = false(1,N);
+         warningFold = false(1,N);
+         for ii = 1:N
+            fieldIndex = find(ismember(blockObj.Fields,field{ii}),1,'first');
+            if isempty(fieldIndex)
+               error(['nigeLab:' mfilename ':BadField'],...
+                  'Invalid field: %s (%s)',field{ii},blockObj.Name);
+            end
+            pcur = parseFolder(fieldIndex);
+            if exist(pcur,'dir')==0
+               warningFold(ii) = true;
+            elseif isempty(dir([pcur filesep '*.mat']))
+               warningRef(ii) = true;
+            else
+               warningRef(ii) = linkField(blockObj,fieldIndex);
+            end
+         end
+         
+         % GIVE USER WARNINGS
+         % Notify user about potential missing folders:
+         if any(warningFold)
+            warningIdx = find(warningFold);
+            nigeLab.utils.cprintf('UnterminatedStrings',...
+               'Some folders are missing. \n');
+            nigeLab.utils.cprintf('text',...
+               '\t-> Rebuilding folder tree ... %.3d%%',0);
+            for ii = 1:numel(warningIdx)
+               fieldIndex = find(ismember(blockObj.Fields,field{warningIdx(ii)}),...
+                  1,'first');
+               pcur = parseFolder(fieldIndex);
+               [~,~,~] = mkdir(pcur);
+               fprintf(1,'\b\b\b\b%.3d%%',round(100*ii/sum(warningFold)));
+            end
+            fprintf(1,'\n');
+         end
+         
+         % If any element of a given "Field" is missing, warn user that there is a
+         % missing data file for that particular "Field":
+         if any(warningRef) && ~suppressWarning
+            warningIdx = find(warningRef);
+            nigeLab.utils.cprintf('UnterminatedStrings',...
+               ['Double-check that data files are present. \n' ...
+               'Consider re-running doExtraction.\n']);
+            for ii = 1:numel(warningIdx)
+               nigeLab.utils.cprintf('text',...
+                  '\t%s\t-> Could not find all %s data files.\n',...
+                  blockObj.Name,field{warningIdx(ii)});
+            end
+         end
+         if strcmp(blockObj.Type,'Block')
+            updateStatus(blockObj,'notify'); % Just emits the event in case listeners
+         end
+         save(blockObj);
+         flag = true; 
+      
+      end
       
       % Methods for storing & parsing metadata:
       h = takeNotes(blockObj)             % View or update notes on current recording
@@ -1059,8 +1131,6 @@ classdef Block < nigeLab.nigelObj
    % HIDDEN,PUBLIC
    methods (Hidden,Access=public)
 % Start Deprecated % % % % % % % % % % % % % % % % % % % % % % % % % % % %
-%       flag = genPaths(blockObj,tankPath,useRemote) % Generate paths property struct
-%       --> Deprecated (inherited from `nigelObj`)
 %       flag = getSaveLocation(blockObj,saveLoc) % Prompt to set save dir
 %       --> Deprecated (inherited from `nigelObj`)
 %       paths = getFolderTree(blockObj,paths,useRemote) % returns a populated path struct
@@ -1070,7 +1140,140 @@ classdef Block < nigeLab.nigelObj
 %       parseRecType(blockObj)              % Parse the recording type
 %       --> Deprecated (inherited from `nigelObj`)
 % % % % % % % % % % % % % % % % % % % % % % % % % % End Deprecated % % % %
+      % Returns `paths` struct from folder tree heirarchy
+      function paths = getFolderTree(obj,paths)
+         %GETFOLDERTREE  Returns paths struct that parses folder names
+         %
+         %  paths = GETFOLDERTREE(obj);
+         %  paths = GETFOLDERTREE(obj,paths);
+         %  paths = GETFOLDERTREE(obj,paths,useRemote);
+         %
+         %  --------
+         %   INPUTS
+         %  --------
+         %  obj       : nigeLab.Block class object
+         %
+         %    paths        : (optional) struct similar to output from this
+         %                   function. This should be passed if paths has
+         %                   already been extracted, to preserve paths that
+         %                   are not extrapolated directly from
+         %                   GETFOLDERTREE.
+               
+         if ~isfield(obj.HasParsInit,'Block')
+            obj.updateParams('Block');
+         elseif ~obj.HasParsInit.Block
+            obj.updateParams('Block');
+         end
+         F = fieldnames(obj.Pars.Block.PathExpr);
+         del = obj.Pars.Block.Delimiter;
+         
+         for iF = 1:numel(F) % For each field, update field type
+            p = obj.Pars.Block.PathExpr.(F{iF});
+            
+            if contains(p.Folder,'%s') % Parse for spikes stuff
+               % Get the current "Spike Detection method," which gets
+               % added onto the front part of the _Spikes and related
+               % folders
+               
+               % default. No attribute in teh name
+               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                   '');
+               if ~isfield(obj.HasParsInit,'SD')
+                  obj.updateParams('SD');
+               elseif ~obj.HasParsInit.SD
+                  obj.updateParams('SD');
+               end
+               
+               % Look for ID in Pars
+               ParsFields = fieldnames(obj.Pars);
+               ParsWithID = find(cellfun(@(F) isfield(obj.Pars.(F),'ID'),ParsFields))';
+               for ii=ParsWithID
+                   if isfield(obj.Pars.(ParsFields{ii}).ID,(F{iF}))
+                       % if found put the ID in the foldername path
+                       p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+                           obj.Pars.(ParsFields{ii}).ID.(F{iF}));
+                       break;
+                   end
+               end
+                             
+            end
+            
+            % Set folder name for this particular Field
+            paths.(F{iF}).dir = nigeLab.utils.getUNCPath(...
+               obj.Out.Folder,[p.Folder]);
+            
+            % Parse for both old and new versions of file naming convention
+            paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
+               paths.(F{iF}).dir,[p.File]);
+            paths.(F{iF}).f_expr = p.File;
+            paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
+            paths.(F{iF}).info = nigeLab.utils.getUNCPath(...
+               paths.(F{iF}).dir,[p.Info]);
+            
+         end
+         
+         function old = getOldFiles(p,fieldPath,type)
+            %GETOLDFILES Get struct with file info for possible old files
+            old = struct;
+            for iO = 1:numel(p.OldFile)
+               f = strsplit(p.OldFile{iO},'.');
+               f = deblank(strrep(f{1},'*',''));
+               if isempty(f)
+                  continue;
+               end
+               O = dir(fullfile(fieldPath.(type),p.OldFile{iO}));
+               if isempty(O)
+                  old.(f) = O;
+               else
+                  if O(1).isdir
+                     old.(f) = dir(fullfile(O(1).folder,O(1).name,...
+                        p.OldFile{iO}));
+                  else
+                     old.(f) = O;
+                  end
+               end
+            end
+         end
+      end
 
+       function flag = genPaths(obj)
+           
+           flag = false;
+           if isempty(obj.Out.SaveLoc)
+               [fmt,idt,type] = obj.getDescriptiveFormatting();
+               dbstack;
+               nigeLab.utils.cprintf('Errors*',obj.Verbose,...
+                   '%s[GENPATHS]: ',idt);
+               nigeLab.utils.cprintf(fmt,obj.Verbose,...
+                   'Tried to build [%s].Paths using empty base\n',type);
+               return;
+           end
+           
+         
+         if exist(obj.Out.Folder,'dir')==0
+            mkdir(obj.Out.Folder);
+         end
+         
+         paths = struct;
+         paths = obj.getFolderTree(paths);
+         % Iterate on all the fieldnames, making the folder if it doesn't exist yet
+         F = fieldnames(paths);
+         for ff=1:numel(F)
+             if exist(paths.(F{ff}).dir,'dir')==0
+                 mkdir(paths.(F{ff}).dir);
+             end
+         end
+         flag = true;
+          obj.Paths = paths;
+         [fmt,idt,type] = obj.getDescriptiveFormatting();
+         nigeLab.utils.cprintf(fmt,obj.Verbose,...
+            '%s[GENPATHS]: Paths updated for %s (%s)\n',...
+            idt,upper(type),obj.Name);
+         nigeLab.utils.cprintf(fmt(1:(end-1)),obj.Verbose,...
+            '\t%s%sObj.Ouput is now %s\n',...
+            idt,lower(type),nigeLab.utils.shortenedPath(obj.Output));
+       end
+       
       flag = intan2Block(blockObj,fields,paths) % Convert Intan to BLOCK
       flag = tdt2Block(blockObj) % Convert TDT to BLOCK
       flag = rhd2Block(blockObj,recFile,saveLoc) % Convert *.rhd to BLOCK

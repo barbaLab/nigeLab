@@ -77,7 +77,9 @@ switch nargin
                case 'Streams'
                   n = numel(blockObj.Streams.(allOps{i}));
                case 'Videos'
-                  n = numel(blockObj.Videos);
+                   % TODO
+%                   n = numel(blockObj.Videos);
+                    n = 0;
                otherwise
                   strNumCh = ['Num' allOps{i}];
                   if isprop(blockObj,strNumCh)

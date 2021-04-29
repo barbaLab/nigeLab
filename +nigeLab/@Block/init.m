@@ -25,17 +25,15 @@ end
 % blockObj.AnimalLoc is empty [] at this point, if no output path was given
 % to the constructor as an input argument. this will bring up
 % a UI to point to the block save directory:
-if ~isempty(blockObj.Output)
-   outLoc = blockObj.Output;
-else
-   outLoc = blockObj.AnimalLoc;
+if isempty(blockObj.Output)
+    if ~blockObj.getSaveLocation(outLoc)
+        flag = false;
+        warning('Save location not set successfully.');
+        return;
+    end
 end
+
    
-if ~blockObj.getSaveLocation(outLoc)
-   flag = false;
-   warning('Save location not set successfully.');
-   return;
-end
 
 %EXTRACT HEADER INFORMATION
 header = blockObj.parseHeader();
@@ -45,10 +43,10 @@ if ~blockObj.initChannels(header)
 end
 
 %INITIALIZE VIDEOS STRUCT
-if ~blockObj.initVideos
-   warning('Could not initialize Videos structure properly.');
-   return;
-end
+% if ~blockObj.initVideos
+%    warning('Could not initialize Videos structure properly.');
+%    return;
+% end
 
 %INITIALIZE STREAMS STRUCT
 if ~blockObj.initStreams(header)
