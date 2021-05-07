@@ -82,6 +82,8 @@ switch blockObj.FileExt
       
       adc_scale = 312.5e-6;
       adc_offset = 32768;
+      dac_scale = 312.5e-6;
+      dac_offset = 32768;
 end
 
 if ~header.DataPresent
@@ -101,11 +103,15 @@ blockObj.reportProgress('Header parsed.',10,'toWindow','Parsed');
 % stream order for digital IO vs all other data streams)
 Files = struct('Standard',struct,'Time',[],'Dig',struct);
 nCh = struct('Standard',struct,'Time',1,'Dig',struct);
-nCh.Standard = struct('Raw',struct('Data',0),...
-   'AnalogIO',struct('Adc',0,'Dac',0,'Aux',0,'Supply',0,'Sensor',0),...
-   'Stim',0,...
-   'DC',struct('Data',0));
-nCh.Dig = struct('DigIO',struct('DigIn',0,'DigOut',0));
+nCh.Standard = struct('Raw',struct('Data',header.NumRawChannels),...
+   'AnalogIO',struct('Adc',header.NumAdcChannels,...
+                     'Dac',header.NumDacChannels,...
+                     'Aux',header.NumAuxChannels,...
+                     'Supply',header.NumSupplyChannels,...
+                     'Sensor',header.NumSensorChannels),...
+   'Stim',header.NumStimChannels,...
+   'DC',struct('Data',header.NumDCChannels));
+nCh.Dig = struct('DigIO',struct('DigIn',header.NumDigInChannels,'DigOut',header.NumDigOutChannels));
 native_order = struct; % For `Streams` fieldType
 stimCurr = 0; % Initialize to 0 amps
 for f = fields_to_extract
@@ -193,7 +199,7 @@ for f = fields_to_extract
          % Do not need the substruct here because of the fact it is just
          % 'Time' and is handled differently
          data = zeros(diskPars.size,diskPars.class);
-         Files.Time = nigeLab.utils.makeDiskFile(diskPars);
+         Files.Time = nigeLab.utils.makeDiskFile(diskPars,data);
          
       case 'Streams'
          infofield = [curDataField 'Channels'];
@@ -321,7 +327,7 @@ if nCh.Standard.Stim > 0 % Then there is 'Stim' data on all channels
       nCh.Standard.Stim,nPerBlock,nChunks);
    fName = sprintf(paths.Stim.file,'Stim');  
    nColStimEventFile = 10 + numel(trigCh); 
-   tmp = zeros(1,nColStimEventFile,'single');
+   data = zeros(1,nColStimEventFile,'single');
    diskPars = struct(...
       'format','Event',...
       'name',fName,...
@@ -329,7 +335,7 @@ if nCh.Standard.Stim > 0 % Then there is 'Stim' data on all channels
       'access','w',...
       'class','single',...
       'verbose',blockObj.Verbose && ~blockObj.OnRemote);
-   Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars,tmp); 
+   Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars,data); 
 
 end
 
