@@ -1155,119 +1155,7 @@ end
          end
          obj.Key = value;
       end
-      
-%       % [DEPENDENT]  .Name (depends on .Type, parsing)
-%       function value = get.Name(obj)
-%          %GET.Name  Property Get method for .Name
-%          %
-%          %  value = get(obj,'Name');
-% 
-%          value = 'Unknown';
-%          if isempty(obj)
-%             return;
-%          end
-%          if ~isvalid(obj)
-%             return;
-%          end
-%          if ~isfield(obj.Paths,'Name')
-%             if ~isfield(obj.Pars,obj.Type)
-%                [~,obj.Pars.(obj.Type)] = obj.updateParams(obj.Type);
-%             end
-% 
-%             name = obj.genName();
-%             obj.Paths.Name = name;
-%          end
-%          % Just in case something went wrong with parsing:
-%          if isempty(obj.Paths.Name) 
-%             switch obj.Type
-%                case 'Tank'
-%                   if isfield(obj.Out,'TankName')
-%                      obj.Paths.Name = obj.Out.TankName;
-%                   else
-%                      obj.Paths.Name = obj.genName();
-%                   end
-%                case 'Animal'
-%                   if isfield(obj.Out,'AnimalName')
-%                      obj.Paths.Name = obj.Out.TankName;
-%                   else
-%                      obj.Paths.Name = obj.genName();
-%                   end
-%                case 'Block'
-%                   if isfield(obj.Out,'BlockName')
-%                      obj.Paths.Name = obj.Out.TankName;
-%                   else
-%                      obj.Paths.Name = obj.genName();
-%                   end
-%             end
-%          end
-%          value = obj.Paths.Name;
-%       end
-%       function set.Name(obj,value)
-%          %SET.Name   Set method for 'Name' property assignments
-%          
-%          if isempty(value)
-%             return;
-%          end
-%          if iscell(value)
-%             if numel(value)==1
-%                value = repmat(value,1,numel(obj));
-%             end
-%             if numel(value) ~= numel(obj)
-%                error(['nigeLab:' mfilename ':InputSizeMismatch'],...
-%                   'If using cell, must have same number of elements.');
-%             else
-%                for i = 1:numel(obj)
-%                   switch class(obj)
-%                      case 'nigeLab.Tank'
-%                         for k = 1:numel(obj.Children)
-%                            if ~isempty(obj.Children(k))
-%                               c = obj.Children(k);
-%                               if isvalid(c)
-%                                  c.Meta.TankID = value;
-%                               end
-%                            end
-%                         end
-%                      case 'nigeLab.Animal'
-%                         for k = 1:numel(obj.Children)
-%                            if ~isempty(obj.Children(k))
-%                               c = obj.Children(k);
-%                               if isvalid(c)
-%                                  c.Meta.AnimalID = value;
-%                               end
-%                            end
-%                         end
-%                   end
-%                   obj(i).Paths.Name = value{i};
-%                end
-%             end
-%          elseif ischar(value)
-%             obj.Paths.Name = value;
-%             switch class(obj)
-%                case 'nigeLab.Tank'
-%                   for k = 1:numel(obj.Children)
-%                      if ~isempty(obj.Children(k))
-%                         c = obj.Children(k);
-%                         if isvalid(c)
-%                            c.Meta.TankID = value;
-%                         end
-%                      end
-%                   end
-%                case 'nigeLab.Animal'
-%                   for k = 1:numel(obj.Children)
-%                      if ~isempty(obj.Children(k))
-%                         c = obj.Children(k);
-%                         if isvalid(c)
-%                            c.Meta.AnimalID = value;
-%                         end
-%                      end
-%                   end
-%             end
-%          else
-%             error(['nigeLab:' mfilename ':BadClass'],...
-%                'value is %s, but should be cell or char',class(value));
-%          end
-%       end
-%       
+  
       % [DEPENDENT]  .OnRemote (running remote job if true)
       function value = get.OnRemote(obj)
          %GET.ONREMOTE  Returns value of OnRemote flag
@@ -1504,30 +1392,6 @@ end
          obj.Params.Pars = obj.MergeStructs(obj.Params.Pars,value);
       end
       
-%       % [DEPENDENT]  .Paths file path info struct
-%       function value = get.Paths(obj)
-%          %GET.PATHS  Gets .Paths property of nigelObj
-%          %
-%          %  value = get(obj,'Paths',pathStruct);
-%          %  --> Returns value held in .Params.Paths
-% 
-%          value = obj.Params.Paths;
-%       end
-%       function set.Paths(obj,value)
-%          %SET.PATHS  Sets .Paths property of nigelObj
-%          %
-%          %  set(obj,'Paths',pathStruct);
-%          %  --> If 'Paths' already exists with fields not included in
-%          %      pathStruct, keep those fields from the old pathStruct
-%          
-%          if isempty(value)
-%             return;
-%          end
-%          
-%          obj.Params.Paths = obj.MergeStructs(obj.Params.Paths,value);
-%          
-%       end
-%       
       % [DEPENDENT]  .RecSystem
       function value = get.RecSystem(obj)
          %GET.RECSYSTEM  Returns value .RecSystem property
@@ -5334,6 +5198,11 @@ end
          % defaults.Block template string:
          incVarIdx = find(~cellfun(@isempty,splitStr));
          splitStr = [splitStr{:}];
+         
+         if numel(splitStr) ~= numel(nameParts)
+                nigeLab.libs.namingConfigurator(obj,meta.OrigName);
+         end
+         
          
          % Find which set of variables (the total number available from the
          % name, or the number set to be read dynamically from the naming

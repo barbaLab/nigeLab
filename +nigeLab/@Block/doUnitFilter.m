@@ -58,10 +58,11 @@ for iCh = blockObj.Mask
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
-   if ~pars.STIM_SUPPRESS
-       data = blockObj.Channels(iCh).Raw(:);
-   else
+   if pars.STIM_SUPPRESS && isfield(blockObj.Events,'Stim')
        data = blockObj.execStimSuppression(iCh);
+   else
+       data = blockObj.Channels(iCh).Raw(:);
+
    end
       % Filter and and save amplifier_data by probe/channel
       pNum  = num2str(blockObj.Channels(iCh).probe);

@@ -1017,7 +1017,9 @@ classdef Block < nigeLab.nigelObj
       flag = linkProbe(blockObj)    % Link probe metadata
       function flag = linkToData(blockObj, suppressWarning)
          flag = false;
-         
+         if nargin < 2
+             suppressWarning = false;
+         end
           % Local function to return folder path
           parseFolder = @(idx) nigeLab.utils.getUNCPath(blockObj.Paths.(blockObj.Fields{idx}).dir);
             % PARSEFOLDER  Local function to return correct folder location

@@ -96,6 +96,8 @@ end
 %% Perform spike detection and feature extraction (wavelet decomposition)
 % --> (on only the third Block of the second Animal)
 blockObj = tankObj{1,1};
+fig = nigeLab.libs.configSD(blockObj);
+waitfor(fig);
 doSD(blockObj);
 linkToData(blockObj);
 
