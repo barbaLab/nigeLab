@@ -815,11 +815,11 @@ classdef Block < nigeLab.nigelObj
          % Make sure that 'AnimalID' and 'RecID' are in SpecialMeta
          if isfield(pars.SpecialMeta,'SpecialVars')
             pars.SpecialMeta.SpecialVars = union(...
-               pars.SpecialMeta.SpecialVars,{'AnimalID','RecID'});  
+               pars.SpecialMeta.SpecialVars,{'AnimalID','BlockID'});  
          else
             pars = nigeLab.defaults.Block;
             pars.SpecialMeta.SpecialVars = union(...
-               pars.SpecialMeta.SpecialVars,{'AnimalID','RecID'});
+               pars.SpecialMeta.SpecialVars,{'AnimalID','BlockID'});
          end
          
          % % % % Run supermethod@superclass % % % % %

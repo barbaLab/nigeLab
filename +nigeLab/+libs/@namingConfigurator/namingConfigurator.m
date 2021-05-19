@@ -41,12 +41,12 @@ classdef namingConfigurator < handle
             obj.IncludeChar = nigelObj.Pars.(type).IncludeChar;
             obj.SpecialMeta.SpecialVars = {};
             
-            obj.Fig = uifigure('Position',[300 150 640 480]);
+            obj.Fig = uifigure('Position',[300 150 640 480],'CloseRequestFcn',@(src,evt)CloseFig(obj));
             obj.SpecialPanel  = uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .1 1 .3],'Scrollable','on','UserData',0);
             obj.MetasPanel = uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .4 1 .3],'Scrollable','on');
             obj.NamePanel= uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .7 1 .3],'Scrollable','on');
             obj.SaveBtn = uibutton(obj.Fig,'Text','Save','Position',[320 10 100 20],'ButtonPushedFcn',@(src,evt)obj.save);
-            obj.Save2AllBtn = uibutton(obj.Fig,'Text','Save to all','Position',[430 10 200 20],@(src,evt)obj.save2all);
+            obj.Save2AllBtn = uibutton(obj.Fig,'Text','Save to all','Position',[430 10 200 20],'ButtonPushedFcn',@(src,evt)obj.save2all);
             % build Name panel
             obj.NamePanel.Units = 'pixels';
             pos = obj.NamePanel.Position;
@@ -241,47 +241,64 @@ classdef namingConfigurator < handle
         function pars = save(obj)
             type = obj.nigelObj.Type;
             pars = struct();
-            pars.(type).NamingConvention = obj.NamingConvention;
-            pars.(type).SpecialMeta = obj.SpecialMeta;
+            pars.NamingConvention = obj.NamingConvention;
+            pars.SpecialMeta = obj.SpecialMeta;
             pars.Delimiter = obj.Delimiter;
+            pars.IncludeChar = obj.IncludeChar;
+            pars.DiscardChar = obj.DiscardChar;
             switch type
                 case 'Tank'
-                    isTankIdPresent = any(strcmp('RecID',obj.NamingConvention)) || ...
+                    isTankIdPresent = any(strcmp([obj.IncludeChar 'RecID'],obj.NamingConvention)) || ...
                         any(strcmp('RecID',fieldnames(obj.SpecialMeta)));
                     if  isTankIdPresent 
-                        obj.nigelObj.Pars.(type) = pars.(type);
+                        ok = true;
                     else
                         error('Please provide an unique Tank identifier called TankID');
                     end
                 case 'Animal'
-                    isAnIdPresent = any(strcmp('AnimalID',obj.NamingConvention)) || ...
+                    isAnIdPresent = any(strcmp([obj.IncludeChar 'AnimalID'],obj.NamingConvention)) || ...
                         any(strcmp('AnimalID',fieldnames(obj.SpecialMeta)));
                     if isAnIdPresent
-                        obj.nigelObj.Pars.(type) = pars.(type);
+                        ok = true;
                     else
                         error('Please provide an unique Animal identifier called AnimalID');
                     end
                 case 'Block'
-                    isRecIdPresent = any(strcmp('RecID',obj.NamingConvention)) || ...
-                        any(strcmp('RecID',fieldnames(obj.SpecialMeta)));
-                    isAnIdPresent = any(strcmp('AnimalID',obj.NamingConvention)) || ...
+                    isRecIdPresent = any(strcmp([obj.IncludeChar 'BlockID'],obj.NamingConvention)) || ...
+                        any(strcmp('BlockID',fieldnames(obj.SpecialMeta)));
+                    isAnIdPresent = any(strcmp([obj.IncludeChar 'AnimalID'],obj.NamingConvention)) || ...
                         any(strcmp('AnimalID',fieldnames(obj.SpecialMeta)));
                     if  isRecIdPresent && isAnIdPresent
-                        obj.nigelObj.Pars.(type) = pars.(type);
+                       ok = true;
                     elseif ~isRecIdPresent
                         error('Please provide an unique Block identifier called RecID');
                     else
                         error('Please provide an unique Animal identifier called AnimalID');
                     end
             end
+            
+            ff = fieldnames(pars);
+            for f = ff'
+                obj.nigelObj.Pars.(type).(f{:}) = pars.(f{:});
+            end
+            
         end
         
         function save2all(obj)
             pars = obj.save;
             for oo = obj.nigelObj.Parent.Children
                 type = oo.Type;
-                oo.Pars.(type) = pa     `   `       rs.(type);
+                ff = fieldnames(pars.(type));
+                for f = ff'
+                    oo.Pars.(type).(f{:}) = pars.(type).(f{:});
+                end
             end
+        end
+        
+        function CloseFig(obj)
+            delete(obj.Fig);
+            obj.nigelObj = [];
+            delete(obj);
         end
     end
 end

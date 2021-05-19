@@ -1611,14 +1611,7 @@ end
             p = nigeLab.utils.getNigelPath();
             setenv('GIT_DIR',p);
             % whoami returns list of logged-in users
-            [status,tmp] = system('whoami');
-            if status == 0
-               tmp = textscan(tmp,'%s');
-               def = tmp{1}{1};
-            else % Otherwise try to parse from .git info
-               gitInfo = nigeLab.utils.Git.getGitInfo();
-               def = gitInfo.user;
-            end
+           def = [getenv('userdomain') '_' getenv('username')];
          end
          
          % Make sure it can be set as a field name
@@ -5200,7 +5193,10 @@ end
          splitStr = [splitStr{:}];
          
          if numel(splitStr) ~= numel(nameParts)
-                nigeLab.libs.namingConfigurator(obj,meta.OrigName);
+                namingInterface = nigeLab.libs.namingConfigurator(obj,meta.OrigName);
+                waitfor(namingInterface);
+                meta = parseNamingMetadata(obj,fName);
+                return
          end
          
          
@@ -5262,18 +5258,20 @@ end
           if ~isfield( obj.Pars.(obj.Type),'Parsing')
                     obj.Meta = obj.parseNamingMetadata;
           end
-          
-          pars = obj.Pars.(obj.Type).Parsing;
-          meta = obj.Meta;
-          % Last, concatenate parsed (included) variables to get .Name
-          str = [];
-          nameCon = pars.NamingConvention;
-          for ii = 1:numel(nameCon)
-              if isfield(meta,nameCon{ii})
-                  str = [str,meta.(nameCon{ii}),pars.Concatenater];
-              end
-          end
-          name = str(1:(end-numel(pars.Concatenater)));
+%           
+%           pars = obj.Pars.(obj.Type).Parsing;
+%           meta = obj.Meta;
+%           % Last, concatenate parsed (included) variables to get .Name
+%           str = [];
+%           nameCon = pars.NamingConvention;
+%           for ii = 1:numel(nameCon)
+%               if isfield(meta,nameCon{ii})
+%                   str = [str,meta.(nameCon{ii}),pars.Concatenater];
+%               end
+%           end
+%           name = str(1:(end-numel(pars.Concatenater)));
+
+        name = obj.Meta.(sprintf('%sID',obj.Type));
       end
       
       % Parse output path (constructor probably always)

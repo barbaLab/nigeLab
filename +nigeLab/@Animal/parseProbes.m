@@ -58,7 +58,7 @@ for b = B
    bC = b.ChannelID;   
    for iCh = 1:size(bC,1)
       pCh = bC(iCh,:);
-      idx = find(ismember(C,pCh,'rows'),1,'first');
+      idx = find(all(C == pCh,2),1,'first');
       b.Channels(iCh).ID = animalObj.Probes(idx).ID;
       
    end
