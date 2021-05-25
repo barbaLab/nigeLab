@@ -56,7 +56,7 @@ info.Duration = blockObj.Duration;
 
 %% PARSE ANIMAL AND RECORDING ID
 infoFields={'AnimalID'
-            'RecID'};
+            'BlockID'};
 for jj=1:numel(infoFields)
    if isfield(blockObj.Meta,infoFields{jj})
       info.(infoFields{jj})={blockObj.Meta.(infoFields{jj})};

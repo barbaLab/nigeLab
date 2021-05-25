@@ -16,14 +16,14 @@ pars.DebugOn = false; % Set to true to turn on "remote debug" mode (slower)
 % For below, see nigeLab.utils.jobTag2Pct()
 pars.TagDelim = '||'; % This should separate TagString between naming and % complete
 pars.TagString.String = ['%s.%s %s' pars.TagDelim '%.3d%%']; % regexp for Tag updates
-pars.TagString.Vars = {'AnimalID','RecID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
+pars.TagString.Vars = {'AnimalID','BlockID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
 
 % regexp for command window updates
 pars.NotifyString.String = '\t%s.%s -> %s: %.3d%%'; 
 %    FORMAT  ::             >>[tab]Animal.Block -> operation : DDD%
 
 % Command window update variables
-pars.NotifyString.Vars = {'AnimalID','RecID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
+pars.NotifyString.Vars = {'AnimalID','BlockID'}; % These are matched to blockObj.Meta "special" parsed dynamic variables
 pars.ConstantString.String = ...
    ['%s', repmat('.%s',1,numel(pars.NotifyString.Vars)-1)];
 

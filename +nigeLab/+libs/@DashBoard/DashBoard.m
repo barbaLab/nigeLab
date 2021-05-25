@@ -580,7 +580,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                      if isfield(cBlk.Meta,'RecTag')
                         BlNames{iBlk} = cBlk.Meta.RecTag;
                      else
-                        BlNames{iBlk} = cBlk.Meta.RecID;
+                        BlNames{iBlk} = cBlk.Meta.BlockID;
                      end
                      
                   end
@@ -608,7 +608,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                   if isfield(nigelObj(ii).Meta,'RecTag')
                      BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecTag,'Parent',AnNode);  
                   else
-                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.RecID,'Parent',AnNode);   
+                     BlNode = uiw.widget.CheckboxTreeNode('Name',nigelObj(ii).Meta.BlockID,'Parent',AnNode);   
                   end
                   set(BlNode,'UserData',{AnNode.UserData,nigelObj.Key.Public});
                   obj.Listener = [obj.Listener, ...
@@ -1205,7 +1205,7 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                indx = cellfun(@(x,idx)[idx*logical(find(src==x)) find(src==x)],{A.Children},num2cell(1:numel(A)),'UniformOutput',false);
                indx = [indx{cellfun(@(x) ~isempty(x),indx)}];
                obj2del = obj.Tree.Root.Children(indx(1)).Children(min(indx(2),end));
-               if obj2del.Name == src.Meta.RecID % useless check  but just to be sure
+               if obj2del.Name == src.Meta.BlockID % useless check  but just to be sure
                   delete(obj2del);
                else
                   nigeLab.utils.cprintf('SystemCommands*',...
@@ -1738,8 +1738,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                         '%s is a higher level than %s',level,class(nigelObj));
                   case 'block'
                      Metas = [nigelObj.Meta];
-                     if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
-                        name = {Metas.RecID};
+                     if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'BlockID')
+                        name = {Metas.BlockID};
                      else
                         name = {nigelObj.Name};
                      end
@@ -1759,8 +1759,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                         if isempty(Metas)
                            name = [name, {b.Name}];
                         else
-                           if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
-                              name = [name, {Metas.RecID}];
+                           if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'BlockID')
+                              name = [name, {Metas.BlockID}];
                            else
                               name = [name, {b.Name}];
                            end
@@ -1781,8 +1781,8 @@ classdef DashBoard < handle & matlab.mixin.SetGet
                      for i = 1:numel(a)
                         b = a(i).Children;
                         Metas = [b.Meta];
-                        if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'RecID')
-                           name = [name, {Metas.RecID}];
+                        if isfield(Metas(1),'AnimalID') && isfield(Metas(1),'BlockID')
+                           name = [name, {Metas.BlockID}];
                         else
                            name = [name, {b.Name}];  %#ok<*AGROW>
                         end

@@ -1292,6 +1292,7 @@ end
          obj.Out.File =    fix(fullfile(value, sprintf('%s_%s.mat',obj.Name,obj.Type)));
          obj.Out.Pars =    fix(fullfile(value, sprintf(obj.ParamsExpr,obj.Name)));
          obj.Out.NigelFile = fix(fullfile(obj.Out.Folder,sprintf('.nigel%s',obj.Type)));
+         flags = arrayfun(@(x)set(x,'Output',obj.Out.Folder),obj.Children,'UniformOutput',false);
          obj.genPaths();
 %          obj.saveIDFile();
          
@@ -4153,7 +4154,7 @@ end
          if exist(obj.Out.Folder,'dir')==0
             mkdir(obj.Out.Folder);
          end
-         flags = arrayfun(@(x)genPaths(x,obj.Out.Folder),obj.Children);
+         flags = arrayfun(@(x)genPaths(x),obj.Children);
          flag = all(flags);
       end
       
@@ -5181,18 +5182,22 @@ end
          
          % Parse variables from defaults.Block "template," which match
          % delimited elements of block recording name:
-         regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
-            pars.IncludeChar,pars.DiscardChar);
-         splitStr = regexp(pars.DynamicVarExp,regExpStr,'match');
+%          regExpStr = sprintf('\\%c\\w*|\\%c\\w*',...
+%             pars.IncludeChar,pars.DiscardChar);
+
+         regExpStr = sprintf('\\%c\\w*',...
+            pars.IncludeChar);
+         splitStr = regexp(pars.NamingConvention,regExpStr,'match');
          
          
          % Find which delimited elements correspond to variables that
          % should be included by looking at the leading character from the
          % defaults.Block template string:
          incVarIdx = find(~cellfun(@isempty,splitStr));
+         exclVarIdx = find(cellfun(@isempty,splitStr));
          splitStr = [splitStr{:}];
          
-         if numel(splitStr) ~= numel(nameParts)
+         if (numel(incVarIdx) + numel(exclVarIdx)) ~= numel(nameParts)
                 namingInterface = nigeLab.libs.namingConfigurator(obj,meta.OrigName);
                 waitfor(namingInterface);
                 meta = parseNamingMetadata(obj,fName);

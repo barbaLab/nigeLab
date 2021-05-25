@@ -248,8 +248,8 @@ classdef namingConfigurator < handle
             pars.DiscardChar = obj.DiscardChar;
             switch type
                 case 'Tank'
-                    isTankIdPresent = any(strcmp([obj.IncludeChar 'RecID'],obj.NamingConvention)) || ...
-                        any(strcmp('RecID',fieldnames(obj.SpecialMeta)));
+                    isTankIdPresent = any(strcmp([obj.IncludeChar 'TankID'],obj.NamingConvention)) || ...
+                        any(strcmp('TankID',fieldnames(obj.SpecialMeta)));
                     if  isTankIdPresent 
                         ok = true;
                     else
@@ -271,7 +271,7 @@ classdef namingConfigurator < handle
                     if  isRecIdPresent && isAnIdPresent
                        ok = true;
                     elseif ~isRecIdPresent
-                        error('Please provide an unique Block identifier called RecID');
+                        error('Please provide an unique Block identifier called BlockID');
                     else
                         error('Please provide an unique Animal identifier called AnimalID');
                     end

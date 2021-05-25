@@ -70,7 +70,7 @@ if getStatus(blockObj,'Clusters',ch)
    end
 elseif exist(fName,'file')~=0   
     load(fName,'data');
-    clusterIndex = data(2,:);
+    clusterIndex = data(:,2);
     ts = getSpikeTimes(blockObj,ch);
     n = numel(ts);
     if numel(clusterIndex)~=n
@@ -82,7 +82,7 @@ elseif exist(fName,'file')~=0
         clusterIndex = zeros(n,1);
         return;
     end
-    blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData(fType,...
+    blockObj.Channels(ch).Clusters = nigeLab.libs.DiskData('event',...
         fName);
     updateStatus(blockObj,'Clusters',true,ch);
 else % If it doesn't exist

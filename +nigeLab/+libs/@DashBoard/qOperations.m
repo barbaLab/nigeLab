@@ -142,7 +142,7 @@ switch class(target)
          tagStr = sprintf(nPars.TagString.String,metas{:},...         % constant part of the message
                            'Pending',0);  
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
-            target.Meta.RecID);
+            target.Meta.BlockID);
          % target is nigelab.Block
 %          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
@@ -191,7 +191,7 @@ switch class(target)
             lineLink,opLink,target.Name);
          % (target is scalar nigeLab.Block)
          blockName = sprintf('%s.%s',target.Meta.AnimalID,...
-            target.Meta.RecID);
+            target.Meta.BlockID);
 %          blockName = blockName(1:min(end,nPars.NMaxNameChars));
          barName = sprintf('%s.%s',blockName,operation);
          starttime = clock();

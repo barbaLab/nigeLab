@@ -70,7 +70,7 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-pars.DynamicVarExp={'$AnimalID','$Year','$Month','$Day','$RecID','$RecDate','$RecTime'}; % demo
+pars.NamingConvention={'$AnimalID','$Phase','$RecDate','$RecTime'}; % demo
 % pars.DynamicVarExp={'$AnimalID' '$RecID' '$RecDate' '$RecTime'}; % iit acute
 
 %% Common NamingConvention values
@@ -78,7 +78,7 @@ pars.DynamicVarExp={'$AnimalID','$Year','$Month','$Day','$RecID','$RecDate','$Re
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecDate','RecTime'}; % (FB/KUMC R03) Since these are different for different configs, please keep commented lines instead of changing directly
 % pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuff
 % pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
-pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC, demo
+% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC, demo
 % pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
 
 % OPTIONAL: To parse "RecID" from combination of meta vars, specify here
@@ -89,10 +89,10 @@ pars.SpecialMeta = struct;
 
 % Note that RecTag (if created) replaces 'RecID' in DashBoard
 % pars.SpecialMeta.SpecialVars = {'RecTag'};     % FB ~!!
-pars.SpecialMeta.SpecialVars = {'AnimalID','RecTag'}; % MM
-pars.SpecialMeta.RecTag.cat = '-';
+pars.SpecialMeta.SpecialVars = {'BlockID'}; % MM
+pars.SpecialMeta.BlockID.cat = '-';
 % pars.SpecialMeta.RecID.cat = '-';      % Concatenater (if used) for names
-pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
+% pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
 
 % pars.SpecialMeta.SpecialVars = {'AnimalID','RecID'}; % KUMC "RC"
 
@@ -100,7 +100,7 @@ pars.SpecialMeta.AnimalID.cat = '-';   % Concatenater (if used) for names
 % pars.SpecialMeta.RecTag.vars = {'RecID'}; % FB
 % pars.SpecialMeta.RecID.vars = {}; % FB/KUMC-R03/MM
 % pars.SpecialMeta.RecTag.vars = {'Year','Month','Day'}; % KUMC "RC"
-pars.SpecialMeta.RecTag.vars = {'Year','Month','Day','RecID'}; % KUMC "MM"
+pars.SpecialMeta.BlockID.vars = {'Phase','RecDate','RecTime'}; % KUMC "MM"
 % pars.SpecialMeta.AnimalID.vars = {}; % FB/KUMC-R03  Keep commented
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 % pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff
@@ -322,6 +322,7 @@ if sum(idx)>0
    return;
 end
 
+
 % Check that if "HasVideo" and/or "HasVidStreams" are true, the appropriate
 % fields and corresponding values are present
 hasVideo = nigeLab.defaults.Video('HasVideo');
@@ -344,9 +345,7 @@ if hasVideo
    % Check dynamic variables expression here and in defaults.Video
    dyVar = cellfun(@(x)x(2:end),nigeLab.defaults.Video('DynamicVars'),...
       'UniformOutput',false);
-   if ~any(ismember(pars.NamingConvention,dyVar))
-      error('No matching entries of NamingConvention (metadata field names) and DynamicVars in +defaults.Video');
-   end
+   
 end
 
 if hasVidStreams

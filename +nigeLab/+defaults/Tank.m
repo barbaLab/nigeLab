@@ -16,8 +16,8 @@ pars.FolderIdentifier = '.nigelTank';
 
 %% Name parsing: see '~/+defaults/Block.m' for detailed documentation
 % This works the same way, but applies to Tank name
-pars.DynamicVarExp={'$TankID'};
-pars.NamingConvention={'TankID'};
+pars.NamingConvention={'$TankID'};
+% pars.NamingConvention={'TankID'};
 
 pars.SpecialMeta = struct;
 pars.SpecialMeta.SpecialVars = {};

@@ -305,11 +305,11 @@ classdef nigelTree < handle & matlab.mixin.SetGet
                         BlocksToAddKeys = setdiff(ThisAnBlocksKeys,BlocksNodesKeys);
                         
                         % finally restrict nigelObj to the blocks to add
-                        BlocksToAdd = nigelObj.findByKey(BlocksToAddKeys);
+                        BlocksToAdd = nigelObj(ismember(AllBlocksKeys,BlocksToAddKeys));
                         
                         for jj=1:numel(BlocksToAdd)
                             thisBlock = BlocksToAdd(jj);
-                            BlNode = uiw.widget.CheckboxTreeNode('Name',thisBlock.Meta.RecID,'Parent',AnNode);
+                            BlNode = uiw.widget.CheckboxTreeNode('Name',thisBlock.Meta.BlockID,'Parent',AnNode);
                             set(BlNode,'UserData',{UAnKeys{ii},thisBlock.getKey});
                             thisBlock.TreeNodeContainer = [thisBlock.TreeNodeContainer, BlNode];
 %                             obj.Listener = [obj.Listener, ...

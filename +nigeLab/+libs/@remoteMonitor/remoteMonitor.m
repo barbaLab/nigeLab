@@ -263,12 +263,12 @@ classdef remoteMonitor < handle
          %   job  --  Matlab job object
 
          %%%% get bar name
-         if isfield(blockObj.Meta,'AnimalID') && isfield(blockObj.Meta,'RecID')
+         if isfield(blockObj.Meta,'AnimalID') && isfield(blockObj.Meta,'BlockID')
             blockName = sprintf('%s.%s',...
                blockObj.Meta.AnimalID,...
-               blockObj.Meta.RecID);
+               blockObj.Meta.BlockID);
          else
-            warning(['Missing AnimalID or RecID Meta fields. ' ...
+            warning(['Missing AnimalID or BlockID Meta fields. ' ...
                'Using Block.Name instead.']);
             blockName = strrep(blockObj.Name,'_','.');
          end
