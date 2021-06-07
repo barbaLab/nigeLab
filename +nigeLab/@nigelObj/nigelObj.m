@@ -385,7 +385,7 @@ end
             mcp = {p.Name};
             props2set = intersect(f,mcp);
             if ismember('Name',props2set) % Make sure this is added first
-               obj.Paths.Name = obj_.Name;
+               obj.Name = obj_.Name;
                props2set = setdiff(props2set,'Name');
             end
             if ismember('Pars',props2set)
@@ -1221,7 +1221,7 @@ end
             return;
          end
          if ~isempty(obj.Out.Folder)
-            value = obj.Out.Folder;
+            value = obj.Out.SaveLoc;
             value = strrep(value,'\','/');
             return;
          elseif isempty(obj.Out.SaveLoc)
@@ -1294,7 +1294,7 @@ end
          obj.Out.NigelFile = fix(fullfile(obj.Out.Folder,sprintf('.nigel%s',obj.Type)));
          flags = arrayfun(@(x)set(x,'Output',obj.Out.Folder),obj.Children,'UniformOutput',false);
          obj.genPaths();
-%          obj.saveIDFile();
+         obj.saveIDFile();
          
       end
       
@@ -3158,7 +3158,7 @@ end
             end
          end
          new = nigeLab.utils.getUNCPath(newLocation);
-         old = nigeLab.utils.getUNCPath(obj.SaveLoc);
+         old = nigeLab.utils.getUNCPath(obj.Out.SaveLoc);
          if ~strcmp(new,old)
             choice = questdlg(...
                sprintf('Move %s files?\n-> %s\n to\n-> %s',...
@@ -4972,7 +4972,7 @@ end
             recursionFlag = true;
          end
          
-         fid = fopen(obj.IDFile,'r+');
+         fid = fopen(obj.Out.NigelFile,'r+');
          if (fid < 0)
             if ~isempty(obj.Name)
                % "ID" file doesn't exist; make it using current properties
@@ -5440,7 +5440,7 @@ end
          end
          
          % Save .nigel___ file to identify this "Type" of folder
-         if isempty(obj.IDFile)
+         if isempty(obj.Out.NigelFile)
             if obj.Verbose
                [fmt,idt,type] = obj.getDescriptiveFormatting();
                dbstack;
@@ -5460,7 +5460,7 @@ end
             end
             return;
          else
-            [outPath,~,~] = fileparts(obj.IDFile);
+            [outPath,~,~] = fileparts(obj.Out.NigelFile);
          end
          if exist(outPath,'dir')==0
             [SUCCESS,MESSAGE,MESSAGEID] = mkdir(outPath); % Make sure the output folder exists
@@ -5468,7 +5468,7 @@ end
                 return;
             end
          end
-         fid = fopen(obj.IDFile,'w');
+         fid = fopen(obj.Out.NigelFile,'w');
          if fid > 0
             fprintf(fid,'%s|%s\n',upper(obj.Type),obj.Name);
             fprintf(fid,'Key.Public|%s\n',obj.Key.Public);
@@ -5489,7 +5489,7 @@ end
             flag = true;
          else
             warning(['nigeLab:' mfilename ':SAVEIDFILE'],...
-               'Could not write FolderIdentifier (%s)',obj.IDFile);
+               'Could not write FolderIdentifier (%s)',obj.Out.NigelFile);
             flag = false;
          end         
       end
@@ -5505,7 +5505,7 @@ end
             case 'Animal'
                 varName = 'blockObj';
                C = dir(nigeLab.utils.getUNCPath(...
-                        obj.Output,'*_Block.mat'));
+                        obj.Out.Folder,'*_Block.mat'));
                if isempty(C)
                   return;
                end
@@ -5513,7 +5513,7 @@ end
             case 'Tank'
                 varName = 'animalObj';
                C = dir(nigeLab.utils.getUNCPath(...
-                        obj.Output,'*_Animal.mat'));
+                        obj.Out.Folder,'*_Animal.mat'));
                if isempty(C)
                   return;
                end
@@ -5664,7 +5664,7 @@ end
          obj.Output = saveLoc;
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
-            p = obj.Output;
+            p = obj.Out.Folder;
             flag = true;
             for i = 1:numel(obj.Children)
                if ~isempty(obj.Children(i))
@@ -5682,7 +5682,7 @@ end
          % remove old block matfile
          objFile = obj.Out.File;
          parsFile =  obj.getParsFilename();
-         IDfile = obj.FolderIdentifier;
+         IDfile = obj.Out.NigelFile;
          if removeOld
              mode = 'mv';
              
@@ -5832,10 +5832,11 @@ end
           
           switch answer
               case btn1
-                  path = uigetdir(obj.Paths.SaveLoc);
+                  path = uigetdir(obj.Out.SaveLoc);
                   dd = dir(fullfile(fileparts(path),'**','*_Tank.mat'));
                   path = dd.folder;
-                  obj.updatePaths(path);
+                  obj.Output = path;
+%                   obj.updatePaths(path);
                   flag = true;
               case btn2
                   flag = false;
@@ -5916,8 +5917,9 @@ end
                    % Parent directory. If DataMoved is true, the loadfunc
                    % was called during the loading process of animal.
                    animalObj = evalin('caller','b'); % evaluates the variable b in the caller workspace
-                   path = animalObj.Output;
-                   b.updatePaths(path);
+                   path = animalObj.Out.Folder;
+                   b.Output = path;
+                   b.genPaths;
                end
                
              case {'Animal'}
@@ -5931,8 +5933,8 @@ end
 % the user to select the correct path, otherwise we use the tankObj path 
                      if length(st) == 2
                          tankObj = evalin('caller','b');
-                         path = tankObj.Output;
-                         b.updatePaths(path);
+                         path = tankObj.Out.Folder;
+                         b.Output = path;
                          flag = true;
                      else
                          flag = b.lookForData;

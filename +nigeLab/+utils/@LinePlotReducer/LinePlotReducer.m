@@ -174,7 +174,8 @@ classdef LinePlotReducer < handle
             % we'll take over managing the data shown in the plot.
             taking_over_existing_plot =    nargin >= 1 ...
                                         && isvector(varargin{1}) ...
-                                        && all(ishandle(varargin{1}));
+                                        && ishandle(varargin{1}) ...
+                                        && isa(varargin{1},'matlab.graphics.primitive.Line');
             if taking_over_existing_plot
 
                 % Record the handles.
@@ -239,7 +240,9 @@ classdef LinePlotReducer < handle
                     
                     % Get the figure.
                     o.h_figure = get(o.h_axes, 'Parent');
-                    
+                    while ~isa(o.h_figure,'Figure') && ~isempty(o.h_figure)
+                        o.h_figure = o.h_figure.Parent;
+                    end
                     % Make them active.
                     set(0, 'CurrentFigure', o.h_figure);
                     set(o.h_figure, 'CurrentAxes', o.h_axes);
