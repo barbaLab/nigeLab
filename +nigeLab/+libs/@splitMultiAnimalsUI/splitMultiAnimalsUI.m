@@ -601,7 +601,7 @@ classdef splitMultiAnimalsUI < handle
             % add the splitted blocks back to the splitted animals
             arrayfun(@(B) B.Parent.addChild(B), thisSplittedBlocks);
            obj.tankObj.addChild([thisSplittedBlocks.Parent]);
-           arrayfun(@(B) B.updatePaths(B.Parent.Output,true), thisSplittedBlocks);
+           arrayfun(@(B) B.updatePaths(B.Parent.Out.Folder,true), thisSplittedBlocks);
            
            an = thisBlock.Parent;
            delete(Tree_(1,:));

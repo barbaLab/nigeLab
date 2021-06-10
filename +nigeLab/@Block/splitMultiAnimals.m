@@ -124,16 +124,7 @@ for ii=1:numel(SplittedMeta)
    end %jj
    
     % create name from meta
-   str = [];
-   nameCon = bl.Pars.Block.NamingConvention;
-   for kk = 1:numel(nameCon)
-      if isfield(bl.Meta,nameCon{kk})
-         str = [str, ...
-            bl.Meta.(nameCon{kk}),...
-            bl.Pars.Block.Delimiter]; %#ok<AGROW>
-      end
-   end %kk
-   bl.Name = str(1:(end-1));
+   bl.Name = bl.genName;
    
    % Channels needs to be empty
    bl.Channels = bl.Channels([]);
@@ -151,7 +142,7 @@ for ii=1:numel(SplittedMeta)
    
 %    bl.NumProbes = 0;
    bl.Mask = [];
-   bl.Output = fullfile(bl.Paths.SaveLoc,bl.Name);
+   bl.Output = fullfile(bl.Out.SaveLoc);
    bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    bl.Key = bl.InitKey();
@@ -215,7 +206,8 @@ for kk=1:size(Tree_,1)
       for jj=1:numel(ff)
          bl.(ff{jj})=Stuff.(ff{jj});
       end
-      bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
+%       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
+      bl.setChannelMask(1:numel(bl.Channels));
       fixPortsAndNumbers(bl);
       bl.MultiAnimals = 0;
 %       bl.Move(bl.Paths.SaveLoc);

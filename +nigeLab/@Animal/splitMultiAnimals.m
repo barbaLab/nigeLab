@@ -118,20 +118,12 @@ for ii = 1:numel(SplittedMeta)
         end %jj
         
         % create name from meta
-        str = [];
-        nameCon = an.Pars.Animal.NamingConvention;
-        for kk = 1:numel(nameCon)
-            if isfield(an.Meta,nameCon{kk})
-                str = [str, ...
-                    an.Meta.(nameCon{kk}),...
-                    an.Pars.Block.Delimiter]; %#ok<AGROW>
-            end
-        end %kk
-        an.Name =  str(1:(end-1));
+ 
+        an.Name =  an.genName;
         an.Children = [];
         an.MultiAnimals = 2;
         an.MultiAnimalsLinkedAnimals(:) = [];
-        an.Output = fullfile(an.Paths.SaveLoc,an.Name);
+        an.Output = fullfile(an.Out.SaveLoc);
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
         
         an.Key = an.InitKey();

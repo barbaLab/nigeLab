@@ -1,5 +1,5 @@
 %%DEMO Script to run `nigeLab` demonstration/test
-clear
+clear all
 clc
 
 % Check current path and if "inside" the package, move to top-level

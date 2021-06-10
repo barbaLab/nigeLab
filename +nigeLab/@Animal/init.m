@@ -26,7 +26,7 @@ for bb=1:numel(Recordings)
       continue;
    end
    [~,fname,ext] = fileparts(Recordings(bb).name);
-   nameParts = strsplit(fname,animalObj.Pars.Block.VarExprDelimiter);
+   nameParts = strsplit(fname,animalObj.Pars.Block.Delimiter);
    if isempty(fname) % If it is empty,
       if ~Recordings(bb).isdir % but it is a file,
          if ~strcmpi(fname,animalObj.Pars.Block.FolderIdentifier)

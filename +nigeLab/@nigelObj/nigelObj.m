@@ -954,7 +954,7 @@ end
                end
             end
          else
-            value = fullfile(obj.Output,fname);
+            value = fullfile(obj.Out.Folder,fname);
          end
       end
       function set.IDFile(obj,value)
@@ -1919,9 +1919,9 @@ end
                   % Create the Children Block objects
                   switch obj.Type
                      case 'Animal'
-                        childObj = nigeLab.Block(childData,obj.Output);
+                        childObj = nigeLab.Block(childData,obj.Out.Folder);
                      case 'Tank'
-                        childObj = nigeLab.Animal(childData,obj.Output);
+                        childObj = nigeLab.Animal(childData,obj.Out.Folder);
                   end
 
                case {'nigeLab.Block', 'nigeLab.Animal'}
@@ -1939,10 +1939,10 @@ end
          else
             switch obj.Type
                case 'Tank'
-                  childObj = nigeLab.Animal('',obj.Output,...
+                  childObj = nigeLab.Animal('',obj.Out.Folder,...
                      'InDef',obj.Input);
                case 'Animal'
-                  childObj = nigeLab.Block('',obj.Output,...
+                  childObj = nigeLab.Block('',obj.Out.Folder,...
                      'InDef',obj.Input);
             end % switch obj.Type
          end % if isempty
@@ -2732,7 +2732,7 @@ end
             return;
          end
          
-         pathString = strrep(obj.Output,'\','/');
+         pathString = strrep(obj.Out.Folder,'\','/');
          if (nargin > 1) && strcmp(obj.Type,'Block')
             switch field
                case 'Video'
@@ -3151,7 +3151,7 @@ end
          %  --> Similar to calling "updatePaths(newLocation)"
          
          if nargin < 2
-            newLocation = uigetdir(obj.Output,obj.OutPrompt);
+            newLocation = uigetdir(obj.Out.Folder,obj.OutPrompt);
             if newLocation == 0
                nigeLab.utils.cprintf('Errors','No selection\n');
                return;
@@ -4296,7 +4296,7 @@ end
          end
          
           function flag = checkForExistingListener(listeners,EventName,Callback)
-              if isempty(listeners)
+              if isempty(listeners) || all(~isvalid(listeners))
                  flag = false;
                  return;
               end
@@ -5107,7 +5107,7 @@ end
          end
          
          reqPars = struct(...
-            'VarExprDelimiter','',...
+            'Delimiter','',...
             'DynamicVarExp','',...
             'IncludeChar','',...
             'DiscardChar','',...
@@ -5145,7 +5145,7 @@ end
                switch f_miss
                   case 'Concatenater'
                      isInvalid = ~ischar(pars.(f_miss));
-                  case 'VarExprDelimiter'
+                  case 'Delimiter'
                      isInvalid = ~iscell(pars.(f_miss));
                   case 'DynamicVarExp'
                      isInvalid = ~iscell(pars.(f_miss));
@@ -5178,7 +5178,7 @@ end
          
          % Parse name and extension. "nameParts" contains parsed variable
          % strings:         
-         nameParts=strsplit(fName,[pars.VarExprDelimiter, '.']);
+         nameParts=strsplit(fName,{pars.Delimiter, '.'});
          
          % Parse variables from defaults.Block "template," which match
          % delimited elements of block recording name:
@@ -5661,6 +5661,7 @@ end
          end
          
          % Assign .Paths save location (container of object folder tree)
+         OldOut = obj.Out;
          obj.Output = saveLoc;
          % Update all files for Animal, Tank
          if ismember(obj.Type,{'Animal','Tank'})
@@ -5692,6 +5693,7 @@ end
          % Get old paths, removing 'SaveLoc' from the list of Fields
          %  that need Paths found for them.
          OldP = obj.Paths;
+         OldP.Folder = OldOut.Folder;
          OldFN_ = fieldnames(OldP);
          OldFN_(strcmp(OldFN_,'SaveLoc'))=[];
          OldFN = [];
@@ -5729,7 +5731,7 @@ end
                      source = filePaths{jj}{hh}{ii};
                      [~,target] = strsplit(source,'\w*\\\w*.mat',...
                          'DelimiterType', 'RegularExpression');
-                     target = fullfile(P.Output,target{1});
+                     target = fullfile(obj.Out.Folder,target{1});
                      pct = ii/numel(filePaths{jj}{hh})*100;
                      switch mode
                          case 'mv'
@@ -5766,10 +5768,10 @@ end
              if exist(IDfile,'file')
                  delete(IDfile);
              end
-             DD = dir(OldP.Output);
+             DD = dir(fullfile(OldP.Folder,'**'));
              DD = DD(~arrayfun(@(x) x.name(1)=='.',DD));
-             if  exist(OldP.Output,'dir') && isempty(DD)
-                 rmdir(OldP.Output);
+             if  exist(OldP.Folder,'dir') && isempty(DD)
+                 rmdir(OldP.Folder);
              end
          end
          flag = true;

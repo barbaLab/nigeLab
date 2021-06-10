@@ -243,7 +243,8 @@ classdef namingConfigurator < handle
             pars = struct();
             pars.NamingConvention = obj.NamingConvention;
             pars.SpecialMeta = obj.SpecialMeta;
-            pars.Delimiter = obj.Delimiter;
+            pars.Delimiter = unique(obj.Delimiter);
+            pars.Delimiter = cellstr(pars.Delimiter(:));
             pars.IncludeChar = obj.IncludeChar;
             pars.DiscardChar = obj.DiscardChar;
             switch type
