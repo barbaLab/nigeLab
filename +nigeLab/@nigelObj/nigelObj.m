@@ -3219,7 +3219,7 @@ end
          ind = sort(ind,'descend');
          ind = reshape(ind,1,numel(ind)); % Make sure it is correctly oriented
          for ii = ind
-            p = obj.Children(ii).Output;
+            p = obj.Children(ii).Out.Folder;
             if exist(p,'dir')
                rmdir(p,'s');
             end
@@ -5708,16 +5708,14 @@ end
          filePaths = cell(1);
          for jj=1:numel(uniqueTypes)
             if ~isempty(obj.(uniqueTypes{jj}))
-               ff = fieldnames(obj.(uniqueTypes{jj})(1));
                
-               fieldsToMove{jj} = ff(cellfun(@(x) ~isempty(regexp(class(x),...
-                  'DiskData.\w', 'once')),...
-                  struct2cell(obj.(uniqueTypes{jj})(1))));
-               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMove{jj}))]; %#ok<*AGROW>
+               fieldsToMove{jj} = findDiskData(obj.(uniqueTypes{jj}));
+               fieldsToMoveShort{jj} = regexprep(fieldsToMove{jj},'[.]\w+','');
+               OldFN = [OldFN;OldFN_(ismember(OldFN_,fieldsToMoveShort{jj}))]; %#ok<*AGROW>
                for hh=1:numel(fieldsToMove{jj})
-                  if all(obj.getStatus(fieldsToMove{jj}{hh}))
+                  if ~isempty(fieldsToMoveShort{jj}{hh})
                      filePaths{jj}{hh} = cellfun(@(x)x.getPath,...
-                        {obj.(uniqueTypes{jj})(obj.Mask).(fieldsToMove{jj}{hh})},...
+                        eval(sprintf('{obj.%s.%s}',uniqueTypes{jj},fieldsToMove{jj}{hh})),...
                         'UniformOutput',false)';
                   end %fi
                end %hh
@@ -5728,8 +5726,8 @@ end
          for jj=1:numel(filePaths)
              for hh=1:numel(filePaths{jj})
                  for ii =1:numel(filePaths{jj}{hh})
-                     source = filePaths{jj}{hh}{ii};
-                     [~,target] = strsplit(source,'\w*\\\w*.mat',...
+                     source = fullfile(filePaths{jj}{hh}{ii});
+                     [~,target] = strsplit(source,'[^\\]*\\[^\\]*.mat',...
                          'DelimiterType', 'RegularExpression');
                      target = fullfile(obj.Out.Folder,target{1});
                      pct = ii/numel(filePaths{jj}{hh})*100;
@@ -5778,6 +5776,27 @@ end
          flag = flag && obj.linkToData;
          flag = flag && obj.save;
          flag = flag && obj.saveParams;
+         
+         
+          function name = findDiskData(p,prefix)
+              if nargin == 1
+                  prefix = '';
+              else
+                  prefix = [prefix '.'];
+              end
+              p = p(1);
+              ff = cellfun(@(f) [prefix f],fieldnames(p),'UniformOutput',false);
+              pcell = struct2cell(p);
+              clss = cellfun(@class,pcell,'UniformOutput',false);
+              name = [ff(cellfun(@(x) ~isempty(regexp(x,...
+                  'DiskData.\w', 'once')),...
+                  clss))];
+              strIdx = strcmp(clss,'struct');
+              name = [name; arrayfun(@(idx)findDiskData(pcell{idx},ff{idx}),find(strIdx),'UniformOutput',true)];
+              if isempty(name)
+                  name = {''};
+              end
+          end
          
          function moveFilesAround(oldPath,NewPath,str)
             %MOVEFILESAROUND  Actually moves the files after they are split

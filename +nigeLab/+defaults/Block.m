@@ -70,7 +70,7 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
 % pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-pars.NamingConvention={'$AnimalID','$Phase','$RecDate','$RecTime'}; % demo
+pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$Phase','$RecDate','$RecTime'}; % demo
 % pars.DynamicVarExp={'$AnimalID' '$RecID' '$RecDate' '$RecTime'}; % iit acute
 
 %% Common NamingConvention values
