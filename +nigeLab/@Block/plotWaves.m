@@ -110,17 +110,22 @@ end
 
 %% MAKE FIGURE AND PLOT
 tickLabs = cell(blockObj.NumChannels,1);
-tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
-   blockObj.NumChannels));
+% tickLocs = 1:blockObj.Pars.Plot.VertOffset:(blockObj.Pars.Plot.VertOffset*(...
+%    blockObj.NumChannels));
+tickLocs = zeros(1,blockObj.NumChannels);
 pixelPos = getpixelposition(ax);
 for iCh = blockObj.Mask
    tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
-   y = blockObj.Channels(iCh).(field)(idx)+tickLocs(iCh);
+   if iCh > 1
+   tickLocs(iCh) = tickLocs(iCh-1) + max(2*prctile(y,75),blockObj.Pars.Plot.VertOffset);
+   end
+   y = blockObj.Channels(iCh).(field)(idx);
    [t_reduced, y_reduced] = nigeLab.utils.reduce_to_width(t, y, pixelPos(end) ,[t(1) t(end)]);
-   line(ax,t_reduced,y_reduced, ...
+   line(ax,t_reduced,y_reduced+tickLocs(iCh), ...
       'Color',cm(ic(iCh),:), ...
       'LineWidth',1.75,...
-      'UserData',iCh); %#ok<NODEF>
+      'UserData',iCh,...
+      'LineStyle',':'); %#ok<NODEF>
   
   if plotSpikesOverlay
       fs = blockObj.SampleRate;

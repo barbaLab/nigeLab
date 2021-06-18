@@ -63,14 +63,13 @@ for iCh=blockObj.Mask
        data=double(blockObj.execStimSuppression(iCh));
    end
    
-   if isfield(pars,'NotchF') &&~isempty(pars.NotchF)
-       data = notchMainPower(data,blockObj.SampleRate,pars.NotchF,3);
-   end
-   
    for jj=1:numel(DecimateCascadeM)
       data=decimate(data,DecimateCascadeM(jj),DecimateCascadeN(jj));
    end
-   
+      
+   if isfield(pars,'NotchF') &&~isempty(pars.NotchF)
+       data = notchMainPower(data,blockObj.SampleRate,pars.NotchF,3);
+   end
    % Get the file name:
    fName = parseFileName(blockObj,iCh);
    
@@ -78,7 +77,7 @@ for iCh=blockObj.Mask
        rereference = zeros(numel(probes),numel(data));
    end
    data = data(:)';
-   thisProbe = blockObj.Channels(iCh).probe;
+   thisProbe = find(probes == blockObj.Channels(iCh).probe);
    rereference(thisProbe,:) = rereference(thisProbe,:) + ...
                                 data./nChanProbe(thisProbe);
    
@@ -101,7 +100,7 @@ if pars.ReReference
     for iCh=blockObj.Mask
         curCh = curCh + 1;
         data = blockObj.Channels(iCh).LFP(:);
-        thisProbe = blockObj.Channels(iCh).probe;
+        thisProbe = probes == blockObj.Channels(iCh).probe;
         blockObj.Channels(iCh).LFP(:) = data - rereference(thisProbe,:);
         lockData(blockObj.Channels(iCh).LFP);
         
@@ -128,7 +127,7 @@ else
 end
 blockObj.save;
 
-for iProbe = probes
+for iProbe = 1:size(rereference,1)
     refName = fullfile(sprintf(...
         strrep(blockObj.Paths.LFP.file,'\','/'),...
         num2str(iProbe),'REF'));
@@ -138,7 +137,8 @@ for iProbe = probes
 end
 
 for iCh = blockObj.Mask
-   blockObj.Channels(iCh).refMeanLFP = refMeanFile{iProbe};
+    thisProbe = probes == blockObj.Channels(iCh).probe;
+   blockObj.Channels(iCh).refMeanLFP = refMeanFile{thisProbe};
 end
 
 flag = true;

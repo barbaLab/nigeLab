@@ -102,15 +102,15 @@ classdef Block < nigeLab.nigelObj
    
    % HIDDEN,ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
    properties (AbortSet,Hidden,Dependent,Transient,Access=public)
-      TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
+%       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
       VideoIndex     (1,1) double = 1  % Current "Video Index" for analyses
    end
    
    % HIDDEN,TRANSIENT,PROTECTED
    properties (Hidden,Access=protected)
-      TrialIndex_          double = 1  % Initialized as empty container
-      TrialMask_           logical     % Initialized as empty container
-      VideoIndex_          double = 1  % Initialized as empty container
+%       TrialIndex_          double = 1  % Initialized as empty container
+%       TrialMask_           logical     % Initialized as empty container
+%       VideoIndex_          double = 1  % Initialized as empty container
    end
    
    % HIDDEN,PUBLIC (flags)
@@ -434,40 +434,40 @@ classdef Block < nigeLab.nigelObj
          blockObj.TrialField_ = value;
       end
       
-      % [DEPENDENT]  Interact with "Trial" Event file to get "Index" attr
-      function value = get.TrialIndex(blockObj)
-         %GET.TRIALINDEX  Interact with "Trial" file to get "Index" attr
-         %
-         %  value = get(blockObj,'TrialIndex');
-         %  --> Returns 'Trials' attribute: Index
-         
-         if isempty(blockObj.TrialIndex_)
-            if isempty(blockObj.Events)
-               value = 1;
-               blockObj.TrialIndex_ = 1;
-               return;
-            end
-            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
-            value = getAttr(...
-               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-               'Index');
-            blockObj.TrialIndex_ = value;
-         else
-            value = blockObj.TrialIndex_;
-         end
-      end
-      function set.TrialIndex(blockObj,value)
-         %SET.TRIALINDEX  Interact with "Trial" file to set "Index" attr
-         %
-         %  set(blockObj,'TrialIndex',value);
-         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
-         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-            'Index',int8(value));
-         if s
-            blockObj.TrialIndex_ = value;
-         end
-      end
-      
+%       % [DEPENDENT]  Interact with "Trial" Event file to get "Index" attr
+%       function value = get.TrialIndex(blockObj)
+%          %GET.TRIALINDEX  Interact with "Trial" file to get "Index" attr
+%          %
+%          %  value = get(blockObj,'TrialIndex');
+%          %  --> Returns 'Trials' attribute: Index
+%          
+%          if isempty(blockObj.TrialIndex_)
+%             if isempty(blockObj.Events)
+%                value = 1;
+%                blockObj.TrialIndex_ = 1;
+%                return;
+%             end
+%             tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+%             value = getAttr(...
+%                blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+%                'Index');
+%             blockObj.TrialIndex_ = value;
+%          else
+%             value = blockObj.TrialIndex_;
+%          end
+%       end
+%       function set.TrialIndex(blockObj,value)
+%          %SET.TRIALINDEX  Interact with "Trial" file to set "Index" attr
+%          %
+%          %  set(blockObj,'TrialIndex',value);
+%          tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
+%          s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
+%             'Index',int8(value));
+%          if s
+%             blockObj.TrialIndex_ = value;
+%          end
+%       end
+%       
       % [DEPENDENT]  Interact with "Trial" event file to get "Mask"
       function value = get.TrialMask(blockObj)
          %GET.TRIALMASK  Returns "Trial" event file Mask vector

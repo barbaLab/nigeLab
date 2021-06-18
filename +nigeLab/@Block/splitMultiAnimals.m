@@ -130,7 +130,7 @@ for ii=1:numel(SplittedMeta)
    bl.Channels = bl.Channels([]);
    
    % Events needs to be empty
-   bl.initEvents;
+   bl.Events = [];
    
    % Streams needs to be empty
    ff = fieldnames(bl.Streams);
