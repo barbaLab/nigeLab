@@ -32,35 +32,8 @@ if forceNewParams
 elseif ~isfield(blockObj.Pars,'Video')
    blockObj.updateParams('Video','KeepPars');
 end
-% Initialize Videos version of Paths
-if blockObj.HasVideoTrials
-   metaName = 'TrialVideo';
-   % In this case, 'V' should already be initialized, but in case something
-   % went funny here:
-   if ~isfield(blockObj.Paths,'V')
-      ext = blockObj.Pars.Video.FileExt;
-      blockObj.Paths.V = struct(...
-         'Root',blockObj.Paths.Output,...
-         'Folder',blockObj.Paths.Name,...
-         'KeyFile',sprintf(blockObj.Paths.Video.f_expr,'*','*',strrep(ext,'.','')),...
-         'FileExt',ext);
-   end
-else
-   metaName = 'Video';
-   initKeyFile=[strrep(blockObj.Name,blockObj.Pars.Block.Concatenater,'*') ...
-      '*' blockObj.Pars.Video.FileExt];
-   [initRoot,initFolder] = fileparts(blockObj.Pars.Video.DefaultSearchPath);
-   blockObj.Paths.V = struct(...
-      'Root',initRoot,...
-      'Folder',initFolder,...
-      'KeyFile', initKeyFile,...
-      'FileExt',blockObj.Pars.Video.FileExt);
-end
-[fmt,idt,~] = getDescriptiveFormatting(blockObj);
 
-if ~isfield(blockObj.Meta,metaName)
-   blockObj.Meta.(metaName) = []; % Initialize 'Video' meta field
-end
+[fmt,idt,~] = getDescriptiveFormatting(blockObj);
 
 if ~blockObj.Pars.Video.HasVideo
    flag = true;
@@ -72,38 +45,46 @@ if ~blockObj.Pars.Video.HasVideo
    end
    return;
 end
+Pars = blockObj.Pars.Video;
+ext = blockObj.Pars.Video.FileExt;
+% Initialize Videos version of Paths
+Metas = cellfun(@(v) blockObj.Meta.(v),Pars.UniqueKey.vars,'UniformOutput',false);
+Key = strjoin(Metas,Pars.UniqueKey.cat);
+Key([1 end+1]) = '*';
+Videos = [];
+for ii =1:numel(Pars.VidFilePath)
+    Videos = [ Videos,dir(fullfile(Pars.VidFilePath{ii},'**',Key))];
+end
 
-% % % % Fills out .V paths struct % % % %
-% First, use default config to try and automatically find ONE video file
-% that is associated with this particular recording block.
-blockObj.Paths.V.Match = parseVidFileExpr(blockObj);
-% Note that parseVidFileName calls nigeLab.libs.VideosFieldType.parse()
-f_search = fullfile(...
-   blockObj.Paths.V.Root,...
-   blockObj.Paths.V.Folder,...
-   blockObj.Paths.V.Match);
-blockObj.Paths.V.F = dir(f_search);
-
-if ~isempty(blockObj.Paths.V.F)
-   vidFileName = fullfile(blockObj.Paths.V.Root,blockObj.Paths.V.Folder,...
-                           blockObj.Paths.V.F(1).name);
-else
-   if blockObj.Pars.Video.UseVideoPromptOnEmpty
-      [fName,pName, ~] = uigetfile(blockObj.Pars.Video.ValidVidExtensions,...
-         sprintf('Select VIDEO for %s',blockObj.Name),...
-         blockObj.Pars.Video.DefaultSearchPath);
+if isempty(Videos)
+   if Pars.UseVideoPromptOnEmpty
+      selpath = uigetdir(Pars.VidFilePath{1},...
+         sprintf('Select VIDEO for %s',blockObj.Name));
       if fName==0
          nigeLab.utils.cprintf(fmt,...
-            '%s[DOVIDINFOEXTRACTION]: No video selected for %s %s\n',...
-            idt,type,blockObj.Name);
-         dbstack(); % See note below:
-         return;    % Should throw error due to flag == false
-         % Will leave it as-is; this could easily happen if .HasVideo is
-         % accidentally configured to false. Would be easier for user to just
-         % change .HasVideo in ~/+defaults/Video.m and retry the Block
-         % constructor than to cancel every video selection.
+            '%s[DOVIDINFOEXTRACTION]: No video selected for Block %s\n',...
+            idt,blockObj.Name);
+        dbstack(); % See note below:
+         return;    
       end
-      vidFileName = fullfile(pName,fName);
+      Pars.VidFilePath = selpath;
+      for ii =1:numel(Pars.VidFilePath)
+          Videos = [ Videos,dir(fullfile(Pars.VidFilePath{ii},'**',[uKey '*' Pars.FileExt]))];
+      end
+      
+      if isempty(Videos)
+         % at this point if no videos are found, naming might be off. 
+         % Best should be to run here the naming configurator but i cannot
+         % be bothered. Will do in the future. Let's throw an error
+         % instead.
+          nigeLab.utils.cprintf(fmt,...
+            ['%s[DOVIDINFOEXTRACTION]: No video was found for Block %s.'...
+            '\nCheck the configuration file for the correct naming.\n'],...
+            idt,blockObj.Name);
+         dbstack(); % See note below:
+         return;    
+      end
+      
    else
       flag = true; % Indicate this is fine; there are just no videos for 
                    % this particular Block (probably from a batch
@@ -113,25 +94,162 @@ else
    end
 end
 
-% Parse name, path, type of video file
-[pName,fName,ext] = fileparts(vidFileName);
-fName = [fName ext];
+paths = {};
+toOrder = false(1,numel(Videos));
+for ii=1:numel(Videos)
+    if Videos(ii).isdir
+        % One camera per folder
+        p_ = dir(fullfile(Videos(ii).folder,Videos(ii).name,['*' ext]));
+        p_ = arrayfun(@(x) fullfile(x.folder,x.name),p_,'UniformOutput',false);
+        i = Pars.CustomSort(p_);
+        paths =[paths {p_(i)}];
+        
+        fName = Videos(ii).name;
+        NamingConvention = Pars.NamingConvention;
+        NamingConvention(contains(NamingConvention,Pars.IncrementingVar)) = [];
+    else
+        
+        % Let's check the file extension, group files and make cameras
+        [path,fName,thisExt] = fileparts(Videos(ii).name);
+        if ~strcmpi(thisExt,ext)
+            exclude(ii) = true;
+            continue;
+        end
+        NamingConvention = Pars.NamingConvention;
+        toOrder(ii) = true;
+        paths =[paths {fullfile(Videos(ii).folder,Videos(ii).name)}];
+    end %fi
 
-% .Root is "one-level" up (in case videos are in their own folder by
-% recording, for example)
-[root,folder] = fileparts(pName);
-blockObj.Paths.V = struct(...
-   'Root',root,...
-   'Folder',folder,...
-   'KeyFile',fName,...
-   'FileExt',ext);
-blockObj.Paths.V.Match = parseVidFileExpr(blockObj);
+        nameParts=strsplit(fName,[Pars.Delimiter, {'.',' '}]);
 
-% Make "Videos" fieldtype object or array
-blockObj.Videos = nigeLab.libs.VideosFieldType(blockObj);
-if ~blockObj.HasVideoTrials % Only do the relative offset if they don't have video trials
-   uView = unique({blockObj.Videos.Source});
-   initRelativeTimes(blockObj.Videos,uView);
+         regExpStr = sprintf('\\%c\\w*',...
+            Pars.IncludeChar);
+         splitStr = regexp(NamingConvention,regExpStr,'match');
+         
+         
+         % Find which delimited elements correspond to variables that
+         % should be included by looking at the leading character from the
+         % defaults.Block template string:
+         incVarIdx = find(~cellfun(@isempty,splitStr));
+         exclVarIdx = find(cellfun(@isempty,splitStr));
+         splitStr = [splitStr{:}];  
+         
+
+         
+          if (numel(incVarIdx) + numel(exclVarIdx)) ~= numel(nameParts)
+               % run nanming interface
+         end
+         
+           
+         % Find which set of variables (the total number available from the
+         % name, or the number set to be read dynamically from the naming
+         % convention) has fewer elements, and use that to determine how
+         % many loop iterations there are:
+         nMin = min(numel(incVarIdx),numel(nameParts));
+         
+         % Create a struct to allow creation of dynamic variable name
+         % dictionary. Make sure to iterate on 'splitStr', and not
+         % 'nameParts,' because variable assignment should be decided by
+         % the string in namingConvention property.
+         for jj=1:nMin
+            varName = deblank( splitStr{jj}(2:end));
+            meta.(varName) = nameParts{incVarIdx(jj)};
+         end
+         
+         % For each "special" field, use combinations of variables to
+         % produce other metadata tags. See '~/+nigeLab/+defaults/Block.m`
+         % for more details
+         for jj = 1:numel(Pars.SpecialMeta.SpecialVars)
+            f = Pars.SpecialMeta.SpecialVars{jj};
+            if ~isfield(meta,f)
+               if ~isfield(Pars.SpecialMeta,f)
+                  link_str = sprintf('nigeLab.defaults.%s','Video');
+                  error(['nigeLab:' mfilename ':BadConfig'],...
+                     ['%s is configured to use %s as a "special field,"\n' ...
+                     'but it is not configured in %s.'],...
+                     nigeLab.utils.getNigeLink(...
+                     'nigeLab.Block','initVideos'),...
+                     f,nigeLab.utils.getNigeLink(link_str));
+               end %fi
+               if isempty(Pars.SpecialMeta.(f).vars)
+                  warning(['nigeLab:' mfilename ':PARSE'],...
+                     ['No <strong>%s</strong> "SpecialMeta" configured\n' ...
+                           '-->\t Making random "%s"'],f,f);
+                  meta.(f) = nigeLab.utils.makeHash();
+                  meta.(f) = meta.(f){:};
+               else
+                  tmp = cell(size(Pars.SpecialMeta.(f).vars));
+                  for i = 1:numel(Pars.SpecialMeta.(f).vars)
+                     tmp{i} = meta.(Pars.SpecialMeta.(f).vars{i});
+                  end %i
+                  meta.(f) = strjoin(tmp,Pars.SpecialMeta.(f).cat);
+               end %fi
+            end% fi
+         end %jj       
+         
+       Meta{ii} = meta;  
+         
+end %ii
+GroupingField = Pars.NamingConvention{strcmp(Pars.GroupingVar,cellfun(@(v) v(2:end),Pars.NamingConvention,'UniformOutput',false))}(2:end);
+CounterField = Pars.NamingConvention{strcmp(Pars.IncrementingVar,cellfun(@(v) v(2:end),Pars.NamingConvention,'UniformOutput',false))}(2:end);
+
+
+if all(~toOrder)
+    Meta_ = cellfun(@(M,p) repmat(M,size(p)),Meta,paths,'UniformOutput',false);
+elseif all(toOrder)
+    toOrder = find(toOrder);
+    AllMetastoOrder = [Meta{toOrder}];
+    GroupingLables = {AllMetastoOrder.(GroupingField)};
+    uLabels = unique(GroupingLables);
+    
+    perm = @(x,i)x(i);
+    OrderedPaths = cell(1,numel(uLabels));
+    
+    for ii=1:numel(uLabels)
+        Idx = (strcmp(GroupingLables, uLabels{ii}));
+        Counter = {AllMetastoOrder(Idx).(CounterField)};
+        [~,i]=sort(Counter);
+        paths{ii} = arrayfun(@(d) fullfile(d.folder,d.name),Videos(perm(toOrder(Idx),i)),'UniformOutput',false);
+        Meta_{ii} = [Meta{Idx}];
+    end
+    paths(ii+1:end) = [];
+else
+    Ordered = find(~toOrder);
+    OrderedMeta = [Meta{Ordered}];
+    OrderedGroups = {OrderedMeta.(GroupingField)};
+    
+    toOrder = find(toOrder);
+    AllMetastoOrder = [Meta{toOrder}];
+    GroupingLables = {AllMetastoOrder.(GroupingField)};
+    uLabels = unique(GroupingLables);
+    
+    perm = @(x,i)x(i);
+    OrderedPaths = cell(1,numel(uLabels));
+   
+    for ii=1:numel(uLabels)
+        Idx = (strcmp(GroupingLables, uLabels{ii}));
+        Counter = {AllMetastoOrder(Idx).(CounterField)};
+        [~,i]=sort(Counter);
+        thisLabel = uLabels(ii);
+        ordIdx = Ordered(strcmp(OrderedGroups,uLabels(ii)));
+        paths{ordIdx} = [paths{ordIdx};...
+            arrayfun(@(d) fullfile(d.folder,d.name),Videos(perm(toOrder(Idx),i)),'UniformOutput',false)];
+        Meta_{ii} = [repmat(Meta{ordIdx},size(paths{ordIdx})) [Meta{perm(toOrder(Idx),i)}]];
+    end
+    paths(toOrder) = [];
 end
+
+
+paths = cellfun(@unique,paths,'UniformOutput',false);
+for ii = 1:size(paths,2)
+    cam(ii) = nigeLab.libs.nigelCamera(blockObj,paths{ii});
+    f = fieldnames(Meta{ii});
+    for ff = f'
+        [cam(ii).Meta.(ff{:})] = deal(Meta_{ii}.(ff{:}));
+    end
+end
+
+
+blockObj.Cameras = cam;
 flag = true;
 end

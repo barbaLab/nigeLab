@@ -86,44 +86,28 @@ classdef Block < nigeLab.nigelObj
       HasROI      (1,1)    logical = false   % Do all the video cameras have ROI set?
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
-      ScoringField         char   = 'ScoredEvents'   % blockObj.Pars.Video.ScoringEventFieldName
       Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
-      TrialField           char   = 'trial-running'  % blockObj.Pars.Event.TrialDetectionInfo.Name
       TrialMask                     % Logical vector of masking for trials (if applicable)
-      TrialVideoOffset     double   % Matrix where rows are video cameras and columns are trials. Each value is a trial/camera-specific offset.
-      VideoHeader          double   % "Header" for Video/Event data
    end
    
    % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC
    properties (AbortSet,Hidden,SetObservable,Access=public)
       CurNeuralTime  (1,1) double = 0  % Current "Neural Time" for analyses
    end
-   
-   % HIDDEN,ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
-   properties (AbortSet,Hidden,Dependent,Transient,Access=public)
-%       TrialIndex     (1,1) double = 1  % Current "Trial Index" for analyses
-      VideoIndex     (1,1) double = 1  % Current "Video Index" for analyses
-   end
-   
-   % HIDDEN,TRANSIENT,PROTECTED
-   properties (Hidden,Access=protected)
-%       TrialIndex_          double = 1  % Initialized as empty container
-%       TrialMask_           logical     % Initialized as empty container
-%       VideoIndex_          double = 1  % Initialized as empty container
-   end
+      
    
    % HIDDEN,PUBLIC (flags)
-   properties (Hidden,Access=public)
-      HasVideoTrials   (1,1) logical = false   % Does the Block have extracted trials?
+   properties (GetAccess=public,SetAccess=?nigeLab.libs.VidScorer)
+      VideoOffset      (1,1) double = 0
    end
    
    % PUBLIC
-   properties (Access=public)
+   properties (GetAccess=public,SetAccess=private)
       Channels struct                        % Struct array of neurophysiological stream data
       Events   struct                        % Struct array of asynchronous events
       Streams  struct                        % Struct array of non-electrode data streams
-      Videos                                 % Array of nigeLab.libs.VideosFieldType
+      Cameras                                % Array of nigeLab.libs.nigelCamera
    end
    
    % RESTRICTED:nigelObj/PUBLIC
@@ -164,10 +148,8 @@ classdef Block < nigeLab.nigelObj
       ChannelID_        % (Transient) store for .ChannelID property
       NumChannels_      % (Transient) store for .NumChannels property
       NumProbes_        % (Transient) store for .NumProbes property
-      ScoringField_     % (Transient) store for .ScoringField property
       Shortcut_         % (Transient) store for .Shortcut property
       TrialField_       % (Transient) store for .TrialField property
-      TrialVideoOffset_ % (Transient) store for .TrialVideoOffset property
       VideoHeader_      % (Transient) store for .VideoHeader property
    end
    
@@ -362,26 +344,6 @@ classdef Block < nigeLab.nigelObj
          blockObj.NumProbes_ = value;
       end
       
-      % [DEPENDENT] Returns .ScoringField property
-      function value = get.ScoringField(blockObj)
-         %GET.SCORINGFIELD  Returns .ScoringField 
-         %
-         %  value = get(blockObj,'ScoringField');
-         %  --> Returns blockObj.Pars.Video.ScoringEventFieldName, or empty
-         %      char 'ScoredEvents' if that parameter has not yet 
-         %      been initialized.
-         if isempty(blockObj.ScoringField_)
-            value = blockObj.Pars.Video.ScoringEventFieldName;
-            blockObj.ScoringField_ = value;
-         else
-            value = blockObj.ScoringField_;
-         end         
-      end
-      function set.ScoringField(blockObj,value)
-         %SET.SCORINGFIELD  Assigns .ScoringField
-         blockObj.ScoringField_ = value;
-      end
-      
       % [DEPENDENT] Returns .Shortcut property
       function value = get.Shortcut(blockObj)
          %GET.SHORTCUT  Returns .Shortcut_
@@ -408,66 +370,15 @@ classdef Block < nigeLab.nigelObj
             value = [];
             return;
          end
-         value = getEventData(blockObj,blockObj.ScoringField,'ts','Trial');
+         TrialStrt = [blockObj.Events(strcmp({blockObj.Events.Name},blockObj.Pars.Event.Trial.Fields{1})).Ts];
+         TrialEnd  = [blockObj.Events(strcmp({blockObj.Events.Name},blockObj.Pars.Event.Trial.Fields{2})).Ts];
+         idx = (TrialEnd - TrialStrt) > blockObj.Pars.Event.Trial.MinDistance;
+         value = [TrialStrt(idx)' TrialEnd(idx)'];
       end
       function set.Trial(blockObj,value)
-         %SET.Trial  Assigns .Trial property
-         setEventData(blockObj,blockObj.ScoringField,'ts','Trial',value);
+          error(['You cannot set manually the Trial field.' newline 'Please add relevant events to the Event structure.']);
       end
       
-      % [DEPENDENT] Returns .TrialField property
-      function value = get.TrialField(blockObj)
-         %GET.TRIALFIELD  Returns .TrialField
-         %
-         %  value = get(blockObj,'TrialField');
-         %  --> Returns blockObj.Pars.Event.TrialDetectionInfo.Name, or 
-         %        'trial-running' otherwise
-         if isempty(blockObj.TrialField_)
-            value = blockObj.Pars.Event.TrialDetectionInfo.Name;
-            blockObj.TrialField_ = value;
-         else
-            value = blockObj.TrialField_;
-         end
-      end
-      function set.TrialField(blockObj,value)
-         %SET.TRIALFIELD  Assigns .TrialField property
-         blockObj.TrialField_ = value;
-      end
-      
-%       % [DEPENDENT]  Interact with "Trial" Event file to get "Index" attr
-%       function value = get.TrialIndex(blockObj)
-%          %GET.TRIALINDEX  Interact with "Trial" file to get "Index" attr
-%          %
-%          %  value = get(blockObj,'TrialIndex');
-%          %  --> Returns 'Trials' attribute: Index
-%          
-%          if isempty(blockObj.TrialIndex_)
-%             if isempty(blockObj.Events)
-%                value = 1;
-%                blockObj.TrialIndex_ = 1;
-%                return;
-%             end
-%             tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
-%             value = getAttr(...
-%                blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-%                'Index');
-%             blockObj.TrialIndex_ = value;
-%          else
-%             value = blockObj.TrialIndex_;
-%          end
-%       end
-%       function set.TrialIndex(blockObj,value)
-%          %SET.TRIALINDEX  Interact with "Trial" file to set "Index" attr
-%          %
-%          %  set(blockObj,'TrialIndex',value);
-%          tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Trial');
-%          s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-%             'Index',int8(value));
-%          if s
-%             blockObj.TrialIndex_ = value;
-%          end
-%       end
-%       
       % [DEPENDENT]  Interact with "Trial" event file to get "Mask"
       function value = get.TrialMask(blockObj)
          %GET.TRIALMASK  Returns "Trial" event file Mask vector
@@ -494,172 +405,11 @@ classdef Block < nigeLab.nigelObj
          %  set(blockObj,'TrialMask',value);
          
          value(isnan(value)) = 1; % Update "NaN" mask to true
-         f = blockObj.ScoringField;
-         setEventData(blockObj,f,'tag','Trial',value);
          blockObj.TrialMask_ = value;
          
-         % If "Trial-Segmented Videos" have been extracted
-         if blockObj.HasVideoTrials
-            % If there are equivalent # of videos to # of trials
-            if numel(blockObj.Videos) == numel(blockObj.TrialMask_)
-               % Then assign "Trial" Mask to Videos as well
-               blockObj.Videos(blockObj.TrialIndex).Masked = ...
-                  blockObj.TrialMask_(blockObj.TrialIndex);
-            end
-         end
       end
       
-      % [DEPENDENT] Returns .TrialVideoOffset property
-      function value = get.TrialVideoOffset(blockObj)
-         %GET.TRIALVIDEOOFFSET  Returns .TrialVideoOffset property
-         %
-         %  value = get(blockObj,'TrialVideoOffset');
-         %  --> Returns a matrix of times (seconds) in double precision.
-         %      * Rows are video cameras (indexed as in VideoHeader and .Videos)
-         %      * Columns are trials 
-         %  --> Each value is a trial/camera-specific offset
-         %  --> The Neural time can be recovered from any _Events timestamp
-         %      if _Events timestamp == tEvent
-         %      if neural time == tNeu
-         %      if offset in header file (column 4) == videoOffset
-         %      and if the trial/camera specific matrix element == specific
-         %     ("specific" is returned by get(blockObj,'TrialVideoOffset'))
-         %
-         %        >> tNeu = tEvent + videoOffset + specific;
-         %
-         %  If the value cannot be accessed or is not initialized, returns
-         %  zero.
-         
-         if ~isempty(blockObj.TrialVideoOffset_)
-            value = blockObj.TrialVideoOffset_;
-            return;
-         end
-
-         header = blockObj.VideoHeader;
-         nMeta = header(1,2);
-         if size(header,2) >= (5+nMeta)
-            value = header(:,(5+nMeta):end);
-            value(isnan(value)) = 0;
-         else
-            value = zeros(size(header,1),1);
-         end
-         blockObj.TrialVideoOffset_ = value;
-      end
-      function set.TrialVideoOffset(blockObj,value)
-         %SET.TRIALVIDEOOFFSET  Returns .TrialVideoOffset property
-         %
-         %  set(blockObj,'TrialVideoOffset');
-         %  --> Set a matrix of times (seconds) in double precision.
-         %      * Rows are video cameras (indexed as in VideoHeader and .Videos)
-         %      * Columns are trials 
-         %  --> Each value is a trial/camera-specific offset
-         %  --> The Neural time can be recovered from any _Events timestamp
-         %      if _Events timestamp == tEvent
-         %      if neural time == tNeu
-         %      if offset in header file (column 4) == videoOffset
-         %      and if the trial/camera specific matrix element == specific
-         %     ("specific" is returned by get(blockObj,'TrialVideoOffset'))
-         %
-         %        >> tNeu = tEvent + videoOffset + specific;
-         %
-         %  If the value cannot be accessed or is not initialized, returns
-         %  zero.
-         
-         blockObj.TrialVideoOffset_ = value;
-         header = blockObj.VideoHeader;
-         nMeta = header(1,2);
-         nSpecific = size(value,2);
-         if size(header,2) == (4+nMeta+nSpecific)
-            header(:,(5+nMeta):end) = value;
-            blockObj.VideoHeader = header;
-         else
-            if blockObj.Verbose
-               dbstack();
-               [fmt,idt] = getDescriptiveFormatting(blockObj);
-               nigeLab.sounds.play('pop',0.5);
-               nigeLab.utils.cprintf('Errors*','%s[BLOCK.SET]: ',idt);
-               nigeLab.utils.cprintf(fmt,...
-                  ['Wrong dimensions: Header has %g columns but ' ...
-                  'should have %g columns\n'],size(header,2),...
-                  4+nMeta+nSpecific);
-            end
-            return; % Otherwise dimensions aren't correct
-         end
-      end
-      
-      % [DEPENDENT]  Returns .VideoHeader property
-      function value = get.VideoHeader(blockObj)
-         %GET.VIDEOHEADER  Returns .VideoHeader property
-         %
-         %  value = get(obj,'VideoHeader');
-         %  * Rows of `value` correspond to each `Videos` element of
-         %     blockObj.
-         %  * value(:,1) := Type (2, for each row)
-         %  * value(:,2) := # of 'Meta' columns in `'snippet'` of diskfile_
-         %  * value(:,3) := 1 (mask/enabled) or 0 (unmask/disabled)
-         %  * value(:,4) := neural offset (seconds)
-         %     --> This is "GrossOffset - VideoOffset"; see .Videos for
-         %     more details.
-         %  * value(:,5+) := first <value(:,2)> columns are 'VarType'
-         %    + (see ~/+nigeLab/+workflow/defaultHotkeyFcn.m)
-         %    + Remaining columns correspond to 'TrialOffset' (seconds),
-         %      where neural time for a trial would be 
-         %        >> tNeuTrial = tTrialVid - GrossOffset - TrialOffset;
-         %        --> TrialOffset corresponds to camera/trial specific
-         %            offsets that may vary over the recording duration
-         %            depending on framerate jitter etc.
-         
-         if isempty(blockObj.VideoHeader_)
-            if isempty(blockObj.Events)
-               value = [];
-               return;
-            end
-            value = getEventData(blockObj,blockObj.ScoringField,...
-               'data','Header');
-            blockObj.VideoHeader_ = value;
-         else
-            value = blockObj.VideoHeader_;
-         end
-      end
-      function set.VideoHeader(blockObj,value)
-         %SET.VIDEOHEADER  Assigns .VideoHeader property
-         % 
-         %  set(blockObj,'VideoHeader',value);
-         %  * Sets blockObj.VideoHeader_ transient store
-         %  * Sets 'Header' diskfile_ using 'data' property (full file)
-         
-         blockObj.VideoHeader_ = value;
-         setEventData(blockObj,blockObj.ScoringField,'data','Header',value);
-      end
-      
-      % [DEPENDENT]  Interact with "Header" Event file to get "Index" attr
-      function value = get.VideoIndex(blockObj)
-         %GET.VIDEOINDEX  Interact with "Header" file to get "Index" attr
-         %
-         %  value = get(blockObj,'VideoIndex');
-         %  --> Returns 'Trials' attribute: Index
-         
-         if isempty(blockObj.VideoIndex_)
-            tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
-            value = getAttr(...
-               blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-               'Index');
-            blockObj.VideoIndex_ = value;
-         else
-            value = blockObj.VideoIndex_;
-         end
-      end
-      function set.VideoIndex(blockObj,value)
-         %SET.VIDEOINDEX  Interact with "Header" file to set "Index" attr
-         %
-         %  set(blockObj,'VideoIndex',value);
-         tIdx = getEventsIndex(blockObj,blockObj.ScoringField,'Header');
-         s = setAttr(blockObj.Events.(blockObj.ScoringField)(tIdx).data,...
-            'Index',int8(value));
-         if s
-            blockObj.VideoIndex_ = value;
-         end
-      end
+    
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
       % Overloaded method to get 'end' indexing
@@ -879,7 +629,7 @@ classdef Block < nigeLab.nigelObj
          %     * 'RecFile'
          %     * 'HasVideoTrials'
          
-         BLOCK_PROPS = {'FileExt', 'RecType', 'Input', 'HasVideoTrials'};
+         BLOCK_PROPS = {'FileExt', 'RecType', 'Input'};
          flag = saveIDFile@nigeLab.nigelObj(blockObj,BLOCK_PROPS);
          if ~flag
             % Missing RecFile or IDFile
@@ -994,7 +744,51 @@ classdef Block < nigeLab.nigelObj
       [idx,field] = getEventsIndex(blockObj,field,eventName); % Returns index to Events field as well as name of Events.(field)
       [data,blockIdx] = getEventData(blockObj,field,prop,ch,matchValue,matchField) % Retrieve event data
       [flag,idx] = setEventData(blockObj,fieldName,eventName,propName,value,rowIdx,colIdx);
+      function flag = addEvent(obj,thisEvent)
+      %%    Adds events to the Event struct. It also takes care of 
+      %     harmonizing the struct fields and returns an error if some 
+      %     required fields are not present
       
+          switch class(thisEvent)
+              case 'struct'
+                  ... nothing to see here
+              case 'nigeLab.evt.evtChanged'
+                  thisEvent = thisEvent.toStruct;
+          end
+          evtFields = fieldnames(obj.Events(1));
+          str = strjoin(evtFields,', ');
+          if ~isstruct(thisEvent)
+              error('Events needs to be structures with the fields: %s',str);
+          end
+          thisFields = fieldnames(thisEvent);
+          if ~all(ismember(evtFields,thisFields))
+              error('Events needs to be structures with the fields: %s',str);
+          end
+          fToRemove = setdiff(thisFields,evtFields);
+          obj.Events = [obj.Events rmfield(thisEvent,fToRemove)];
+      end
+      function flag = deleteEvent(obj,thisEvent)
+      %% Removes an event from the struct field.
+          switch class(thisEvent)
+              case 'struct'
+                  ...
+              case 'nigeLab.evt.evtChanged'
+                  thisEvent = thisEvent.toStruct;
+          end
+          if isnan(thisEvent.Ts)
+              Alltrials = [obj.Events.Trial];
+              idx = Alltrials == thisEvent.Trial;
+          else
+              Alltimes = [obj.Events.Ts];
+              idx = Alltimes == thisEvent.Ts;
+          end
+          if ~any(idx)
+              return;
+          end
+          idx2 = strcmp([obj.Events(idx).Name],thisEvent.Name);          
+          idx(idx) = idx(idx) && idx2;
+          obj.Events(idx) = [];
+      end
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)  % LFP synchronization index
@@ -1289,25 +1083,7 @@ classdef Block < nigeLab.nigelObj
       header = parseHierarchy(blockObj)   % Parse header from file hierarchy
       blocks = splitMultiAnimals(blockObj,varargin)  % splits block with multiple animals in it
    
-      function formatTrialVideosForExtraction(blockObj)
-         %FORMATTRIALVIDEOSFOREXTRACTION  Moves videos to correct place
-         %
-         %  formatTrialVideosForExtraction(blockObj);
-         
-         if numel(blockObj) > 1
-            for i = 1:numel(blockObj)
-               formatTrialVideosForExtraction(blockObj(i));
-            end
-            return;
-         end
-         
-         if ~blockObj.HasVideoTrials
-            return;
-         end
-         
-         
-      end
-      
+          
       function lockData(blockObj,fieldType)
          %LOCKDATA  Lock all data of a given fieldType
          %

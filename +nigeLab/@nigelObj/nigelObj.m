@@ -2546,7 +2546,7 @@ end
             return;
          end
          
-         idx = strcmpi(thisObj.Fields,field);
+         idx = ismember(thisObj.Fields,field);
          if sum(idx) == 0
             error(['nigeLab:' mfilename ':BadField'],...
                '[GETFIELDTYPE]: No matching field type: %s',field);
@@ -5956,12 +5956,10 @@ end
          switch b.Type
             case 'Block'
 %                % Be sure to re-assign transient .Block property to Videos
-%                if ~isempty(b.Videos)
-%                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
-%                elseif b.Pars.Video.HasVideo
-%                    b.Videos = nigeLab.libs.VideosFieldType.empty();
-%                else
-%                end
+               if ~isempty(b.Cameras)
+                    [b.Cameras.Parent] = deal(b);
+                    arrayfun(@addVideos,b.Cameras);
+               end
                
                if DataMoved
                    % This means the load process deteermined the data was

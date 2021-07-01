@@ -96,9 +96,16 @@ end
 if ~isempty(map)
    icon = ind2rgb(img,map);
 else
-    icon = img;
     alpha = ones(size(img));
-    alpha(img == 0) = 0;
+    col = nigeLab.defaults.nigelColors(pars.Background)*255;
+    idx = all(~img,3);
+    for ii =1:3
+        thisCol = img(:,:,ii);
+        thisCol(idx) = col(ii);
+        alpha(idx,ii) = 0;
+        img(:,:,ii) = thisCol;
+    end
+   icon = img; 
 end
 
 if ~strcmpi(pars.Type,'double')

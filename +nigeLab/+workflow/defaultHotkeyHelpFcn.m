@@ -131,7 +131,7 @@ end
       if nargin < 2
          descriptor = 'Unused';
       end
-      f = which('nigeLab.workflow.defaultHotkeyFcn');
+      f = which('nigeLab.workflow.defaultVideoScoringHotkey');
       fid = fopen(f,'r');
       A = textscan(fid,'%s','Delimiter','\n');
       A = A{1};

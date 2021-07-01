@@ -66,20 +66,9 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 % ~/path/R18-68_0_180724_141203
 
 %% Common DynamicVarExp values
-% pars.DynamicVarExp={'&Tag' '$AnimalID' '$RecID'}; % IIT
-% pars.DynamicVarExp={'$Project' '$SurgNumber' '$Year' '$Month' '$Day'}; % KUMC "RC" proj (and MM stuff)
-% pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
-% pars.DynamicVarExp={'$SurgYear' '$SurgNumber' '$RecID' '&info'}; % iit chronics
-pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$Phase','$RecDate','$RecTime'}; % demo
-% pars.DynamicVarExp={'$AnimalID' '$RecID' '$RecDate' '$RecTime'}; % iit acute
-
-%% Common NamingConvention values
-% pars.NamingConvention={'AnimalID','RecID'}; % IIT tdt
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID','RecDate','RecTime'}; % (FB/KUMC R03) Since these are different for different configs, please keep commented lines instead of changing directly
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID'}; % MM Audio stuff
-% pars.NamingConvention={'AnimalID','Year','Month','Day'}; % KUMC "RC" proj (and MM stuff)
-% pars.NamingConvention={'AnimalID','Year','Month','Day','RecID', 'RecDate' 'RecTime'}; % KUMC, demo
-% pars.NamingConvention={'AnimalID','RecID','RecDate','RecTime'}; % IIT intan
+% pars.NamingConvention={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
+% pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$Phase','$RecDate','$RecTime'}; % demo
+pars.NamingConvention={'$AnimalID' '$ExpPhase' '$RecDate' '$RecTime'}; % iit acute
 
 % OPTIONAL: To parse "RecID" from combination of meta vars, specify here
 % (otherwise, if RecID is normally present, or if this is empty, it is not
@@ -100,7 +89,7 @@ pars.SpecialMeta.BlockID.cat = '-';
 % pars.SpecialMeta.RecTag.vars = {'RecID'}; % FB
 % pars.SpecialMeta.RecID.vars = {}; % FB/KUMC-R03/MM
 % pars.SpecialMeta.RecTag.vars = {'Year','Month','Day'}; % KUMC "RC"
-pars.SpecialMeta.BlockID.vars = {'Phase','RecDate','RecTime'}; % KUMC "MM"
+pars.SpecialMeta.BlockID.vars = {'ExpPhase','RecDate','RecTime'}; % KUMC "MM"
 % pars.SpecialMeta.AnimalID.vars = {}; % FB/KUMC-R03  Keep commented
 % pars.SpecialMeta.AnimalID.vars = {'Project','SurgNumber'}; % KUMC "RC"
 % pars.SpecialMeta.AnimalID.vars = {'SurgYear','SurgNumber'};  % MM Audio stuff
@@ -161,7 +150,7 @@ Fields =  { ...
    'DigEvents';      % 12
    'VidStreams';     % 13
    'Stim';           % 14 - hard-coded for extraction in RHS
-%    'DC';             % 15 - hard-coded for extraction in RHS
+   'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
@@ -184,7 +173,7 @@ FieldType = { ...
    'Events';   % 12
    'Videos';  % 13
    'Events';   % 14
-%    'Channels'; % 15
+   'Channels'; % 15
    'Meta';     % 16
 %    'Meta';     % 17
    'Meta'      % 18
@@ -207,7 +196,7 @@ OldNames       =  { ...
    {'*Press.mat';'*Beam.mat'};      % 12
    {'*Paw.mat';'*Kinematics.mat'};  % 13
    {'*STIM*'};                      % 14
-%    {'*DC*'};                        % 15
+   {'*DC*'};                        % 15
    {'*Time*'};                      % 16
 %    {'*experiment.txt'};             % 17
    {'*probes.xlsx'};                % 18
@@ -230,7 +219,7 @@ FolderNames     = {  ...
    'Digital';           % 12
    'Video';             % 13 - for streams parsed from Video
    'StimData';          % 14
-%    'StimData';          % 15
+   'StimData';          % 15
    'Digital';           % 16
 %    'Metadata';          % 17
    'Metadata';          % 18
@@ -253,7 +242,7 @@ FileNames =  { ...
    'DigEvents';      % 12
    'VidStream';          % 13 - for streams parsed from Videos
    'Stim';           % 14 - hard-coded for extraction in RHS
-%   'DC';             % 15 - hard-coded for extraction in RHS
+  'DC';             % 15 - hard-coded for extraction in RHS
    'Time';           % 16
 %    'Notes'           % 17
    'Probes';         % 18
@@ -276,7 +265,7 @@ FileType = { ...
    'Event';    % 12
    'Hybrid';   % 13
    'Event';    % 14
-%    'Hybrid';   % 15
+   'Hybrid';   % 15
    'Hybrid';   % 16
 %    'Other';    % 17
    'Other';    % 18
@@ -325,43 +314,6 @@ end
 
 % Check that if "HasVideo" and/or "HasVidStreams" are true, the appropriate
 % fields and corresponding values are present
-hasVideo = nigeLab.defaults.Video('HasVideo');
-hasVidStreams = nigeLab.defaults.Video('HasVidStreams');
-if hasVideo
-   % Check that there is a 'Video' Field, since Videos defaults assumes
-   % there is (hasVideo is true)
-   idx = find(ismember(Fields,'Video'));
-   if numel(idx) ~= 1
-      error('Not properly configured for Video recordings. Check +defaults.Video');
-   end
-   % Check that FieldType corresponding to 'Video' Field is correct
-   if ~strcmp(FieldType{idx},'Videos')
-      error('Invalid FieldType for Field ''Video'': ''%s''',FieldType{idx});
-   end
-   % Check that FileType corresponding to 'Video' Field is correct
-   if ~strcmp(FileType{idx},'Other')
-      error('Invalid FileType for Field ''Video'': ''%s''',FileType{idx});
-   end
-   % Check dynamic variables expression here and in defaults.Video
-   dyVar = cellfun(@(x)x(2:end),nigeLab.defaults.Video('DynamicVars'),...
-      'UniformOutput',false);
-   
-end
-
-if hasVidStreams
-   % defaults.Video is configured to assume there are data streams
-   % associated with the video. Check that there is appropriate Fields
-   % entry for 'VidStreams'
-   idx = find(ismember(Fields,'VidStreams'));
-   if numel(idx) ~= 1
-      error('Not properly configured for parsing VidStreams. Check +defaults.Video');
-   end
-   % Make sure that the FieldType corresponding to that entry is correctly
-   % labeled as 'Streams'
-   if ~strcmp(FieldType{idx},'Videos')
-      error('Invalid FieldType for Field ''VidStreams'': ''%s''',FieldType{idx});
-   end
-end
 
 %% MAKE DIRECTORY PARAMETERS STRUCT
 % Concatenate identifier for each file-type:

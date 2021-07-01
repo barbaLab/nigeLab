@@ -132,10 +132,7 @@ classdef LinePlotReducer < handle
         h_axes;
         h_plot;
         
-        % Original data
-        x;
-        y;
-        y_to_x_map;
+        
         
         % Extrema
         x_min;
@@ -160,6 +157,13 @@ classdef LinePlotReducer < handle
         % have been deleted (cleared from axes, closed figure, etc.).
         deleted_plots;
         
+    end
+    
+    properties (SetObservable)
+        % Original data
+        x;
+        y;
+        y_to_x_map;
     end
     
     methods
@@ -490,6 +494,10 @@ classdef LinePlotReducer < handle
             % Force the drawing to happen now.
             drawnow();
 
+            % set callbaxk on observable props
+            addlistener(o,'x','PostSet',@(src,evt)o.RefreshData(true));
+            addlistener(o,'y','PostSet',@(src,evt)o.RefreshData(true));
+            addlistener(o,'y_to_x_map','PostSet',@(src,evt)o.RefreshData(true));
             % No longer busy.
             o.busy = false;
             
@@ -500,8 +508,11 @@ classdef LinePlotReducer < handle
     methods
         
         % Redraw all of the data.
-        function RefreshData(o)
+        function RefreshData(o,force)
 
+            if nargin <2
+                force = false;
+            end
             % When we set the axes units to 'pixels' and back, it will
             % trigger a callback each time for *both* 'Position' and
             % 'Units' (and in that order). Since we've set up callbacks to
@@ -536,7 +547,7 @@ classdef LinePlotReducer < handle
             end
             
             % Return if there's nothing to do.
-            if width == o.last_width && all(lims == o.last_lims)
+            if ~force && width == o.last_width && all(lims == o.last_lims)
                 o.busy = false;
                 return;
             end

@@ -84,139 +84,53 @@ pars.UseVideoPromptOnEmpty = false;
 
 % % % -- For Video Scoring -- % % %
 
-% Stream Names: Most-flexible naming
-% pars.VidStreamName = []; % For "no video streams" case
-
-% IMPORTANT: DO NOT GIVE THESE REDUNDANT NAMES WITH OTHER "STREAMS" (e.g.
-% make sure they have _Likelihood or _X on the end. Otherwise it messes up
-% some of the convenient built-in parsing for methods like
-% blockObj.getStream etc)
-% pars.VidStreamName = {'Paw_Likelihood'}; % KUMC: "RC"
-pars.VidStreamName = {{'D1_Likelihood','D1_X','D1_Y','D1_Z',...
-                       'D2_Likelihood','D2_X','D2_Y','D2_Z',...
-                       'D3_Likelihood','D3_X','D3_Y','D3_Z',...
-                       'D4_Likelihood','D4_X','D4_Y','D4_Z',... % KUMC: "Murphy"
-                       'D5_Likelihood','D5_X','D5_Y','D5_Z',...
-                       'W_Likelihood','W_X','W_Y','W_Z',...
-                       'LED_Trial_Sync'}; ...
-                      {'Nose_Likelihood','Nose_X','Nose_Y',...
-                       'Head_Likelihood','Head_X','Head_Y',...
-                       'Tail_Likelihood','Tail_X','Tail_Y',...
-                       'LED_L_Trial_Sync','LED_R_Trial_Sync'}};
-   
-% Stream Groups: 'Marker' or 'Sync' (only 2 so far)
-% pars.VidStreamGroup = []; % For "no video streams" case
-% pars.VidStreamGroup = {'Marker'}; % KUMC: "RC" (only 1 cell level because only 1 camera on recording)
-pars.VidStreamGroup = {{'Marker','Marker','Marker','Marker',... 
-                       'Marker','Marker','Marker','Marker',...
-                       'Marker','Marker','Marker','Marker',... % KUMC: "Murphy"
-                       'Marker','Marker','Marker','Marker',...
-                       'Marker','Marker','Marker','Marker',...
-                       'Marker','Marker','Marker','Marker',...
-                       'Sync'};... % 2nd cell is due to different signals on "Top-A" camera 
-                      {'Marker','Marker','Marker',... 
-                       'Marker','Marker','Marker',...
-                       'Marker','Marker','Marker',... % KUMC: "Murphy"
-                       'Sync','Sync'}};
-
-
-% SubGroups: 'p', 'x', 'y', 'z' (Marker) and 'discrete' or 'analog' (Sync)
-
-% pars.VidStreamSubGroup = []; % For "no video streams" case
-% pars.VidStreamSubGroup = {'p'}; % KUMC: "RC" (No 2nd cell if CameraSourceVar is [])
-pars.VidStreamSubGroup = {{'p','x','y','z',... % KUMC: "Murphy"
-                          'p','x','y','z',...
-                          'p','x','y','z',...
-                          'p','x','y','z',...
-                          'p','x','y','z',...
-                          'p','x','y','z',...
-                          'discrete'};...
-                         {'p','x','y'... % (Different for Top-A)
-                          'p','x','y',...
-                          'p','x','y',...
-                          'discrete',...
-                          'discrete'}};
-
-% Sources: Should match CAMERA-SOURCE, which is defaulted to being parsed
-%           using the matching 'pars.DynamicVars' metadata variable set in
-%           'pars.CameraSourceVar'. If left as [], then
-%           'pars.VidStreamSource' can be assigned manually and should have
-%           the same number of elements as the other "VidStream" params.
-
-pars.CameraSourceVar = 'View'; % KUMC: "Murphy"
-% pars.CameraSourceVar = []; % KUMC: "RC"
-
-% CameraKey: Gives indexing into which cell array applies to which camera
-pars.CameraKey = struct('Index',{1;1;1;1;1;1;2;2},... % KUMC: "Murphy"
-   'Source',{'Left-A';'Left-B';'Left-C';'Right-A';'Right-B';'Right-C';'Top-A';'Back-A'});
-% pars.CameraKey = struct('Index',1,'Source','Front'); % KUMC: "RC"
-pars.VideoEventCamera = 'Top-A'; % KUMC: "Murphy"
-% pars.VideoEventCamera = 'Front';
-
-pars.VidStreamSource = '';  % If pars.CameraSourceVar is non-empty
-% pars.VidStreamSource = {'Front'}; % KUMC: "RC"
-
-% Depends on location of video files. If you are switching back and forth a
-% lot, may be convenient to add elements to this array so you don't forget
-% to toggle it.
-
 pars.VidFilePath    = { ... % "Includes" for where videos might be. Stops after first non-empty path.
-...   'K:\Rat\Video\BilateralReach\Murphy'; 
-...   'K:\Rat\Video\BilateralReach\RC';
-   'P:\Rat\BilateralReach\Video\post-surg'
+   'P:\foo\bar'
    };
 
-% Default search path for UI selection:
-pars.DefaultSearchPath = 'P:\Rat\BilateralReach\Video\post-surg';
-% Valid extensions for UI selection:
-pars.ValidVidExtensions = {'*_Right-A_0.MP4','Right Camera Videos Only';...
-                           '*_0.MP4','First Video Only';...
-                           '*.MP4;*.mp4;*.avi','Video Files (*.mp4,*.avi)';...
-                           '*.*','All Files (*.*)'};  
+% Unique key denotes the research key that will be used to identify and
+% match videos with Blocks. It tells the system what Block's Meta fields to 
+% use to find it's matching Videos. A good key might be 
+% {'AnimalID','BlockID'}. E.g a block having AnimalID = A00 and
+% BlockID = B00 will link all the videos whose name start with A00_B00
+pars.UniqueKey.vars = {'AnimalID','Phase','RecDate'};
+pars.UniqueKey.cat = '_';
+
+% As in other customizable naming conventions, metadata can be acquired
+% from the file name. 
+pars.NamingConvention={'$AnimalID','$Phase','$RecDate','$CameraID','$Counter'};
 pars.FileExt = '.MP4';
-% For DynamicVars expressions, see 'Metadata parsing' below; main
-% difference here is that ALL variables (if there are enough tokens) are
-% included as metadata variables; '$' vs '~' only denotes whether to use
-% that particular variable in figuring out other videos belonging to a
-% given recording.
-pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','$RecID','~View','~MovieID'}; % KUMC: "Murphy"
-% pars.DynamicVars = {'$AnimalID','$Year','$Month','$Day','~MovieID'}; % KUMC: "RC"
-pars.MovieIndexVar = 'MovieID'; % KUMC: "RC" (and in general)
+pars.Delimiter   = '_'; 
 
-% Make a separate set of "DynamicVars" to be parsed from 'Trials' videos
-pars.DynamicVarsTrials = {'$Field','~View','~MovieID'};
+pars.SpecialMeta = struct;
+pars.SpecialMeta.SpecialVars = {'VideoID'}; 
 
-% Information about video scoring
-% pars.OutcomeEvent = [];
-pars.OriginalVideoListFile = 'VideoList.csv';
-pars.TrialVideoListFile = 'TrialVideoList.csv';
-pars.OutcomeEvent = 'Outcome'; % special Event type for progress-tracking
-pars.StartExportVariable = 'Init';    % Can be '' to always use trial-running vector to parse
-pars.StopExportVariable = 'Complete'; % Can be '' to always use trial-running vector to parse
+pars.SpecialMeta.VideoID.cat = '-';
+pars.SpecialMeta.VideoID.vars = {'AnimalID','Phase','RecDate','CameraID'};
 
-% Information for "Trial Video" export
-pars.ROI.Width = 512;   % (Standardized) cropped frame width, in pixels
-pars.ROI.Height = 512;  % (Standardized) cropped frame height, in pixels
-% Note: KUMC Z620 workstation for running DeepLabCut seems to max out for
-%                 images of size 600 x 600.
+pars.IncludeChar='$';
+pars.DiscardChar='~';
+
+pars.GroupingVar = 'CameraID';
+pars.IncrementingVar = 'Counter';
+
+pars.VideoEventCamera = 'CamA';
+
+pars.CustomSort = @nigeLab.utils.orderGoProVideos;
+
+% % Information for "Trial Video" export
+% pars.ROI.CamA.Width = 512;   % (Standardized) cropped frame width, in pixels
+% pars.ROI.CamA.Height = 512;  % (Standardized) cropped frame height, in pixels
+% % Note: KUMC Z620 workstation for running DeepLabCut seems to max out for
+% %                 images of size 600 x 600.
+
 pars.PreTrialBuffer = 0.25;  % Time before "trial" to start video frame for
                              % a given scoring "trial." It is useful to
-                             % start at an earlier frame, because the
-                             % VideoReader object is faster at reading the
-                             % "next" frame rather than going backwards, for
-                             % whatever reason (it seems).
-pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" to keep writing
-
-[pars.VarsToScore,pars.VarType,pars.VarDefs] = setScoringVars();
+                             % start at an earlier frame.
+pars.PostTrialBuffer = 0.25; % Time in seconds after "trial" 
 
 % % % -- For Video Alignment -- % % %
 pars.Alignment_FS = struct('TDT',125,'RHD',100,'RHS',100);
-
-%% Less-likely to change these parameters
-% Metadata parsing
-pars.Delimiter = '_'; % Break filename "variables" by this
-pars.IncludeChar = '$'; % Include data from these variables
-pars.ExcludeChar = '~'; % Exclude data from these variables
 
 pars.ValueShortcutFcn = @nigeLab.workflow.defaultVideoScoringShortcutFcn;
 pars.VideoScoringStringsFcn = @nigeLab.workflow.defaultVideoScoringStrings;
@@ -225,118 +139,21 @@ pars.ScoringHotkeyFcn = @nigeLab.workflow.defaultHotkeyFcn;
 pars.ScoringHotkeyHelpFcn = @nigeLab.workflow.defaultHotkeyHelpFcn;
 
 %% Error parsing (do not change)
-pars.HasVidStreams = ...
-   pars.HasVidStreams && ...
-   pars.HasVideo && ...
-   (~isempty(pars.VidStreamName));
+% pars.HasVidStreams = ...
+%    pars.HasVidStreams && ...
+%    pars.HasVideo && ...
+%    (~isempty(pars.VidStreamName));
+% 
+% if pars.HasVidStreams
+%    dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
+%    if ~ismember('CameraID',dyVar)
+%       error(['nigeLab:' mfilename ':BadConfig'],...
+%          '[DEFAULTS/VIDEO]: ');
+%    end
+%    
+% end
 
-if pars.HasVidStreams
-   dyVar = cellfun(@(x)x(2:end),pars.DynamicVars,'UniformOutput',false);
-   if ismember('Key',dyVar)
-      error(['nigeLab:' mfilename ':BadConfig'],...
-         '[DEFAULTS/VIDEO]: Invalid use of reserved meta variable (''Key'')');
-   end
-   
-   % Check that the CameraSourceVar and MovieIndexVar were added to `pars`
-   if ~isfield(pars,'CameraSourceVar')
-      error(['nigeLab:' mfilename ':BadConfig'],...
-         ['CameraSourceVar parameter field is missing\n' ...
-         '->\t(can be left as [] if unwanted)']);
-   end
-   if ~isfield(pars,'MovieIndexVar')
-      error(['nigeLab:' mfilename ':BadConfig'],...
-         ['MovieIndexVar parameter field is missing\n' ...
-         '->\t(can be left as [] if unwanted)']);
-   end
-   
-   n = numel(pars.VidStreamName);
-   if ~isempty(pars.CameraSourceVar)
-      pars.VidStreamField = cell(n,1);
-      pars.VidStreamFieldType = cell(n,1);
-      
-      % Check that the CameraSourceVar is good
-      idx = ismember(dyVar,pars.CameraSourceVar);
-      if sum(idx) ~= 1
-         error(['nigeLab:' mfilename ':BadConfig'],...
-            'CameraSourceVar (%s) is not a member of pars.DynamicVars',...
-            pars.CameraSourceVar);
-      end
-      
-      % For each Cell corresponding to a different subset of markings,
-      % double-check
-      for i = 1:numel(pars.VidStreamName)
-         n = numel(pars.VidStreamName{i});
-         m = numel(pars.VidStreamGroup{i});
-         if n ~= m
-            error(['Number of elements of pars.VidStreamName{%g} (%g) must ' ...
-               'equal number of elements of pars.VidStreamGroup{%g} (%g).'],...
-               i,n,i,m);
-         end
-         m = numel(pars.VidStreamSubGroup{i});
-         if n ~= m
-            error(['Number of elements of pars.VidStreamName{%g} (%g) must ' ...
-               'equal number of elements of pars.VidStreamSubGroup{%g} (%g).'],...
-               i,n,i,m);
-         end
-         pars.VidStreamField{i} = repmat({'VidStreams'},1,n);
-         pars.VidStreamFieldType{i}= repmat({'Streams'},1,n);
-      end
-      pars.VidStream = [];
-   else
-      m = numel(pars.VidStreamGroup);
-      if n ~= m
-         error(['Number of elements of pars.VidStreamName (%g) must ' ...
-            'equal number of elements of pars.VidStreamGroup (%g).'],...
-            n,m);
-      end
-      m = numel(pars.VidStreamSubGroup);
-      if n ~= m
-         error(['Number of elements of pars.VidStreamName (%g) must ' ...
-            'equal number of elements of pars.VidStreamSubGroup (%g).'],...
-            n,m);
-      end
-      m = numel(pars.VidStreamSource);
-      if n ~= m
-         error(['Number of elements of pars.VidStreamName (%g) must ' ...
-            'equal number of elements of pars.VidStreamSource (%g).'],...
-            n,m);
-      end
-      pars.VidStreamField = repmat({'VidStreams'},1,n);
-      pars.VidStreamFieldType= repmat({'Videos'},1,n);
-      pars.VidStream = nigeLab.utils.signal(...
-         pars.VidStreamGroup,...
-         [],... % Unknown number of samples
-         pars.VidStreamField,...
-         pars.VidStreamFieldType,...
-         pars.VidStreamSource,...
-         pars.VidStreamName,...
-         pars.VidStreamSubGroup); 
-   end
-end
-eventType = nigeLab.defaults.Event('EventType');
-f = fieldnames(eventType);
-% Check which one is the 'manual' "key" if variables should be scored
-if (~isempty(pars.VarsToScore))
-   pars.ScoringEventFieldName = [];
-   for i = 1:numel(f)
-      if strcmpi(eventType.(f{i}),'manual')
-         pars.ScoringEventFieldName = f{i};
-         break;
-      end
-   end
-   if isempty(pars.ScoringEventFieldName)
-      error(['Parameter configuration suggests videos should be scored, ' ...
-             'but ''pars.EventType'' key is set up incorrectly.']);
-   end
-else
-   pars.ScoringEventFieldName = [];   
-end
-% Check that number of elements of VarsToScore matches number of elements
-% of VarType.
-if numel(pars.VarsToScore) ~= numel(pars.VarType)
-   error('Dimension mismatch for pars.VarsToScore (%d) and pars.VarType (%d).',...
-      numel(pars.VarsToScore), numel(pars.VarType));
-end
+
 
 %% Parse output
 if nargin < 1

@@ -55,10 +55,10 @@ if ~blockObj.initStreams(header)
 end
 
 %INITIALIZE EVENTS STRUCT
-if ~blockObj.initEvents
-   warning('Could not initialize Events structure properly.');
-   return;
-end
+% if ~blockObj.initEvents
+%    warning('Could not initialize Events structure properly.');
+%    return;
+% end
 
 %INITIALIZE STATUS
 blockObj.updateStatus('init');
