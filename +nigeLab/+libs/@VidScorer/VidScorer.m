@@ -18,8 +18,8 @@ classdef VidScorer < matlab.mixin.SetGet
    % % % PROPERTIES % % % % % % % % % %
    % DEPENDENT,PUBLIC
    properties (Access=public)
-      FrameTime   (1,1) double  = 0    % From .VidGraphicsObj (time of current frame)
-      NeuTime     (1,1) double  = 0    % Neural time corresponding to current frame (from parent)
+      VideoTime    double  = 0    % From .VidGraphicsObj (time of current frame)
+      NeuTime      double  = 0    % Neural time corresponding to current frame (from parent)
       Parent                           % Handle to obj.Panel (matlab.ui.container.Panel)
       Position    (1,4) double  = [0 0.15 0.6 0.8]  % Position of obj.Axes
       TrialOffset (1,1) double  = 0    % Trial/Camera-specific offset
@@ -64,14 +64,15 @@ classdef VidScorer < matlab.mixin.SetGet
       ScrollRightBtn
       SpeedSlider
       SynchButton
+      StretchButton
       trialsOverlayChk
       ZoomButton
+      PanButton
       TrialLabel
    end
    
    % Other nigeLab linked obj
    properties (Transient,Access=public)
-      CameraObj                  % "Source" Camera object
 %       MaskObj                    % Image for showing "grayed out" non-included regions
       nigelCam             % "Parent" VidGraphics object      
       Block          % "Parent" nigeLab.Block object
@@ -151,14 +152,20 @@ classdef VidScorer < matlab.mixin.SetGet
          end
          
          obj.nigelCam = nigelCam;
-%          obj.Parent = VidGraphicsObj.Panel;
+         obj.VideoTime = nigelCam.getTimeSeries;
+         obj.VideoTime = obj.VideoTime- obj.nigelCam.VideoOffset- (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch;
          obj.Block = nigelCam.Parent;
+         obj.NeuTime =obj.Block.Time(:);
+         if isempty(obj.NeuTime)
+             obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
+         end
          obj.XLim = [0 max(nigelCam.Meta(end).duration)];
          obj.DX = diff(obj.XLim);
-%          obj.ZoomLevel = 0; % Initialize CMap and Zoom
-         obj.NeuOffset = -obj.Block.VideoOffset;
-%          initColors(obj);
-         
+         if isempty(obj.nigelCam.VideoOffset)
+             obj.NeuOffset = 0;
+         else
+             obj.NeuOffset =  -obj.nigelCam.VideoOffset;
+         end
          
          % Parse input arguments
          for iV = 1:2:numel(varargin)
@@ -277,16 +284,17 @@ classdef VidScorer < matlab.mixin.SetGet
             'HitTest','off');
       end
       function updateTimeMakrer(obj)
-          obj.Now.XData = ones(2,1)*obj.nigelCam.Time+obj.NeuOffset;
-          thisTrial = find(obj.Block.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last');
+          obj.Now.XData = ones(2,1)*obj.VideoTime(obj.nigelCam.FrameIdx);
+          trueTime = obj.nigelCam.getTimeSeries;
+          thisTrial = find(obj.Block.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last'); % maybe change with min(abs()) ?
           if isempty(thisTrial),thisTrial = 0;end
           obj.TrialIdx = thisTrial;
           xl = xlim(obj.sigAxes);
           
           if obj.Now.XData(1) > xl(2)
-              xlim(obj.sigAxes,[xl(2) xl(2)+diff(xl)])
+              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
           elseif obj.Now.XData(1) < xl(1)
-              xlim(obj.sigAxes,[xl(1)-diff(xl) xl(1)])
+              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
           end
       end
       
@@ -299,27 +307,17 @@ classdef VidScorer < matlab.mixin.SetGet
       function NeuOffsetChanged(obj,src,evt)
           obj.VideoOffset = -obj.NeuOffset;
           obj.Block.VideoOffset = obj.VideoOffset;
-          
+          obj.nigelCam.VideoOffset = -obj.NeuOffset;
          VidNodes =  obj.SignalTree.Root.Children(strcmp({obj.SignalTree.Root.Children.Name},'Video streams')).Children;
-         for nn = VidNodes
-             UD = nn.UserData;
-             if isfield(UD,'ReducedPlot')
-                 UD.ReducedPlot.x = {UD.Time + obj.NeuOffset};
-             end
-         end
+%          for nn = VidNodes
+%              UD = nn.UserData;
+%              if isfield(UD,'ReducedPlot')
+%                  UD.ReducedPlot.x = {UD.Time + obj.NeuOffset};
+%              end
+%          end
       end
       
-      % Check/update axes limits
-      function checkAxesLimits(obj)
-         %CHECKAXESLIMITS  Check and update axes x-limits
-         %
-         %  checkAxesLimits(obj);
-         
-         if (obj.CameraObj.Time > obj.XLim(2)) || ...
-            (obj.CameraObj.Time < obj.XLim(1))
-            updateZoom(obj);
-         end
-      end
+      
       
       % Clear TimeStamps
       function clearTimeStamps(obj)
@@ -456,9 +454,11 @@ classdef VidScorer < matlab.mixin.SetGet
    % SEALED,PROTECTED Callbacks
    methods (Sealed,Access=protected)
        % Signal Axes click callback, seeks the video
-       function sigAxClick(obj,src,evt)
+       function sigAxClick(obj,~,evt)
            obj.Now.XData = ones(2,1)*evt.IntersectionPoint(1);
-           obj.nigelCam.seek(evt.IntersectionPoint(1) - obj.NeuOffset);
+           [~,idx] = min( abs(obj.VideoTime  - evt.IntersectionPoint(1)));
+           trueVideoTime = obj.nigelCam.getTimeSeries;
+           obj.nigelCam.seek(trueVideoTime(idx));
        end
        
       % Play/Paue button. When clicked, also switches icon
@@ -483,8 +483,9 @@ classdef VidScorer < matlab.mixin.SetGet
           if obj.TrialIdx+direction <= 0
               return;
           end
-          trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3 - obj.NeuOffset;
-          obj.nigelCam.seek(trialTime);
+          trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3;
+          evt.IntersectionPoint = trialTime;
+          obj.sigAxClick([],evt);   % as if the user clicked on the timeline.
       end
       
       % Enables synch mode
@@ -493,7 +494,7 @@ classdef VidScorer < matlab.mixin.SetGet
           CheckedNodes = obj.SignalTree.SelectedNodes;
           zoom(obj.sigAxes,'off');
           if src.Value % synch mode selected
-              if numel(SelectedNodes) < 2
+              if numel(SelectedNodes) < 1
                   src.Value = false;
                  error('Not enough nodes selected to perform synchronization!');
               end
@@ -526,7 +527,6 @@ classdef VidScorer < matlab.mixin.SetGet
                   nn.UserData.ReducedPlot.h_plot.PickableParts = 'none';
                  nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = [];
                end
-               set(obj.sigFig, 'windowbuttondownfcn', []);
                set(obj.sigFig, 'windowbuttonmotionfcn', []);
                set(obj.sigFig, 'windowbuttonupfcn', []);
                set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
@@ -573,7 +573,7 @@ classdef VidScorer < matlab.mixin.SetGet
                   set(fig,'Pointer','crosshair');
                   title(['[' num2str(out(1,1)) ']']);
                   if ~isempty(UDAta.lineObj)                      
-                      UDAta.lineObj.x = {UDAta.xData-(UDAta.xpos0-out(1,1))};%--move x data
+                      UDAta.lineObj.x = {UDAta.xData(:)-(UDAta.xpos0-out(1,1))};%--move x data
                       UDAta.xNew =out(1,1);
                       title(['[' num2str(out(1,1)) '], offset=[' num2str(UDAta.xpos0-out(1,1)) ']']);
                   end
@@ -597,22 +597,150 @@ classdef VidScorer < matlab.mixin.SetGet
               end
               
 %               SRate = arrayfun(@(ud) diff(ud.ReducedPlot.x{1}(1:2)),[SelectedNodes.UserData]);
-              allPLots = [SelectedNodes.UserData];
-              allPLots = [allPLots.ReducedPlot];
-              thisPlot = allPLots == UDAta.lineObj;
-              xfixed = SelectedNodes(~thisPlot).UserData.ReducedPlot.x{1};
-              kf = find(xfixed>UDAta.xNew,1);
-              
-              xmov = UDAta.xData;
-              km = dsearchn(xmov,UDAta.xpos0);
+%               allPLots = [SelectedNodes.UserData];
+%               allPLots = [allPLots.ReducedPlot];
+%               thisPlot = allPLots == UDAta.lineObj;
+%               xfixed = SelectedNodes(~thisPlot).UserData.ReducedPlot.x{1};
+%               [~,kf] = min(abs(xfixed-UDAta.xNew));
+%               
+%               xmov = UDAta.xData;
+%               km = dsearchn(xmov,UDAta.xpos0);
               
 %               SelectedNodes(thisPlot).UserData.ReducedPlot.x = {x + x(k) - UDAta.xpos0 - obj.NeuOffset};
-              obj.NeuOffset = UDAta.xOffs - (xmov(km)-xfixed(kf));
-              UDAta.lineObj.x = {UDAta.xData-(xmov(km)-xfixed(kf))};
-              
+%               obj.NeuOffset = UDAta.xOffs - (xmov(km)-xfixed(kf));
+              obj.NeuOffset = UDAta.xOffs - UDAta.xpos0 + UDAta.xNew;
+              fprintf(1,'adjusted for %d ms\n',abs(UDAta.xpos0 - UDAta.xNew))
+%               UDAta.lineObj.x = {UDAta.xData-(xmov(km)-xfixed(kf))};
+              obj.VideoTime = UDAta.lineObj.x{:};
           end
       end
       
+      % Enab;es strecth mode
+      function buttonStretch(obj,src)
+          % In stretch mode, the data can be compressed or streched on the
+          % x axis to better align the sampling
+          
+          SelectedNodes = obj.SignalTree.SelectedNodes;
+          CheckedNodes = obj.SignalTree.SelectedNodes;
+          zoom(obj.sigAxes,'off');obj.ZoomButton.Value = false;
+          if src.Value % synch mode selected
+              if numel(SelectedNodes) < 2
+                  src.Value = false;
+                  error('Not enough nodes selected to perform synchronization!');
+              end
+              obj.SignalTree.SelectionChangeFcn = @(~,~)set(obj.SignalTree,'SelectedNodes',SelectedNodes);
+              for nn = SelectedNodes
+                  if ~nn.Checked
+                      nn.Checked = 1;
+                  end
+                  nn.UserData.ReducedPlot.h_plot.LineWidth = 1.5;
+                  nn.UserData.ReducedPlot.h_plot.HitTest = 'on';
+                  nn.UserData.ReducedPlot.h_plot.PickableParts = 'visible';
+                  
+                  nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = @(src,evt)initStretch(nn.UserData.ReducedPlot,obj.sigFig,obj);
+                  % set(obj.sigFig, 'windowbuttondownfcn', @(src,evt)initMove(obj.sigAxes));
+                  set(obj.sigFig, 'windowbuttonmotionfcn', @(src,evt)stretchStuff(obj.sigAxes,obj.sigFig,obj));
+                  set(obj.sigFig, 'windowbuttonupfcn', @(src,evt)disableStretch(obj.sigAxes,obj.sigFig,SelectedNodes,obj));
+                  set(obj.sigAxes,'ButtonDownFcn',[]);
+                  
+                  CheckedNodes(CheckedNodes==nn) = [];
+              end 
+              
+              obj.sigAxes.UserData = struct('init_state',[],'lineObj',[],...
+                 'macro_active',false,'xpos0',[],'currentlinestyle',[],...
+                 'xData',[],'currentTitle','','xNew',[],'idx0',[]);
+          else
+              obj.SignalTree.SelectionChangeFcn = [];
+              for nn = CheckedNodes
+                  nn.UserData.ReducedPlot.h_plot.LineWidth = .2;
+                  nn.UserData.ReducedPlot.h_plot.HitTest = 'off';
+                  nn.UserData.ReducedPlot.h_plot.PickableParts = 'none';
+                  nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = [];
+              end
+              set(obj.sigFig, 'windowbuttonmotionfcn', []);
+              set(obj.sigFig, 'windowbuttonupfcn', []);
+              set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
+              
+              Question = sprintf('Do you want nigel to change the Video Time as well?\nThis is usually done when a Video Stream is modified.');
+              ButtonName = questdlg(Question, 'Change Video Time?', 'Yes', 'No', 'Yes');
+              if strcmp(ButtonName,'Yes')
+                 UDAta_ = obj.sigAxes.UserData;
+                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
+                 obj.nigelCam.VideoStretch = (UDAta_.xpos0-UDAta_.xNew)./UDAta_.idx0;
+              end
+              
+              obj.sigAxes.UserData = [];
+          end
+          
+          
+          function initStretch(reducedPlot,fig,obj)
+              ax = reducedPlot.h_axes;
+              %     disp('interactive_move enable')
+              UDAta = ax.UserData;
+              %UDAta.init_state = uisuspend(fig);
+
+              out=get(ax,'CurrentPoint');
+              UDAta.lineObj = reducedPlot;
+              set(ax,'NextPlot','replace')
+              set(fig,'Pointer','crosshair');
+              UDAta.xpos0 = out(1,1);%--store initial position x
+              xl=get(ax,'XLim');
+              if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))% &&...
+                      %(UDAta.ypos0 > yl(1) && UDAta.ypos0 < yl(2))) %--disable if outside axes
+                  UDAta.currentlinestyle = UDAta.lineObj.h_plot.LineStyle;
+                  UDAta.currentmarker = UDAta.lineObj.h_plot.Marker;
+
+                  UDAta.lineObj.h_plot.Marker = '.';
+                  UDAta.lineObj.h_plot.LineStyle = 'none';
+                  UDAta.xData = UDAta.lineObj.x{1};%--assign x data
+                  [~,UDAta.idx0] = min(abs(UDAta.xpos0-UDAta.xData));
+                  UDAta.xOffs = obj.NeuOffset;
+                  UDAta.currentTitle=get(get(ax, 'Title'), 'String');                  
+                  title(ax,['[' num2str(out(1,1)) ']']);
+                  UDAta.macro_active = 1;
+                  ax.UserData = UDAta;
+
+              else
+                  ax.UserData = UDAta;
+                  disableStretch(ax,fig);
+              end
+              
+          end
+          %--------function to handle event
+          function stretchStuff(ax,fig,obj)
+              UDAta = ax.UserData;             
+              if UDAta.macro_active
+                  out=get(ax,'CurrentPoint');
+                  set(fig,'Pointer','crosshair');
+                  title(['[' num2str(out(1,1)) ']']);
+                  if ~isempty(UDAta.lineObj)
+                      mismatch = (UDAta.xpos0-out(1,1))./UDAta.idx0;
+                      UDAta.lineObj.x = {UDAta.xData(:) - (1:numel(UDAta.xData))'.*mismatch};%--move x data
+                      UDAta.xNew =out(1,1);
+                      title(['[' num2str(out(1,1)) '], offset=[' num2str(UDAta.xpos0-out(1,1)) ']']);
+                  end
+              end
+              ax.UserData = UDAta;
+          end
+          
+          % stop moving stuff
+          function disableStretch(ax,fig,SelectedNodes,obj)
+              
+              UDAta = ax.UserData;
+              UDAta.macro_active=0;
+              title(UDAta.currentTitle);
+              ax.UserData = UDAta;
+%               uirestore(UDAta.init_state);
+              set(fig,'Pointer','arrow');
+              set(ax,'NextPlot','add')
+              if ~isempty(UDAta.lineObj)
+                  set(UDAta.lineObj.h_plot,'LineStyle',UDAta.currentlinestyle);
+                  set(UDAta.lineObj.h_plot,'Marker',UDAta.currentmarker);
+              end
+              
+              
+          end
+      end
       
       function treecheckchange(obj,src,evt)
           plotStruct = evt.Nodes.UserData;
@@ -633,7 +761,19 @@ classdef VidScorer < matlab.mixin.SetGet
               dd = plotStruct.Data(:);
               dd = dd./max(dd);
               if isempty(tt)
-                   tt = (1:numel(dd)) ./ obj.Block.SampleRate * 1000;
+                  if strcmp(evt.Nodes.Parent.Name,'Video streams')
+                      if isempty(obj.VideoTime)
+                          tt = (1:numel(dd)) ./ obj.nigelCam.Meta(1).frameRate * 1000;
+                      else
+                          tt = obj.NeuTime;
+                      end
+                  else
+                      if isempty(obj.NeuTime)
+                          tt = (1:numel(dd)) ./ obj.Block.SampleRate * 1000;
+                      else
+                          tt = obj.NeuTime;
+                      end
+                  end
               end
               plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt, dd);
               plotStruct.ReducedPlot.h_plot.HitTest = 'off';
@@ -900,7 +1040,7 @@ classdef VidScorer < matlab.mixin.SetGet
              'BackgroundColor',nigeLab.defaults.nigelColors('onsurface'),...
              'String','1');
          fcnlist = {{@(src,evt)set(obj,'TrialIdx',str2double(src.String))},...
-             {@(src,evt)obj.nigelCam.seek(obj.Block.Trial(round(str2double(src.String)),1)*1e3) }};
+             {@(src,evt)obj.sigAxClick([],struct('IntersectionPoint',obj.Block.Trial(round(str2double(src.String)),1)*1e3)) }};
          
         obj.TrialLabel.Callback = @(src,evt)nigeLab.utils.multiCallbackWrap(src,evt,fcnlist);         
          
@@ -956,17 +1096,32 @@ classdef VidScorer < matlab.mixin.SetGet
          
          obj.SynchButton = uicontrol(obj.cmdPanel,'Style','togglebutton',...
              'Units', 'pixels',...
-             'Position',[obj.cmdPanel.Position(3)-100 20 80 20],...
+             'Position',[obj.cmdPanel.Position(3)-100 10 80 20],...
              'String','Synch mode',...
              'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
              'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'),...
              'Callback',@(src,evt)obj.buttonSynch(src));
+         
+         obj.StretchButton = uicontrol(obj.cmdPanel,'Style','togglebutton',...
+             'Units', 'pixels',...
+             'Position',[obj.cmdPanel.Position(3)-100 35 80 20],...
+             'String','Stretch mode',...
+             'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
+             'ForegroundColor',nigeLab.defaults.nigelColors('onprimary'),...
+             'Callback',@(src,evt)obj.buttonStretch(src));
          
          obj.ZoomButton = uicontrol(obj.cmdPanel,'Style','togglebutton',...
              'Units', 'pixels',...
              'Position',[obj.cmdPanel.Position(3)-140 20 24 24],...
              'CData',obj.icons.zoom.img,...
              'Callback',@(src,evt)zoom(obj.sigAxes,[bool2onoff(src.Value)])...
+         );
+     
+     obj.PanButton = uicontrol(obj.cmdPanel,'Style','togglebutton',...
+             'Units', 'pixels',...
+             'Position',[obj.cmdPanel.Position(3)-170 20 24 24],...
+             'CData',obj.icons.pan.img,...
+             'Callback',@(src,evt)pan(obj.sigAxes,[bool2onoff(src.Value)])...
          );
          
           function str = bool2onoff(val)
@@ -1406,6 +1561,14 @@ classdef VidScorer < matlab.mixin.SetGet
             'BackgroundIndex',8 ...
             );
         
+        [obj.icons.pan.img,...
+          obj.icons.pan.alpha] =nigeLab.utils.getMatlabBuiltinIcon(...
+            'Pan_24.PNG',...
+            'IconPath',fullfile(matlabroot,'toolbox\shared\controllib\general\resources\toolstrip_icons'),...
+            'Background','sfc',...
+            'BackgroundIndex',8 ...
+            );
+        
       end
       
       % Initialize struct for main graphics reference
@@ -1507,7 +1670,7 @@ classdef VidScorer < matlab.mixin.SetGet
               if HasTrials,Status = 'on';else,Status = 'off';end
                   obj.trialsOverlayChk = uicontrol(obj.cmdPanel,'Style','checkbox',...
                   'Units', 'pixels',...
-                  'Position',[obj.cmdPanel.Position(3)-230 20 80 20],...
+                  'Position',[obj.cmdPanel.Position(3)-260 20 80 20],...
                   'String','View Trials',...
                   'Enable',Status,...
                   'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...

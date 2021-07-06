@@ -18,6 +18,11 @@ classdef nigelCamera < matlab.mixin.SetGet
         WindowOpened = false;
    end
    
+   properties (SetAccess=?nigeLab.libs.VidScorer)
+        VideoOffset      (1,1)double = 0;
+        VideoStretch     (1,1)double = 0;
+   end
+   
    properties (Transient,GetAccess=private)
       VideoReader                             % Array of video objects interface (c++ mex function)
    end
@@ -37,6 +42,7 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties(Dependent)
        Time   
        Name
+       FrameIdx
    end
    
    properties(Access=private)
@@ -74,6 +80,13 @@ classdef nigelCamera < matlab.mixin.SetGet
          
          % notify time changed
          notify(obj,'timeChanged');
+      end
+      
+      function idx = get.FrameIdx(obj)
+         %GET.TIME  Returns .Time (references .SeriesTime_)
+         [~,idx] = min(abs( obj.Time_ - obj.getTimeSeries));
+      end
+      function set.FrameIdx(obj,value)
       end
       
       function set.Name(obj,value)
@@ -232,10 +245,10 @@ end
               t(t==0) = nan;
               nigelSig = nigeLab.utils.signal('vid',numel(sig),'VidStreams','Streams');
               thisStream = struct('name',varname,'signal',nigelSig,'Key',nigeLab.utils.makeHash,'fs',mean([obj.Meta.frameRate]));
-              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,nigelSig.Group,thisStream.name,'mat'));
+              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,thisStream.name,'mat'));
               thisStream.data = nigeLab.libs.DiskData('Hybrid',thisPath,sig,'overwrite', true);
               
-              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,nigelSig.Group,[thisStream.name '_Time'],'mat'));
+              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,[thisStream.name '_Time'],'mat'));
               thisStream.time = nigeLab.libs.DiskData('Hybrid',thisPath,t,'overwrite', true);
           else
               [path,name,ext] = fileparts(PathToFile);
@@ -274,10 +287,10 @@ end
               end
               nigelSig = nigeLab.utils.signal('vid',numel(sig),'VidStreams','Streams');
               thisStream = struct('name',varname,'signal',nigelSig,'Key',nigeLab.utils.makeHash,'fs',mean([obj.Meta.frameRate]));
-              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,nigelSig.Group,thisStream.name,'mat'));
+              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,thisStream.name,'mat'));
               thisStream.data = nigeLab.libs.DiskData('Hybrid',thisPath,sig,'overwrite', true);
               
-              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,nigelSig.Group,[thisStream.name '_Time'],'mat'));
+              thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,[thisStream.name '_Time'],'mat'));
               thisStream.time = nigeLab.libs.DiskData('Hybrid',thisPath,t,'overwrite', true);
           end
           obj.Streams = [obj.Streams thisStream];

@@ -36,7 +36,7 @@ public:
     mutable std::mutex mtx;
     deque<Mat> buffer;
     deque<double> bufferMs;
-
+    int seekNFramesLoad = 10;
 
     int direction = 1;          // 1 forward, -1 backwards
 
@@ -130,7 +130,7 @@ public:
             //frameRate.push_back( (double)cap.get(CAP_PROP_FPS));
             //nFrames.push_back( (int)cap.get(CAP_PROP_FRAME_COUNT));
             chrono::microseconds s((int) floor(1000000 / frameRate));
-            chrono::milliseconds d((int)floor( 1000 * (nFrames_-1) / frameRate + videoDurations.back().count()));
+            chrono::milliseconds d((int)floor( 1000 * (nFrames_) / frameRate + videoDurations.back().count()));
 
             meta thisMeta;
             thisMeta.width = width;
@@ -189,7 +189,7 @@ public:
                     diskIndex = fr;
 
                     // check if we have reached the end of file
-                    if(diskIndex >= MetaIndex->nFrames -1){
+                    if(diskIndex >= MetaIndex->nFrames){
                         // if this is the last file we exit
                         if (MetaIndex == Meta.end()) {
                             bufferEnabled = false;
@@ -324,8 +324,8 @@ void dispFrames(){
         buffer.erase(buffer.begin(), buffer.end());
         bufferMs.erase(bufferMs.begin(), bufferMs.end());
      mtx.unlock();
-
-     bufferIndex = -1;
+     msTime = msTime - chrono::duration_cast<chrono::milliseconds>(MetaIndex->frameInterval).count() * seekNFramesLoad;
+     bufferIndex = seekNFramesLoad - 1;
      //frameIndex = (int)floor(chrono::duration<double,milli>(msTime) / frameInterval) - 1;
 
      // find the videofile index based on the msTime
@@ -394,7 +394,7 @@ void dispFrames(){
              i = 0;
              for (int jj = 0; jj < nVideo; jj++)
                  i += iterations[jj];
-             progEnd.x = (int)((float)i / (float)lambnFrames * w);
+             progEnd.x = (int)((float)i / (float)lambnFrames * (float)w);
              line(img, progStart, progEnd, Scalar(11, 93, 4), int(50));
              imshow("Progress", img);
              if ((waitKey(500) == 27) || (i == lambnFrames)) {
@@ -406,18 +406,15 @@ void dispFrames(){
          destroyWindow("Progress");
      };
 
-   //  dispProgressThread.detach();
-     getMeanValReturnStr* AllRes = new getMeanValReturnStr[videoPaths.size()];
-     atomic<int>* iterations = new atomic<int>[videoPaths.size()];
 
     auto extrSignal = [thisROI, normROI,&stop,&iterations,&AllRes](int nFrames, VideoCapture ROIcap, double duration,int jj) {
          double* outVal = new double [nFrames] {0};
          double* outTime = new double [nFrames] {0};
          Mat frame, frameBW,normFramBW;
          while (true) {
-             double ff = 0;
+             //double ff = 0;
              bool success = ROIcap.read(frame);
-             ff = ROIcap.get(CAP_PROP_POS_FRAMES);
+             //ff = ROIcap.get(CAP_PROP_POS_FRAMES);
              double ms = ROIcap.get(CAP_PROP_POS_MSEC) + duration;
 
              double min;
@@ -428,12 +425,12 @@ void dispFrames(){
                  // minMaxLoc(frameBW, &min, &outVal[iterations[jj]]);
                  outVal[iterations[jj]] = sum(mean(frameBW))[0] / sum(mean(normFramBW))[0];
                  outTime[iterations[jj]] = ms;
-                 iterations[jj]++;
              }
-
+             if(success)
+                iterations[jj]++;
 
              // if we reached the last frame, video file has to be changed
-             if ((iterations[jj] > nFrames - 1) || stop)
+             if ((iterations[jj] > nFrames - 1) || stop )
                  break;
          }
 
@@ -645,7 +642,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         thisVideoReader->seek((float)mxGetScalar(prhs[2]));
         if (!thisVideoReader->bufferRunning) {
             thread bufferThread(&SimpleVideoReader::startBuffer, ref(*thisVideoReader));
-            while (thisVideoReader->buffer.size() < 5)
+            while (thisVideoReader->buffer.size() < thisVideoReader->seekNFramesLoad*2)
                 this_thread::sleep_for(std::chrono::milliseconds(1));
             bufferThread.detach();
         }
