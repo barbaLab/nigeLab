@@ -50,6 +50,7 @@ end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
 for iCh = blockObj.Mask
+
    curCh = curCh + 1;
    
    % No longer need check for CAR since checkActionIsValid does this
@@ -73,7 +74,7 @@ for iCh = blockObj.Mask
    if isempty(art)
       art = nan(size(spk,1),size(art,2));
    end
-   
+   % art = zeros(1,5);
    if ~saveChannelSpikingEvents(blockObj,iCh,spk,feat,art)
       error(['nigeLab:' mfilename ':BadSave'],...
          '[BLOCK/DOSD]::%s: Could not save spiking events for channel %d.',...
@@ -367,7 +368,7 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
-         artifact = artifact(:); % make sure is column oriented
+         artifact = unique(artifact(:)); % make sure is column oriented
          iStart = artifact([true, diff(artifact)' ~= 1]);
          iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));
          
