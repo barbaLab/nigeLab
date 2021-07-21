@@ -27,17 +27,16 @@ end
 % If this is called before videos are initialized, then it will never
 % "link" the videos properly; however, videos should always be initialized
 % first.
-if isempty(blockObj.Videos)
+if isempty(blockObj.Cameras)
    blockObj.updateStatus(field,false);
    return;
-end
-
-flag = updateVidInfo(blockObj,true);
-if ~flag
-   blockObj.updateStatus(field,false);
 else
-   updateFlags = true(1,numel(blockObj.Videos));
-   blockObj.updateStatus(field,updateFlags,1:numel(blockObj.Videos));
+   for ii=1:numel(blockObj.Cameras)
+       blockObj.Cameras(ii).addVideos;
+   end
+   updateFlags = true(1,numel(blockObj.Cameras));
+   blockObj.updateStatus(field,updateFlags,1:numel(blockObj.Cameras));
+
 end
 
 end
