@@ -36,6 +36,9 @@ classdef configSD < handle
        artRejData
    end
    
+   properties(Access=private)
+       icons       (1,1)struct = struct();
+   end
    
    methods
        
@@ -62,6 +65,7 @@ classdef configSD < handle
            obj.Pars = obj.ExBlock.Pars.SD;
            
            % Build UI
+           obj.getIcons();
            obj.buildGUI();
            
            obj.Channels.Name = {obj.ExBlock.Channels.name};
@@ -70,6 +74,8 @@ classdef configSD < handle
            obj.UI.channel = 1;
            
            obj.UI.ChannelSelector = nigeLab.libs.ChannelUI(obj.UI);
+           obj.UI.ChannelSelector.Figure.Name =...
+               sprintf('configSD - %s',obj.UI.ChannelSelector.Figure.Name);
            obj.Listeners = [obj.Listeners, ...
                addlistener(obj.UI.ChannelSelector,'NewChannel',...
                @obj.setChannel)];
@@ -78,6 +84,16 @@ classdef configSD < handle
            obj.sampleData()
            
            
+       end
+       
+       function getIcons(obj)
+           [obj.icons.zoom.img,...
+               obj.icons.zoom.alpha] =nigeLab.utils.getMatlabBuiltinIcon(...
+               'Zoom_In_24.PNG',...
+               'IconPath',fullfile(matlabroot,'toolbox\shared\controllib\general\resources\toolstrip_icons'),...
+               'Background','bg',...
+               'BackgroundIndex',8 ...
+               );           
        end
        
        function flag = set(~,field,~)
@@ -173,7 +189,8 @@ classdef configSD < handle
                'Position',[1500 200 800 700],...
                'Color',nigeLab.defaults.nigelColors('bg'),...
                'Visible','on',...
-               'CloseRequestFcn',@(~,~) obj.delete);
+               'CloseRequestFcn',@(~,~) obj.delete,...
+               'Name','configSD - Spike detection configurator');
            fig = obj.UI.Fig;
          else
             obj.UI.Fig = fig; 
@@ -182,8 +199,10 @@ classdef configSD < handle
          
          obj.DataAx = axes(fig,'Units','normalized','Position',[.05 .7   .9 .25],'Box','off');
          obj.ZoomBtn = uicontrol(fig,'Style','togglebutton',...
-             'String','Z',...
-             'Units','normalized','Position',[.05 .96 .03 .03],'Callback',@(~,~)zoom(fig));
+             'Units','normalized',...
+             'Position',[.05 .96 .03 .03],...
+             'Callback',@(~,~)zoom(fig),...
+             'CData',obj.icons.zoom.img);
          jh = nigeLab.utils.findjobj(obj.ZoomBtn);
          jh.setBorderPainted(false);
          jh.setContentAreaFilled(false);

@@ -8,8 +8,10 @@ classdef ExploreData < handle
         
     methods
         
-        function obj = ExploreData(nigelObj)
-            
+        function obj = ExploreData(nigelObj,Field)
+            if nargin <2
+                Field = 'Raw';
+            end
             switch nigelObj.Type
                 case 'Block'
                     obj.ThisBlock = nigelObj;
@@ -21,7 +23,7 @@ classdef ExploreData < handle
                     nigeLab.libs.ExploreData(nigelObj{anIdx});
             end     
                     
-            obj.BuildGui();
+            obj.BuildGui(Field);
             obj.addListeners();
             
         end
@@ -43,8 +45,10 @@ classdef ExploreData < handle
             plotData(obj);
         end
         
-        function BuildGui(obj)
-
+        function BuildGui(obj,Field)
+           if nargin <2
+               Field = 'Raw';
+           end
             % Parse plottable fields
            Fields = obj.ThisBlock.getStatus;
            Fields_ = obj.ThisBlock.Fields;
@@ -52,8 +56,8 @@ classdef ExploreData < handle
            Fields = Fields_(strcmp(FieldsType_,'Channels') & ismember(Fields_,Fields) );
            
            % Build gui
-           obj.UI.DataSelector = obj.buildDataTypeSelector(Fields);           
-           obj.UI.DataScroller = nigeLab.libs.DataScrollerAxis(obj.ThisBlock,'Raw');
+           obj.UI.DataSelector = obj.buildDataTypeSelector(Fields,find(strcmp(Fields,Field)));           
+           obj.UI.DataScroller = nigeLab.libs.DataScrollerAxis(obj.ThisBlock,Field);
             fs = obj.ThisBlock.SampleRate;
             
             obj.ROI = cumsum(floor(obj.UI.DataScroller.ROIpos([1 3])*fs))+1; % DataScroller.ROIpos is [xpos ypos width height]
@@ -71,7 +75,7 @@ classdef ExploreData < handle
            
         end
         
-        function str_box = buildDataTypeSelector(obj,Fields)
+        function str_box = buildDataTypeSelector(obj,Fields,Default)
             
             % Create handle to store data and build graphics            
             obj.UI.DataSelectorFig = figure('Name','Data type selector', ...
@@ -109,7 +113,8 @@ classdef ExploreData < handle
                 'FontSize', 16, ...
                 'FontName','Droid Sans',...
                 'String',Fields,...
-                'Callback',@(~,~)obj.changeDataTyoe);
+                'Callback',@(~,~)obj.changeDataTyoe,...
+                'Value',Default);
             
             p.nestObj(str_box);
         end

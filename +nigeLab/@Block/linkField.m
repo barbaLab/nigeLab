@@ -44,7 +44,7 @@ switch blockObj.FieldType{fieldIndex}
    case 'Events'
       % Events have the following fields:
       % 'type', 'value', 'tag', 'ts', 'snippet'
-      flag = linkEventsField(blockObj,field);
+%       flag = linkEventsField(blockObj,field);
    case 'Videos'
       if blockObj.Pars.Video.HasVideo
          flag = linkVideosField(blockObj,field);

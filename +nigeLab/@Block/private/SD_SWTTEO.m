@@ -52,7 +52,7 @@ end
 
 
 %vectorized version:
-lo_D = wfilters(pars.waveName);
+[lo_D,HiD] = wfilters(pars.waveName);
 out_ = zeros(size(data));
 ss = data;
 for k=1:pars.wavLevel
@@ -104,17 +104,42 @@ tloc = repmat(ts,2*PLP+1,1) + (-PLP:PLP).';
 tloc(tloc < 1) = 1;
 tloc(tloc > numel(data)) = numel(data);
 [pmax,Imax] = max(data(tloc));
-pW = abs(Imax-PLP);
 p2pamp = pmax + pmin;
 
-%% EXCLUDE VALUES OF PMAX <= 0
+%% Get peak width and exlude pw > pars.PeakDur
+tlocmin = flipud( repmat(ts,PLP+1,1) + (-PLP:0).');
+tlocmin(tlocmin < 1) = 1;
+tlocmin(tlocmin > numel(data)) = numel(data);
+tlocmax = repmat(ts,PLP,1) + (1:PLP).';
+tlocmax(tlocmax < 1) = 1;
+tlocmax(tlocmax > numel(data)) = numel(data);
+for ii=1:size(tlocmin,2)
+    [~,thispeak] = findpeaks(data(tlocmin(:,ii)),'NPeaks',1);
+    if isempty(thispeak)
+        thispeak = PLP+1;
+    end
+    Imax1(ii) = 1-thispeak;
+    
+    [~,thispeak] = findpeaks(data(tlocmax(:,ii)),'NPeaks',1);
+    if isempty(thispeak)
+        thispeak = PLP;
+    end
+    Imax2(ii) = thispeak;
+end
+
+pW = Imax2 - Imax1;
+
+%% EXCLUDE VALUES 
+pw_ex = pW>PLP;
 pm_ex = pmax<=0;
-ts(pm_ex) = [];
-p2pamp(pm_ex) = [];
-pmax(pm_ex) = [];
-pmin(pm_ex) = [];
-E(pm_ex) = [];
-pW(pm_ex) = [];
+
+ex = pw_ex | pm_ex;
+ts(ex) = [];
+p2pamp(ex) = [];
+pmax(ex) = [];
+pmin(ex) = [];
+E(ex) = [];
+pW(ex) = [];
 
 
 

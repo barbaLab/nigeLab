@@ -57,7 +57,7 @@ Nsamples = double(floor(pars.Samples*1e-3*pars.fs)); % from ms to samples
 
 
 %% REMOVE (ZERO) SECTIONS AROUND ARTIFACT
-if any(segm)    
+if ~isempty(segm)    
     if (Nsamples)
          rm_pre = max(segm - Nsamples,1);             % Start index >= 1
          rm_post = min(length(data),segm + Nsamples); % End index <= total samples in data
@@ -67,7 +67,7 @@ if any(segm)
 %               art_idx = [art_idx ,segm(in):rm_post(in)];
              art_idx = [art_idx ,rm_pre(in):rm_post(in)]; %#ok<AGROW>
          end 
-%          art_idx = unique([segm,art_idx]');
+         art_idx = unique(art_idx)';
     end
     data_ART = data;
 %     data_ART(art_idx) = [];

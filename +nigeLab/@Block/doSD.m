@@ -368,7 +368,7 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
-         artifact = unique(artifact(:)); % make sure is column oriented
+         artifact = unique(artifact(:)); % make sure is column oriented, unique and sorted
          iStart = artifact([true, diff(artifact)' ~= 1]);
          iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));
          
