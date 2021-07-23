@@ -546,6 +546,7 @@ classdef VidScorer < matlab.mixin.SetGet
               set(fig,'Pointer','crosshair');
               UDAta.macro_active = 1;
               UDAta.xpos0 = out(1,1);%--store initial position x
+              UDAta.xNew =out(1,1);
               xl=get(ax,'XLim');
               if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))% &&...
                       %(UDAta.ypos0 > yl(1) && UDAta.ypos0 < yl(2))) %--disable if outside axes
@@ -684,6 +685,7 @@ classdef VidScorer < matlab.mixin.SetGet
               set(ax,'NextPlot','replace')
               set(fig,'Pointer','crosshair');
               UDAta.xpos0 = out(1,1);%--store initial position x
+              UDAta.xNew =out(1,1);
               xl=get(ax,'XLim');
               if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))% &&...
                       %(UDAta.ypos0 > yl(1) && UDAta.ypos0 < yl(2))) %--disable if outside axes
@@ -754,10 +756,17 @@ classdef VidScorer < matlab.mixin.SetGet
           else
               if strcmp(evt.Nodes.Parent.Name,'Video streams')
                   offset = obj.NeuOffset;
+                  convert = false;
               else
                   offset = 0;
+                  convert = true;
               end
-              tt = plotStruct.Time(:) + offset ;
+              if convert
+                  tt = plotStruct.Time(:)./ obj.Block.SampleRate * 1000;
+              else
+                  tt = plotStruct.Time(:);
+              end
+              tt = tt + offset ;
               dd = plotStruct.Data(:);
               dd = dd./max(dd);
               if isempty(tt)
