@@ -786,7 +786,7 @@ classdef Block < nigeLab.nigelObj
               return;
           end
           idx2 = strcmp([obj.Events(idx).Name],thisEvent.Name);          
-          idx(idx) = idx(idx) && idx2;
+          idx(idx) = idx(idx) & idx2;
           obj.Events(idx) = [];
       end
       % Computational methods:

@@ -46,8 +46,8 @@ classdef VidScorer < matlab.mixin.SetGet
       evtFigure
       evtPanel
       lblPanel
-      evtElementList = [];
-      lblElementList = [];
+      evtElementList     matlab.ui.container.Panel
+      lblElementList     matlab.ui.container.Panel
       link = [];
       trialProgAx
       trialProgBar
@@ -159,7 +159,7 @@ classdef VidScorer < matlab.mixin.SetGet
          if isempty(obj.NeuTime)
              obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
          end
-         obj.XLim = [0 max(nigelCam.Meta(end).duration)];
+         obj.XLim = [0 nigelCam.Meta(end).duration*1.05];
          obj.DX = diff(obj.XLim);
          if isempty(obj.nigelCam.VideoOffset)
              obj.NeuOffset = 0;
@@ -179,11 +179,27 @@ classdef VidScorer < matlab.mixin.SetGet
         obj.buildCmdPanel();
         buildEventPanel(obj);
         
+              
         obj.nigelCam.showThumb();
         obj.nigelCam.startBuffer();
         
         obj.addListeners();
         obj.paintTrials();
+        
+        
+        % recover events and labels from block
+         lblIdx = isnan([obj.Block.Events.Ts]);
+         lbls = obj.Block.Events(lblIdx);
+         for this = lbls
+             idx = find(cellfun(@isnumeric,this.Data));
+             addNewLabel(obj,this.Name,this.Data{idx(1)},this.Trial,false)
+         end
+         evts = obj.Block.Events(~lblIdx);
+         for this = evts
+             addNewEvent(obj,this.Name,this.Ts,this.Trial,false)
+         end
+        
+        updateTimeMakrer(obj);
       end
       
       
@@ -303,6 +319,14 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.trialProgBar.XData = [0 pct pct 0];
           
           obj.TrialLabel.String = num2str(obj.TrialIdx);
+          
+          % updating event list hiding events outside of this trial
+          [obj.evtElementList.Visible] = deal(false);
+          [obj.evtElementList([obj.Evts.Trial] == obj.TrialIdx).Visible] = deal(true);
+          
+          % updating lbl list hiding events outside of this trial
+          [obj.lblElementList.Visible] = deal(false);
+          [obj.lblElementList([obj.TrialLbls.Trial] == obj.TrialIdx).Visible] = deal(true);
       end
       function NeuOffsetChanged(obj,src,evt)
           obj.VideoOffset = -obj.NeuOffset;
@@ -428,7 +452,7 @@ classdef VidScorer < matlab.mixin.SetGet
               name = name(1);
           end
            idx = [obj.TrialLbls.Trial] == trial;
-           if sum(idx)>1
+           if sum(idx)>0
               idx2 = strcmp({obj.TrialLbls(idx).Name},name);
               idx(idx) = idx2;
            end
@@ -448,6 +472,13 @@ classdef VidScorer < matlab.mixin.SetGet
                   'Name',src.name,...
                   'UserData',pltData,'CheckboxEnabled',true);
       strmNode.Checked = true;
+      end
+      
+      function T = projectInVideoTime(obj,t)
+          T = nan(size(t));
+          [~,idx]=arrayfun(@(x) min(abs(obj.VideoTime  - x)),t);
+          trueVideoTime = obj.nigelCam.getTimeSeries;
+          T = trueVideoTime(idx);
       end
    end
    
@@ -480,7 +511,7 @@ classdef VidScorer < matlab.mixin.SetGet
       end
       
       function skipToNext(obj,direction)
-          if obj.TrialIdx+direction <= 0
+          if (obj.TrialIdx+direction <= 0) || (obj.TrialIdx+direction > size(obj.Block.Trial,1))
               return;
           end
           trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3;
@@ -1244,7 +1275,7 @@ classdef VidScorer < matlab.mixin.SetGet
           
       end
       
-      function addNewLabel(obj,Name,Value,Trial)
+      function addNewLabel(obj,Name,Value,Trial,notify_)
           if nargin == 1 % no info provided, prompt the user
              [Pars] = inputdlg({'Label Name';'Data'},'Enter label values.',[1 10],{'event', '0'});
              if isempty(Pars)  % cancelled
@@ -1258,24 +1289,34 @@ classdef VidScorer < matlab.mixin.SetGet
           end
           if nargin < 4 % Name and Time provided
             Trial = obj.TrialIdx;
-         end
-          if ~isempty(obj.getLblByKey(obj.TrialIdx,Name))
+          end
+          if nargin < 5 % Name and Time provided
+              notify_ = true;
+          end
+          if ~isempty(obj.getLblByKey(Trial,Name))
               warning(sprintf('Only one label with ID %s is permitted for trial %d.\nOperation aborted.\n',Name,obj.TrialIdx));
               return;
           end
           
+          if isnan(Trial) || isinf(Trial)
+             return;
+          end
+          
+          % compute correct position of the panel with name and value. It
+          % depends on how many labels or events there are in this trial
           obj.lblPanel.Units = 'pixels';
           pnlH = 20;
           maxW = obj.lblPanel.InnerPosition(3);
           pnlW = maxW-10;
           dist = 5;
           Top = obj.lblPanel.InnerPosition(4)-10;
-          n = numel(obj.lblElementList);
+          thisTrialLbls = find([obj.TrialLbls.Trial] == Trial);
+          n = numel(thisTrialLbls);
           pos = [5 Top-pnlH-(pnlH+dist)*n ,...
               pnlW pnlH];
           if pos(2)<0
-              pos(2) = obj.lblElementList(end).Position(2);
-              for c = obj.lblElementList
+              pos(2) = obj.lblElementList(thisTrialLbls(end)).Position(2);
+              for c = obj.lblElementList(thisTrialLbls)
                   c.Position(2) = c.Position(2)+pnlH+dist;
               end
           end
@@ -1289,7 +1330,8 @@ classdef VidScorer < matlab.mixin.SetGet
               'ButtonDownFcn',@obj.labelSelect,...
               'UserData',false,...
               'BorderType','none',...
-              'ContextMenu',cm);
+              'ContextMenu',cm,...
+              'Visible',notify_);
           
           Valuelabel = uicontrol(thisEvent,'Style','text',...
               'String','',...
@@ -1318,11 +1360,13 @@ classdef VidScorer < matlab.mixin.SetGet
          m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyLabelEntry(thisEvent,Name,Value,thisMenu));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteLabelEntry(thisEvent,Name,Value));
          
-         this = struct('Name',Namelabel.String,'Time',nan,'Trial',Trial,'Misc',[],'graphicObj',thisEvent);
+         this = struct('Name',Namelabel.String,'Time',nan,'Trial',Trial,'Misc',Value,'graphicObj',thisEvent);
          obj.TrialLbls = [obj.TrialLbls this];
-         notify(obj,'lblAdded',nigeLab.evt.evtChanged({this.Name},nan,{this.Misc},numel(obj.TrialLbls),[this.Trial]));
+         if notify_
+             notify(obj,'lblAdded',nigeLab.evt.evtChanged({this.Name},nan,{this.Misc},numel(obj.TrialLbls),[this.Trial]));
+         end
       end
-      function addNewEvent(obj,Name,Time)
+      function addNewEvent(obj,Name,Time,Trial,notify_)
           if nargin == 1 % no info provided, prompt the user
              [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.nigelCam.Time)});
              if isempty(Pars)  % cancelled
@@ -1330,23 +1374,38 @@ classdef VidScorer < matlab.mixin.SetGet
              end
              Time = str2double(Pars{2});
              Name = Pars{1};
+             Trial = obj.TrialIdxl;
+             notify_ = true;
          elseif nargin == 2 % Only name provided
              Time = obj.nigelCam.Time;
-         end
+             Trial = obj.TrialIdx;
+             notify_ = true;
+          elseif nargin == 3
+              Trial = obj.TrialIdx;
+              notify_ = true;
+          elseif nargin == 4
+             notify_ = true; 
+          end
           
-          
+          if isnan(Trial) || isinf(Trial)
+             return;
+          end
+           
+          % compute correct position of the panel with name and value. It
+          % depends on how many labels or events there are in this trial
           obj.evtPanel.Units = 'pixels';
           pnlH = 20;
           maxW = obj.evtPanel.InnerPosition(3);
           pnlW = maxW-10;
           dist = 5;
           Top = obj.evtPanel.InnerPosition(4)-10;
-          n = numel(obj.evtElementList);
+          thisTrialEvts = find([obj.Evts.Trial] == Trial);
+          n = numel(thisTrialEvts);
           pos = [5 Top-pnlH-(pnlH+dist)*n ,...
               pnlW pnlH];
           if pos(2)<0
-              pos(2) = obj.evtElementList(end).Position(2);
-              for c = obj.evtElementList
+              pos(2) = obj.evtElementList(thisTrialEvts(end)).Position(2);
+              for c = obj.evtElementList(thisTrialEvts)
                   c.Position(2) = c.Position(2)+pnlH+dist;
               end
           end
@@ -1360,7 +1419,8 @@ classdef VidScorer < matlab.mixin.SetGet
               'ButtonDownFcn',@obj.eventSelect,...
               'UserData',false,...
               'BorderType','none',...
-              'ContextMenu',cm);
+              'ContextMenu',cm,...
+              'Visible',notify_);
           
           Timelabel = uicontrol(thisEvent,'Style','text',...
               'String','',...
@@ -1389,9 +1449,11 @@ classdef VidScorer < matlab.mixin.SetGet
          m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyEventEntry(thisEvent,Name,Time,thisMenu));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteEventEntry(thisEvent,Name,Time));
          
-         this = struct('Name',Namelabel.String,'Time',Time,'Trial',obj.TrialIdx,'Misc',[],'graphicObj',thisEvent);
+         this = struct('Name',Namelabel.String,'Time',Time,'Trial',Trial,'Misc',[],'graphicObj',thisEvent);
          obj.Evts = [obj.Evts this];
-         notify(obj,'evtAdded',nigeLab.evt.evtChanged({this.Name},[this.Time],{this.Misc},numel(obj.Evts),[this.Trial]));
+         if notify_
+             notify(obj,'evtAdded',nigeLab.evt.evtChanged({this.Name},[this.Time],{this.Misc},numel(obj.Evts),[this.Trial]));
+         end
       end
       function clearEvents(obj)
           
@@ -1430,12 +1492,12 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.Evts(idx).Time = str2double(Pars{2});
           menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyEventEntry(thisEventObj,obj.Evts(idx).Name ,obj.Evts(idx).Time,menu);
       end
-      function modifyLabelEntry(obj,thisEventObj,name,menu)
+      function modifyLabelEntry(obj,thisEventObj,name,value,menu)
           maxW = thisEventObj.InnerPosition(3);
           Namelabel = thisEventObj.Children(1);
           Datalabel = thisEventObj.Children(2);
           [this,idx] = obj.getLblByKey(obj.TrialIdx,name);
-          [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{name,Datalabel.String});
+          [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{name{:},Datalabel.String});
           Datalabel.String = Pars{2};
           Namelabel.String = Pars{1};
           Namelabel.Position(3) = min(Namelabel.Extent(3),maxW/2);
@@ -1450,10 +1512,10 @@ classdef VidScorer < matlab.mixin.SetGet
           delete(thisEventObj);
           notify(obj,'evtDeleted',nigeLab.evt.evtChanged(this.Name,this.Time,this.Misc,idx,this.Trial));
       end  
-      function deleteLabelEntry(obj,thisEventObj,name)
+      function deleteLabelEntry(obj,thisEventObj,name,value)
           [this,idx] = obj.getLblByKey(obj.TrialIdx,name);
           delete(thisEventObj);
-          notify(obj,'lblDeleted',nigeLab.evt.evtChanged(this.Name,[],this.Misc,idx,this.Trial));
+          notify(obj,'lblDeleted',nigeLab.evt.evtChanged(this.Name,nan,this.Misc,idx,this.Trial));
       end
 
       function updateEvtGraphicList(obj)
@@ -1466,8 +1528,10 @@ classdef VidScorer < matlab.mixin.SetGet
                       offset(idx) = [];
                       arrayfun(@(c) set(obj.evtElementList(c),'Position',obj.evtElementList(c).Position + [0 offset(c)*ofs 0 0]),1:numel(obj.evtElementList))
                   end
+                  
+                
       end
-      function updateLblGraphicList(obj)         
+      function updateLblGraphicList(obj)
                   idx = ~isvalid(obj.lblElementList);
                   offset = cumsum(idx);
                   obj.lblElementList(idx) = [];
