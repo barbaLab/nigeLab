@@ -698,7 +698,8 @@ classdef VidScorer < matlab.mixin.SetGet
               if strcmp(ButtonName,'Yes')
                  UDAta_ = obj.sigAxes.UserData;
                  obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
-                 obj.nigelCam.VideoStretch = (UDAta_.xpos0-UDAta_.xNew)./UDAta_.idx0;
+                 ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
+                 obj.nigelCam.VideoStretch = (ShiftedTime - obj.VideoTime(end))./numel(obj.VideoTime);
               end
               
               obj.sigAxes.UserData = [];
@@ -785,27 +786,17 @@ classdef VidScorer < matlab.mixin.SetGet
                   plotStruct.ReducedPlot.h_plot.Visible = 'off';
               end
           else
-              if strcmp(evt.Nodes.Parent.Name,'Video streams')
-                  offset = obj.NeuOffset;
-                  convert = false;
-              else
-                  offset = 0;
-                  convert = true;
-              end
-              if convert
-                  tt = plotStruct.Time(:)./ obj.Block.SampleRate * 1000;
-              else
-                  tt = plotStruct.Time(:);
-              end
-              tt = tt + offset ;
+             
+              tt = plotStruct.Time();  % function handle returning the full time vector in ms       
               dd = plotStruct.Data(:);
               dd = dd./max(dd);
               if isempty(tt)
                   if strcmp(evt.Nodes.Parent.Name,'Video streams')
+                      % this should never happend, but just in case
                       if isempty(obj.VideoTime)
                           tt = (1:numel(dd)) ./ obj.nigelCam.Meta(1).frameRate * 1000;
                       else
-                          tt = obj.NeuTime;
+                          tt = obj.VideoTime;
                       end
                   else
                       if isempty(obj.NeuTime)
@@ -1021,7 +1012,7 @@ classdef VidScorer < matlab.mixin.SetGet
          for ss = 1:numel(blkStreams)
              strmTypeNode = uiw.widget.CheckboxTreeNode('Parent',blkNode,'Name',blkStreams{ss},'CheckboxEnabled',false,'CheckboxVisible',false);
              for tt =1:numel(obj.Block.Streams.(blkStreams{ss}))
-                 pltData.Time = obj.Block.Time;
+                 pltData.Time = @(t) obj.Block.Time(:)./ obj.Block.SampleRate * 1000; % from samples to ms
                  pltData.Data = obj.Block.Streams.(blkStreams{ss})(tt).data;
                  strmNode = uiw.widget.CheckboxTreeNode('Parent',strmTypeNode,...
                      'Name',obj.Block.Streams.(blkStreams{ss})(tt).name,...
@@ -1037,7 +1028,7 @@ classdef VidScorer < matlab.mixin.SetGet
              'Name','Video streams',...
              'Parent',obj.SignalTree,'UIContextMenu',mm,'CheckboxEnabled',false,'CheckboxVisible',false);
          for tt =1:numel(obj.nigelCam.Streams)
-             pltData.Time = obj.nigelCam.getTimeSeries;
+             pltData.Time = @(t) obj.VideoTime(:);
              pltData.Data = obj.nigelCam.Streams(tt).data;
              strmNode = uiw.widget.CheckboxTreeNode('Parent',vidNode,...
                  'Name',obj.nigelCam.Streams(tt).name,...
@@ -1367,6 +1358,7 @@ classdef VidScorer < matlab.mixin.SetGet
          end
       end
       function addNewEvent(obj,Name,Time,Trial,notify_)
+          % Time is in seconds
           if nargin == 1 % no info provided, prompt the user
              [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.nigelCam.Time)});
              if isempty(Pars)  % cancelled
@@ -1377,7 +1369,7 @@ classdef VidScorer < matlab.mixin.SetGet
              Trial = obj.TrialIdxl;
              notify_ = true;
          elseif nargin == 2 % Only name provided
-             Time = obj.nigelCam.Time;
+             Time = obj.VideoTime(obj.nigelCam.FrameIdx)./1e3;
              Trial = obj.TrialIdx;
              notify_ = true;
           elseif nargin == 3
@@ -1441,14 +1433,17 @@ classdef VidScorer < matlab.mixin.SetGet
          obj.link = [ obj.link    linkprop([thisEvent,Timelabel,Namelabel],'BackgroundColor')];
          obj.evtElementList = [obj.evtElementList thisEvent];
 
-         Timelabel.String = num2str(Time);
+         Timelabel.String = sprintf('%.3f',Time);
          Namelabel.String = Name;
          Namelabel.Position(3) = min(Namelabel.Extent(3),pnlW/2);
          Timelabel.Position(3) = min(Timelabel.Extent(3),pnlW/2);
          
          m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyEventEntry(thisEvent,Name,Time,thisMenu));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteEventEntry(thisEvent,Name,Time));
-         
+         [~,zz] = min( abs(obj.VideoTime  - Time*1e3));
+         T = obj.nigelCam.getTimeSeries;
+         m2 = uimenu(cm,'Text','Go to','MenuSelectedFcn',@(src,evt)obj.nigelCam.seek(T(zz)));
+
          this = struct('Name',Namelabel.String,'Time',Time,'Trial',Trial,'Misc',[],'graphicObj',thisEvent);
          obj.Evts = [obj.Evts this];
          if notify_
