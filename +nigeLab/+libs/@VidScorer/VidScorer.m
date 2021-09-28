@@ -1366,7 +1366,7 @@ classdef VidScorer < matlab.mixin.SetGet
              end
              Time = str2double(Pars{2});
              Name = Pars{1};
-             Trial = obj.TrialIdxl;
+             Trial = obj.TrialIdx;
              notify_ = true;
          elseif nargin == 2 % Only name provided
              Time = obj.VideoTime(obj.nigelCam.FrameIdx)./1e3;
