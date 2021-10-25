@@ -47,7 +47,7 @@ for ff = ePars.EvtNames(:)'
       blockObj.Events = [blockObj.Events thisEvt];
       clear('thisEvt');
     catch er
-        disp( getReport( me, 'extended', 'hyperlinks', 'on' ) )
+        disp( getReport( er, 'extended', 'hyperlinks', 'on' ) )
     end
 end    
 blockObj.save;

@@ -796,7 +796,37 @@ classdef Block < nigeLab.nigelObj
           idx2 = strcmp([obj.Events(idx).Name],thisEvent.Name);          
           idx(idx) = idx(idx) & idx2;
           obj.Events(idx) = [];
+          flag = true;
       end
+      function flag = modifyEvent(obj,thisEvent)
+          if ~isscalar(thisEvent)
+              modifyEvent(obj,thisEvent(2:end));
+              thisEvent = thisEvent(1);
+          end
+      %% Removes an event from the struct field.
+          switch class(thisEvent)
+              case 'struct'
+                  ...
+              case 'nigeLab.evt.evtChanged'
+                  thisEvent = thisEvent.toStruct;
+          end
+          % find index of evt to change
+          if isnan(thisEvent.Ts)
+              Alltrials = [obj.Events.Trial];
+              idx = Alltrials == thisEvent.OldEvt.Trial;
+          else
+              Alltimes = [obj.Events.Ts];
+              idx = Alltimes == thisEvent.OldEvt.Time; % OldEvt has Time instead of Ts, super inconvenient but it is what it is
+          end
+          if ~any(idx)
+              return;
+          end
+          idx2 = strcmp([obj.Events(idx).Name],thisEvent.OldEvt.Name);          
+          idx(idx) = idx(idx) & idx2;
+          obj.Events(idx) = rmfield(thisEvent,'OldEvt');
+          flag = true;
+      end
+      
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)  % LFP synchronization index
