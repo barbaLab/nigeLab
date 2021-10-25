@@ -749,7 +749,10 @@ classdef Block < nigeLab.nigelObj
       %%    Adds events to the Event struct. It also takes care of 
       %     harmonizing the struct fields and returns an error if some 
       %     required fields are not present
-      
+          if ~isscalar(thisEvent)
+              flag = addEvent(obj,thisEvent(1)) & addEvent(obj,thisEvent(2:end));
+              return;
+          end
           switch class(thisEvent)
               case 'struct'
                   ... nothing to see here
@@ -769,6 +772,10 @@ classdef Block < nigeLab.nigelObj
           obj.Events = [obj.Events rmfield(thisEvent,fToRemove)];
       end
       function flag = deleteEvent(obj,thisEvent)
+          if ~isscalar(thisEvent)
+              flag = deleteEvent(obj,thisEvent(1)) & deleteEvent(obj,thisEvent(2:end));
+              return;
+          end
       %% Removes an event from the struct field.
           switch class(thisEvent)
               case 'struct'

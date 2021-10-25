@@ -43,6 +43,7 @@ for ff = ePars.EvtNames(:)'
         [thisEvt.Duration] = deal(1);
         [thisEvt.Data] = deal([]);
         [thisEvt.Trial] = deal(nan);
+        blockObj.Events(strcmp([blockObj.Events.Name],ff{:})) = []; % remove duplicates
       blockObj.Events = [blockObj.Events thisEvt];
       clear('thisEvt');
     catch er
