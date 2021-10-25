@@ -101,6 +101,9 @@ for ii=1:numel(Videos)
         % One camera per folder
         p_ = dir(fullfile(Videos(ii).folder,Videos(ii).name,['*' ext]));
         p_ = arrayfun(@(x) fullfile(x.folder,x.name),p_,'UniformOutput',false);
+        if isempty(p_)
+            continue
+        end
         i = Pars.CustomSort(p_);
         paths =[paths {p_(i)}];
         
@@ -192,7 +195,7 @@ for ii=1:numel(Videos)
 end %ii
 GroupingField = Pars.NamingConvention{strcmp(Pars.GroupingVar,cellfun(@(v) v(2:end),Pars.NamingConvention,'UniformOutput',false))}(2:end);
 CounterField = Pars.NamingConvention{strcmp(Pars.IncrementingVar,cellfun(@(v) v(2:end),Pars.NamingConvention,'UniformOutput',false))}(2:end);
-
+Meta(cellfun(@isempty,Meta))=[];
 
 if all(~toOrder)
     Meta_ = cellfun(@(M,p) repmat(M,size(p)),Meta,paths,'UniformOutput',false);

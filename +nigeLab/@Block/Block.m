@@ -103,11 +103,12 @@ classdef Block < nigeLab.nigelObj
    end
    
    % PUBLIC
-   properties (GetAccess=public,SetAccess=private)
+   properties (GetAccess=public,SetAccess=?nigeLab.nigelObj)
       Channels struct                        % Struct array of neurophysiological stream data
       Events   struct                        % Struct array of asynchronous events
       Streams  struct                        % Struct array of non-electrode data streams
       Cameras                                % Array of nigeLab.libs.nigelCamera
+      Videos
    end
    
    % RESTRICTED:nigelObj/PUBLIC

@@ -4757,11 +4757,13 @@ end
                if isempty(obj(1).Index)
                   pLinkStr = '';
                else
+                  AllParents = [obj.Parent];
+                  uParents = unique({AllParents.Name});
                   pLinkStr = [sprintf(...
                      '\t-->\tView <strong>Parent</strong> '),...
                      '<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '...
                      sprintf('nigeLab.nigelObj.DisplayCurrent(%s,''simple'');">',tankName) ...
-                     sprintf('(Tank) %s</a>',obj(1).Parent.Name)];
+                     sprintf('(Tank) %s</a>',uParents{:})];
                end
                switch inputname(1)
                   case {'obj',''}
@@ -5804,7 +5806,10 @@ end
              end
          end
          flag = true;
-         flag = flag && obj.linkToData;
+         for jj = 1:numel(OldFN)
+             obj.linkField(OldFN{jj});
+         end
+%          flag = flag && obj.linkToData;
          flag = flag && obj.save;
          flag = flag && obj.saveParams;
          
