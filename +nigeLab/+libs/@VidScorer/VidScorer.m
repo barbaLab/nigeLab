@@ -117,6 +117,7 @@ classdef VidScorer < matlab.mixin.SetGet
       lblAdded
       evtDeleted
       lblDeleted
+      evtModified
    end
    
    % % % METHODS% % % % % % % % % % % %
@@ -561,7 +562,41 @@ classdef VidScorer < matlab.mixin.SetGet
                set(obj.sigFig, 'windowbuttonmotionfcn', []);
                set(obj.sigFig, 'windowbuttonupfcn', []);
                set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
-               obj.sigAxes.UserData = [];
+               
+               if isempty(obj.sigAxes.UserData.lineObj)
+                  % npthing moved
+                  obj.sigAxes.UserData = [];
+                  return;
+               end
+              
+               UDAta_ = obj.sigAxes.UserData;
+
+              Question = sprintf('Do you want nigel to update the Events'' time?\n');
+              ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
+              if strcmp(ButtonName,'Yes')
+                  % Assign the new timeline to the nigelCam.
+                  % Change all Events' time accordingly.
+                  
+                 EvtsT = [obj.Evts.Time]; 
+                 if ~isempty(EvtsT)
+                     [~,EvtsS] = min(abs(EvtsT*1e3 - obj.VideoTime(:)));
+                 end
+                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
+                 % update Evts
+                for ii=1:numel(obj.Evts)
+                    thisEventObj = obj.Evts(ii).graphicObj;
+                    OldName = obj.Evts(ii).Name;
+                    OldTime = obj.Evts(ii).Time;
+                    NewTime = obj.VideoTime(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                    modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
+                end
+              else
+                  obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
+              end
+              
+              ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
+              obj.nigelCam.VideoStretch = (ShiftedTime(end) - obj.VideoTime(end))./numel(obj.VideoTime);
+              obj.sigAxes.UserData = [];
           end
           
           
@@ -693,14 +728,38 @@ classdef VidScorer < matlab.mixin.SetGet
               set(obj.sigFig, 'windowbuttonupfcn', []);
               set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
               
-              Question = sprintf('Do you want nigel to change the Video Time as well?\nThis is usually done when a Video Stream is modified.');
-              ButtonName = questdlg(Question, 'Change Video Time?', 'Yes', 'No', 'Yes');
-              if strcmp(ButtonName,'Yes')
-                 UDAta_ = obj.sigAxes.UserData;
-                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
-                 ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
-                 obj.nigelCam.VideoStretch = (ShiftedTime - obj.VideoTime(end))./numel(obj.VideoTime);
+              if isempty(obj.sigAxes.UserData.lineObj)
+                  % npthing moved
+                  obj.sigAxes.UserData = [];
+                  return;
               end
+              
+              UDAta_ = obj.sigAxes.UserData;
+              
+              Question = sprintf('Do you want nigel to update the Events'' time?\n');
+              ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
+              if strcmp(ButtonName,'Yes')
+                  % Assign the new timeline to the nigelCam.
+                  % Change all Events' time accordingly.
+                  
+                 EvtsT = [obj.Evts.Time]; 
+                 if ~isempty(EvtsT),[~,EvtsS] = min(abs(EvtsT*1e3 - obj.VideoTime(:)));end
+                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
+                
+                 % update Evts
+                for ii=1:numel(obj.Evts)
+                    thisEventObj = obj.Evts(ii).graphicObj;
+                    OldName = obj.Evts(ii).Name;
+                    OldTime = obj.Evts(ii).Time;
+                    NewTime = obj.VideoTime(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                    modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
+                end
+              else
+                  obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
+              end
+              
+              ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
+              obj.nigelCam.VideoStretch = (ShiftedTime(end) - obj.VideoTime(end))./numel(obj.VideoTime);
               
               obj.sigAxes.UserData = [];
           end
@@ -1348,7 +1407,7 @@ classdef VidScorer < matlab.mixin.SetGet
          Namelabel.Position(3) = min(Namelabel.Extent(3),pnlW/2);
          Valuelabel.Position(3) = min(Valuelabel.Extent(3),pnlW/2);
          
-         m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyLabelEntry(thisEvent,Name,Value,thisMenu));
+         m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyLabelEntry(thisEvent,Name,Value));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteLabelEntry(thisEvent,Name,Value));
          
          this = struct('Name',Namelabel.String,'Time',nan,'Trial',Trial,'Misc',Value,'graphicObj',thisEvent);
@@ -1360,7 +1419,7 @@ classdef VidScorer < matlab.mixin.SetGet
       function addNewEvent(obj,Name,Time,Trial,notify_)
           % Time is in seconds
           if nargin == 1 % no info provided, prompt the user
-             [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.nigelCam.Time)});
+             [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.VideoTime(obj.nigelCam.FrameIdx)./1e3)});
              if isempty(Pars)  % cancelled
                  return;
              end
@@ -1438,7 +1497,7 @@ classdef VidScorer < matlab.mixin.SetGet
          Namelabel.Position(3) = min(Namelabel.Extent(3),pnlW/2);
          Timelabel.Position(3) = min(Timelabel.Extent(3),pnlW/2);
          
-         m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyEventEntry(thisEvent,Name,Time,thisMenu));
+         m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyEventEntry(thisEvent,Name,Time));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteEventEntry(thisEvent,Name,Time));
          [~,zz] = min( abs(obj.VideoTime  - Time*1e3));
          T = obj.nigelCam.getTimeSeries;
@@ -1473,26 +1532,41 @@ classdef VidScorer < matlab.mixin.SetGet
           notify(obj,'lblDeleted',nigeLab.evt.evtChanged({this.Name},this.Time,{this.Misc},idx,[this.Trial]));
       end       
       
-      function modifyEventEntry(obj,thisEventObj,name,time,menu)
+      function modifyEventEntry(obj,thisEventObj,OldName,OldTime,NewName,NewTime)
+          
+          if nargin < 5
+              [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],[OldName,{sprintf('%.2f',OldTime)}]);
+              NewTime = str2double(Pars{2});
+              NewName = Pars{1};
+          end
+          % Get the correct menu
+           mIdx = strcmp({thisEventObj.ContextMenu.Children.Text},'Edit');
+           menu = thisEventObj.ContextMenu.Children(mIdx);         
+          % find selected event
+          [Old,idx] = obj.getEvtByKey(OldTime,OldName);
+          % get the objects to change
           maxW = thisEventObj.InnerPosition(3);
           Namelabel = thisEventObj.Children(1);
           Timelabel = thisEventObj.Children(2);
-          [this,idx] = obj.getEvtByKey(time,name);
-          [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{name,Timelabel.String});
-          Timelabel.String = Pars{2};
-          Namelabel.String = Pars{1};
+          % change GUI
+          Timelabel.String = sprintf('%.2f',NewTime);
+          Namelabel.String = NewName;
           Namelabel.Position(3) = min(Namelabel.Extent(3),maxW/2);
           Timelabel.Position(3) = min(Timelabel.Extent(3),maxW/2);
-          obj.Evts(idx).Name = Pars{1};
-          obj.Evts(idx).Time = str2double(Pars{2});
-          menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyEventEntry(thisEventObj,obj.Evts(idx).Name ,obj.Evts(idx).Time,menu);
+          % change evt 
+          obj.Evts(idx).Name = NewName;
+          obj.Evts(idx).Time = NewTime;
+          New = obj.Evts(idx);
+          menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyEventEntry(thisEventObj,obj.Evts(idx).Name ,obj.Evts(idx).Time);
+          notify(obj,'evtModified',nigeLab.evt.evtChanged(New.Name,New.Time,New.Misc,idx,New.Trial,Old));
+
       end
       function modifyLabelEntry(obj,thisEventObj,name,value,menu)
           maxW = thisEventObj.InnerPosition(3);
           Namelabel = thisEventObj.Children(1);
           Datalabel = thisEventObj.Children(2);
           [this,idx] = obj.getLblByKey(obj.TrialIdx,name);
-          [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{name{:},Datalabel.String});
+          [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{name,Datalabel.String});
           Datalabel.String = Pars{2};
           Namelabel.String = Pars{1};
           Namelabel.Position(3) = min(Namelabel.Extent(3),maxW/2);
