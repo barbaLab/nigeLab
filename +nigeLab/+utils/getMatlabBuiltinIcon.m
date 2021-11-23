@@ -95,6 +95,10 @@ else % Otherwise use user-provided map
 end
 if ~isempty(map)
    icon = ind2rgb(img,map);
+else
+    icon = img;
+    alpha = ones(size(img));
+    alpha(img == 0) = 0;
 end
 
 if ~strcmpi(pars.Type,'double')
