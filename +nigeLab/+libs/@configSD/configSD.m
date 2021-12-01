@@ -473,7 +473,7 @@ classdef configSD < handle
            
            hold(obj.DataAx,'on');
            delete(obj.spkPlot);
-           obj.spkPlot = plot(obj.DataAx,t(tIdx),peakAmpl,'*r');
+           obj.spkPlot = scatter(obj.DataAx,t(tIdx),peakAmpl,'filled','Marker','o','MarkerFaceColor',[1 0 0],'MarkerFaceAlpha',.4);
            legend(obj.DataAx,{'Data','Artifacts','Spikes'});
            % BUILD SPIKE SNIPPET ARRAY AND PEAK_TRAIN
            tIdx = tIdx(:); % make sure it's vertical

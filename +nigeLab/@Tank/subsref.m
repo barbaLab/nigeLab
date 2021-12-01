@@ -43,7 +43,7 @@ function varargout = subsref(tankObj,S)
 %             element of tankObj.Children indexed by idx1.
 
 varargout = cell(1,nargout);
-if isempty(tankObj.Children)
+if isempty([tankObj.Children])
    return;
 end
 
@@ -139,6 +139,7 @@ switch S(1).type
                               [methodSubs,~,methodOutputs,methodInputs] = ...
                                  obj.findMethodSubsIndices(S);
                            else
+                              S(1:methodSubs(1)+1) = [];
                               methodSubs = [];
                            end
                         else
@@ -149,7 +150,8 @@ switch S(1).type
                               [methodSubs,~,methodOutputs,methodInputs] = ...
                                  obj.findMethodSubsIndices(S);
                            else
-                              methodSubs = [];
+                               S(1:methodSubs(1)) = [];
+                               methodSubs = [];
                            end
                         end
                      otherwise % Then it was "obj.method.method" call
@@ -160,7 +162,8 @@ switch S(1).type
                            [methodSubs,~,methodOutputs] = ...
                               obj.findMethodSubsIndices(S);
                         else
-                           methodSubs = [];
+                            S(1:methodSubs(1)) = [];
+                            methodSubs = [];
                         end
                   end
                else
@@ -178,8 +181,10 @@ switch S(1).type
                return;
             end
          end
-         ans = builtin('subsref',obj,S) %#ok<NOPRT>
-         nigeLab.utils.mtb(ans);
+         if ~isempty(S)
+             ans = builtin('subsref',obj,S) %#ok<NOPRT>
+             nigeLab.utils.mtb(ans);
+         end
       end
 end
 end

@@ -197,7 +197,7 @@ switch S(1).type
          end
          
       end
-      index = ones(1,length(TargetObj)).*(1:size(s,1));
+      index = ones(size(TargetObj)).*(1:size(s,1));
       varargout = {arrayfun(@(x,idx) subsref(x,s(idx,:)),TargetObj,index,'UniformOutput',false)};
       
    otherwise % Otherwise this is not a valid subsref 'type' reference

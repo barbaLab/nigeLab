@@ -25,7 +25,7 @@ function clusterIndex = getClus(blockObj,ch,suppressText)
 
 % PARSE INPUT
 if nargin < 2
-   ch = 1:blockObj(1).NumChannels;
+   ch = blockObj(1).Mask;
 end
 
 if nargin < 3

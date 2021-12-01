@@ -68,7 +68,7 @@ for iCh=blockObj.Mask
    end
       
    if isfield(pars,'NotchF') &&~isempty(pars.NotchF)
-       data = notchMainPower(data,blockObj.SampleRate,pars.NotchF,3);
+       data = notchMainPower(data,blockObj.Pars.LFP.DownSampledRate,pars.NotchF,3);
    end
    % Get the file name:
    fName = parseFileName(blockObj,iCh);

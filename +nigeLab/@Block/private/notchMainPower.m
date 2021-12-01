@@ -10,9 +10,9 @@ function data_out=notchMainPower(data_in,Fs,MainF,NSub)
 
 switch nargin 
     case 3
-        Nsub = 2;
+        NSub = 2;
     case 2
-        Nsub = 2;
+        NSub = 2;
         MainF = 50;
     otherwise
 end

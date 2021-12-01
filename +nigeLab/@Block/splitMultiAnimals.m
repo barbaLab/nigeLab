@@ -99,7 +99,7 @@ function CreateChildrenBlocks(blockObj)
 
 % split meta that contains MultiAnimalsChar
 ff = fieldnames(blockObj.Meta)';
-ff = setdiff(ff,{'Header','FileExt','OrigName','OrigPath'});
+ff = setdiff(ff,[{'Header','FileExt','OrigName','OrigPath'} blockObj.Pars.Block.SpecialMeta.SpecialVars]);
 types =  structfun(@(x) class(x),blockObj.Meta,'UniformOutput',false);
 for ii = ff
    if ~strcmp(types.(ii{:}),'char'),continue;end
@@ -120,10 +120,36 @@ for ii=1:numel(SplittedMeta)
    
    % assign correct meta
    for jj=1:numel(ff)
-      bl.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
+       bl.Meta.(ff{jj}) = SplittedMeta(ii).(ff{jj});
    end %jj
    
-    % create name from meta
+   for kk = 1:numel(bl.Pars.Block.SpecialMeta.SpecialVars)
+       f = bl.Pars.Block.SpecialMeta.SpecialVars{kk};
+       if ~isfield(bl.Pars.Block.SpecialMeta,f)
+           link_str = sprintf('nigeLab.defaults.%s',bl.Type);
+           error(['nigeLab:' mfilename ':BadConfig'],...
+               ['%s is configured to use %s as a "special field,"\n' ...
+               'but it is not configured in %s.'],...
+               nigeLab.utils.getNigeLink(...
+               'nigeLab.nigelObj','parseNamingMetadata'),...
+               f,nigeLab.utils.getNigeLink(link_str));
+       end %fi
+       if isempty(bl.Pars.Block.SpecialMeta.(f).vars)
+           warning(['nigeLab:' mfilename ':PARSE'],...
+               ['No <strong>%s</strong> "SpecialMeta" configured\n' ...
+               '-->\t Making random "%s"'],f,f);
+           bl.Meta.(f) = nigeLab.utils.makeHash();
+           bl.Meta.(f) = bl.Meta.(f){:};
+       else
+           tmp = cell(size(bl.Pars.Block.SpecialMeta.(f).vars));
+           for i = 1:numel(bl.Pars.Block.SpecialMeta.(f).vars)
+               tmp{i} = bl.Meta.(bl.Pars.Block.SpecialMeta.(f).vars{i});
+           end
+           bl.Meta.(f) = strjoin(tmp,bl.Pars.Block.SpecialMeta.(f).cat);
+       end % fi
+   end %kk
+   
+   % create name from meta
    bl.Name = bl.genName;
    
    % Channels needs to be empty

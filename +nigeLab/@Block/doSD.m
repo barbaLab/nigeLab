@@ -172,7 +172,7 @@ flag = true;
       Artargsout = cell(1,nargout(ArtFun));
       [Artargsout{:}] = feval(ArtFun,data_ART,ArtPars);
       data_ART = Artargsout{1};
-      artifact = Artargsout{2};
+      artifact = unique(Artargsout{2});
       
 
       
@@ -242,7 +242,7 @@ flag = true;
 %             error('Invalid PKDETECT specification.');
 %       end
       % ENSURE NO SPIKES REMAIN FROM ARTIFACT PERIODS
-      if any(artifact)
+      if ~isempty(artifact)
          [tIdx,ia]=setdiff(tIdx,(artifact./pars.fs));
          peak2peak=peak2peak(ia);
          peakAmpl = peakAmpl(ia);
@@ -368,6 +368,10 @@ flag = true;
       if isempty(artifact)
          art = ones(0,5);
       else
+         artifact = unique(artifact(:)); % make sure is column oriented
+
+         iStart = artifact(logical([true; diff(artifact)-1]));
+         iStop =  artifact(logical([diff(artifact)-1; true]));
          artifact = unique(artifact(:)); % make sure is column oriented, unique and sorted
          iStart = artifact([true, diff(artifact)' ~= 1]);
          iStop = artifact(fliplr([true, diff(fliplr(artifact))' ~= 1]));

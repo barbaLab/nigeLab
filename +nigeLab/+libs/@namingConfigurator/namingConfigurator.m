@@ -46,7 +46,8 @@ classdef namingConfigurator < handle
             obj.MetasPanel = uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .4 1 .3],'Scrollable','on');
             obj.NamePanel= uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .7 1 .3],'Scrollable','on');
             obj.SaveBtn = uibutton(obj.Fig,'Text','Save','Position',[320 10 100 20],'ButtonPushedFcn',@(src,evt)obj.save);
-            obj.Save2AllBtn = uibutton(obj.Fig,'Text','Save to all','Position',[430 10 200 20],'ButtonPushedFcn',@(src,evt)obj.save2all);
+            obj.Save2AllBtn = uibutton(obj.Fig,'Text','Save to all','Position',[430 10 200 20],'ButtonPushedFcn',@(src,evt)obj.save2all,...
+                'Enable',false); % TODO fix the save to all
             % build Name panel
             obj.NamePanel.Units = 'pixels';
             pos = obj.NamePanel.Position;

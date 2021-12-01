@@ -4593,7 +4593,11 @@ end
          
          BaseVars = evalin('base','whos');
          TankIdx = strcmp({BaseVars.class},'nigeLab.Tank');
-         TankName = BaseVars(TankIdx).name;
+         if ~any(TankIdx)
+             TankName = 'NaN';
+         else
+             TankName = BaseVars(TankIdx).name;
+         end
          header = getHeader(obj);
          header = strrep(header,sprintf('>%s</a>',obj.Type),sprintf('>%s</a> %s',obj.Type,obj.Name));
          disp(header);
@@ -5199,8 +5203,11 @@ end
          [~,meta.ParentID,~] = fileparts(p);
          
          % Parse name and extension. "nameParts" contains parsed variable
-         % strings:         
-         nameParts=strsplit(fName,{pars.Delimiter, '.'});
+         % strings:      
+         if ~iscell(pars.Delimiter)
+             pars.Delimiter = {pars.Delimiter};
+         end
+         nameParts=strsplit(fName,[pars.Delimiter(:); {'.'}]);
          
          % Parse variables from defaults.Block "template," which match
          % delimited elements of block recording name:
@@ -5815,7 +5822,7 @@ end
               name = [ff(cellfun(@(x) ~isempty(regexp(x,...
                   'DiskData.\w', 'once')),...
                   clss))];
-              strIdx = strcmp(clss,'struct');
+              strIdx = strcmp(clss,'struct') & ~structfun(@isempty,p);
               name = [name; arrayfun(@(idx)findDiskData(pcell{idx},ff{idx}),find(strIdx),'UniformOutput',true)];
               if isempty(name)
                   name = {''};

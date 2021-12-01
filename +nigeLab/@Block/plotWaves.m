@@ -114,9 +114,10 @@ tickLabs = cell(blockObj.NumChannels,1);
 %    blockObj.NumChannels));
 tickLocs = zeros(1,blockObj.NumChannels);
 pixelPos = getpixelposition(ax);
+chNum = 1;
 for iCh = blockObj.Mask
    tickLabs{iCh} = blockObj.Channels(iCh).custom_channel_name;
-   if iCh > 1
+   if chNum > 1
    tickLocs(iCh) = tickLocs(iCh-1) + max(2*prctile(y,75),blockObj.Pars.Plot.VertOffset);
    end
    y = blockObj.Channels(iCh).(field)(idx);
@@ -161,7 +162,7 @@ for iCh = blockObj.Mask
          'Color','k',...
          'FontSize',10,...
          'UserData',iCh);
-   
+   chNum = chNum+1;
 end
 ax.YTick = tickLocs;
 ax.YTickLabel = tickLabs;
