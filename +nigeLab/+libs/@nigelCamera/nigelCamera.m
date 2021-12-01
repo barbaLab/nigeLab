@@ -43,6 +43,7 @@ classdef nigelCamera < matlab.mixin.SetGet
        Time   
        Name
        FrameIdx
+       Paths
    end
    
    properties(Access=private)
@@ -99,6 +100,12 @@ classdef nigelCamera < matlab.mixin.SetGet
           end
           value = obj.Name_;
       end
+      
+      function set.Paths(obj,vakue)
+      end
+      function value = get.Paths(obj)
+          value = obj.VideoPaths;
+      end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 end
    
@@ -152,10 +159,8 @@ end
          for iV = 1:2:numel(varargin)
             obj.(varargin{iV}) = varargin{iV+1};
          end
-         obj.VideoPaths = Paths;
-         if ~isempty(obj.VideoPaths)
-            obj.addVideos(Paths); 
-         end
+         obj.VideoPaths = [];
+         obj.addVideos(Paths);
          
          obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
          
@@ -212,12 +217,16 @@ end
           
           if nargin<2
               Paths = obj.VideoPaths;
+          else
+             Paths = [obj.VideoPaths;Paths]; 
           end
           
           if ~iscell(Paths)
               error('Paths should be a cell array.\n');
           end
           
+          %% TODO embed sort in nigelCamera
+          Paths = Paths(obj.Parent.Pars.Video.CustomSort(Paths));
 
           obj.VideoPaths = nigeLab.utils.getUNCPath(Paths);
           obj.VideoReader = simpleVideoReader('new',Paths);
