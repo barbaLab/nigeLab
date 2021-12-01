@@ -1435,9 +1435,14 @@ classdef VidScorer < matlab.mixin.SetGet
               Trial = obj.TrialIdx;
               notify_ = true;
           elseif nargin == 4
-             notify_ = true; 
+              notify_ = true;
           end
-          
+
+          if ~isempty(obj.getEvtByKey(Time,Name))
+              warning(sprintf('Only one label with ID %s is permitted for trial %d.\nOperation aborted.\n',Name,obj.TrialIdx));
+              return;
+          end
+
           if isnan(Trial) || isinf(Trial)
              return;
           end
