@@ -428,17 +428,17 @@ classdef VidScorer < matlab.mixin.SetGet
       end
            
       % retrieves events or label by name and time
-      function [evt,idx] = getEvtByKey(obj,time,name)
+      function [evt,idx] = getEvtByKey(obj,Time,Name)
           evt_ = [];
           idx_ = [];
-          if ~isscalar(time)
-              [evt_,idx_] = getEvtByKey(obj,time(2:end),name(2:end));
-              time = time(1);
-              name = name(1);
+          if ~isscalar(Time)
+              [evt_,idx_] = getEvtByKey(obj,Time(2:end),Name(2:end));
+              Time = Time(1);
+              Name = Name(1);
           end
-           idx = [obj.Evts.Time] == time;
+           idx = [obj.Evts.Time] == Time;
            if sum(idx)>1
-              idx2 = strcmp({obj.Evts(idx).Name},name);
+              idx2 = strcmp({obj.Evts(idx).Name},Name);
               idx(idx) = idx2;
            end
            evt = [evt_ obj.Evts(idx)];
