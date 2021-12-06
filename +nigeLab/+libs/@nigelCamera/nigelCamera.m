@@ -230,7 +230,7 @@ end
 
           obj.VideoPaths = nigeLab.utils.getUNCPath(Paths);
           obj.VideoReader = simpleVideoReader('new',Paths);
-          obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
+%           obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
 %           obj.Lags = cumsum([obj.Meta.duration]);
        end
        

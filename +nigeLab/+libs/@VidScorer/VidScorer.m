@@ -100,7 +100,7 @@ classdef VidScorer < matlab.mixin.SetGet
    end
    
    
-   % TRANSIENT,PROTECTED
+   % TRANSIENT,PROTECTEDadd
    properties (Access=protected)
       DX        (1,1) double = 1   % "Stored" axes limit difference
       XLim      (1,2) double = [0 1]  % "Stored" axes limits
@@ -197,6 +197,9 @@ classdef VidScorer < matlab.mixin.SetGet
          end
          evts = obj.Block.Events(~lblIdx);
          for this = evts
+             if iscell(this.Name)
+                this.Name = this.Name{:};
+             end
              addNewEvent(obj,this.Name,this.Ts,this.Trial,false)
          end
         
