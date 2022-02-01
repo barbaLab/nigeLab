@@ -823,7 +823,7 @@ classdef Block < nigeLab.nigelObj
           end
           idx2 = strcmp([obj.Events(idx).Name],thisEvent.OldEvt.Name);          
           idx(idx) = idx(idx) & idx2;
-          obj.Events(idx) = rmfield(thisEvent,'OldEvt');
+          obj.Events(idx) = rmfield(thisEvent,{'OldEvt','Idx'});
           flag = true;
       end
       
