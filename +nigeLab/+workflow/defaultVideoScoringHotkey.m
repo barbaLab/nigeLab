@@ -15,9 +15,9 @@ function defaultVideoScoringHotkey(evt,obj)
 %                 'h' (lists current keypress commands).
 
 switch evt.Key
-    case 'comma' % not a stereotyped trial (default)
+    case {'comma',','} % not a stereotyped trial (default)
         add(obj,'lbl','Stereotyped',0);
-    case 'period' % set as stereotyped trial
+    case {'period','.'} % set as stereotyped trial
         add(obj,'lbl','Stereotyped',1);
     case 't' % set reach frame
         add(obj,'evt','ReachStarted');
@@ -29,10 +29,10 @@ switch evt.Key
         add(obj,'lbl','Grasp',1);
     case 'f' % set no grasp for trial
         add(obj,'lbl','Grasp',0);
-    case 'b' % set "both" (support) frame
-        add(obj,'lbl','Support',1);
-    case 'v' % (next to 'b') -> no "support" for this trial
-        add(obj,'lbl','Support',0);
+    case 'c' 
+        add(obj,'evt','Contact');
+    case 'z'
+        add(obj,'evt','Retract');
     case 'multiply' % set trial Complete frame
         add(obj,'evt','EndOfTrial');
         add(obj,'lbl','Complete',1);
@@ -74,35 +74,35 @@ switch evt.Key
         end
     case 'a' % previous frame
         previousFrame(obj);
-    case 'leftarrow' % previous trial
+    case {'leftarrow','\u001c'} % previous trial
         previousTrial(obj);
     case 'd' % next frame
         nextFrame(obj);
-    case 'rightarrow' % next trial
+    case {'rightarrow','\u001d'} % next trial
         nextTrial(obj);
     case 's' % alt + s = save
         if strcmpi(evt.Modifier,'alt')
             saveScoring(obj);
         end
-    case 'numpad0'
+    case {'numpad0','0'}
         add(obj,'lbl','Pellets',0);
-    case 'numpad1'
+    case {'numpad1','1'}
         add(obj,'lbl','Pellets',1);
-    case 'numpad2'
+    case {'numpad2','2'}
         add(obj,'lbl','Pellets',2);
-    case 'numpad3'
+    case {'numpad3','3'}
         add(obj,'lbl','Pellets',3);
-    case 'numpad4'
+    case {'numpad4','4'}
         add(obj,'lbl','Pellets',4);
-    case 'numpad5'
+    case {'numpad5','5'}
         add(obj,'lbl','Pellets',5);
-    case 'numpad6'
+    case {'numpad6','6'}
         add(obj,'lbl','Pellets',6);
-    case 'numpad7'
+    case {'numpad7','7'}
         add(obj,'lbl','Pellets',7);
-    case 'numpad8'
+    case {'numpad8','8'}
         add(obj,'lbl','Pellets',8);
-    case 'numpad9'
+    case {'numpad9','9'}
         add(obj,'lbl','Pellets',9);
     case 'subtract'
         add(obj,'lbl','PelletPresent',0);
@@ -110,7 +110,7 @@ switch evt.Key
         add(obj,'lbl','PelletPresent',1);
     case 'delete'
         toggleTrialMask(obj);
-    case 'space'
+    case {'space',' '}
         playpause(obj);
 end
 

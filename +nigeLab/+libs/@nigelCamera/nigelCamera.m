@@ -348,6 +348,10 @@ end
           simpleVideoReader('setSpeed',obj.VideoReader,s);
        end
        
+       function setBufferSize(obj,N)
+          simpleVideoReader('setBufferSize', obj.VideoReader,N); 
+       end
+       
        function crop(obj)
            simpleVideoReader('drawROI',obj.VideoReader);
        end

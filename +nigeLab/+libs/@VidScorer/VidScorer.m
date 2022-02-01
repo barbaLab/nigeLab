@@ -58,6 +58,7 @@ classdef VidScorer < matlab.mixin.SetGet
       colors
       icons       (1,1)struct = struct('leftarrow',[],'rightarrow',[],'circle',[],'play',[],'pause',[]);
       
+      AutoSaveBtn
       ScrollLeftBtn
       PlayPauseBtn
       StopBtn
@@ -78,6 +79,7 @@ classdef VidScorer < matlab.mixin.SetGet
       Block          % "Parent" nigeLab.Block object
       
       listeners
+      AutoSaveTimer
      
    end
    
@@ -204,6 +206,9 @@ classdef VidScorer < matlab.mixin.SetGet
          end
         
         updateTimeMakrer(obj);
+        
+        obj.AutoSaveTimer = timer('TimerFcn',@(~,~)save(obj.Block),'Period',300,'ExecutionMode','fixedDelay');
+        
       end
       
       
@@ -223,6 +228,8 @@ classdef VidScorer < matlab.mixin.SetGet
           
           delete(obj.evtFigure);
           delete(obj.sigFig);
+          stop(obj.AutoSaveTimer);
+          delete(obj.AutoSaveTimer);
           % request camA to close, to be implemented in c++
           obj.nigelCam.closeFig;
       end
@@ -494,6 +501,19 @@ classdef VidScorer < matlab.mixin.SetGet
            [~,idx] = min( abs(obj.VideoTime  - evt.IntersectionPoint(1)));
            trueVideoTime = obj.nigelCam.getTimeSeries;
            obj.nigelCam.seek(trueVideoTime(idx));
+       end
+       
+       function toggleAutoSave(obj,src)
+           if src.UserData.AutoSave
+               src.UserData.AutoSave = false;
+               src.CData = obj.icons.saveOff.img;
+               stop(obj.AutoSaveTimer);
+           else
+               src.CData = obj.icons.saveOn.img;
+               src.UserData.AutoSave = true;
+               start(obj.AutoSaveTimer);
+           end
+           drawnow;
        end
        
       % Play/Paue button. When clicked, also switches icon
@@ -1216,6 +1236,14 @@ classdef VidScorer < matlab.mixin.SetGet
              'CData',obj.icons.pan.img,...
              'Callback',@(src,evt)pan(obj.sigAxes,[bool2onoff(src.Value)])...
          );
+     
+     obj.AutoSaveBtn = uicontrol(obj.cmdPanel,'Style', 'push',...
+             'Units', 'pixels',...
+             'Position',[1200 20 24 24],...
+             'CData',obj.icons.saveOff.img,...
+             'UserData',struct('AutoSave',false),...
+             'Callback',@(src,evt)obj.toggleAutoSave(src),...
+             'Tooltip','5 minutes Auto Save');
          
           function str = bool2onoff(val)
              if val
@@ -1714,6 +1742,22 @@ classdef VidScorer < matlab.mixin.SetGet
         [obj.icons.pan.img,...
           obj.icons.pan.alpha] =nigeLab.utils.getMatlabBuiltinIcon(...
             'Pan_24.PNG',...
+            'IconPath',fullfile(matlabroot,'toolbox\shared\controllib\general\resources\toolstrip_icons'),...
+            'Background','sfc',...
+            'BackgroundIndex',8 ...
+            );
+        
+         [obj.icons.saveOn.img,...
+          obj.icons.saveOn.alpha] =nigeLab.utils.getMatlabBuiltinIcon(...
+            'Save_Dirty_24.PNG',...
+            'IconPath',fullfile(matlabroot,'toolbox\shared\controllib\general\resources\toolstrip_icons'),...
+            'Background','sfc',...
+            'BackgroundIndex',8 ...
+            );
+        
+        [obj.icons.saveOff.img,...
+          obj.icons.saveOff.alpha] =nigeLab.utils.getMatlabBuiltinIcon(...
+            'Save_24.PNG',...
             'IconPath',fullfile(matlabroot,'toolbox\shared\controllib\general\resources\toolstrip_icons'),...
             'Background','sfc',...
             'BackgroundIndex',8 ...
