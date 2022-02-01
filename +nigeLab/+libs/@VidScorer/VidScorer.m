@@ -195,7 +195,7 @@ classdef VidScorer < matlab.mixin.SetGet
          lbls = obj.Block.Events(lblIdx);
          for this = lbls
              idx = find(cellfun(@isnumeric,this.Data));
-             addNewLabel(obj,this.Name,this.Data{idx(1)},this.Trial,false)
+             addNewLabel(obj,this.Name{:},this.Data{idx(1)},this.Trial,false)
          end
          evts = obj.Block.Events(~lblIdx);
          for this = evts
@@ -288,6 +288,8 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
           obj.listeners = [obj.listeners addlistener(obj,'lblAdded',@(src,evt)obj.Block.addEvent(evt))];
           obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
+          
+          obj.listeners = [obj.listeners addlistener(obj,'evtModified',@(src,evt)obj.Block.modifyEvent(evt))];
 
       end
       
@@ -888,7 +890,7 @@ classdef VidScorer < matlab.mixin.SetGet
                       end
                   end
               end
-              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt, dd);
+              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt(:)', dd(:)');
               plotStruct.ReducedPlot.h_plot.HitTest = 'off';
               plotStruct.ReducedPlot.h_plot.PickableParts = 'none';
 
@@ -1594,22 +1596,36 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.Evts(idx).Time = NewTime;
           New = obj.Evts(idx);
           menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyEventEntry(thisEventObj,obj.Evts(idx).Name ,obj.Evts(idx).Time);
-          notify(obj,'evtModified',nigeLab.evt.evtChanged(New.Name,New.Time,New.Misc,idx,New.Trial,Old));
+          notify(obj,'evtModified',nigeLab.evt.evtChanged({New.Name},New.Time,{New.Misc},idx,New.Trial,Old));
 
       end
-      function modifyLabelEntry(obj,thisEventObj,name,value,menu)
+      function modifyLabelEntry(obj,thisEventObj,OldName,OldValue,NemwName,NewValue)
+          
+          if nargin < 5
+              [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{OldName,sprintf('%f',OldValue)});
+              NewValue = str2double(Pars{2});
+              NemwName = Pars{1};
+          end
+          % Get the correct menu
+           mIdx = strcmp({thisEventObj.ContextMenu.Children.Text},'Edit');
+           menu = thisEventObj.ContextMenu.Children(mIdx);         
+          % find selected label
+          [Old,idx] = obj.getLblByKey(obj.TrialIdx,OldName);
+          % get the objects to change
           maxW = thisEventObj.InnerPosition(3);
           Namelabel = thisEventObj.Children(1);
           Datalabel = thisEventObj.Children(2);
-          [this,idx] = obj.getLblByKey(obj.TrialIdx,name);
-          [Pars] = inputdlg({'Label Name';'Data'},'Enter event values.',[1 10],{name,Datalabel.String});
-          Datalabel.String = Pars{2};
-          Namelabel.String = Pars{1};
+          % change GUI
+          Datalabel.String = sprintf('%f',NewValue);
+          Namelabel.String = NemwName;
           Namelabel.Position(3) = min(Namelabel.Extent(3),maxW/2);
           Datalabel.Position(3) = min(Datalabel.Extent(3),maxW/2);
-          obj.TrialLbls(idx).Name = Pars{1};
-          obj.TrialLbls(idx).Time = str2double(Pars{2});
-          menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyEventEntry(thisEventObj,obj.TrialLbls(idx).Name ,obj.TrialLbls(idx).Time,menu);
+          % change lbl
+          obj.TrialLbls(idx).Name = NemwName;
+          obj.TrialLbls(idx).Misc = NewValue;
+          New = obj.TrialLbls(idx);
+          menu.MenuSelectedFcn = @(thisMenu,evt)obj.modifyLabelEntry(thisEventObj,obj.TrialLbls(idx).Name ,obj.TrialLbls(idx).Misc);
+          notify(obj,'evtModified',nigeLab.evt.evtChanged({New.Name},New.Time,{New.Misc},idx,New.Trial,Old));
       end
       
       function deleteEventEntry(obj,thisEventObj,name,time)
@@ -1622,30 +1638,34 @@ classdef VidScorer < matlab.mixin.SetGet
           delete(thisEventObj);
           notify(obj,'lblDeleted',nigeLab.evt.evtChanged(this.Name,nan,this.Misc,idx,this.Trial));
       end
-
+      
       function updateEvtGraphicList(obj)
-                  idx = ~isvalid(obj.evtElementList);
-                  offset = cumsum(idx);
-                  obj.evtElementList(idx) = [];
-                  obj.Evts(idx) = [];
-                  if sum(~idx)>1
-                      ofs = obj.evtElementList(1).Position(2) - obj.evtElementList(2).Position(2);
-                      offset(idx) = [];
-                      arrayfun(@(c) set(obj.evtElementList(c),'Position',obj.evtElementList(c).Position + [0 offset(c)*ofs 0 0]),1:numel(obj.evtElementList))
-                  end
-                  
-                
+          idx = ~isvalid(obj.evtElementList);
+          offset = cumsum(idx);
+          obj.evtElementList(idx) = [];
+          obj.Evts(idx) = [];
+          
+          thisTrialEvts = obj.evtElementList([obj.Evts.Trial] == obj.TrialIdx);
+          if numel(thisTrialEvts)>0
+              ofs = thisTrialEvts(1).Position(2) - thisTrialEvts(2).Position(2);
+              offset(idx) = [];
+              arrayfun(@(c) set(thisTrialEvts(c),'Position',thisTrialEvts(c).Position + [0 offset(c)*ofs 0 0]),1:numel(thisTrialEvts))
+          end
+          
+          
       end
       function updateLblGraphicList(obj)
-                  idx = ~isvalid(obj.lblElementList);
-                  offset = cumsum(idx);
-                  obj.lblElementList(idx) = [];
-                  obj.TrialLbls(idx) = [];
-                  if sum(~idx)>1
-                      ofs = obj.lblElementList(1).Position(2) - obj.lblElementList(2).Position(2);
-                      offset(idx) = [];
-                      arrayfun(@(c) set(obj.lblElementList(c),'Position',obj.lblElementList(c).Position + [0 offset(c)*ofs 0 0]),1:numel(obj.lblElementList))
-                  end
+          idx = ~isvalid(obj.lblElementList);
+          offset = cumsum(idx);
+          obj.lblElementList(idx) = [];
+          obj.TrialLbls(idx) = [];
+          
+          thisTrialLbls = obj.lblElementList([obj.TrialLbls.Trial] == obj.TrialIdx);
+          if numel(thisTrialLbls)>0
+              ofs = thisTrialLbls(1).Position(2) - thisTrialLbls(2).Position(2);
+              offset(idx) = [];
+              arrayfun(@(c) set(thisTrialLbls(c),'Position',thisTrialLbls(c).Position + [0 offset(c)*ofs 0 0]),1:numel(thisTrialLbls))
+          end
       end
       
       % Initialize colors
