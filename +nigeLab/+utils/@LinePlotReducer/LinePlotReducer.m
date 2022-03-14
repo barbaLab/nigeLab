@@ -304,7 +304,7 @@ classdef LinePlotReducer < handle
 
                         % Transpose if necessary.
                         if size(xm, 1) ~= size(ym, 1)
-                            ym = ym';
+                            error('Vectors must be the same length.');
                         end
 
                         % Store y, x, and a map from y index to x
