@@ -1098,6 +1098,9 @@ classdef VidScorer < matlab.mixin.SetGet
              for tt =1:numel(obj.Block.Streams.(blkStreams{ss}))
                  pltData.Time = @(t) obj.Block.Time(:)./ obj.Block.SampleRate * 1000; % from samples to ms
                  pltData.Data = obj.Block.Streams.(blkStreams{ss})(tt).data;
+                 if length(pltData.Time) ~= length(pltData.Data)
+                    pltData.Time = [1:length(pltData.Data)]./obj.Block.Streams.(blkStreams{ss})(tt).fs;
+                 end
                  strmNode = uiw.widget.CheckboxTreeNode('Parent',strmTypeNode,...
                      'Name',obj.Block.Streams.(blkStreams{ss})(tt).name,...
                      'UserData',pltData,'CheckboxEnabled',true);
