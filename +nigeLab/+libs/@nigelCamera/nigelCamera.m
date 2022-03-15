@@ -101,7 +101,7 @@ classdef nigelCamera < matlab.mixin.SetGet
           value = obj.Name_;
       end
       
-      function set.Paths(obj,vakue)
+      function set.Paths(obj,value)
       end
       function value = get.Paths(obj)
           value = obj.VideoPaths;
