@@ -473,6 +473,10 @@ void dispFrames(){
      return result;
  }
 
+ void exportF(string outPath){
+     imwrite(outPath, buffer.at(bufferIndex));
+ }
+
 private:
 };
 
@@ -511,6 +515,7 @@ enum string_code {
     getMeta_,
     getMeanVal_,
     closeRequest_,
+    exportF_,
 
 };
 
@@ -522,6 +527,7 @@ string_code hashit(std::string const& inString) {
     if (inString == "delete") return delete_;
     if (inString == "frameF") return frameF_;
     if (inString == "frameB") return frameB_;
+    if (inString == "exportF") return exportF_;
     if (inString == "getMeta") return getMeta_;
     if (inString == "drawROI") return drawROI_;
     if (inString == "setSpeed") return setSpeed_;
@@ -697,6 +703,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         delete [] (result.Time);
     }
         break;
+    case exportF_: {
+        checkForThirdPar(nrhs);
+        string thisPath = mxArrayToString(prhs[2]);
+        thisVideoReader->exportF(thisPath);
+    }
+    break;
     default:
         // Got here, so command not recognized
         string errtxt = "mex:Command " + string(cmd) + "not recognized.";

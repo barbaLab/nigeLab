@@ -356,6 +356,12 @@ end
            simpleVideoReader('drawROI',obj.VideoReader);
        end
        
+       function exportFrame(obj)
+           NFrames = numel(dir(fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame*.jpg',obj.Name))));
+           thisPath = fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame%.4d.jpg',obj.Name,NFrames));
+           simpleVideoReader('exportF',obj.VideoReader,thisPath);
+       end
+
        function [sig,t] = extractSignal(obj)
            % EXTRACTSIGNAL prompts the suer to select a roi on the video thumbanail. 
            % It later proceeds to compute the maximum brightness of the
