@@ -24,6 +24,15 @@ struct getMeanValReturnStr
     double* Time;
 };
 
+struct meta {
+        int fpsScaleFactor;
+        double frameRate;
+        int nFrames;
+        int width;
+        int height;
+        chrono::microseconds frameInterval;
+    };
+
 // C++ class interfacing with matlab to implement a sensible video reader
 class SimpleVideoReader
 {
@@ -45,13 +54,6 @@ public:
     Rect ROI;
 
     int nFrames;
-    struct meta {
-        double frameRate;
-        int nFrames;
-        int width;
-        int height;
-        chrono::microseconds frameInterval;
-    };
     list<meta> Meta;
     vector<chrono::milliseconds> videoDurations;                    // array of durations to be searched during seek. It should be intrinsecally ordered by construction
     vector<chrono::milliseconds>::iterator lastDuration;
@@ -137,6 +139,7 @@ public:
             thisMeta.height = height;
             thisMeta.nFrames = nFrames_;
             thisMeta.frameRate = frameRate;
+            thisMeta.fpsScaleFactor = int(round(frameRate * speed / 30));
             thisMeta.frameInterval = s ;
 
             videoDurations.push_back(d);
@@ -167,8 +170,6 @@ public:
 
     void startBuffer() {
         //mexPrintf("fBuffer started\n");
-        //VideoCapture cap(videoPath);
-        int sleepingTime = 10;
         bufferEnabled = true; bufferRunning = true;
 
         //cap.set(CAP_PROP_POS_FRAMES, frameIndex);
@@ -201,7 +202,7 @@ public:
                         lastDuration++;
                         diskIndex = 0;
                         cap.release();
-                        cap.open(*PathsIndex,CAP_FFMPEG);
+                        cap.open(*PathsIndex, CAP_FFMPEG);
                         
                     }
                     // lock the mutex and push frame to the buffer
@@ -213,7 +214,7 @@ public:
             }
             else {
                 // otherwise just wait
-                this_thread::sleep_for(chrono::milliseconds(1));
+                this_thread::sleep_for(chrono::microseconds(10));
             }
         }
 
@@ -253,7 +254,7 @@ void frameB(){
 }
 
 void dispFrames(){         
-    auto fInterval = chrono::duration_cast<chrono::microseconds>(MetaIndex->frameInterval);
+    auto fInterval = std::chrono::milliseconds(1000/30-5); // 30 fps fixed playback speed
     auto start = chrono::system_clock::now();
 
     if (videoEnabled && bufferIndex > bufferSize / 2 - 1) {
@@ -262,13 +263,18 @@ void dispFrames(){
        while (buffer.size() < (bufferSize / 2 + 2))
            this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-
+    // main loop
+    int frameCounter=0;
     do {      
         mtx.lock();
 
-        if (videoEnabled && buffer.size() < (bufferSize/2+2)) {
+        if (videoEnabled && buffer.size() < (bufferSize/2+2)) { 
+            putText(thumb, "Buffering...", Point(ROI.x + 5,ROI.y + ROI.height/2 - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
+            imshow("Video", thumb(ROI));
             mtx.unlock();
-            break;
+            waitKey(1);
+            this_thread::sleep_until(start + std::chrono::seconds(2));
+            continue;
         }
         Mat frame_ = buffer.at(bufferIndex + direction);
         double ms = bufferMs.at(bufferIndex + direction);
@@ -283,15 +289,16 @@ void dispFrames(){
             bufferIndex = max(0, min(bufferIndex, (int)buffer.size()-2));
 
         mtx.unlock();
-        if (frame_.size().width >= ROI.width && frame_.size().height >= ROI.height) {
+        if (frame_.size().width >= ROI.width && frame_.size().height >= ROI.height && 
+            ++frameCounter % MetaIndex->fpsScaleFactor == 0 ) {
             thumb = frame_;
             string str = to_string(ms);
             putText(frame_, str.substr(0, str.find(".")), Point(ROI.x +5,ROI.y + ROI.height - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
-            this_thread::sleep_until(start + fInterval/speed);
+            this_thread::sleep_until(start + fInterval);
             imshow("Video", frame_(ROI));
             start = chrono::system_clock::now();
-            if (waitKey(1) == 27)
-                break;
+            /*if (waitKey(1) == 27)
+                break;*/
         }
 
     } while (videoEnabled);
@@ -309,6 +316,7 @@ void dispFrames(){
  void showThumb() {
         namedWindow("Video", WINDOW_NORMAL | WINDOW_KEEPRATIO);// Create a window for display.
         imshow("Video", thumb);                   // Show our image inside it.
+        startWindowThread();
 
 
     }
@@ -474,7 +482,8 @@ void dispFrames(){
  }
 
  void exportF(string outPath){
-     imwrite(outPath, buffer.at(bufferIndex));
+     Mat frame_ = buffer.at(bufferIndex);
+     imwrite(outPath, frame_);
  }
 
 private:
@@ -630,9 +639,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         msT = thisVideoReader->getTime();
         plhs[0] = mxCreateDoubleScalar(msT);
         break;
-    case setSpeed_: 
+    case setSpeed_: { 
         checkForThirdPar(nrhs);
-        thisVideoReader->speed = mxGetScalar(prhs[2]);
+        float speed = mxGetScalar(prhs[2]);
+        thisVideoReader->speed = speed;
+        for (list<meta>::iterator MetaIt = thisVideoReader->Meta.begin(); MetaIt != thisVideoReader->Meta.end(); ++MetaIt)
+            MetaIt->fpsScaleFactor = int(round(MetaIt->frameRate * speed / 30));
+        
+    }
         break;
     case setBufferSize_:
          checkForThirdPar(nrhs);
