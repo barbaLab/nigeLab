@@ -16,6 +16,7 @@ classdef nigelCamera < matlab.mixin.SetGet
    properties (Access=private)
         VideoPaths = {}                 % cell array of paths to videos.
         WindowOpened = false;
+        Active         (1,1)double = false;
    end
    
    properties (SetAccess=?nigeLab.libs.VidScorer)
@@ -65,7 +66,9 @@ classdef nigelCamera < matlab.mixin.SetGet
       % [DEPENDENT]  .Time references .SeriesTime_
       function value = get.Time(obj)
          %GET.TIME  Returns .Time (references .SeriesTime_)
-         value = obj.Time_;
+         value = obj.getSynchedTime(...
+             obj.Time_,...
+             'video2ext');
       end
       function set.Time(obj,value)
          %SET.TIME  Assign new .Time (updates .Index based on .Time_)
@@ -307,6 +310,17 @@ end
           evtData = nigeLab.evt.vidstreamAdded(thisStream);
           notify(obj,'streamAdded',evtData);
        end
+       
+       function setActive(obj,val)
+           obj.Active = val;
+           if val
+               obj.startBuffer;
+               obj.showThumb;
+           else
+               obj.stopBuffer;
+               obj.closeFig;
+           end
+       end
    end % methods public
    
    % Mex interface methods. Methods in this section are used to comunicate
@@ -316,15 +330,27 @@ end
           simpleVideoReader('startBuffer',obj.VideoReader);
        end
        
-        function play(obj)
+       function stopBuffer(obj)
+           simpleVideoReader('stopBuffer',obj.VideoReader);
+       end
+       
+       function play(obj)
+            if ~obj.Active
+               return;
+           end
            if ~obj.WindowOpened
-               simpleVideoReader('showThumb',obj.VideoReader);
+              showThumb(obj);
            end
            simpleVideoReader('play',obj.VideoReader);
        end
        
-        function showThumb(obj)
-           simpleVideoReader('showThumb',obj.VideoReader);
+       function showThumb(obj)
+           nn = obj.Name;
+           if isempty(nn)
+               nn = 'Video';
+           end
+           simpleVideoReader('showThumb',obj.VideoReader,nn);
+           obj.Active = true;
            obj.WindowOpened = true;
        end
        
@@ -333,14 +359,25 @@ end
        end
        
        function seek(obj,t)
+           if ~obj.Active
+               return;
+           end
+           
+            t = obj.getSynchedTime(t,'ext2video');
            obj.Time = simpleVideoReader('seek',obj.VideoReader,t);
        end
        
        function frameF(obj)
+           if ~obj.Active
+               return;
+           end
           obj.Time = simpleVideoReader('frameF',obj.VideoReader);
        end
        
        function frameB(obj)
+           if ~obj.Active
+               return;
+           end
           obj.Time = simpleVideoReader('frameB',obj.VideoReader);
        end
        
@@ -374,6 +411,20 @@ end
           [sig,t] =  simpleVideoReader('getMeanVal',obj.VideoReader);
           
        
+       end
+       
+       function tt = getSynchedTime(obj,t,direction)
+           
+           switch direction           
+               case 'video2ext'
+                   [~,idx] = min( abs(obj.getTimeSeries - t));
+                   tt = obj.TS(idx) -  obj.VideoOffset - idx.* obj.VideoStretch;
+               case 'ext2video'
+                   trueVideoTime = obj.getTimeSeries;
+                   [~,idx] = min( abs( trueVideoTime - obj.VideoOffset-(1:numel(obj.TS)).*obj.VideoStretch...
+                       - t));
+                   tt = trueVideoTime(idx);
+           end
        end
    end
    

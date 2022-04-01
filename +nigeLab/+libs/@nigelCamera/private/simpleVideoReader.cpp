@@ -52,6 +52,7 @@ public:
     Mat thumb;
     //vector<float> ROI(4, -1);
     Rect ROI;
+    string PlayerName;
 
     int nFrames;
     list<meta> Meta;
@@ -294,8 +295,8 @@ void dispFrames(){
             thumb = frame_;
             string str = to_string(ms);
             putText(frame_, str.substr(0, str.find(".")), Point(ROI.x +5,ROI.y + ROI.height - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
+            imshow(PlayerName, frame_(ROI));
             this_thread::sleep_until(start + fInterval);
-            imshow("Video", frame_(ROI));
             start = chrono::system_clock::now();
             /*if (waitKey(1) == 27)
                 break;*/
@@ -313,9 +314,10 @@ void dispFrames(){
         bufferEnabled = false;
     }
 
- void showThumb() {
-        namedWindow("Video", WINDOW_NORMAL | WINDOW_KEEPRATIO);// Create a window for display.
-        imshow("Video", thumb);                   // Show our image inside it.
+ void showThumb(const string videoName) {
+        PlayerName = videoName;
+        namedWindow(PlayerName, WINDOW_NORMAL | WINDOW_KEEPRATIO);// Create a window for display.
+        imshow(PlayerName, thumb);                   // Show our image inside it.
         startWindowThread();
 
 
@@ -481,7 +483,7 @@ void dispFrames(){
      return result;
  }
 
- void exportF(string outPath){
+ void exportF(string outPath) {
      Mat frame_ = buffer.at(bufferIndex);
      imwrite(outPath, frame_);
  }
@@ -652,11 +654,14 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
          checkForThirdPar(nrhs);
          thisVideoReader->bufferSize = (int)mxGetScalar(prhs[2]);
          break;
-    case showThumb_:
-        thisVideoReader->showThumb();
+    case showThumb_: {
+        checkForThirdPar(nrhs);
+        string thisName = mxArrayToString(prhs[2]);
+        thisVideoReader->showThumb(thisName);
+    }
         break;
     case closeRequest_:
-        destroyWindow("Video");
+        destroyWindow(thisVideoReader->PlayerName);
         break;
     case seek_:
         thisVideoReader->seek((float)mxGetScalar(prhs[2]));
