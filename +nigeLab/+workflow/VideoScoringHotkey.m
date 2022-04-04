@@ -1,5 +1,17 @@
-function defaultVideoScoringHotkey(evt,obj)
-% DEFAULTHOTKEYFCN  Default function mapping hotkeys for video scoring
+function VideoScoringHotkey(evt,obj)
+% VIDEOSCORINGHOTKEY  Function mapping hotkeys for video scoring. Usually
+% called from nigelab.libs.VideoScorer, uses the public interface methods
+% of VideoScorer to streamline common operations. 
+% See <a href="matlab:help nigelab.libs.VidScorer">nigelab.libs.VideoScorer</a> for more infromation.
+%
+% To customize the hotkeys add your custom commands and key in the switch
+% tree down below. If one key is defined multiple times the first one gets
+% priority.
+%
+% <strong>Please, do not redifine reserved keys.</strong>
+%  RESERVED KEYS: 
+%                 'escape' (closes the window).
+%                 'h' (lists current keypress commands).
 %
 %  inputs:
 %     evt -- Keypress eventdata, which has evt.Key for the name of
@@ -10,9 +22,6 @@ function defaultVideoScoringHotkey(evt,obj)
 %     b -- nigeLab.libs.behaviorInfo class object that tracks event
 %           data from scoring etc.
 %
-%  RESERVED KEYS: 'control' (modifier: control + key gives HELP)
-%                 'escape' (closes the window).
-%                 'h' (lists current keypress commands).
 
 switch evt.Key
     case {'comma',','} % not a stereotyped trial (default)
@@ -80,10 +89,6 @@ switch evt.Key
         nextFrame(obj);
     case {'rightarrow','\u001d'} % next trial
         nextTrial(obj);
-    case 's' % alt + s = save
-        if strcmpi(evt.Modifier,'alt')
-            saveScoring(obj);
-        end
     case {'numpad0','0'}
         add(obj,'lbl','Pellets',0);
     case {'numpad1','1'}
@@ -108,10 +113,16 @@ switch evt.Key
         add(obj,'lbl','PelletPresent',0);
     case 'add'
         add(obj,'lbl','PelletPresent',1);
-    case 'delete'
-        toggleTrialMask(obj);
     case {'space',' '}
         playpause(obj);
+end
+
+%% DO NOT CHANGE
+switch evt.Key
+    case 'h'
+        nigeLab.workflow.VideoScoringHotkeyHelpFcn;
+    case 'escape'
+        delete(obj);
 end
 
 end

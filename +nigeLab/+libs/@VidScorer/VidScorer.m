@@ -1,70 +1,77 @@
 classdef VidScorer < matlab.mixin.SetGet
-   %TIMESCROLLERAXES  Axes that allows "jumping" through a movie
+   %VIDSCORER  Creates interface to annotate frames and trials in a video
+   % for relevant behavioural events.
    %
-   %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj);
+   %  VidScorerObj = nigeLab.libs.VidScorer(nigelCamArray)
+   %  Input:
+   %    nigelCamArray - array of nigelCam obj, usually fuound in
+   %                    blockObj.Camera
+   %  Output:
+   %    VidScorerObj - this object.
    %
-   %  Constructor is restricted to `nigeLab.libs.VidGraphics` object. This
-   %  should only be created in combination with a `VidGraphics` object.
+   % VidScorer can be interfaced with using public methods, which can be
+   % called from scripts or customizable keyboard shortcuts 
+   % (see <a href="matlab:help nigeLab.workflow.VideoScoringHotkey; matlab;open nigeLab.workflow.VideoScoringHotkey">nigeLab.workflow.VideoScoringHotkey</a>).
    %
-   %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj,'align');
-   %  --> Assumes "alignment" configs
-   %
-   %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj,'score');
-   %  --> Assumes "score" configs (default)
-   %
-   %  ax = nigeLab.libs.TimeScrollerAxes(___,'Name',value,...);
-   %  --> Assign properties using <'Name',value> pair syntax
-   
+   %  VidScorer methods (public):
+   %  add - Adds events or labels to current trial at current timestamp.
+   %  addAllTrials - Adds a label to all trials
+   %  playpause - Toggles play/pause state for the primary view
+   %  nextFrame - Advances all active views one frame
+   %  previousFrame -  Back up all active views one frame
+   %  nextTrial - Jumps to the next trial in all active views
+   %  previousTrial - Jumps to the previous trial in all active views
+   %  addExternalStreamToCam - Adds a stream to the current primary view.
+   %  deleteExternalStreamToCam - Deletes a stream from the current primary view.
+   %  exportFrame - exports the current frame from all active views to
+   %                jpeg.
+    % 
+
+
    % % % PROPERTIES % % % % % % % % % %
    % DEPENDENT,PUBLIC
-   properties (Access=public)
-      VideoTime    double  = 0    % From .VidGraphicsObj (time of current frame)
-      NeuTime      double  = 0    % Neural time corresponding to current frame (from parent)
-      Parent                           % Handle to obj.Panel (matlab.ui.container.Panel)
-      Position    (1,4) double  = [0 0.15 0.6 0.8]  % Position of obj.Axes
-      TrialOffset (1,1) double  = 0    % Trial/Camera-specific offset
-      Verbose     (1,1) logical = true % From obj.VidGraphicsObj
-      VideoOffset (1,1) double  = 0    % Alignment offset from start of video series
-      Zoom        (1,1) double  = 4    % Current axes "Zoom" offset
-      nTrial      (1,1) double  = 0
+   properties (Access=private)
+      VideoTime    double  = 0    % Video time as returned from nigelCam                    TOCHECK
+      NeuTime      double  = 0    % Neural time corresponding to current frame (from parent) TOREMOVE
+      VideoOffset (1,1) double  = 0    % Alignment offset from start of video series            TOREMOVE
+      nTrial      (1,1) double  = 0     % Total number of trials in blockObj
       
    end
    
-   properties (SetObservable)
-      TrialIdx    (1,1) double  = 0
-      NeuOffset   (1,1) double  = 0    % Alignment offset between vid and dig
+   properties (SetObservable,Access=private)
+      TrialIdx    (1,1) double  = 0    % Current trial Index
+      NeuOffset   (1,1) double  = 0    % Alignment offset between vid and dig TOREMOVE
 
    end
    
    % Gui eleemnts
-   properties (Transient,Access=public)
-      sigFig
-      VidComPanel
-      FigComPanel
-      SigComPanel
-      sigAxes
-      cmdPanel
-      camPanel
-      loadingPanel
-      exportPanel
+   properties (Transient,Access=public, Hidden)
+      sigFig                % ui figure with all elements inside
+      VidComPanel           % Video command panel
+      FigComPanel           % Application comand panel
+      SigComPanel           % Signal comand panel
+      sigAxes               % Axes for plotting signals and time
+      camPanel              % Camera/views panel
+      loadingPanel          % Overlay panel for loading animation
+      exportPanel           % export panel to export frames/videparts
       
       
-      evtFigure
-      evtPanel
-      lblPanel
-      evtElementList     matlab.ui.container.Panel
-      lblElementList     matlab.ui.container.Panel
-      link = [];
-      trialProgAx
-      trialProgBar
+      evtFigure             % figure with events table
+      evtPanel              % event panel in evtFigure
+      lblPanel              % label panel in evtFigure
+      evtElementList     matlab.ui.container.Panel      % array of panels, used to display events homed in evtPanel
+      lblElementList     matlab.ui.container.Panel      % array of panels, used to display labels homed in lblPanel
+      link = [];            % array of linkprops, used to link mostly backgrounds
+      trialProgBar          % Bar displaying progress in scoring
       
-      Now
-      SignalTree
+      Now                   % Time indicator
+      SignalTree            % uitree to display Block and video streams
       
-      colors
-      icons       (1,1)struct = struct('leftarrow',[],'rightarrow',[],'circle',[],'play',[],'pause',[]);
+      colors                % colors struct (currently unused)
+      icons       (1,1)struct = struct('leftarrow',[],'rightarrow',[],'circle',[],'play',[],'pause',[]); % icons struct loading all icons nedded during startup
 
-      TimerBtn
+      % Buttons
+      TimerBtn              
       AutoSaveBtn
       ScrollLeftBtn
       PlayPauseBtn
@@ -77,38 +84,29 @@ classdef VidScorer < matlab.mixin.SetGet
       ZoomButton
       PanButton
       TrialLabel
+
+      exportFrom    matlab.ui.control.CheckBox                % flags to activate/deactivate export of videos
+
    end
    
    % Other nigeLab linked obj
-   properties (Transient,Access=public)
-       
+   properties (Transient,Access=private)
+
        nigelCam             % preferred camera
        nigelCamArray        % Array of nigelCam obj
        Block                % "Parent" nigeLab.Block object
-       
-       listeners
-       AutoSaveTimer
-       
+
+       listeners            % All listeners
+       AutoSaveTimer        % Timer obj to autosave
+
+       PerformanceTimer struct = struct('T_elaps',0,'Trial_scored',0,'Timer',[]);   % Structure with timer and fields to evaluate scoring time and ETAs on scoring a block
+       Evts           struct = repmat(struct('Time',[],'Name',[],'Trial',[],'Misc',[],'graphicObj',[]),1,0);    % Structure referencing events
+       TrialLbls      struct = repmat(struct('Time',[],'Name',[],'Trial',[],'Misc',[],'graphicObj',[]),1,0);    % Structure referencing labels
    end
-   
-   % HIDDEN,DEPENDENT,PUBLIC
-   properties (Hidden,Access=public)
-      
-      PerformanceTimer struct = struct('T_elaps',0,'Trial_scored',0,'Timer',[]);
-      Evts           struct = repmat(struct('Time',[],'Name',[],'Trial',[],'Misc',[],'graphicObj',[]),1,0);
-      TrialLbls      struct = repmat(struct('Time',[],'Name',[],'Trial',[],'Misc',[],'graphicObj',[]),1,0);
-   end
-   
-   % HIDDEN,PUBLIC
-   properties (Hidden,Access=public)
-       exportFrom    matlab.ui.control.CheckBox                % flags to activate/deactivate export of videos
-   end
-   
-   
+
    % TRANSIENT,PROTECTEDadd
-   properties (Access=protected)
-      DX        (1,1) double = 1   % "Stored" axes limit difference
-      XLim      (1,2) double = [0 1]  % "Stored" axes limits
+   properties (Access=private)
+      XLim      (1,2) double = [0 1]  % "Initial" axes limits, comprising all trials
    end
      
    % % % % % % % % % % END PROPERTIES %
@@ -124,25 +122,14 @@ classdef VidScorer < matlab.mixin.SetGet
    % % % METHODS% % % % % % % % % % % %
    
    %Constructors
-   methods %(Access=?nigeLab.libs.VidGraphics)
+   methods 
       % Constructor
       function obj = VidScorer(nigelCams,varargin)
-         %TIMESCROLLERAXES  Axes that allows "jumping" through a movie
-         %
-         %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj);
-         %
-         %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj,'align');
-         %  --> Assumes "alignment" configs
-         %
-         %  ax = nigeLab.libs.TimeScrollerAxes(VidGraphicsObj,'score');
-         %  --> Assumes "score" configs (default)
-         %
-         %  ax = nigeLab.libs.TimeScrollerAxes(___,'Name',value,...);
-         %  --> Assign properties using <'Name',value> pair syntax
+         %thisObj = VIDSCORER(nigelCams) creates gui to manually annotate frames and trials for intresting events.
          
          % Allow empty constructor etc.
          if nargin < 1
-            obj = nigeLab.libs.TimeScrollerAxes.empty();
+            obj = nigeLab.libs.VidScorer.empty();
             return;
          elseif isnumeric(nigelCams)
             dims = nigelCams;
@@ -153,10 +140,12 @@ classdef VidScorer < matlab.mixin.SetGet
             return;
          end
          
+         % assigns construcotr values
          obj.nigelCamArray = nigelCams;
          arrayfun(@(v)v.setActive(false),obj.nigelCamArray(2:end));
 
          obj.nigelCam = nigelCams(1);
+         obj.nigelCam.setActive(true);
          obj.VideoTime = obj.nigelCam.getTimeSeries;
          obj.VideoTime = obj.VideoTime- ...
              obj.nigelCam.VideoOffset- ...
@@ -168,7 +157,6 @@ classdef VidScorer < matlab.mixin.SetGet
              obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
          end
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
-         obj.DX = diff(obj.XLim);
          if isempty(obj.nigelCam.VideoOffset)
              obj.NeuOffset = 0;
          else
@@ -180,7 +168,7 @@ classdef VidScorer < matlab.mixin.SetGet
             obj.(varargin{iV}) = varargin{iV+1};
          end
          
-
+        % constructs the gui
         obj.buildTimeAxesGraphics();
         setToLoading(obj,true);
         obj.buildCmdPanel();
@@ -217,8 +205,10 @@ classdef VidScorer < matlab.mixin.SetGet
         setToLoading(obj,false);
       end
       
-      
+      % destructor
       function delete(obj)
+          % destructor, takes care of removing all listeners, timers and
+          % proplinks as well as closing all video figures.
           if ~isempty(obj.listeners)
               for o = obj.listeners
                  o.Enabled = false; 
@@ -243,135 +233,9 @@ classdef VidScorer < matlab.mixin.SetGet
    end
    
    
-   % PUBLIC
+   % 
    methods (Access=public)
-      
-      % Add Boundary Indicators
-      function addBoundaryIndicators(obj)
-         %ADDBOUNDARYINDICATORS  Adds "boundary indicator" patches
-         %
-         %  addBoundaryIndicators(obj);
          
-         % Add "segments" indicating timing from different vids
-         tmp = FromSame(obj.VidGraphicsObj.Block.Videos,obj.VidGraphicsObj.VideoSource);
-         c = linspace(0.75,0.95,numel(tmp)-1);
-         if ~isempty(obj.BoundsIndicator)
-            if isvalid(obj.BoundsIndicator)
-               delete(obj.BoundsIndicator);
-            end
-         end
-         obj.BoundsIndicator = gobjects(numel(tmp)-1);
-         for i = 1:(numel(tmp)-1)
-            if tmp(i).Masked
-               rX = max(tmp(i).tVid);
-            else
-               rX = min(tmp(i).tVid);
-            end
-            rW = max(rX - min(tmp(i+1).tVid),0.005);
-            obj.BoundsIndicator(i) = rectangle(obj.Axes,...
-               'Position',[rX,-0.15,rW,1.15],...
-               'Curvature',[0.2 0.2],...
-               'EdgeColor','none',...
-               'FaceColor',nigeLab.defaults.nigelColors('light'),...
-               'Tag','Video Boundary',...
-               'Clipping','on',...
-               'PickableParts','none');
-         end
-      end
-      
-      % Add Listeners
-      function addListeners(obj)
-          obj.listeners = addlistener(obj.nigelCam,'timeChanged',@(src,evt)obj.updateTimeMarker);
-          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.updateEvtGraphicList)];
-          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.updateLblGraphicList)];
-          
-          obj.listeners = [obj.listeners addlistener(obj.nigelCam,'streamAdded',@(src,evt)obj.updateStreams(evt,src))];
-          
-          obj.listeners = [obj.listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
-          obj.listeners = [obj.listeners addlistener(obj,'NeuOffset','PostSet',@obj.NeuOffsetChanged)];
-          
-          obj.listeners = [obj.listeners addlistener(obj,'evtAdded',@(src,evt)obj.Block.addEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'lblAdded',@(src,evt)obj.Block.addEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
-          
-          obj.listeners = [obj.listeners addlistener(obj,'evtModified',@(src,evt)obj.Block.modifyEvent(evt))];
-
-      end
-      
-      % Add "Time Marker" line to axes
-      function addTimeMarker(obj)
-         %ADDTIMEMARKER  Adds "time marker" line to axes
-         %
-         %  addTimeMarker(obj);
-         x = obj.nigelCam.Time;
-         obj.Now = line(obj.sigAxes,[x x],[0 1.1],...
-            'DisplayName','Time',...
-            'Tag','Time',...
-            'LineWidth',1,...
-            'LineStyle','-',...
-            'Marker','v',...
-            'MarkerIndices',2,... % Only show top marker
-            'MarkerSize',10,...
-            'MarkerEdgeColor',[0 0 0],...
-            'MarkerFaceColor',nigeLab.defaults.nigelColors('g'),...
-            'Color',nigeLab.defaults.nigelColors('sfc'),...
-            'HitTest','off');
-      end
-      function updateTimeMarker(obj)
-          obj.Now.XData = ones(2,1)*obj.nigelCam.Time;
-
-          thisTrial = find(obj.Block.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last'); % maybe change with min(abs()) ?
-          if isempty(thisTrial),thisTrial = 0;end
-          obj.TrialIdx = thisTrial;
-          xl = xlim(obj.sigAxes);
-          
-          if obj.Now.XData(1) > xl(2)
-              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
-          elseif obj.Now.XData(1) < xl(1)
-              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
-          end
-      end
-      function updateSigAxLimits(obj,dir)
-          nXl = obj.sigAxes.XLim;
-          diff = obj.sigAxes.XLim*[-1 1]';
-          if dir == 1
-              nXl(2) = min(nXl(2)+diff,obj.XLim(2));
-              nXl(1) = nXl(2) - diff;
-          elseif dir == -1
-              nXl(1) = max(nXl(1)-diff,obj.XLim(1));
-              nXl(2) = nXl(1) + diff;
-          end
-          xlim(obj.sigAxes,nXl);
-      end
-      
-      function TrialIdxChanged(obj,~,~)
-          pct = obj.TrialIdx ./ obj.nTrial;
-          obj.trialProgBar.XData = [0 pct pct 0];
-          
-          obj.TrialLabel.Value = num2str(obj.TrialIdx);
-          
-          % updating event list hiding events outside of this trial
-          [obj.evtElementList.Visible] = deal(false);
-          [obj.evtElementList([obj.Evts.Trial] == obj.TrialIdx).Visible] = deal(true);
-          
-          % updating lbl list hiding events outside of this trial
-          [obj.lblElementList.Visible] = deal(false);
-          [obj.lblElementList([obj.TrialLbls.Trial] == obj.TrialIdx).Visible] = deal(true);
-      end
-      function NeuOffsetChanged(obj,~,~)
-          obj.VideoOffset = -obj.NeuOffset;
-          obj.Block.VideoOffset = obj.VideoOffset;
-          obj.nigelCam.VideoOffset = -obj.NeuOffset;
-         VidNodes =  obj.SignalTree.Root.Children(strcmp({obj.SignalTree.Root.Children.Name},'Video streams')).Children;
-%          for nn = VidNodes
-%              UD = nn.UserData;
-%              if isfield(UD,'ReducedPlot')
-%                  UD.ReducedPlot.x = {UD.Time + obj.NeuOffset};
-%              end
-%          end
-      end
-       
       % retrieves events or label by name and time
       function [evt,idx] = getEvtByKey(obj,Time,Name)
           evt_ = [];
@@ -406,6 +270,51 @@ classdef VidScorer < matlab.mixin.SetGet
            idx = [idx_ find(idx)];
       end
       
+      % DEPRECATED TOREMOVE
+%       function T = projectInVideoTime(obj,t)
+%           T = nan(size(t));
+%           [~,idx]=arrayfun(@(x) min(abs(obj.VideoTime  - x)),t);
+%           trueVideoTime = obj.nigelCam.getTimeSeries;
+%           T = trueVideoTime(idx);
+%       end
+   end
+   
+   % private Callbacks
+   methods (Access=private)
+
+       % postset properties callbacks
+      function TrialIdxChanged(obj,~,~)
+          % callbakc function called when trialIdx property is changed
+          % updates the TrialLabel, the progress bar and displays only
+          % relevant labels and events
+          pct = obj.TrialIdx ./ obj.nTrial;
+          obj.trialProgBar.XData = [0 pct pct 0];
+          
+          obj.TrialLabel.Value = num2str(obj.TrialIdx);
+          
+          % updating event list hiding events outside of this trial
+          [obj.evtElementList.Visible] = deal(false);
+          [obj.evtElementList([obj.Evts.Trial] == obj.TrialIdx).Visible] = deal(true);
+          
+          % updating lbl list hiding events outside of this trial
+          [obj.lblElementList.Visible] = deal(false);
+          [obj.lblElementList([obj.TrialLbls.Trial] == obj.TrialIdx).Visible] = deal(true);
+      end
+      function NeuOffsetChanged(obj,~,~)
+          obj.VideoOffset = -obj.NeuOffset;
+          obj.Block.VideoOffset = obj.VideoOffset;
+          obj.nigelCam.VideoOffset = -obj.NeuOffset;
+         VidNodes =  obj.SignalTree.Root.Children(strcmp({obj.SignalTree.Root.Children.Name},'Video streams')).Children;
+%          for nn = VidNodes
+%              UD = nn.UserData;
+%              if isfield(UD,'ReducedPlot')
+%                  UD.ReducedPlot.x = {UD.Time + obj.NeuOffset};
+%              end
+%          end
+      end
+
+      % callback function called when a new stream is added. It takes care
+      % of adding a new node to the tree
       function updateStreams(obj,src,~)
           if isfield(src,'time') || isprop(src,'time')
               pltData.Time = src.time;
@@ -420,22 +329,45 @@ classdef VidScorer < matlab.mixin.SetGet
       strmNode.Checked = true;
       end
       
-      function T = projectInVideoTime(obj,t)
-          T = nan(size(t));
-          [~,idx]=arrayfun(@(x) min(abs(obj.VideoTime  - x)),t);
-          trueVideoTime = obj.nigelCam.getTimeSeries;
-          T = trueVideoTime(idx);
+       % sigaxes callbacks
+      function updateTimeMarker(obj)
+          % updateTimeMarker(obj) moves time marker to the right position
+          % on axes
+          obj.Now.XData = ones(2,1)*obj.nigelCam.Time;
+
+          thisTrial = find(obj.Block.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last'); % maybe change with min(abs()) ?
+          if isempty(thisTrial),thisTrial = 0;end
+          obj.TrialIdx = thisTrial;
+          xl = xlim(obj.sigAxes);
+          
+          if obj.Now.XData(1) > xl(2)
+              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
+          elseif obj.Now.XData(1) < xl(1)
+              xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
+          end
       end
-   end
-   
-   % SEALED,PROTECTED Callbacks
-   methods (Sealed,Access=protected)
+      function updateSigAxLimits(obj,dir)
+          % changes the limits of the sigAxes accordingly to where time
+          % marker is
+          nXl = obj.sigAxes.XLim;
+          diff = obj.sigAxes.XLim*[-1 1]';
+          if dir == 1
+              nXl(2) = min(nXl(2)+diff,obj.XLim(2));
+              nXl(1) = nXl(2) - diff;
+          elseif dir == -1
+              nXl(1) = max(nXl(1)-diff,obj.XLim(1));
+              nXl(2) = nXl(1) + diff;
+          end
+          xlim(obj.sigAxes,nXl);
+      end
+
        % Signal Axes click callback, seeks the video
        function sigAxClick(obj,~,evt)
            obj.Now.XData = ones(2,1)*evt.IntersectionPoint(1);
            arrayfun(@(v) v.seek(obj.Now.XData(1)), obj.nigelCamArray);
        end
-       
+      
+       % Activate/deactivate autosave
        function toggleAutoSave(obj,src)
            if src.UserData.AutoSave
                src.UserData.AutoSave = false;
@@ -448,7 +380,9 @@ classdef VidScorer < matlab.mixin.SetGet
            end
            drawnow;
        end
-       
+      
+       % activates/deactivates perdomance timer. When deactivates also
+       % diplays at screen a summary of the scoring perfomance
        function toggleTimer(obj,src)
            if ~src.Value
                %if active we stop the timer and report performance
@@ -476,10 +410,6 @@ classdef VidScorer < matlab.mixin.SetGet
        
       % Play/Paue button. When clicked, also switches icon
       function buttonPlayPause(obj,src)
-         %BUTTONCLICKEDCB  Indicate that button is pressed
-         %DA RIFAREEEEEE
-         %  obj.ScrollLeftBtn.ButtonDownFcn = @(s,~)obj.buttonClickedCB;
-         %  obj.ScrollRightBtn.ButtonDownFcn = @(s,~)obj.buttonClickedCB;
          if src.UserData.VideoRunning
              src.UserData.VideoRunning = false;
              src.Icon = obj.icons.play.img;
@@ -494,6 +424,7 @@ classdef VidScorer < matlab.mixin.SetGet
          drawnow;
       end
       
+      % Skip to next or previous trial depending on direction
       function skipToNext(obj,direction)
           if (obj.TrialIdx+direction <= 0) || (obj.TrialIdx+direction > size(obj.Block.Trial,1))
               return;
@@ -665,7 +596,7 @@ classdef VidScorer < matlab.mixin.SetGet
           end
       end
       
-      % Enab;es strecth mode
+      % Enables strecth mode
       function buttonStretch(obj,src)
           % In stretch mode, the data can be compressed or streched on the
           % x axis to better align the sampling
@@ -818,8 +749,9 @@ classdef VidScorer < matlab.mixin.SetGet
           end
       end
       
+      % Callback for plotsignal menu entry. it plots the related signal on
+      % the signal axes
       function treecheckchange(obj,~,src,plotStruct)
-%           plotStruct = evt.Nodes.UserData;
           hold(obj.sigAxes,'on')
           setToLoading(obj,true)
           if ismember('ReducedPlot',fieldnames(plotStruct))
@@ -862,6 +794,8 @@ classdef VidScorer < matlab.mixin.SetGet
           setToLoading(obj,false)
       end
       
+      % functions to highlight and set the relevant indexes of selcted events and
+      % labels. This is useful to delete or rename the selcted stuff.
       function eventSelect(obj,src,~)
           k = obj.evtFigure.UserData;
           switch k
@@ -936,8 +870,20 @@ classdef VidScorer < matlab.mixin.SetGet
    
    % Interface methods to use with external apps or shortcuts
    methods (Access=public)
-       % Function for hotkeys
        function add(obj,type,Name,Value)
+           % ADD(obj,type,Name,Value)
+           % <strong>type</strong> selects event or label:
+           % type = 'evt' or 'event' or 'events' selects event
+           % type = 'lbl' or 'label' or 'labels' selects label
+           %
+           % the selected event or label is added to the current trial adn
+           % at current timestamp.
+           % Name determines the name of the added event or label, and 
+           % Value determines the value of the label.
+           % Example:
+           % obj = nigeLab.libs.VideoScorer(blockObj);
+           % obj.add('evt','Reach');
+           % obj.add('lbl','Success',true);
            if nargin<3
                Value = 0;
            end
@@ -949,6 +895,8 @@ classdef VidScorer < matlab.mixin.SetGet
            end
        end
        function addAllTrials(obj,Name,Value)
+           % ADDALLTRIALS(obj,Name,Value) adds a label with name <strong>Name</strong> and
+           % value <strong>Value</strong> to all trials.
            if nargin<3
                Value = 0;
            end
@@ -957,42 +905,88 @@ classdef VidScorer < matlab.mixin.SetGet
            end
        end
        function playpause(obj)
+           % PLAYPAUSE toggles the play pause state of the video
            buttonPlayPause(obj,obj.PlayPauseBtn);
        end
        function nextFrame(obj)
+           % NEXTFRAME advances one frame in all active views
            arrayfun(@(v) v.frameF, obj.nigelCamArray);
        end
        function previousFrame(obj)
+           % PREVIOUSFRAME backs one frame in all active views
            arrayfun(@(v) v.frameB, obj.nigelCamArray);
        end
        function nextTrial(obj)
+           % NEXTTRIAL jumps to the next trial in all active views
            obj.skipToNext(1);
        end
        function previousTrial(obj)
+           % PREVIOUSTRIAL jumps to the previous trial in all active views
            obj.skipToNext(-1);
        end
        function addExternalStreamToCam(obj,prompt,~,~)
+           % ADDEXTERNALSTREAMTOCAM(prompt)
+           % Adds a stream to the current nigelCam.
+           % if <strong>prompt</strong>, the user will be promped to point
+           % to an external matfile where the signal is saved. A time basis
+           % has to be provided, either in the form of a second variable
+           % called "t" (or "time") inside the pointed matfile, or in the form of
+           % a second matfile. If no time basis is provided, Nigel will
+           % assume the stream has the same time basis as the video with
+           % each time point corresponding to each frame.
+           %
+           % if ~<strong>prompt</strong> Nigel will extract the steam from
+           % the video. For more info see <a href="matlab:help nigeLab.libs.nigelCamera.extractSignal">nigeLab.libs.nigelCamera.extractSignal</a>.
+
            if prompt
-            [file,path] = uigetfile(fullfile(obj.Block.Out.Folder,'*.*'),'Select stream to add to nigelCam');
-            if file==0
-                return;
-            end
-            PathToFile = fullfile(path,file);
-            variables = who('-file', PathToFile);
-            if numel(variables) == 1
-            obj.nigelCam.addStream(PathToFile);
-            else
-                this = nigeLab.utils.uidropdownbox('Select variable,','The selected file has more than 1 varibale stored in it.\nPlease select the correct one.',variables);
-                if strcmp(this,'none')
-                    return;
-                end
-                obj.nigelCam.addStream(PathToFile);
-            end
+               [file,path] = uigetfile(fullfile(obj.Block.Out.Folder,'*.*'),'Select stream to add to nigelCam');
+               if file==0
+                   return;
+               end
+               PathToFile = fullfile(path,file);
+               variables = who('-file', PathToFile);
+               if numel(variables) == 1
+                   obj.nigelCam.addStream(PathToFile);
+               else
+                   this = nigeLab.utils.uidropdownbox('Select variable,','The selected file has more than 1 varibale stored in it.\nPlease select the correct one.',variables);
+                   if strcmp(this,'none')
+                       return;
+                   end
+                   obj.nigelCam.addStream(PathToFile,this);
+               end
            else
-            obj.nigelCam.addStream();
+               obj.nigelCam.addStream();
            end
        end
-       function deleteExternalStreamToCam(obj,~,~,stream,strmNode)
+       function deleteExternalStreamToCam(obj,stream,strmNode,~,~)
+           % DELETEEXTERNALSTREAMTOCAM(obj,stream,node) deletes the
+           % video stream specified by <strong>stream</strong> and its corresponding node in
+           % the signal tree (specified by <strong>strmNode</strong>);
+           % If only one argument is provided it prompts the user to chose
+           % a stream from a dropdown menu.
+
+           if nargin<3
+               % prompts the user to select the stream to delete
+               Allnodes = obj.SignalTree.Children(2).Children;
+               AllStreams = obj.nigelCam.Streams;
+
+               AllnodesNames = {Allnodes.Text};
+               AllStreamsNames = {AllStreams.name};
+
+               str = nigeLab.utils.uidropdownbox(...
+                   'Select stream to delete','What stream do you want to delete?',AllnodesNames,true);
+               if strcmp(str,'none')
+                    return;
+               else
+                   stream = AllStreams(strcmp(str,AllStreamsNames));
+                   strmNode = Allnodes(strcmp(str,AllnodesNames));
+               end
+           elseif nargin == 2
+               error('Not enough input arguments. Either 1 or 3.');
+           elseif nargin > 3
+               error('Too many input arguments.');
+           end
+
            selection = uiconfirm(obj.sigFig,...
                sprintf('Are you sure?\nThis will also erase the signal from the disk.'),...
                'Delete signal','Icon','warning');
@@ -1003,23 +997,48 @@ classdef VidScorer < matlab.mixin.SetGet
                if isfield(stream,'time')
                    delete(stream.data.getPath);
                end
-               
+
                idx = obj.nigelCam.Streams == stream;
                delete(stream);
                obj.nigelCam.Streams(idx) = [];
-               
+
                delete(strmNode);
-               
+
            end
        end
        function exportFrame(obj)
+           % EXPORTFRAME exports a jpeg version of the current frame from
+           % all active views. The frame is saved in the video folder,
+           % defined in Block.Paths.Video.dir and the file will be named as
+           % [CameraName]Frame000N.jpeg where N is the number of jpeg files
+           % in that folder +1;
            arrayfun(@(x) x.exportFrame,obj.nigelCamArray([obj.exportFrom.Value]));
        end
    end
    
    
-   % PROTECTED, build graphical objects
-   methods (Access=protected)
+   % PRIVATE, build graphical objects and add listeners
+   methods (Access=private)
+      % Add Listeners
+      function addListeners(obj)
+          obj.listeners = addlistener(obj.nigelCam,'timeChanged',@(src,evt)obj.updateTimeMarker);
+          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.updateEvtGraphicList)];
+          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.updateLblGraphicList)];
+          
+          obj.listeners = [obj.listeners addlistener(obj.nigelCam,'streamAdded',@(src,evt)obj.updateStreams(evt,src))];
+          
+          obj.listeners = [obj.listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
+          obj.listeners = [obj.listeners addlistener(obj,'NeuOffset','PostSet',@obj.NeuOffsetChanged)];
+          
+          obj.listeners = [obj.listeners addlistener(obj,'evtAdded',@(src,evt)obj.Block.addEvent(evt))];
+          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
+          obj.listeners = [obj.listeners addlistener(obj,'lblAdded',@(src,evt)obj.Block.addEvent(evt))];
+          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
+          
+          obj.listeners = [obj.listeners addlistener(obj,'evtModified',@(src,evt)obj.Block.modifyEvent(evt))];
+
+      end
+        
       % Make all the graphics for tracking relative position of neural
       function buildTimeAxesGraphics(obj)
          % BUILDSTREAMGRAPHICS  Make all graphics for tracking relative
@@ -1036,7 +1055,7 @@ classdef VidScorer < matlab.mixin.SetGet
              'ToolBar','none',...
              'MenuBar','none',...
              'Color',nigeLab.defaults.nigelColors('bg'),...
-             'KeyPressFcn',@(src,evt)nigeLab.workflow.defaultVideoScoringHotkey(evt,obj),...
+             'KeyPressFcn',@(src,evt)nigeLab.workflow.VideoScoringHotkey(evt,obj),...
              'CloseRequestFcn',@(src,evt)obj.delete);
          g = uigridlayout(obj.sigFig,[2 3],...
              'Padding',3*ones(1,4),...
@@ -1181,7 +1200,7 @@ classdef VidScorer < matlab.mixin.SetGet
               % create treenode menu to plot/hide and delete
              mm = uicontextmenu(obj.sigFig);
              m1 = uimenu(mm,'Text','Delete',...
-                 'MenuSelectedFcn',@(evt,src)obj.deleteExternalStreamToCam(evt,src,obj.nigelCam.Streams(tt),strmNode));
+                 'MenuSelectedFcn',@(evt,src)obj.deleteExternalStreamToCam(obj.nigelCam.Streams(tt),strmNode,evt,src));
              m1 = uimenu(mm,'Text','Plot signal',...
                  'Checked',false,...
                  'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,pltData));
@@ -1194,6 +1213,26 @@ classdef VidScorer < matlab.mixin.SetGet
          obj.addTimeMarker();
       end
       
+      % Add "Time Marker" line to axes
+      function addTimeMarker(obj)
+         %ADDTIMEMARKER  Adds "time marker" line to axes
+         %
+         %  addTimeMarker(obj);
+         x = obj.nigelCam.Time;
+         obj.Now = line(obj.sigAxes,[x x],[0 1.1],...
+            'DisplayName','Time',...
+            'Tag','Time',...
+            'LineWidth',1,...
+            'LineStyle','-',...
+            'Marker','v',...
+            'MarkerIndices',2,... % Only show top marker
+            'MarkerSize',10,...
+            'MarkerEdgeColor',[0 0 0],...
+            'MarkerFaceColor',nigeLab.defaults.nigelColors('g'),...
+            'Color',nigeLab.defaults.nigelColors('sfc'),...
+            'HitTest','off');
+      end
+
       function buildCmdPanel(obj)
                     
          % Create axes for "left-scroll" arrow
@@ -1435,13 +1474,13 @@ classdef VidScorer < matlab.mixin.SetGet
           end
           
           % Build Trial progression bar
-          obj.trialProgAx = axes(obj.evtFigure,'Units','normalized',...
+          trialProgAx = axes(obj.evtFigure,'Units','normalized',...
               'Position',[0 0 1 .03],'Toolbar',[],...
               'Color',nigeLab.defaults.nigelColors('sfc'));
-          obj.trialProgAx.XAxis.Visible = false;
-          obj.trialProgAx.YAxis.Visible = false;
-          xlim(obj.trialProgAx,[0 1]);
-          ylim(obj.trialProgAx,[0 1]);
+          trialProgAx.XAxis.Visible = false;
+          trialProgAx.YAxis.Visible = false;
+          xlim(trialProgAx,[0 1]);
+          ylim(trialProgAx,[0 1]);
           pct = obj.TrialIdx ./ obj.nTrial;
           obj.trialProgBar = patch([0 pct pct 0],[0 0 1 1],nigeLab.defaults.nigelColors('primary'));
           
@@ -2093,6 +2132,8 @@ classdef VidScorer < matlab.mixin.SetGet
          drawnow;
       end
       
+      % Callback function to minimize all popups panels as camPanel and
+      % ExportPanel
       function minimizePopUps(obj)
           % helper function to minimize all popups
          popupPans = [obj.exportPanel obj.camPanel];
@@ -2122,7 +2163,7 @@ classdef VidScorer < matlab.mixin.SetGet
             dims = [0, n];
          end
          
-         obj = nigeLab.libs.TimeScrollerAxes(dims);
+         obj = nigeLab.libs.VidScorer(dims);
       end
    end
    

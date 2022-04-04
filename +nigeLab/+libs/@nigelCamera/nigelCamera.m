@@ -1,10 +1,63 @@
 classdef nigelCamera < matlab.mixin.SetGet
    %NIGELCAMERA  Object with data about all videos from a source camera
    % This object handles passing from a video to the next one and stitching
-   % them together
+   % them together. It provides a matlab interface to simple VideoReader
+   % mex function built using openCV 3.1.4.3
+   %
+   % nigelCamera Methods to the mex interface:
+   %
+%    pause    -      Pauses video reproduction
+%    play     -      Starts video reproduction
+%    seek     -      Sets the video to a particoular time [ms]
+%    frameF   -      Advances one frame.
+%    framB    -      Backs one frame.
+%    setBufferSize - Sets the buffer size [int - frame numbers]
+%    setSpeed    -   Sets reproduction speed [int - number]
+%    showThumb   -   Opens reproduction window
+%    startBuffer -   Starts video buffering. Automatically called upon play
+%    stopBuffer  -   Stops video buffering. Called upon delete
+%    closeFig    -   Closes the reproduction figure. Called upon delete
+%    crop        -   Crops the video for reproduction (does not actually modify the video)
+%    exportFrame -   Exports current frame as jpeg to paths set in
+%                    Paths.VidStreams of block.
+%    extractSignal - Prompts the user to set a ROI and a Normalization_ROI.
+%                    For each frame, it extracts the mean value of ROI 
+%                    normalized over the mean value of Normalization_ROI.
+%
+% nigelCamera other public Methods:
+% addVideos - Adds videos specified in path to nigelCamera. If no input is
+%             provided refreshes the videos in Paths recreating the mex objects.
+% getTimeSeries - returns the full video time in [ms] (untransformed by
+%                 VideoOffset and VideoStretch).
+% addStream  - Adds a stream to nigelCamera.
+% setActive  - Sets the private property Active. Inactive videos do not
+%              respond to comands such as play/pause, framF/B etc.
+% getSynchedTime - returns input t transformed by VideoOffset and
+%                  VideoStretch.
+%
+% nigelCamera Properties:
+%  Meta - Structure containing metadata about the video parsed both from
+%         video name and from video file.
+% Streams - Streams associated to video file. They can be created from the
+%           video itself or added from an external file. This filed is
+%           populated using ADDSTREAM function
+% VideoOffset - Set using nigeLab.libs.Vidscorer interface. Specifies the
+%               offset between the video time and (usually) the ePhys time.
+%               It is only a translational factor.
+% VideoStretch - Set using nigeLab.libs.Vidscorer interface. Specifies the
+%                strecthing factor i.e. corrects for inconsistencies
+%                between sampling frequencies. See getSynchedTime.
+% Time - Now. It returns the time corresponding to the displayed frame.
+%        This is only set when the video is paused.
+% FrameIdx - As above, but returns the frame index instead of frame time.
+% Name - Cameta name.
+% Paths - Paths to all videos in nigelCamera.
+
+
+
+
    %   
    %  cameraObj = nigeLab.libs.nigelCamera(timeAxesObj);
-   %  * Constructor is restricted to be called from `TimeScrollerAxes`
    
    % % % PROPERTIES % % % % % % % % % %     
    % ABORTSET,DEPENDENT,TRANSIENT,PUBLIC
@@ -20,34 +73,29 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
    
    properties (SetAccess=?nigeLab.libs.VidScorer)
-        VideoOffset      (1,1)double = 0;
-        VideoStretch     (1,1)double = 0;
+        VideoOffset      (1,1)double = 0;       % double. Set beginning offset between video and world
+        VideoStretch     (1,1)double = 0;       % double. Set the streatching factor: correccts for inconsistencies between sampling frequencies.
    end
    
-   properties (Transient,GetAccess=private)
+   properties (Transient,Access=private)
       VideoReader                             % Array of video objects interface (c++ mex function)
+
+      TS                   double = [];     % Time vector
    end
    
-   % DEPENDENT,TRANSIENT,PUBLIC
+   % TRANSIENT
    properties (Transient,SetAccess=?nigeLab.nigelObj)
       Parent                        % Parent nigeLab.Block object 
    end
-   
-   % TRANSIENT,HIDDEN,PUBLIC
-   properties(Transient,Access=private)
-      NeuTime_       (1,1) double = 0  % Current neural time
-      TS                   double = [];
+      
+   properties(Dependent,SetAccess=private)
+       Time   % This frame's time
+       Name   % camera name
+       FrameIdx %This frame index
+       Paths % All videos paths
    end
    
-   
-   properties(Dependent)
-       Time   
-       Name
-       FrameIdx
-       Paths
-   end
-   
-   properties(Access=private)
+   properties(GetAccess=public,SetAccess=private,Hidden)
       Time_ (1,1) double = 0        % Current "Series Time"
       TimeIdx_ (1,1) double = 1
       Name_
@@ -60,12 +108,12 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
    
    % % % METHODS% % % % % % % % % % % %
-   % NO ATTRIBUTES (overloaded)
    methods
       % % % (DEPENDENT) GET/SET.PROPERTY METHODS % % % % % % % % % % % %
-      % [DEPENDENT]  .Time references .SeriesTime_
+      % [DEPENDENT]  .Time references .Time_. Also takes care of conversion
+      % of video time to the world.
       function value = get.Time(obj)
-         %GET.TIME  Returns .Time (references .SeriesTime_)
+         %GET.TIME  Returns .Time (references .Time_)
          value = obj.getSynchedTime(...
              obj.Time_,...
              'video2ext');
@@ -90,10 +138,12 @@ classdef nigelCamera < matlab.mixin.SetGet
          %GET.TIME  Returns .Time (references .SeriesTime_)
          [~,idx] = min(abs( obj.Time_ - obj.getTimeSeries));
       end
-      function set.FrameIdx(obj,value)
+      function set.FrameIdx(~,~)
       end
       
-      function set.Name(obj,value)
+      % [DEPENDENT]  .Name references Name_. First time it is called it
+      % parses the information from Meta.CameraID
+      function set.Name(~,~)
       end
       function value = get.Name(obj)
           if isempty(obj.Name_)
@@ -104,7 +154,9 @@ classdef nigelCamera < matlab.mixin.SetGet
           value = obj.Name_;
       end
       
-      function set.Paths(obj,value)
+      % [DEPENDENT]  .Paths references VideoPaths. Just a proxy for
+      % convenience.
+      function set.Paths(~,~)
       end
       function value = get.Paths(obj)
           value = obj.VideoPaths;
@@ -112,82 +164,85 @@ classdef nigelCamera < matlab.mixin.SetGet
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 end
    
-   % RESTRICTED:nigeLab.libs.TimeScrollerAxes (constructor)
-   methods %(Access={?nigeLab.libs.TimeScrollerAxes,?nigeLab.Block,?nigeLab.nigelObj})
-      % Class constructor
-      function obj = nigelCamera(blockObj,Paths,varargin)
-         %NIGELCAMERA  Constructor for object to reference video series
-         %   
-         %  cameraObj = nigeLab.libs.nigelCamera(blockObj,Paths,varargin);
-         %  Paths can either be a path to a folder containing videos or a
-         %  cell array to paths for videos.
-         %  If the path points to a folder, naming parsing needs to be
-         %  done. In order to do so the correspoding default file will be
-         %  called.
-         %
-         if isa(blockObj,'nigeLab.Block')
-             obj.Parent = blockObj;
-         else
-             error(['nigeLab:' mfilename ':BadClass'],...
-                 ['\t\t->\t<strong>[BLOCKOBJ]</strong>: ' ...
-                 'First input needs to be `nigeLab.Block`\n']);
-         end
-       Pars = blockObj.Pars.Video;
-         % Error checking on Paths
-         if ~iscell(Paths)
-             if ischar(Paths) && exist(Paths,'dir')
-                 vFiles = cellfun(@(ext)...
-                     dir(sprintf('%s%c%s',Paths,filesep,ext)),...
-                     Pars.ValidVidExtensions(:,1),'UniformOutput',false);
-                 vFiles = cat(1,vFiles{:});
-                 
-                 if isempty(vFiles) && Pars.UseVideoPromptOnEmpty
-                     Paths = uigetdir(Pars.DefaultSearchPath,'Please, select the video folder.');
-                     vFiles = cellfun(@(ext)...
-                     dir(sprintf('%s%c*%s',Paths,filesep,ext)),...
-                     Pars.ValidVidExtensions);
-                 end
-                 
-                 Paths = arrayfun(@(f) fullfile(f.folder,f.name),vFiles,'UniformOutput',false);
-             elseif ischar(Paths) && exist(Paths,'file')
+methods
+    % Class constructor
+    function obj = nigelCamera(blockObj,Paths,varargin)
+        %NIGELCAMERA  Constructor for object to reference video series
+        %
+        %  cameraObj = nigeLab.libs.nigelCamera(blockObj,Paths,varargin);
+        %  Paths can either be a path to a folder containing videos or a
+        %  cell array to paths for videos.
+        %  If the path points to a folder, naming parsing needs to be
+        %  done. In order to do so the correspoding default file will be
+        %  called.
+        %
+        if isa(blockObj,'nigeLab.Block')
+            obj.Parent = blockObj;
+        else
+            error(['nigeLab:' mfilename ':BadClass'],...
+                ['\t\t->\t<strong>[BLOCKOBJ]</strong>: ' ...
+                'First input needs to be `nigeLab.Block`\n']);
+        end
+        Pars = blockObj.Pars.Video;
+        % Error checking on Paths
+        if ~iscell(Paths)
+            if ischar(Paths) && exist(Paths,'dir')
+                vFiles = cellfun(@(ext)...
+                    dir(sprintf('%s%c%s',Paths,filesep,ext)),...
+                    Pars.ValidVidExtensions(:,1),'UniformOutput',false);
+                vFiles = cat(1,vFiles{:});
+
+                if isempty(vFiles) && Pars.UseVideoPromptOnEmpty
+                    Paths = uigetdir(Pars.DefaultSearchPath,'Please, select the video folder.');
+                    vFiles = cellfun(@(ext)...
+                        dir(sprintf('%s%c*%s',Paths,filesep,ext)),...
+                        Pars.ValidVidExtensions);
+                end
+
+                Paths = arrayfun(@(f) fullfile(f.folder,f.name),vFiles,'UniformOutput',false);
+            elseif ischar(Paths) && exist(Paths,'file')
                 Paths = {Paths};
-             else
-                 error(['nigeLab:' mfilename ':BadInArg'],...
-                 ['\t\t->\t<strong>[Paths]</strong>: ' ...
-                 'Second input needs to be a path to a video file or directory oa a cell array of paths\n']);
-             end
-             
-         end
-         % No error-checking here
-         for iV = 1:2:numel(varargin)
+            else
+                error(['nigeLab:' mfilename ':BadInArg'],...
+                    ['\t\t->\t<strong>[Paths]</strong>: ' ...
+                    'Second input needs to be a path to a video file or directory oa a cell array of paths\n']);
+            end
+
+        end
+        % No error-checking here
+        for iV = 1:2:numel(varargin)
             obj.(varargin{iV}) = varargin{iV+1};
-         end
-         obj.VideoPaths = [];
-         obj.addVideos(Paths);
-         
-         obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
-         
-      end
-      
-       %% Destructor - Destroy the C++ class instance
-        function delete(obj)
-            if ~isempty(obj.VideoReader)
-                simpleVideoReader('closeFig', obj.VideoReader);
-                simpleVideoReader('delete', obj.VideoReader);
-            end
-            obj.VideoReader = [];
         end
-        
-        
-        function obj = loadobj(a)
-            if isa(a, 'nigeLab.libs.nigelCamera')
-                a.addVideos(a.VideoPaths);
-            end
+        obj.VideoPaths = [];
+        obj.addVideos(Paths);
+
+        obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
+
+    end
+
+    % Class destructor
+    function delete(obj)
+        %DELETE  Destructor for object. Also takes care of destroying video
+        %objects.
+        if ~isempty(obj.VideoReader)
+            simpleVideoReader('closeFig', obj.VideoReader);
+            simpleVideoReader('delete', obj.VideoReader);
         end
-   end
+        obj.VideoReader = [];
+    end
+
+    % Class loader
+    function a = loadobj(a)
+    %LOAD override function. Takes care of reinitializing all c++
+    %videoreader objects
+        if isa(a, 'nigeLab.libs.nigelCamera')
+            a.addVideos(a.VideoPaths);
+        end
+    end
+end
    
-   % PROTECTED
-   methods (Access=protected)
+   % PRIVATE
+   methods (Access=private)
       function parseTime(obj)
          %PARSETIME   Parses concatenated vector for .Time_ property
          %
@@ -208,10 +263,6 @@ end
    
    
    methods (Access=public)
-       
-       function closeFig(obj)
-           simpleVideoReader('closeFig', obj.VideoReader);
-       end
        
        function addVideos(obj,Paths)
           % Add videoFiles to the Videos field using paths 
@@ -274,12 +325,13 @@ end
                                 answer = questdlg(sprintf(quest),'Where is time?','Yes!','No...','Yes!');
                                 if strcmp(answer,'Yes!')
                                     [Tfile,Tpath] = uigetfile(fullfile(obj.Parent.Out.Folder,'*.*'),'Select the Time vector.');
-                                    variablesT = who('-file', PathToFile);
-                                    if numel(variablesT) ~= 1
-                                        error('Variable to load is unclear.\n Please provide a time vector with only one variable in it.\n');
+                                    t_varname = who('-file', PathToFile);
+                                    if numel(t_varname) ~= 1
+                                        error('Variable to load is unclear.\n Please provide a time matfile with only one variable in it.\n');
                                     end
-                                    t = load(fullfile(Tpath,Tfile),variablesT{1});
-                                    t = t.(variablesT{1});
+                                    t_varname = t_varname{1};
+                                    t = load(fullfile(Tpath,Tfile),t_varname);
+                                    t = t.(t_varname);
                                 elseif strcmp(answer,'No...')
                                     f = msgbox(sprintf('No problem, Nigel will create one for you!\n(Time basis will be the same as video.)')...
                                         ,'Fine.');
@@ -287,7 +339,10 @@ end
                                 else
                                     return;
                                 end
-                            elseif any(ismember(variables,{'t','time'}))
+                            elseif numel(variables) == 2 && any( cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables ) )
+                                t_varname = variables{cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables )};
+                                t = load(PathToFile,t_varname);
+                                t = t.(t_varname);
                             else
                                 error('Variable to load is unclear.\n Please specify as third input which variable in the provided file you want to add as a Stream.\n');
                             end
@@ -296,6 +351,9 @@ end
                       sig = sig.(varname);
                   otherwise
                       error('Unknow file format. File format %s not yet supported.\n',ext);
+              end
+              if numel(sig) ~= numel(t)
+                error('Dimension mismatch between %s and %s',varname,t_varname);
               end
               nigelSig = nigeLab.utils.signal('vid',numel(sig),'VidStreams','Streams');
               thisStream = struct('name',varname,'signal',nigelSig,'Key',nigeLab.utils.makeHash,'fs',mean([obj.Meta.frameRate]));
@@ -310,8 +368,15 @@ end
           evtData = nigeLab.evt.vidstreamAdded(thisStream);
           notify(obj,'streamAdded',evtData);
        end
-       
+
        function setActive(obj,val)
+           % SETACTIVE(obj,val) sets Active (private) property to <strong>val</strong>. 
+           %
+           % If Active isfalse the video does not  respond to the mex 
+           % interface commands.
+           % See also PLAY, PAUSE, FRAMEF, FRAMEB, SEEK, CROP, EXPORTFRAME,
+           % SHOWTHUMB.
+
            obj.Active = val;
            if val
                obj.startBuffer;
@@ -321,101 +386,18 @@ end
                obj.closeFig;
            end
        end
-   end % methods public
-   
-   % Mex interface methods. Methods in this section are used to comunicate
-   % with the c++ class
-   methods (Access=public)
-       function startBuffer(obj)
-          simpleVideoReader('startBuffer',obj.VideoReader);
-       end
-       
-       function stopBuffer(obj)
-           simpleVideoReader('stopBuffer',obj.VideoReader);
-       end
-       
-       function play(obj)
-            if ~obj.Active
-               return;
-           end
-           if ~obj.WindowOpened
-              showThumb(obj);
-           end
-           simpleVideoReader('play',obj.VideoReader);
-       end
-       
-       function showThumb(obj)
-           nn = obj.Name;
-           if isempty(nn)
-               nn = 'Video';
-           end
-           simpleVideoReader('showThumb',obj.VideoReader,nn);
-           obj.Active = true;
-           obj.WindowOpened = true;
-       end
-       
-       function pause(obj)
-           obj.Time = simpleVideoReader('pause',obj.VideoReader);
-       end
-       
-       function seek(obj,t)
-           if ~obj.Active
-               return;
-           end
-           
-            t = obj.getSynchedTime(t,'ext2video');
-           obj.Time = simpleVideoReader('seek',obj.VideoReader,t);
-       end
-       
-       function frameF(obj)
-           if ~obj.Active
-               return;
-           end
-          obj.Time = simpleVideoReader('frameF',obj.VideoReader);
-       end
-       
-       function frameB(obj)
-           if ~obj.Active
-               return;
-           end
-          obj.Time = simpleVideoReader('frameB',obj.VideoReader);
-       end
-       
-       function setSpeed(obj,s)
-          simpleVideoReader('setSpeed',obj.VideoReader,s);
-       end
-       
-       function setBufferSize(obj,N)
-          simpleVideoReader('setBufferSize', obj.VideoReader,N); 
-       end
-       
-       function crop(obj)
-           simpleVideoReader('drawROI',obj.VideoReader);
-       end
-       
-       function exportFrame(obj)
-           NFrames = numel(dir(fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame*.jpg',obj.Name))));
-           thisPath = fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame%.4d.jpg',obj.Name,NFrames));
-           simpleVideoReader('exportF',obj.VideoReader,thisPath);
-       end
 
-       function [sig,t] = extractSignal(obj)
-           % EXTRACTSIGNAL prompts the suer to select a roi on the video thumbanail. 
-           % It later proceeds to compute the maximum brightness of the
-           % selected ROI throughout the video and returns the computed
-           % value. This is useful when LED are used for synchronization
-           % purposes. 
-           %
-           % To abort the operation keep pressed the ESC button for a
-           % couple of seconds
-          [sig,t] =  simpleVideoReader('getMeanVal',obj.VideoReader);
-          
-       
-       end
-       
        function tt = getSynchedTime(obj,t,direction)
-           
-           switch direction           
+           % TT = GETSYNCHEDTIME(obj,t,direction)
+            % When VideoOffset and VideoStretch are set returns input <strong>t</strong>
+            % properly transformed to reflect <strong>direction</strong>. This method is
+            % also called when <a href="matlab:help('nigeLab.libs.nigelCamera.Time')">Time</a> property is returned assuming it is
+            % preferible to keep that varible synched with the outside
+            % world.
+            % <strong>direction</strong> can be:
+            % <strong>video2ext</strong> - converts t from video time to world time
+            % <strong>ext2video</strong> - converts t from world time to video time
+           switch direction
                case 'video2ext'
                    [~,idx] = min( abs(obj.getTimeSeries - t));
                    tt = obj.TS(idx) -  obj.VideoOffset - idx.* obj.VideoStretch;
@@ -426,43 +408,178 @@ end
                    tt = trueVideoTime(idx);
            end
        end
-   end
+   end % methods public
    
-   methods (Access=private)
-       
-   end
+   % Mex interface methods. Methods in this section are used to comunicate
+   % with the c++ class
+   methods (Access=public)
+       function startBuffer(obj)
+%        Starts video buffering. Automatically called upon PLAY    
+           simpleVideoReader('startBuffer',obj.VideoReader);
+       end
+
+       function stopBuffer(obj)
+%        Stops video buffering. Automatically called upon DELETE
+           simpleVideoReader('stopBuffer',obj.VideoReader);
+       end
+
+       function play(obj)
+           % If Active, plays video
+           if ~obj.Active
+               return;
+           end
+           if ~obj.WindowOpened
+               showThumb(obj);
+           end
+           simpleVideoReader('play',obj.VideoReader);
+       end
+
+       function showThumb(obj)
+           % If Active, opens a window for video reproduction
+            if ~obj.Active
+               return;
+           end
+           nn = obj.Name;
+           if isempty(nn)
+               nn = 'Video';
+           end
+           simpleVideoReader('showThumb',obj.VideoReader,nn);
+           obj.Active = true;
+           obj.WindowOpened = true;
+       end
+
+       function pause(obj)
+           % If Active, pauses video reproduction
+            if ~obj.Active
+               return;
+           end
+           obj.Time = simpleVideoReader('pause',obj.VideoReader);
+       end
+
+       function seek(obj,t)
+           % If Active, seeks to a specified time (input t)
+           if ~obj.Active
+               return;
+           end
+
+           t = obj.getSynchedTime(t,'ext2video');
+           obj.Time = simpleVideoReader('seek',obj.VideoReader,t);
+       end
+
+       function frameF(obj)
+           % If Active, advances one frame
+           if ~obj.Active
+               return;
+           end
+           obj.Time = simpleVideoReader('frameF',obj.VideoReader);
+       end
+
+       function frameB(obj)
+           % If Active, backs one frame
+           if ~obj.Active
+               return;
+           end
+           obj.Time = simpleVideoReader('frameB',obj.VideoReader);
+       end
+
+       function setSpeed(obj,s)
+           % SETSPEED(obj,s)
+           % Sets video reproduction speed to <strong>s</strong>. No limit is set but for
+           % reproduction speeds higher than 30 fps frame skipping is
+           % implemented (which is finne - it is doneonly during play,
+           % frameF/B always show all frames) and for reproduction speeds
+           % higher than 240 fps there are usually buffering problems (i.e.
+           % the video stops to replenish the buffer, like YT in the 90's).
+           simpleVideoReader('setSpeed',obj.VideoReader,s);
+       end
+
+       function setBufferSize(obj,N)
+           % SETBUFFERSIZE(obj,N)
+           % Sets video buffer size to <strong>N</strong> frames. Keep in mind that no
+           % checks are done on memory. If N is too big, it will saturate
+           % your RAM and matlab will become unresponsive. Default value is
+           % usually way more than it's needed and is set to 600.
+           simpleVideoReader('setBufferSize', obj.VideoReader,N);
+       end
+
+       function crop(obj)
+           % Opens a dialog to crop video visualization. No changes are
+           % done to the actual video.
+            if ~obj.Active
+               return;
+           end
+           simpleVideoReader('drawROI',obj.VideoReader);
+       end
+
+       function exportFrame(obj)
+           % Exports current frame as jpeg. Path of export is defined in
+           % obj.Parent.Paths.Video.dir and the jpeg name will be
+           % [obj.Name]Frame[n+1].jpg where n is the number of files that
+           % follow this naming scheme in the folder,
+            if ~obj.Active
+               return;
+           end
+           NFrames = numel(dir(fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame*.jpg',obj.Name))));
+           thisPath = fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame%.4d.jpg',obj.Name,NFrames));
+           simpleVideoReader('exportF',obj.VideoReader,thisPath);
+       end
+
+       function [sig,t] = extractSignal(obj)
+           % EXTRACTSIGNAL prompts the suer to select a roi on the video thumbanail.
+           % It later proceeds to compute the maximum brightness of the
+           % selected ROI throughout the video and returns the computed
+           % value. This is useful when LED are used for synchronization
+           % purposes.
+           %
+           % To abort the operation keep pressed the ESC button for a
+           % couple of seconds
+            if ~obj.Active
+               return;
+           end
+           [sig,t] =  simpleVideoReader('getMeanVal',obj.VideoReader);
+
+
+       end
+
+       function closeFig(obj)
+           % Closes the video reproduction window.
+           simpleVideoReader('closeFig', obj.VideoReader);
+       end
+
+   end % methods public - c++ interface
    
-   % PROTECTED,STATIC
-   methods (Static,Access=protected)
-      function idx = getSeriesIndex(seriesTime,seriesTimeInfo)
-         %GETSERIESINDEX  Returns index based on series start/stop times
-         %
-         %  idx = nigeLab.libs.nigelCamera(seriesTime,seriesTimeInfo);
-         %
-         %  seriesTime : Scalar -- time to update series to
-         %  seriesTimeInfo : nSeries x 3 matrix
-         %     * Column 1 -- "Enabled" (1) or "Disabled" (0)
-         %     * Column 2 -- Start times (SERIES) (greater than or equals)
-         %     * Column 3 -- Stop times (SERIES)  (less than)
-         %
-         
-         if isempty(seriesTime) || isempty(seriesTimeInfo)
-            idx = [];
-            return;
-         end
-         
-         % Uses mask:
-         % idx = find(seriesTimeInfo(:,1) & ...
-         %           (seriesTime >= seriesTimeInfo(:,2)) & ...
-         %           (seriesTime <  seriesTimeInfo(:,3)),1,'first');
-         
-         % Disregards mask:
-         idx = find( ...
-                   (seriesTimeInfo(:,2) <= seriesTime) & ...
-                   (seriesTimeInfo(:,3) > seriesTime),1,'last');
-                % Note: in case of overlap in times, use "later" video.
-      end
-   end
+%%    Probably deprecated
+%    % PROTECTED,STATIC
+%    methods (Static,Access=protected)
+%       function idx = getSeriesIndex(seriesTime,seriesTimeInfo)
+%          %GETSERIESINDEX  Returns index based on series start/stop times
+%          %
+%          %  idx = nigeLab.libs.nigelCamera(seriesTime,seriesTimeInfo);
+%          %
+%          %  seriesTime : Scalar -- time to update series to
+%          %  seriesTimeInfo : nSeries x 3 matrix
+%          %     * Column 1 -- "Enabled" (1) or "Disabled" (0)
+%          %     * Column 2 -- Start times (SERIES) (greater than or equals)
+%          %     * Column 3 -- Stop times (SERIES)  (less than)
+%          %
+%          
+%          if isempty(seriesTime) || isempty(seriesTimeInfo)
+%             idx = [];
+%             return;
+%          end
+%          
+%          % Uses mask:
+%          % idx = find(seriesTimeInfo(:,1) & ...
+%          %           (seriesTime >= seriesTimeInfo(:,2)) & ...
+%          %           (seriesTime <  seriesTimeInfo(:,3)),1,'first');
+%          
+%          % Disregards mask:
+%          idx = find( ...
+%                    (seriesTimeInfo(:,2) <= seriesTime) & ...
+%                    (seriesTimeInfo(:,3) > seriesTime),1,'last');
+%                 % Note: in case of overlap in times, use "later" video.
+%       end
+%    end
    % % % % % % % % % % END METHODS% % %
 end
 
