@@ -31,17 +31,12 @@ classdef VidScorer < matlab.mixin.SetGet
    % % % PROPERTIES % % % % % % % % % %
    % DEPENDENT,PUBLIC
    properties (Access=private)
-      VideoTime    double  = 0    % Video time as returned from nigelCam                    TOCHECK
-      NeuTime      double  = 0    % Neural time corresponding to current frame (from parent) TOREMOVE
-      VideoOffset (1,1) double  = 0    % Alignment offset from start of video series            TOREMOVE
       nTrial      (1,1) double  = 0     % Total number of trials in blockObj
       
    end
    
    properties (SetObservable,Access=private)
       TrialIdx    (1,1) double  = 0    % Current trial Index
-      NeuOffset   (1,1) double  = 0    % Alignment offset between vid and dig TOREMOVE
-
    end
    
    % Gui eleemnts
@@ -157,12 +152,7 @@ classdef VidScorer < matlab.mixin.SetGet
 %              obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
 %          end
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
-         if isempty(obj.nigelCam.VideoOffset)
-             obj.NeuOffset = 0;
-         else
-             obj.NeuOffset =  -obj.nigelCam.VideoOffset;
-         end
-         
+                  
          % Parse input arguments
          for iV = 1:2:numel(varargin)
             obj.(varargin{iV}) = varargin{iV+1};
@@ -270,13 +260,7 @@ classdef VidScorer < matlab.mixin.SetGet
            idx = [idx_ find(idx)];
       end
       
-      % DEPRECATED TOREMOVE
-%       function T = projectInVideoTime(obj,t)
-%           T = nan(size(t));
-%           [~,idx]=arrayfun(@(x) min(abs(obj.VideoTime  - x)),t);
-%           trueVideoTime = obj.nigelCam.getTimeSeries;
-%           T = trueVideoTime(idx);
-%       end
+      
    end
    
    % private Callbacks
@@ -300,19 +284,6 @@ classdef VidScorer < matlab.mixin.SetGet
           [obj.lblElementList.Visible] = deal(false);
           [obj.lblElementList([obj.TrialLbls.Trial] == obj.TrialIdx).Visible] = deal(true);
       end
-      function NeuOffsetChanged(obj,~,~)
-          obj.VideoOffset = -obj.NeuOffset;
-          obj.Block.VideoOffset = obj.VideoOffset;
-          obj.nigelCam.VideoOffset = -obj.NeuOffset;
-         VidNodes =  obj.SignalTree.Root.Children(strcmp({obj.SignalTree.Root.Children.Name},'Video streams')).Children;
-%          for nn = VidNodes
-%              UD = nn.UserData;
-%              if isfield(UD,'ReducedPlot')
-%                  UD.ReducedPlot.x = {UD.Time + obj.NeuOffset};
-%              end
-%          end
-      end
-
       % callback function called when a new stream is added. It takes care
       % of adding a new node to the tree
       function updateStreams(obj,src,~,cam)
@@ -819,16 +790,12 @@ classdef VidScorer < matlab.mixin.SetGet
                 % not set, we creat esome artificial time vectors.
                   if strcmp(plotStruct.Type,'Video')
                       % this should never happend, but just in case
-                      if isempty(obj.VideoTime)
-                          tt = (1:numel(dd)) ./ obj.nigelCam.Meta(1).frameRate * 1000;
-                      else
-                          tt = obj.VideoTime;
-                      end
+                      tt = plotStruct.Obj.getTimeSeries();
                   else
-                      if isempty(obj.NeuTime)
+                      if isempty(obj.Block.Time)
                           tt = (1:numel(dd)) ./ obj.Block.SampleRate * 1000;
                       else
-                          tt = obj.NeuTime;
+                          tt = obj.Block.Time;
                       end
                   end
               end
@@ -1088,7 +1055,6 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.listeners = [obj.listeners addlistener(obj.nigelCam,'streamAdded',@(src,evt)obj.updateStreams(evt,src))];
           
           obj.listeners = [obj.listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
-          obj.listeners = [obj.listeners addlistener(obj,'NeuOffset','PostSet',@obj.NeuOffsetChanged)];
           
           obj.listeners = [obj.listeners addlistener(obj,'evtAdded',@(src,evt)obj.Block.addEvent(evt))];
           obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
@@ -1618,12 +1584,6 @@ classdef VidScorer < matlab.mixin.SetGet
       end
       function setMainView(obj,ii)   
          obj.nigelCam  = obj.nigelCamArray(ii);
-         obj.VideoTime = obj.nigelCam.getTimeSeries;
-%          obj.VideoTime = obj.VideoTime- ...
-%              obj.nigelCam.VideoOffset- ...
-%              (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch; 
-         
-         %obj.SignalTree.Children(2:end).Visible=false;
       end
       function setViewActive(obj,~,src,ii)
           obj.nigelCamArray(ii).setActive(src.Value);
@@ -1790,7 +1750,7 @@ classdef VidScorer < matlab.mixin.SetGet
       function addNewEvent(obj,Name,Time,Trial,notify_)
           % Time is in seconds
           if nargin == 1 % no info provided, prompt the user
-             [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.VideoTime(obj.nigelCam.FrameIdx)./1e3)});
+             [Pars] = inputdlg({'Event Name';'Event Time'},'Enter event values.',[1 10],{'event', num2str(obj.nigelCam.Time./1e3)});
              if isempty(Pars)  % cancelled
                  return;
              end
@@ -1799,7 +1759,7 @@ classdef VidScorer < matlab.mixin.SetGet
              Trial = obj.TrialIdx;
              notify_ = true;
          elseif nargin == 2 % Only name provided
-             Time = obj.VideoTime(obj.nigelCam.FrameIdx)./1e3;
+             Time = obj.nigelCam.Time./1e3;
              Trial = obj.TrialIdx;
              notify_ = true;
           elseif nargin == 3
