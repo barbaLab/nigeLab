@@ -242,7 +242,7 @@ void frameF(){
     videoEnabled = false;
     while (videoRunning)
         this_thread::sleep_for(chrono::milliseconds(1));
-    dispFrames();
+    dispFrames(true);
        
 }
 
@@ -251,10 +251,10 @@ void frameB(){
     videoEnabled = false;
     while (videoRunning)
         this_thread::sleep_for(chrono::milliseconds(1));
-    dispFrames();
+    dispFrames(true);
 }
 
-void dispFrames(){         
+void dispFrames(bool frameStepping = false){         
     auto fInterval = std::chrono::milliseconds(1000/30-5); // 30 fps fixed playback speed
     auto start = chrono::system_clock::now();
 
@@ -271,7 +271,7 @@ void dispFrames(){
 
         if (videoEnabled && buffer.size() < (bufferSize/2+2)) { 
             putText(thumb, "Buffering...", Point(ROI.x + 5,ROI.y + ROI.height/2 - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
-            imshow("Video", thumb(ROI));
+            imshow(PlayerName, thumb(ROI));
             mtx.unlock();
             waitKey(1);
             this_thread::sleep_until(start + std::chrono::seconds(2));
@@ -291,7 +291,7 @@ void dispFrames(){
 
         mtx.unlock();
         if (frame_.size().width >= ROI.width && frame_.size().height >= ROI.height && 
-            ++frameCounter % MetaIndex->fpsScaleFactor == 0 ) {
+            ((++frameCounter % MetaIndex->fpsScaleFactor == 0) || frameStepping )) {
             thumb = frame_;
             string str = to_string(ms);
             putText(frame_, str.substr(0, str.find(".")), Point(ROI.x +5,ROI.y + ROI.height - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
@@ -329,35 +329,75 @@ void dispFrames(){
      while(bufferRunning || videoRunning)
         this_thread::sleep_for(chrono::milliseconds(1));
      
-     // erase the buffer
-     mtx.lock();
-        buffer.erase(buffer.begin(), buffer.end());
-        bufferMs.erase(bufferMs.begin(), bufferMs.end());
-     mtx.unlock();
-     msTime = msTime - chrono::duration_cast<chrono::milliseconds>(MetaIndex->frameInterval).count() * seekNFramesLoad;
-     bufferIndex = seekNFramesLoad - 1;
-     //frameIndex = (int)floor(chrono::duration<double,milli>(msTime) / frameInterval) - 1;
+     double msXframe = chrono::duration_cast<chrono::milliseconds>(MetaIndex->frameInterval).count();
+     msTime = msTime - msXframe * seekNFramesLoad;
+    int thisShift = round((msTime - *bufferMs.begin()) / msXframe);
+    //deque<double>::iterator thisFrame = bufferMs.begin() + thisShift;
+    double refine = true;
 
-     // find the videofile index based on the msTime
-     lastDuration = lower_bound(videoDurations.begin(), videoDurations.end(), chrono::milliseconds( (int)floor(msTime)) ) - 1;
-     int64_t n = distance(videoDurations.begin(), lastDuration) - distance(videoPaths.begin(), PathsIndex);
-     advance(PathsIndex, n);
-     //advance(MetaIndex, n);
-     
-     // open the correct videofile
-     mtx.lock();
-        cap.release();
-        cap.open(*PathsIndex, CAP_FFMPEG);
-        cap.set(CAP_PROP_POS_MSEC, msTime - lastDuration->count());
-     mtx.unlock();
+    if (thisShift > 0 && thisShift < bufferMs.size()) {
+        while (bufferMs.at(thisShift) -msTime > 0){
+            // we are ahead, check if the previous frame is closer.
+            if (abs(bufferMs.at(thisShift) - msTime) > abs(bufferMs.at(--thisShift) - msTime))
+                continue;// Nothing to do here
+            else {
+                thisShift++;             //go back to where we were
+                refine = false;
+                break;                   // exit the loop
+            }
+        }
+
+        while ((bufferMs.at(thisShift) - msTime < 0) && refine) {
+            // we are behind, check if the next frame is closer.
+            if (abs(bufferMs.at(thisShift) - msTime) > abs(bufferMs.at(++thisShift) - msTime))
+                continue;// Nothing to do here
+            else {
+                thisShift--;             //go back to where we were
+                break;
+            }
+        }
+
+        mtx.lock();
+        buffer.erase(buffer.begin(), buffer.begin() + thisShift);
+        bufferMs.erase(bufferMs.begin(), bufferMs.begin() + thisShift);
+        mtx.unlock();
+        bufferIndex = seekNFramesLoad - 1;
+    }
+    else {
+        // we are out of the buffer, let's erase it and start anew
+        mtx.lock();
+            buffer.erase(buffer.begin(), buffer.end());
+            bufferMs.erase(bufferMs.begin(), bufferMs.end());
+        mtx.unlock();
+        bufferIndex = seekNFramesLoad - 1;
+        //frameIndex = (int)floor(chrono::duration<double,milli>(msTime) / frameInterval) - 1;
+
+        // find the videofile index based on the msTime
+        lastDuration = lower_bound(videoDurations.begin(), videoDurations.end(), chrono::milliseconds((int)floor(msTime))) - 1;
+        int64_t n = distance(videoDurations.begin(), lastDuration) - distance(videoPaths.begin(), PathsIndex);
+        advance(PathsIndex, n);
+        //advance(MetaIndex, n);
+        if (n == 0)
+            cap.set(CAP_PROP_POS_MSEC, msTime - lastDuration->count());
+        else {
+            // open the correct videofile
+            mtx.lock();
+                cap.release();
+                cap.open(*PathsIndex, CAP_FFMPEG);
+                cap.set(CAP_PROP_POS_MSEC, msTime - lastDuration->count());
+            mtx.unlock();
+        }
+        
+    }
+
  }
 
  void drawROI() {
      // if window is closed, open it
      if (getWindowProperty("Video", WND_PROP_AUTOSIZE) == -1)
-         showThumb();
+         showThumb("ROI Selection");
 
-     ROI = selectROI("Video", thumb, true, false);
+     ROI = selectROI("ROI Selection", thumb, true, false);
  }
 
  getMeanValReturnStr getMeanVal() {

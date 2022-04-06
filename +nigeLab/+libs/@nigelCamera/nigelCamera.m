@@ -27,8 +27,9 @@ classdef nigelCamera < matlab.mixin.SetGet
 % nigelCamera other public Methods:
 % addVideos - Adds videos specified in path to nigelCamera. If no input is
 %             provided refreshes the videos in Paths recreating the mex objects.
-% getTimeSeries - returns the full video time in [ms] (untransformed by
-%                 VideoOffset and VideoStretch).
+% getTimeSeries - returns the full video time in [ms] transformed by
+%                 VideoOffset and VideoStretch. Original time series is
+%                 stored in <a href="matlab:help nigeLab.libs.nigelCamera.TS">TS</a> property, see below.
 % addStream  - Adds a stream to nigelCamera.
 % setActive  - Sets the private property Active. Inactive videos do not
 %              respond to comands such as play/pause, framF/B etc.
@@ -52,6 +53,9 @@ classdef nigelCamera < matlab.mixin.SetGet
 % FrameIdx - As above, but returns the frame index instead of frame time.
 % Name - Cameta name.
 % Paths - Paths to all videos in nigelCamera.
+%
+% TS - Hidden, readonly property with the original video timebased in [ms] 
+%       (untransformed by VideoOffset and VideoStretch).
 
 
 
@@ -77,10 +81,9 @@ classdef nigelCamera < matlab.mixin.SetGet
         VideoStretch     (1,1)double = 0;       % double. Set the streatching factor: correccts for inconsistencies between sampling frequencies.
    end
    
-   properties (Transient,Access=private)
+   properties (Transient,SetAccess=private,Hidden)
       VideoReader                             % Array of video objects interface (c++ mex function)
-
-      TS                   double = [];     % Time vector
+      TS                   double = [];    % Hidden, readonly property with the original video timebased in [ms] (untransformed by VideoOffset and VideoStretch).
    end
    
    % TRANSIENT
@@ -121,7 +124,7 @@ classdef nigelCamera < matlab.mixin.SetGet
       function set.Time(obj,value)
          %SET.TIME  Assign new .Time (updates .Index based on .Time_)
          
-         idx = find(obj.getTimeSeries() == value);
+         idx = find(obj.TS == value);
          if isempty(idx) % Returns empty if "out of bounds"
            idx = round(value/1000/obj.Meta(1).frameRate);
          end
@@ -136,7 +139,7 @@ classdef nigelCamera < matlab.mixin.SetGet
       
       function idx = get.FrameIdx(obj)
          %GET.TIME  Returns .Time (references .SeriesTime_)
-         [~,idx] = min(abs( obj.Time_ - obj.getTimeSeries));
+         [~,idx] = min(abs( obj.Time_ - obj.TS));
       end
       function set.FrameIdx(~,~)
       end
@@ -217,7 +220,7 @@ methods
         obj.addVideos(Paths);
 
         obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
-
+        obj.getTimeSeries();
     end
 
     % Class destructor
@@ -284,6 +287,7 @@ end
 
           obj.VideoPaths = nigeLab.utils.getUNCPath(Paths);
           obj.VideoReader = simpleVideoReader('new',Paths);
+          obj.getTimeSeries;
 %           obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
 %           obj.Lags = cumsum([obj.Meta.duration]);
        end
@@ -294,7 +298,7 @@ end
                TS = arrayfun(@(idx) (nFrames(idx):nFrames(idx+1)-1) .* (1000./obj.Meta(idx).frameRate)  ,1:numel(nFrames)-1 ,'UniformOutput' ,false);
                obj.TS = [TS{:}];
            end
-           TS = obj.TS;
+           TS = obj.TS  -  obj.VideoOffset - (1:numel(obj.TS)).* obj.VideoStretch;
        end
        
        function addStream(obj,PathToFile,varname)
@@ -335,7 +339,7 @@ end
                                 elseif strcmp(answer,'No...')
                                     f = msgbox(sprintf('No problem, Nigel will create one for you!\n(Time basis will be the same as video.)')...
                                         ,'Fine.');
-                                    t = obj.getTimeSeries;
+                                    t = obj.TS;
                                 else
                                     return;
                                 end
@@ -399,10 +403,10 @@ end
             % <strong>ext2video</strong> - converts t from world time to video time
            switch direction
                case 'video2ext'
-                   [~,idx] = min( abs(obj.getTimeSeries - t));
+                   [~,idx] = min( abs(obj.TS - t));
                    tt = obj.TS(idx) -  obj.VideoOffset - idx.* obj.VideoStretch;
                case 'ext2video'
-                   trueVideoTime = obj.getTimeSeries;
+                   trueVideoTime = obj.TS;
                    [~,idx] = min( abs( trueVideoTime - obj.VideoOffset-(1:numel(obj.TS)).*obj.VideoStretch...
                        - t));
                    tt = trueVideoTime(idx);
@@ -462,7 +466,7 @@ end
                return;
            end
 
-           t = obj.getSynchedTime(t,'ext2video');
+          % t = obj.getSynchedTime(t,'ext2video');
            obj.Time = simpleVideoReader('seek',obj.VideoReader,t);
        end
 

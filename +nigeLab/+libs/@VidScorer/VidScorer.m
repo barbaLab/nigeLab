@@ -146,16 +146,16 @@ classdef VidScorer < matlab.mixin.SetGet
 
          obj.nigelCam = nigelCams(1);
          obj.nigelCam.setActive(true);
-         obj.VideoTime = obj.nigelCam.getTimeSeries;
-         obj.VideoTime = obj.VideoTime- ...
-             obj.nigelCam.VideoOffset- ...
-             (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch;
+%          obj.VideoTime = obj.nigelCam.getTimeSeries;
+%          obj.VideoTime = obj.VideoTime- ...
+%              obj.nigelCam.VideoOffset- ...
+%              (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch;
          
          obj.Block = obj.nigelCam.Parent;
-         obj.NeuTime =obj.Block.Time(:);
-         if isempty(obj.NeuTime)
-             obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
-         end
+%          obj.NeuTime =obj.Block.Time(:);
+%          if isempty(obj.NeuTime)
+%              obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
+%          end
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
          if isempty(obj.nigelCam.VideoOffset)
              obj.NeuOffset = 0;
@@ -315,11 +315,12 @@ classdef VidScorer < matlab.mixin.SetGet
 
       % callback function called when a new stream is added. It takes care
       % of adding a new node to the tree
-      function updateStreams(obj,src,~)
+      function updateStreams(obj,src,~,cam)
           if isfield(src,'time') || isprop(src,'time')
-              pltData.Time = src.time;
+              pltData.Time = src.time - cam.VideoOffset- ...
+                        (1:numel(src.time)).* cam.VideoStretch;
           else
-              pltData.Time = obj.nigelCam.getTimeSeries;
+              pltData.Time = cam.getTimeSeries;
           end
               pltData.Data = src.data;
               vidNode = obj.SignalTree.Root.Children(2);
@@ -436,55 +437,68 @@ classdef VidScorer < matlab.mixin.SetGet
       
       % Enables synch mode
       function buttonSynch(obj,src)
-          SelectedNodes = obj.SignalTree.SelectedNodes;
-          CheckedNodes = obj.SignalTree.SelectedNodes;
+          AllNodes = cat(1,obj.SignalTree.Children.Children);
+          idx = arrayfun(@(x)~isempty(x.UserData),AllNodes);        
+          VideoNodes = AllNodes(idx);
+          
+          idx = arrayfun(@(x)x.UserData.OnScreen,VideoNodes);
+          SelectedNodes = VideoNodes(idx);
+          
           zoom(obj.sigAxes,'off');
+          obj.ZoomButton.Value = false;
           if src.Value % synch mode selected
               if numel(SelectedNodes) < 1
                   src.Value = false;
-                 error('Not enough nodes selected to perform synchronization!');
+                  error(['No Video streams plotted!' newline 'Right click on the data node to plot the corresponding stream.']);
               end
-              obj.SignalTree.SelectionChangeFcn = @(~,~)set(obj.SignalTree,'SelectedNodes',SelectedNodes);
-              for nn = SelectedNodes
-                 if ~nn.Checked
-                     nn.Checked = 1;
-                 end
+               idx = 1;
+               for nn = SelectedNodes(:)'
                  nn.UserData.ReducedPlot.h_plot.LineWidth = 1.5;
                  nn.UserData.ReducedPlot.h_plot.HitTest = 'on';
                  nn.UserData.ReducedPlot.h_plot.PickableParts = 'visible';
-
-                 nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = @(src,evt)initMove(nn.UserData.ReducedPlot,obj.sigFig,obj);
-                % set(obj.sigFig, 'windowbuttondownfcn', @(src,evt)initMove(obj.sigAxes));
-                 set(obj.sigFig, 'windowbuttonmotionfcn', @(src,evt)moveStuff(obj.sigAxes,obj.sigFig,obj));
-                 set(obj.sigFig, 'windowbuttonupfcn', @(src,evt)disableMove(obj.sigAxes,obj.sigFig,SelectedNodes,obj));
-                 set(obj.sigAxes,'ButtonDownFcn',[]);
-
-                 CheckedNodes(CheckedNodes==nn) = [];
-              end
-              
-             obj.sigAxes.UserData = struct('init_state',[],'lineObj',[],...
-                 'macro_active',false,'xpos0',[],'currentlinestyle',[],...
-                 'xData',[],'currentTitle','','xNew',[]);
+                 Data(idx).cam = nn.UserData.Obj;
+                 Data(idx).reducedPlot = nn.UserData.ReducedPlot;
+                 Data(idx).MvmtData =  struct(...
+                     'macro_active',false,'xpos0',[],'xNew',[]...
+                     ,'currentlinestyle',[],'currentmarker',[],...
+                     'xData',[],'oldXData',nn.UserData.Obj.getTimeSeries,...
+                     'xOffs','[]','hasMoved',false);
+                 allHPlots(idx)=nn.UserData.ReducedPlot.h_plot;
+                 idx = idx+1;
+                 
+               end
+              obj.sigFig.UserData = Data;
+              arrayfun(@(i) set(allHPlots(i),'ButtonDownFcn',@(src,evt)initMove(obj.sigFig,i)),1:idx-1);
+              set(obj.sigFig, 'windowbuttonmotionfcn', @(src,evt)moveStuff(obj.sigFig));
+              set(obj.sigFig, 'windowbuttonupfcn', @(src,evt)disableMove(obj.sigFig));
+              set(obj.sigAxes,'ButtonDownFcn',[]);
           else % synch mode deactivated
-              obj.SignalTree.SelectionChangeFcn = [];
-               for nn = CheckedNodes
+               idx = 1;
+               Data = obj.sigFig.UserData;
+               moved = false;
+              for nn = SelectedNodes(:)'
                   nn.UserData.ReducedPlot.h_plot.LineWidth = .2;
                   nn.UserData.ReducedPlot.h_plot.HitTest = 'off';
                   nn.UserData.ReducedPlot.h_plot.PickableParts = 'none';
-                 nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = [];
-               end
-               set(obj.sigFig, 'windowbuttonmotionfcn', []);
-               set(obj.sigFig, 'windowbuttonupfcn', []);
-               set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
-               
-               if isempty(obj.sigAxes.UserData.lineObj)
-                  % npthing moved
-                  obj.sigAxes.UserData = [];
-                  return;
-               end
+                  nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = [];
+                  if Data(idx).cam == obj.nigelCam
+                      oldXData = Data(idx).MvmtData.oldXData;
+                      moved = Data(idx).MvmtData.hasMoved;
+                  end
+                  idx = idx +1;
+                  nn.UserData.MvmtData = [];
+              end
+              set(obj.sigFig, 'windowbuttonmotionfcn', []);
+              set(obj.sigFig, 'windowbuttonupfcn', []);
+              set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
               
-               UDAta_ = obj.sigAxes.UserData;
-
+              if ~moved
+                  % npthing moved
+                  obj.sigFig.UserData = [];
+                  return;
+              end
+              
+               % Change Events if needed
               Question = sprintf('Do you want nigel to update the Events'' time?\n');
               ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
               if strcmp(ButtonName,'Yes')
@@ -493,106 +507,101 @@ classdef VidScorer < matlab.mixin.SetGet
                   
                  EvtsT = [obj.Evts.Time]; 
                  if ~isempty(EvtsT)
-                     [~,EvtsS] = min(abs(EvtsT*1e3 - obj.VideoTime(:)));
+                     [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
                  end
-                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
                  % update Evts
+                 newXData = obj.nigelCam.getTimeSeries;
                 for ii=1:numel(obj.Evts)
                     thisEventObj = obj.Evts(ii).graphicObj;
                     OldName = obj.Evts(ii).Name;
                     OldTime = obj.Evts(ii).Time;
-                    NewTime = obj.VideoTime(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                    NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
                     modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
-                end
-              else
-                  obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
-              end
+                end % ii               
+              end %fi strcmp
+          end % fi src.Value
+          
+          
+          function initMove(fig,idx)
               
-              ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
-              obj.nigelCam.VideoStretch = (ShiftedTime(end) - obj.VideoTime(end))./numel(obj.VideoTime);
-              obj.sigAxes.UserData = [];
-          end
-          
-          
-          function initMove(reducedPlot,fig,obj)
+              % get this line pars
+              ThisData = fig.UserData;
+              reducedPlot = ThisData(idx).reducedPlot;
               ax = reducedPlot.h_axes;
-              %     disp('interactive_move enable')
-              UDAta = ax.UserData;
-              %UDAta.init_state = uisuspend(fig);
-
+              UDAta = ThisData(idx).MvmtData;
+              cam = ThisData(idx).cam;
+              
               out=get(ax,'CurrentPoint');
-              UDAta.lineObj = reducedPlot;
               set(ax,'NextPlot','replace')
               set(fig,'Pointer','crosshair');
               UDAta.macro_active = 1;
               UDAta.xpos0 = out(1,1);%--store initial position x
               UDAta.xNew =out(1,1);
               xl=get(ax,'XLim');
-              if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))% &&...
-                      %(UDAta.ypos0 > yl(1) && UDAta.ypos0 < yl(2))) %--disable if outside axes
-                  UDAta.currentlinestyle = UDAta.lineObj.h_plot.LineStyle;
-                  UDAta.currentmarker = UDAta.lineObj.h_plot.Marker;
-
-                  UDAta.lineObj.h_plot.Marker = '.';
-                  UDAta.lineObj.h_plot.LineStyle = 'none';
-                  UDAta.xData = UDAta.lineObj.x{1};%--assign x data
-                  UDAta.xOffs = obj.NeuOffset;
-                  UDAta.currentTitle=get(get(ax, 'Title'), 'String');                  
-                  title(ax,['[' num2str(out(1,1)) ']']);
-                  ax.UserData = UDAta;
-              else
-                  ax.UserData = UDAta;
-                  disableMove(ax,fig);
-              end
-              
+              if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))
+                  UDAta.currentlinestyle = reducedPlot.h_plot.LineStyle;
+                  UDAta.currentmarker = reducedPlot.h_plot.Marker;
+ 
+                  reducedPlot.h_plot.Marker = '.';
+                  reducedPlot.h_plot.LineStyle = 'none';
+                  UDAta.xData = reducedPlot.x{1};%--assign x data
+                  UDAta.xOffs =  cam.VideoOffset;
+                  ThisData(idx).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
+               else
+                  ThisData(idx).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
+                  disableMove(fig);
+              end              
           end
-          %--------function to handle event
-          function moveStuff(ax,fig,obj)
-              UDAta = ax.UserData;             
-              if UDAta.macro_active
-                  out=get(ax,'CurrentPoint');
+          
+          % Callback during movement
+          function moveStuff(fig)
+              ThisData = fig.UserData;
+              idx_ = [ThisData.MvmtData];
+              idx_ = logical([idx_.macro_active]);
+              if any(idx_)
+                  reducedPlot = ThisData(idx_).reducedPlot;
+                  ax = reducedPlot.h_axes;
+                  UDAta = ThisData(idx_).MvmtData;
+
+                  out = get(ax,'CurrentPoint');
                   set(fig,'Pointer','crosshair');
-                  title(['[' num2str(out(1,1)) ']']);
-                  if ~isempty(UDAta.lineObj)                      
-                      UDAta.lineObj.x = {UDAta.xData(:)-(UDAta.xpos0-out(1,1))};%--move x data
+                  if ~isempty(reducedPlot)                      
+                      reducedPlot.x = {UDAta.xData(:)-(UDAta.xpos0-out(1,1))};%--move x data
                       UDAta.xNew =out(1,1);
-                      title(['[' num2str(out(1,1)) '], offset=[' num2str(UDAta.xpos0-out(1,1)) ']']);
                   end
+                  UDAta.hasMoved = true;
+                  ThisData(idx_).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
               end
-              ax.UserData = UDAta;
           end
           
           % stop moving stuff
-          function disableMove(ax,fig,SelectedNodes,obj)
+          function disableMove(fig)              
+                % Gather data and rename stuff for readability
+              ThisData = fig.UserData;
+              reducedPlotS = [ThisData.reducedPlot];
+              h_plots = [reducedPlotS.h_plot];
+              ax = reducedPlotS(1).h_axes;
               
-              UDAta = ax.UserData;
-              UDAta.macro_active=0;
-              title(UDAta.currentTitle);
-              ax.UserData = UDAta;
-%               uirestore(UDAta.init_state);
-              set(fig,'Pointer','arrow');
-              set(ax,'NextPlot','add')
-              if ~isempty(UDAta.lineObj)
-                  set(UDAta.lineObj.h_plot,'LineStyle',UDAta.currentlinestyle);
-                  set(UDAta.lineObj.h_plot,'Marker',UDAta.currentmarker);
+              % reset graphics ti original state and deactivate moving
+              % macro
+              for zz=1:numel(ThisData)
+                  UDAta = ThisData(zz).MvmtData;       % renamed for readability
+                  
+                  if ThisData(zz).MvmtData.macro_active
+                      set( h_plots,'LineStyle',UDAta.currentlinestyle);
+                      set( h_plots,'Marker',UDAta.currentmarker);
+                      ThisData(zz).cam.VideoOffset = UDAta.xOffs + UDAta.xpos0 - UDAta.xNew;
+                      fprintf(1,'%s shifted by %d ms\n',ThisData(zz).cam.Name,ThisData(zz).cam.VideoOffset)
+                  end
+                  ThisData(zz).MvmtData.macro_active = 0;
               end
               
-%               SRate = arrayfun(@(ud) diff(ud.ReducedPlot.x{1}(1:2)),[SelectedNodes.UserData]);
-%               allPLots = [SelectedNodes.UserData];
-%               allPLots = [allPLots.ReducedPlot];
-%               thisPlot = allPLots == UDAta.lineObj;
-%               xfixed = SelectedNodes(~thisPlot).UserData.ReducedPlot.x{1};
-%               [~,kf] = min(abs(xfixed-UDAta.xNew));
-%               
-%               xmov = UDAta.xData;
-%               km = dsearchn(xmov,UDAta.xpos0);
-              
-%               SelectedNodes(thisPlot).UserData.ReducedPlot.x = {x + x(k) - UDAta.xpos0 - obj.NeuOffset};
-%               obj.NeuOffset = UDAta.xOffs - (xmov(km)-xfixed(kf));
-              obj.NeuOffset = UDAta.xOffs - UDAta.xpos0 + UDAta.xNew;
-              fprintf(1,'adjusted for %d ms\n',abs(UDAta.xpos0 - UDAta.xNew))
-%               UDAta.lineObj.x = {UDAta.xData-(xmov(km)-xfixed(kf))};
-              obj.VideoTime = UDAta.lineObj.x{:};
+              set(fig,'Pointer','arrow');
+              set(ax,'NextPlot','add')
+              set(fig,'UserData',ThisData)
           end
       end
       
@@ -601,54 +610,67 @@ classdef VidScorer < matlab.mixin.SetGet
           % In stretch mode, the data can be compressed or streched on the
           % x axis to better align the sampling
           
-          SelectedNodes = obj.SignalTree.SelectedNodes;
-          CheckedNodes = obj.SignalTree.SelectedNodes;
-          zoom(obj.sigAxes,'off');obj.ZoomButton.Value = false;
-          if src.Value % synch mode selected
-              if numel(SelectedNodes) < 2
+          AllNodes = cat(1,obj.SignalTree.Children.Children);
+          idx = arrayfun(@(x)~isempty(x.UserData),AllNodes);        
+          VideoNodes = AllNodes(idx);
+          
+          idx = arrayfun(@(x)x.UserData.OnScreen,VideoNodes);
+          SelectedNodes = VideoNodes(idx);
+          
+          zoom(obj.sigAxes,'off');
+          obj.ZoomButton.Value = false;
+          if src.Value % stretch mode selected
+              if numel(SelectedNodes) < 1
                   src.Value = false;
-                  error('Not enough nodes selected to perform synchronization!');
+                  error(['No Video streams plotted!' newline 'Right click on the data node to plot the corresponding stream.']);
               end
-              obj.SignalTree.SelectionChangeFcn = @(~,~)set(obj.SignalTree,'SelectedNodes',SelectedNodes);
-              for nn = SelectedNodes
-                  if ~nn.Checked
-                      nn.Checked = 1;
-                  end
+              idx = 1;
+              for nn = SelectedNodes(:)'
                   nn.UserData.ReducedPlot.h_plot.LineWidth = 1.5;
                   nn.UserData.ReducedPlot.h_plot.HitTest = 'on';
                   nn.UserData.ReducedPlot.h_plot.PickableParts = 'visible';
+                  Data(idx).cam = nn.UserData.Obj;
+                  Data(idx).reducedPlot = nn.UserData.ReducedPlot;
+                  Data(idx).MvmtData =  struct(...
+                      'macro_active',false,'xpos0',[],'xNew',[]...
+                      ,'currentlinestyle',[],'currentmarker',[],...
+                      'xData',[],'oldXData',nn.UserData.Obj.getTimeSeries,...
+                      'xOffs','[]','hasMoved',false);
+                  allHPlots(idx)=nn.UserData.ReducedPlot.h_plot;
+                  idx = idx+1;
                   
-                  nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = @(src,evt)initStretch(nn.UserData.ReducedPlot,obj.sigFig,obj);
-                  % set(obj.sigFig, 'windowbuttondownfcn', @(src,evt)initMove(obj.sigAxes));
-                  set(obj.sigFig, 'windowbuttonmotionfcn', @(src,evt)stretchStuff(obj.sigAxes,obj.sigFig,obj));
-                  set(obj.sigFig, 'windowbuttonupfcn', @(src,evt)disableStretch(obj.sigAxes,obj.sigFig,SelectedNodes,obj));
-                  set(obj.sigAxes,'ButtonDownFcn',[]);
-                  
-                  CheckedNodes(CheckedNodes==nn) = [];
-              end 
-              
-              obj.sigAxes.UserData = struct('init_state',[],'lineObj',[],...
-                 'macro_active',false,'xpos0',[],'currentlinestyle',[],...
-                 'xData',[],'currentTitle','','xNew',[],'idx0',[]);
+              end
+              obj.sigFig.UserData = Data;
+              arrayfun(@(i) set(allHPlots(i),'ButtonDownFcn',@(src,evt)initStretch(obj.sigFig,i)),1:idx-1);
+              set(obj.sigFig, 'windowbuttonmotionfcn', @(src,evt)stretchStuff(obj.sigFig));
+              set(obj.sigFig, 'windowbuttonupfcn', @(src,evt)disableStretch(obj.sigFig));
+              set(obj.sigAxes,'ButtonDownFcn',[]);
           else
-              obj.SignalTree.SelectionChangeFcn = [];
-              for nn = CheckedNodes
+              idx = 1;
+              Data = obj.sigFig.UserData;
+              stretched = false;
+              for nn = SelectedNodes(:)'
                   nn.UserData.ReducedPlot.h_plot.LineWidth = .2;
                   nn.UserData.ReducedPlot.h_plot.HitTest = 'off';
                   nn.UserData.ReducedPlot.h_plot.PickableParts = 'none';
                   nn.UserData.ReducedPlot.h_plot.ButtonDownFcn = [];
+                                    
+                  if Data(idx).cam == obj.nigelCam
+                      oldXData = Data(idx).MvmtData.oldXData;
+                      stretched = Data(idx).MvmtData.hasMoved;
+                  end
+                  idx = idx +1;
+                  nn.UserData.MvmtData = [];
               end
               set(obj.sigFig, 'windowbuttonmotionfcn', []);
               set(obj.sigFig, 'windowbuttonupfcn', []);
               set(obj.sigAxes,'ButtonDownFcn',@obj.sigAxClick);
               
-              if isempty(obj.sigAxes.UserData.lineObj)
-                  % npthing moved
-                  obj.sigAxes.UserData = [];
+              if ~stretched
+                  % nothing moved
+                  obj.sigFig.UserData = [];
                   return;
               end
-              
-              UDAta_ = obj.sigAxes.UserData;
               
               Question = sprintf('Do you want nigel to update the Events'' time?\n');
               ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
@@ -657,118 +679,144 @@ classdef VidScorer < matlab.mixin.SetGet
                   % Change all Events' time accordingly.
                   
                  EvtsT = [obj.Evts.Time]; 
-                 if ~isempty(EvtsT),[~,EvtsS] = min(abs(EvtsT*1e3 - obj.VideoTime(:)));end
-                 obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
-                
+                 if ~isempty(EvtsT)
+                     [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
+                 end
                  % update Evts
+                NewTime  = obj.nigelCam.getTimeSeries;
                 for ii=1:numel(obj.Evts)
                     thisEventObj = obj.Evts(ii).graphicObj;
                     OldName = obj.Evts(ii).Name;
                     OldTime = obj.Evts(ii).Time;
-                    NewTime = obj.VideoTime(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                    NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
                     modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
                 end
-              else
-                  obj.VideoTime = UDAta_.lineObj.x{1};%--move x data
               end
               
-              ShiftedTime = obj.nigelCam.getTimeSeries - obj.nigelCam.VideoOffset;
-              obj.nigelCam.VideoStretch = (ShiftedTime(end) - obj.VideoTime(end))./numel(obj.VideoTime);
-              
-              obj.sigAxes.UserData = [];
+   
+              obj.sigFig.UserData = [];
           end
           
           
-          function initStretch(reducedPlot,fig,obj)
+          function initStretch(fig,idx)
+              
+              % get this line pars
+              ThisData = fig.UserData;
+              reducedPlot = ThisData(idx).reducedPlot;
               ax = reducedPlot.h_axes;
-              %     disp('interactive_move enable')
-              UDAta = ax.UserData;
-              %UDAta.init_state = uisuspend(fig);
-
+              UDAta = ThisData(idx).MvmtData;
+              cam = ThisData(idx).cam;
+              
               out=get(ax,'CurrentPoint');
-              UDAta.lineObj = reducedPlot;
               set(ax,'NextPlot','replace')
               set(fig,'Pointer','crosshair');
+              UDAta.macro_active = 1;
               UDAta.xpos0 = out(1,1);%--store initial position x
               UDAta.xNew =out(1,1);
               xl=get(ax,'XLim');
-              if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))% &&...
-                      %(UDAta.ypos0 > yl(1) && UDAta.ypos0 < yl(2))) %--disable if outside axes
-                  UDAta.currentlinestyle = UDAta.lineObj.h_plot.LineStyle;
-                  UDAta.currentmarker = UDAta.lineObj.h_plot.Marker;
-
-                  UDAta.lineObj.h_plot.Marker = '.';
-                  UDAta.lineObj.h_plot.LineStyle = 'none';
-                  UDAta.xData = UDAta.lineObj.x{1};%--assign x data
-                  [~,UDAta.idx0] = min(abs(UDAta.xpos0-UDAta.xData));
-                  UDAta.xOffs = obj.NeuOffset;
-                  UDAta.currentTitle=get(get(ax, 'Title'), 'String');                  
-                  title(ax,['[' num2str(out(1,1)) ']']);
-                  UDAta.macro_active = 1;
-                  ax.UserData = UDAta;
-
-              else
-                  ax.UserData = UDAta;
-                  disableStretch(ax,fig);
-              end
-              
+              if ((UDAta.xpos0 > xl(1) && UDAta.xpos0 < xl(2)))
+                  UDAta.currentlinestyle = reducedPlot.h_plot.LineStyle;
+                  UDAta.currentmarker = reducedPlot.h_plot.Marker;
+ 
+                  reducedPlot.h_plot.Marker = '.';
+                  reducedPlot.h_plot.LineStyle = 'none';
+                  UDAta.xData = reducedPlot.x{1};%--assign x data
+                  [~,UDAta.idx0] = min(abs(UDAta.xpos0 - UDAta.xData));
+                  ThisData(idx).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
+               else
+                  UDAta.macro_active = 0;
+                  ThisData(idx).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
+                  disableStretch(fig);
+              end           
           end
-          %--------function to handle event
-          function stretchStuff(ax,fig,obj)
-              UDAta = ax.UserData;             
-              if UDAta.macro_active
-                  out=get(ax,'CurrentPoint');
+          
+          % Callback during movement
+          function stretchStuff(fig)
+              ThisData = fig.UserData;
+              idx_ = [ThisData.MvmtData];
+              idx_ = logical([idx_.macro_active]);
+              if any(idx_)
+                  reducedPlot = ThisData(idx_).reducedPlot;
+                  ax = reducedPlot.h_axes;
+                  UDAta = ThisData(idx_).MvmtData;
+
+                  out = get(ax,'CurrentPoint');
                   set(fig,'Pointer','crosshair');
-                  title(['[' num2str(out(1,1)) ']']);
-                  if ~isempty(UDAta.lineObj)
+                  if ~isempty(reducedPlot)   
                       mismatch = (UDAta.xpos0-out(1,1))./UDAta.idx0;
-                      UDAta.lineObj.x = {UDAta.xData(:) - (1:numel(UDAta.xData))'.*mismatch};%--move x data
+                      reducedPlot.x = {UDAta.xData(:) - (1:numel(UDAta.xData))'.*mismatch};%--move x data
                       UDAta.xNew =out(1,1);
-                      title(['[' num2str(out(1,1)) '], offset=[' num2str(UDAta.xpos0-out(1,1)) ']']);
                   end
+                  UDAta.hasMoved = true;
+                  ThisData(idx_).MvmtData = UDAta;
+                  set(fig,'UserData',ThisData)
               end
-              ax.UserData = UDAta;
           end
           
           % stop moving stuff
-          function disableStretch(ax,fig,SelectedNodes,obj)
+          function disableStretch(fig)
               
-              UDAta = ax.UserData;
-              UDAta.macro_active=0;
-              title(UDAta.currentTitle);
-              ax.UserData = UDAta;
-%               uirestore(UDAta.init_state);
-              set(fig,'Pointer','arrow');
-              set(ax,'NextPlot','add')
-              if ~isempty(UDAta.lineObj)
-                  set(UDAta.lineObj.h_plot,'LineStyle',UDAta.currentlinestyle);
-                  set(UDAta.lineObj.h_plot,'Marker',UDAta.currentmarker);
+              ThisData = fig.UserData;
+              reducedPlotS = [ThisData.reducedPlot];
+              h_plots = [reducedPlotS.h_plot];
+              ax = reducedPlotS(1).h_axes;
+              
+              % reset graphics ti original state and deactivate moving
+              % macro
+              for zz=1:numel(ThisData)
+                  UDAta = ThisData(zz).MvmtData;       % renamed for readability
+                  
+                  if ThisData(zz).MvmtData.macro_active
+                      set( h_plots,'LineStyle',UDAta.currentlinestyle);
+                      set( h_plots,'Marker',UDAta.currentmarker);
+                      ThisData(zz).cam.VideoStretch = (ThisData(zz).cam.TS(end) - ThisData(zz).cam.VideoOffset - reducedPlotS(zz).x{1}(end))./numel(ThisData(zz).cam.TS);
+                      fprintf(1,'%s stretched by a factor of %d ms\n',ThisData(zz).cam.Name,ThisData(zz).cam.VideoStretch)
+                  end
+                  ThisData(zz).MvmtData.macro_active = 0;
               end
               
-              
+              set(fig,'Pointer','arrow');
+              set(ax,'NextPlot','add')
+              set(fig,'UserData',ThisData)
           end
       end
       
       % Callback for plotsignal menu entry. it plots the related signal on
       % the signal axes
-      function treecheckchange(obj,~,src,plotStruct)
+      function treecheckchange(obj,~,src,node)
+          
+          % get pars and init
+          plotStruct = node.UserData;
           hold(obj.sigAxes,'on')
           setToLoading(obj,true)
+          
           if ismember('ReducedPlot',fieldnames(plotStruct))
+              % This means it was already plotted, we only need to toggle
+              % visibility at this point
               if ~src.Source.Checked
                  plotStruct.ReducedPlot.h_plot.Visible = 'on';
                  src.Source.Checked = true;
+                 plotStruct.OnScreen = true;
               else
                   plotStruct.ReducedPlot.h_plot.Visible = 'off';
                   src.Source.Checked = false;
+                  plotStruct.OnScreen = false;
 
               end
+              
           else
+             % This means the plot does not exist: we need to take some
+             % time and plot the data
              
+             % let's gather some data
               tt = plotStruct.Time();  % function handle returning the full time vector in ms       
               dd = plotStruct.Data(:);
               dd = dd./max(dd);
               if isempty(tt)
+                % let's make this foolproof. If for whatever reason time is
+                % not set, we creat esome artificial time vectors.
                   if strcmp(plotStruct.Type,'Video')
                       % this should never happend, but just in case
                       if isempty(obj.VideoTime)
@@ -784,12 +832,24 @@ classdef VidScorer < matlab.mixin.SetGet
                       end
                   end
               end
-              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt(:)', dd(:)');
-              plotStruct.ReducedPlot.h_plot.HitTest = 'off';
+              
+              % We have all the data, let's plot it with LinePlotReducer
+              idx = ~isnan(tt(:)');     % LinePlotReducer does not get along with nan, let's get rid of those
+              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt(idx), dd(idx));
+              
+              % these are usefull to make the click-to-seek feature work
+              plotStruct.ReducedPlot.h_plot.HitTest = 'off';        
               plotStruct.ReducedPlot.h_plot.PickableParts = 'none';
+              
+              % set some flags
+              plotStruct.OnScreen = true;
+              src.Source.Checked = true;
 
           end
-          set(src.Source,'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,plotStruct))
+          
+          % upload the data to the UI and finishing touches
+          node.UserData = plotStruct;
+          set(src.Source,'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,node))
           hold(obj.sigAxes,'off')
           setToLoading(obj,false)
       end
@@ -924,7 +984,7 @@ classdef VidScorer < matlab.mixin.SetGet
            % PREVIOUSTRIAL jumps to the previous trial in all active views
            obj.skipToNext(-1);
        end
-       function addExternalStreamToCam(obj,prompt,~,~)
+       function addExternalStreamToCam(obj,prompt,cam)
            % ADDEXTERNALSTREAMTOCAM(prompt)
            % Adds a stream to the current nigelCam.
            % if <strong>prompt</strong>, the user will be promped to point
@@ -946,19 +1006,19 @@ classdef VidScorer < matlab.mixin.SetGet
                PathToFile = fullfile(path,file);
                variables = who('-file', PathToFile);
                if numel(variables) == 1
-                   obj.nigelCam.addStream(PathToFile);
+                   cam.addStream(PathToFile);
                else
                    this = nigeLab.utils.uidropdownbox('Select variable,','The selected file has more than 1 varibale stored in it.\nPlease select the correct one.',variables);
                    if strcmp(this,'none')
                        return;
                    end
-                   obj.nigelCam.addStream(PathToFile,this);
+                   cam.addStream(PathToFile,this);
                end
            else
-               obj.nigelCam.addStream();
+               cam.addStream();
            end
        end
-       function deleteExternalStreamToCam(obj,stream,strmNode,~,~)
+       function deleteExternalStreamToCam(obj,stream,strmNode,cam)
            % DELETEEXTERNALSTREAMTOCAM(obj,stream,node) deletes the
            % video stream specified by <strong>stream</strong> and its corresponding node in
            % the signal tree (specified by <strong>strmNode</strong>);
@@ -968,7 +1028,7 @@ classdef VidScorer < matlab.mixin.SetGet
            if nargin<3
                % prompts the user to select the stream to delete
                Allnodes = obj.SignalTree.Children(2).Children;
-               AllStreams = obj.nigelCam.Streams;
+               AllStreams = cam.Streams;
 
                AllnodesNames = {Allnodes.Text};
                AllStreamsNames = {AllStreams.name};
@@ -998,9 +1058,9 @@ classdef VidScorer < matlab.mixin.SetGet
                    delete(stream.data.getPath);
                end
 
-               idx = obj.nigelCam.Streams == stream;
+               idx = cam.Streams == stream;
                delete(stream);
-               obj.nigelCam.Streams(idx) = [];
+               cam.Streams(idx) = [];
 
                delete(strmNode);
 
@@ -1151,7 +1211,8 @@ classdef VidScorer < matlab.mixin.SetGet
          blkStreams = fieldnames(obj.Block.Streams);
          
          for ss = 1:numel(blkStreams) % for all the different stream types
-             strmTypeNode = uitreenode(blkNode,'Text',blkStreams{ss});
+             strmTypeNode = uitreenode(blkNode,'Text',blkStreams{ss},...
+                 'UserData',[]);
              
              % create another root node
              for tt =1:numel(obj.Block.Streams.(blkStreams{ss}))
@@ -1167,13 +1228,13 @@ classdef VidScorer < matlab.mixin.SetGet
                  % create the menu to plut or hide
                  mm = uicontextmenu(obj.sigFig);
                  m1 = uimenu(mm,'Text','Plot signal',...
-                     'Checked',false,...
-                     'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,pltData));
+                     'Checked',false);
                  
                  % finally make the node
                  strmNode = uitreenode(strmTypeNode,...
                      'Text',obj.Block.Streams.(blkStreams{ss})(tt).name,...
                      'UIContextMenu',mm);
+                 set(m1,'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,strmNode));
              end
          end
          
@@ -1181,32 +1242,39 @@ classdef VidScorer < matlab.mixin.SetGet
          
          % create a menu for the top level video nodes to add external
          % signals or signals gathered from videos
-         mm = uicontextmenu(obj.sigFig);
-         m1 = uimenu(mm,'Text','Add stream from video','MenuSelectedFcn',@(evt,src)obj.addExternalStreamToCam(false,evt,src));
-         m1 = uimenu(mm,'Text','Add external stream','MenuSelectedFcn',@(evt,src)obj.addExternalStreamToCam(true,evt,src));
-         vidNode = uitreenode(obj.SignalTree,...
-             'Text','Video streams',...
-             'UIContextMenu',mm);
-         for tt =1:numel(obj.nigelCam.Streams)
-             % create structure with everything to plot signals
-             pltData.Time = @(t) obj.VideoTime(:);
-             pltData.Data = obj.nigelCam.Streams(tt).data;
-             pltData.Type = 'Video';
-             
-             % actually create the nodes
-             strmNode = uitreenode(vidNode,...
-                 'Text',obj.nigelCam.Streams(tt).name);
-             
-              % create treenode menu to plot/hide and delete
+
+         for cam = obj.nigelCamArray
              mm = uicontextmenu(obj.sigFig);
-             m1 = uimenu(mm,'Text','Delete',...
-                 'MenuSelectedFcn',@(evt,src)obj.deleteExternalStreamToCam(obj.nigelCam.Streams(tt),strmNode,evt,src));
-             m1 = uimenu(mm,'Text','Plot signal',...
-                 'Checked',false,...
-                 'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,pltData));
-             set(strmNode,'UIContextMenu',mm);
+             m1 = uimenu(mm,'Text','Add stream from video','MenuSelectedFcn',@(evt,src)obj.addExternalStreamToCam(false,cam));
+             m1 = uimenu(mm,'Text','Add external stream','MenuSelectedFcn',@(evt,src)obj.addExternalStreamToCam(true,cam));
+             
+             vidNode = uitreenode(obj.SignalTree,...
+                 'Text',sprintf('%s streams',cam.Name),...
+                 'UIContextMenu',mm);
+             for tt =1:numel(cam.Streams)
+                 % create structure with everything to plot signals
+                 t = cam.Streams(tt).time(:);
+                 pltData.Time = t - cam.VideoOffset -...
+                     (1:numel(t)).* cam.VideoStretch;
+                 pltData.Data = cam.Streams(tt).data;
+                 pltData.Type = 'Video';
+                 pltData.Obj = cam;
+                 pltData.OnScreen = false;
+                 
+                 % actually create the nodes
+                 strmNode = uitreenode(vidNode,...
+                     'Text',cam.Streams(tt).name,'UserData',pltData);
+                 
+                 % create treenode menu to plot/hide and delete
+                 mm = uicontextmenu(obj.sigFig);
+                 m1 = uimenu(mm,'Text','Delete',...
+                     'MenuSelectedFcn',@(evt,src)obj.deleteExternalStreamToCam(cam.Streams(tt),strmNode,cam));
+                 m1 = uimenu(mm,'Text','Plot signal',...
+                     'Checked',false,...
+                     'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,strmNode));
+                 set(strmNode,'UIContextMenu',mm);
+             end
          end
-         
          
 %          obj.SignalTree.CheckedNodesChangedFcn = @obj.treecheckchange;
          obj.sigAxes = ax;
@@ -1318,7 +1386,7 @@ classdef VidScorer < matlab.mixin.SetGet
          
          
          obj.SynchButton = uibutton(obj.SigComPanel,'state',...
-             'Position',[200 2 80 20],...
+             'Position',[180 2 80 20],...
              'Text','Synch',...
              'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
              'FontColor',nigeLab.defaults.nigelColors('onprimary'),...
@@ -1326,7 +1394,7 @@ classdef VidScorer < matlab.mixin.SetGet
              'Tooltip','Activate synch mode: move the video time to synch it with ePhys.');
          
          obj.StretchButton = uibutton(obj.SigComPanel,'state',...
-             'Position',[200 25 80 20],...
+             'Position',[180 25 80 20],...
              'Text','Stretch',...
              'BackgroundColor',nigeLab.defaults.nigelColors('primary'),...
              'FontColor',nigeLab.defaults.nigelColors('onprimary'),...
@@ -1536,7 +1604,8 @@ classdef VidScorer < matlab.mixin.SetGet
                  'Text','Main view');
          
          fcnList = {{@(src,evt)set(camBoxes(src.Value),'Value',true)}
-             {@(src,evt)obj.setMainView(src.Value)}};
+                   {@(src,evt)obj.setViewActive(camBoxes(src.Value),evt,src.Value)}
+                   {@(src,evt)obj.setMainView(src.Value)}};
          uidropdown(obj.camPanel,...
                  'Position',[127 100 80 30],...
                  'FontSize',13,...
@@ -1550,9 +1619,11 @@ classdef VidScorer < matlab.mixin.SetGet
       function setMainView(obj,ii)   
          obj.nigelCam  = obj.nigelCamArray(ii);
          obj.VideoTime = obj.nigelCam.getTimeSeries;
-         obj.VideoTime = obj.VideoTime- ...
-             obj.nigelCam.VideoOffset- ...
-             (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch; 
+%          obj.VideoTime = obj.VideoTime- ...
+%              obj.nigelCam.VideoOffset- ...
+%              (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch; 
+         
+         %obj.SignalTree.Children(2:end).Visible=false;
       end
       function setViewActive(obj,~,src,ii)
           obj.nigelCamArray(ii).setActive(src.Value);
@@ -1806,8 +1877,8 @@ classdef VidScorer < matlab.mixin.SetGet
          
          m1 = uimenu(cm,'Text','Edit','MenuSelectedFcn',@(thisMenu,evt)obj.modifyEventEntry(thisEvent,Name,Time));
          m2 = uimenu(cm,'Text','Delete','MenuSelectedFcn',@(src,evt)obj.deleteEventEntry(thisEvent,Name,Time));
-         [~,zz] = min( abs(obj.VideoTime  - Time*1e3));
-         T = obj.nigelCam.getTimeSeries;
+         T = obj.nigelCam.getTimeSeries;   
+         [~,zz] = min( abs(T - Time*1e3));
          m2 = uimenu(cm,'Text','Go to','MenuSelectedFcn',@(src,evt)obj.nigelCam.seek(T(zz)));
 
          this = struct('Name',Namelabel.String,'Time',Time,'Trial',Trial,'Misc',[],'graphicObj',thisEvent);
