@@ -6,6 +6,7 @@ properties
     Key
     fs
     data
+    time
 end
 
    methods
@@ -13,12 +14,15 @@ end
          %TIMEUPDATED  Constructor for time axes click event data
          %
          %  evt = nigeLab.evt.timeUpdated(timepoint);
-         
-         evt.name = stream.name;
-         evt.signal = stream.signal;
-         evt.Key = stream.Key;
-         evt.fs = stream.fs;
-         evt.data = stream.data;
+         fnames =  fieldnames(stream);
+         for ff = fnames(:)'
+             evt.(ff{1})=stream.(ff{1});
+         end
+%          evt.name = stream.name;
+%          evt.signal = stream.signal;
+%          evt.Key = stream.Key;
+%          evt.fs = stream.fs;
+%          evt.data = stream.data;
       end
    end
    
