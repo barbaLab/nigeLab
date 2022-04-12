@@ -29,6 +29,22 @@ end
 checkActionIsValid(blockObj);
 ePars = blockObj.Pars.Event;
 
+str = 'This will replace any events called ';
+for ff = ePars.EvtNames(:)'
+    str = [str ff{1} ' or '];
+end
+str = [str(1:end-4) '.' newline 'Do you want to continue?'];
+selection = questdlg(sprintf(str),...
+    'Do event detection?',...
+    'Detect events','Cancel','Cancel');
+
+if strcmp(selection,'Detect events')
+    ... Nothing to do here
+elseif strcmp(selection,'Cancel') || isempty(selection)
+    fprintf(1,'Operation aborted.\n');
+    return;
+end
+
 %
 % Always extract 'Trial' first
 for ff = ePars.EvtNames(:)'
