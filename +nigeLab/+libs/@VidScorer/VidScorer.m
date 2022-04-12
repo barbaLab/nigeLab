@@ -286,17 +286,17 @@ classdef VidScorer < matlab.mixin.SetGet
       end
       % callback function called when a new stream is added. It takes care
       % of adding a new node to the tree
-      function updateStreams(obj,src,~,cam)
-          if isfield(src,'time') || isprop(src,'time')
-              pltData.Time = src.time - cam.VideoOffset- ...
-                        (1:numel(src.time)).* cam.VideoStretch;
+      function updateStreams(obj,evt,cam)
+          if isfield(evt,'time') || isprop(evt,'time')
+              pltData.Time = evt.time - cam.VideoOffset- ...
+                        (1:numel(evt.time)).* cam.VideoStretch;
           else
               pltData.Time = cam.getTimeSeries;
           end
-              pltData.Data = src.data;
+              pltData.Data = evt.data;
               vidNode = obj.SignalTree.Root.Children(2);
               strmNode = uiw.widget.CheckboxTreeNode('Parent',vidNode,...
-                  'Name',src.name,...
+                  'Name',evt.name,...
                   'UserData',pltData,'CheckboxEnabled',true);
       strmNode.Checked = true;
       end
@@ -1051,8 +1051,9 @@ classdef VidScorer < matlab.mixin.SetGet
           obj.listeners = addlistener(obj.nigelCam,'timeChanged',@(src,evt)obj.updateTimeMarker);
           obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.updateEvtGraphicList)];
           obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.updateLblGraphicList)];
-          
-          obj.listeners = [obj.listeners addlistener(obj.nigelCam,'streamAdded',@(src,evt)obj.updateStreams(evt,src))];
+
+          camList = arrayfun(@(cam) addlistener(cam,'streamAdded',@(src,evt)obj.updateStreams(evt,src)),obj.nigelCamArray);
+          obj.listeners = [obj.listeners camList];
           
           obj.listeners = [obj.listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
           
