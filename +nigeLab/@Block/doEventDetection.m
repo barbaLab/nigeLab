@@ -1,4 +1,4 @@
-function flag = doEventDetection(blockObj,EventName,StreamName)
+function flag = doEventDetection(blockObj,force)
 % DOEVENTDETECTION  "Detects" putative Trial events
 %
 %  flag = doEventDetection(blockObj,EventName,StreamName); 
@@ -6,19 +6,15 @@ function flag = doEventDetection(blockObj,EventName,StreamName)
 %       Timestamps are extracted from StreamName and saved in the Events
 %       struct using the tag provided in EventName.
 
-if nargin < 3
-   forceHeaderExtraction = [];
-end
-
 if nargin < 2
-   vidOffset = [];
+   force = false;
 end
 
 if numel(blockObj) > 1
    flag = true;
    for i = 1:numel(blockObj)
       flag = flag && doEventDetection(blockObj(i),...
-         behaviorData,vidOffset,forceHeaderExtraction);
+         force);
    end
    return;
 else
@@ -28,23 +24,23 @@ end
 % Check that this can be done and make shortcut to video and event params
 checkActionIsValid(blockObj);
 ePars = blockObj.Pars.Event;
-
-str = 'This will replace any events called ';
-for ff = ePars.EvtNames(:)'
-    str = [str ff{1} ' or '];
-end
-str = [str(1:end-4) '.' newline 'Do you want to continue?'];
-selection = questdlg(sprintf(str),...
-    'Do event detection?',...
-    'Detect events','Cancel','Cancel');
-
-if strcmp(selection,'Detect events')
-    ... Nothing to do here
-elseif strcmp(selection,'Cancel') || isempty(selection)
+if ~force
+    str = 'This will replace any events called ';
+    for ff = ePars.EvtNames(:)'
+        str = [str ff{1} ' or '];
+    end
+    str = [str(1:end-4) '.' newline 'Do you want to continue?'];
+    selection = questdlg(sprintf(str),...
+        'Do event detection?',...
+        'Detect events','Cancel','Cancel');
+    
+    if strcmp(selection,'Detect events')
+        ... Nothing to do here
+    elseif strcmp(selection,'Cancel') || isempty(selection)
     fprintf(1,'Operation aborted.\n');
     return;
+    end
 end
-
 %
 % Always extract 'Trial' first
 for ff = ePars.EvtNames(:)'
