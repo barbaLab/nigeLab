@@ -466,7 +466,7 @@ end
                return;
            end
 
-          % t = obj.getSynchedTime(t,'ext2video');
+           t = obj.getSynchedTime(t,'ext2video');
            obj.Time = simpleVideoReader('seek',obj.VideoReader,t);
        end
 
