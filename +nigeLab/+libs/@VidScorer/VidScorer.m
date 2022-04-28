@@ -293,12 +293,25 @@ classdef VidScorer < matlab.mixin.SetGet
           else
               pltData.Time = cam.getTimeSeries;
           end
-              pltData.Data = evt.data;
-              vidNode = obj.SignalTree.Root.Children(2);
-              strmNode = uiw.widget.CheckboxTreeNode('Parent',vidNode,...
-                  'Name',evt.name,...
-                  'UserData',pltData,'CheckboxEnabled',true);
-      strmNode.Checked = true;
+          pltData.Data = evt.data;
+          pltData.Type = 'Video';
+          pltData.Obj = cam;
+          pltData.OnScreen = false;
+          vidIdx=strncmpi(cam.Name,{obj.SignalTree.Children.Text},numel(cam.Name));
+          vidNode = obj.SignalTree.Children(vidIdx);
+          strmNode = uitreenode(vidNode,...
+              'Text',evt.name,...
+              'UserData',pltData);
+          
+          % create treenode menu to plot/hide and delete
+          mm = uicontextmenu(obj.sigFig);
+          tt =(strcmp(evt.Key,{cam.Streams.Key}));
+          m1 = uimenu(mm,'Text','Delete',...
+              'MenuSelectedFcn',@(evt,src)obj.deleteExternalStreamToCam(cam.Streams(tt),strmNode,cam));
+          m1 = uimenu(mm,'Text','Plot signal',...
+              'Checked',false,...
+              'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,strmNode));
+          set(strmNode,'UIContextMenu',mm);
       end
       
        % sigaxes callbacks
@@ -1017,7 +1030,7 @@ classdef VidScorer < matlab.mixin.SetGet
            selection = uiconfirm(obj.sigFig,...
                sprintf('Are you sure?\nThis will also erase the signal from the disk.'),...
                'Delete signal','Icon','warning');
-           if strcmp(selection,'ok')
+           if strcmpi(selection,'ok')
                if isfield(stream,'data')
                    delete(stream.data.getPath);
                end
@@ -1025,8 +1038,7 @@ classdef VidScorer < matlab.mixin.SetGet
                    delete(stream.data.getPath);
                end
 
-               idx = cam.Streams == stream;
-               delete(stream);
+               idx = strcmp(stream.Key,{cam.Streams.Key});
                cam.Streams(idx) = [];
 
                delete(strmNode);

@@ -287,8 +287,8 @@ end
 
           obj.VideoPaths = nigeLab.utils.getUNCPath(Paths);
           obj.VideoReader = simpleVideoReader('new',Paths);
+          obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
           obj.getTimeSeries;
-%           obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
 %           obj.Lags = cumsum([obj.Meta.duration]);
        end
        
@@ -537,9 +537,10 @@ end
            %
            % To abort the operation keep pressed the ESC button for a
            % couple of seconds
-            if ~obj.Active
-               return;
-           end
+%             if ~obj.Active
+%                 sig=[];t=[];
+%                return;
+%            end
            [sig,t] =  simpleVideoReader('getMeanVal',obj.VideoReader);
 
 

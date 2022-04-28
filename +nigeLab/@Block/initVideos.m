@@ -94,6 +94,17 @@ if isempty(Videos)
    end
 end
 
+% let's make sure videos not in folders are not double detected
+dirs = Videos([Videos.isdir]);
+LooseVideosIdx = find(~[Videos.isdir]);
+LooseVideos = Videos(LooseVideosIdx);
+    % check if found videos that are not in folders were double detected
+    % because also contained in the found folders
+videos2remove = ismember({LooseVideos.folder},...
+    arrayfun(@(x)fullfile(x.folder,x.name),dirs,'UniformOutput',false));
+Videos(LooseVideosIdx(videos2remove))=[];
+
+
 paths = {};
 toOrder = false(1,numel(Videos));
 for ii=1:numel(Videos)
