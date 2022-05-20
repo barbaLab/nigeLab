@@ -146,17 +146,25 @@ classdef DataScrollerAxis < handle
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
             end
             
-            if isempty(tt) || length(tt)~=obj.sigLenght
+            if isempty(tt) || length(tt)~=obj.sigLenght || sum(tt==0) > 10
                 %failsafe
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
+                warninglabel = true;
+            else
+                warninglabel = false;
             end
             [x_reduced, y_reduced] = nigeLab.utils.reduce_to_width(tt, data, obj.MainAxPixelSize(4) ,[tt(1) tt(end)]);
             cla(obj.UI.MainAx);
             L = line(obj.UI.MainAx,x_reduced,y_reduced);
             obj.ReducedPlot = nigeLab.utils.LinePlotReducer(L,tt,data);
             xlim(obj.UI.MainAx,[tt(1) tt(end)]);
-%             obj.LinePlotExplorer = nigeLab.utils.LinePlotExplorer(obj.UI.Fig);
-            
+            %             obj.LinePlotExplorer = nigeLab.utils.LinePlotExplorer(obj.UI.Fig);
+            if warninglabel
+                string = 'Warning: Time does not match signal lenght. The signal might be incomplete.';
+                color = nigeLab.defaults.nigelColors(3);
+                msgbox(sprintf('\\color[rgb]{%f %f %f}%s',color(1),color(3),color(3),string),...
+                    'Incomplete data','warn');
+            end
         end
         
         function RoiChanged(obj)

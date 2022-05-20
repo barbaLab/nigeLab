@@ -263,7 +263,7 @@ classdef signal < matlab.mixin.SetGet
                subgroup = '';
                samples = [];
                
-            case {'MP4','AVI','MOV'}
+            case {'MP4','AVI','MOV','VID'}
                field = 'Video';
                fieldType = 'Videos';
                source = 'Video';

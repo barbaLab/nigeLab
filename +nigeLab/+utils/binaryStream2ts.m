@@ -33,21 +33,18 @@ function ts = binaryStream2ts(stream,fs,threshold,transition_type,debounce)
 %  streams. For each row of stream, a cell array of ts is returned.
 
 % Handle inputs
-defPars = nigeLab.defaults.Event('TrialDetectionInfo');
 if nargin < 5
    debounce = [];
 end
 
 if nargin < 4
-   transition_type = defPars.Type;
+   transition_type = 'Both';
 elseif isempty(transition_type)
-   transition_type = defPars.Type;
+   transition_type = 'Both';
 end
 
 if nargin < 3
-   threshold = defPars.Threshold;
-elseif isempty(threshold)
-   threshold = defPars.Threshold;
+   threshold = [];
 end
 
 if ~isa(stream,'nigeLab.libs.nigelStream')
@@ -77,7 +74,9 @@ else
       stream = stream.data;
    end
 end
- 
+if isempty(threshold)
+   threshold = std(stream) * 2;
+end
 x = stream > threshold;
 x = reshape(x,1,numel(stream)); % Make sure it's a row vector
 

@@ -60,6 +60,9 @@ end
 if iscell(streamName)
    streamName = streamName{:}; % Convert to char or back to struct
 end
-stream = nigeLab.libs.nigelStream(blockObj,streamName,scaleOpts);
+
+matchingNames = structfun(@(x) {x(contains({x.name},streamName)).name},blockObj.Streams,'UniformOutput',false);
+matchingNames = struct2array(matchingNames);
+stream = nigeLab.libs.nigelStream(blockObj,matchingNames{1},scaleOpts);
 
 end

@@ -18,9 +18,11 @@ classdef ExploreData < handle
                 case 'Animal'
                     blIdx = randi(numel(nigelObj.Children));
                     nigeLab.libs.ExploreData(nigelObj{blIdx});
+                    return;
                 case 'Tank'
                     anIdx = randi(numel(nigelObj.Children));
                     nigeLab.libs.ExploreData(nigelObj{anIdx});
+                    return;
             end     
                     
             obj.BuildGui(Field);

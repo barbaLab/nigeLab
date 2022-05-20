@@ -2546,7 +2546,7 @@ end
             return;
          end
          
-         idx = strcmpi(thisObj.Fields,field);
+         idx = ismember(thisObj.Fields,field);
          if sum(idx) == 0
             error(['nigeLab:' mfilename ':BadField'],...
                '[GETFIELDTYPE]: No matching field type: %s',field);
@@ -4757,11 +4757,13 @@ end
                if isempty(obj(1).Index)
                   pLinkStr = '';
                else
+                  AllParents = [obj.Parent];
+                  uParents = unique({AllParents.Name});
                   pLinkStr = [sprintf(...
                      '\t-->\tView <strong>Parent</strong> '),...
                      '<a href="matlab: nigeLab.sounds.play(''pop'',1.5); '...
                      sprintf('nigeLab.nigelObj.DisplayCurrent(%s,''simple'');">',tankName) ...
-                     sprintf('(Tank) %s</a>',obj(1).Parent.Name)];
+                     sprintf('(Tank) %s</a>',uParents{:})];
                end
                switch inputname(1)
                   case {'obj',''}
@@ -5804,7 +5806,10 @@ end
              end
          end
          flag = true;
-         flag = flag && obj.linkToData;
+         for jj = 1:numel(OldFN)
+             obj.linkField(OldFN{jj});
+         end
+%          flag = flag && obj.linkToData;
          flag = flag && obj.save;
          flag = flag && obj.saveParams;
          
@@ -5956,12 +5961,10 @@ end
          switch b.Type
             case 'Block'
 %                % Be sure to re-assign transient .Block property to Videos
-%                if ~isempty(b.Videos)
-%                   b.Videos = nigeLab.libs.VideosFieldType(b,b.Videos);
-%                elseif b.Pars.Video.HasVideo
-%                    b.Videos = nigeLab.libs.VideosFieldType.empty();
-%                else
-%                end
+               if ~isempty(b.Cameras)
+                    [b.Cameras.Parent] = deal(b);
+                    arrayfun(@addVideos,b.Cameras);
+               end
                
                if DataMoved
                    % This means the load process deteermined the data was

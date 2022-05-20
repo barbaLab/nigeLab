@@ -1,4 +1,4 @@
-function [icon,alpha] = getMatlabBuiltinIcon(iconName,varargin)
+function [icon,alpha,path] = getMatlabBuiltinIcon(iconName,varargin)
 %GETMATLABBUILTINICON  Return icon CData for a .gif Matlab builtin icon
 %
 %  nigeLab.utils.getMatlabBuiltinIcon('help');
@@ -73,6 +73,8 @@ if ~ismember(ext,pars.ValidIconFileTypes)
       '[GET_ICON]: Bad icon filetype (''%s'')\n',ext);
 end
 
+path = fullfile(pars.IconPath,[iconName ext]);
+
 if isempty(pars.Map) % Read Map from .gif
    [img,map] = imread(fullfile(pars.IconPath,[iconName ext]));
    if ~isempty(map)
@@ -96,9 +98,16 @@ end
 if ~isempty(map)
    icon = ind2rgb(img,map);
 else
-    icon = img;
     alpha = ones(size(img));
-    alpha(img == 0) = 0;
+    col = nigeLab.defaults.nigelColors(pars.Background)*255;
+    idx = all(~img,3);
+    for ii =1:3
+        thisCol = img(:,:,ii);
+        thisCol(idx) = col(ii);
+        alpha(idx,ii) = 0;
+        img(:,:,ii) = thisCol;
+    end
+   icon = img; 
 end
 
 if ~strcmpi(pars.Type,'double')

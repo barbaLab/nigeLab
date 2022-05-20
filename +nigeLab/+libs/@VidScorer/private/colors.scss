@@ -1,0 +1,24 @@
+// setting colors
+$line_background: darkgray; // color of the bar when it's empty
+$line_color: #343a40; // color of the bar when it has some progress
+$bordered_line_color: #138D75; // color of border and line of bordered indeterminate bar
+$determinate_line_background: darkgrey; // color of the bar when it's empty
+$determinate_line_color: #343a40; // color of determinate bar when it has some progress
+$determinate_bordered_line_border: #067861; // color of border of bordered determinate bar
+$determinate_bordered_line_color: #138D75; // color of line of bordered determinate bar
+$circles_color: #138D75; // color of darkest dot, the animation is based on fading the color
+$spinner_shadow: darkgrey; // base color of the spinner
+$spinner_color: #343a40; // color of the moving part of the spinner
+$determinate_circle_background: darkgrey; // base color of the spinner
+$determinate_circle_color: #343a40; // color of the moving part of the spinner
+$dashed_color: #138D75; // color of the dashed element
+
+// for spinners with multiple parts choose the darkest shade of chosen color you want to use, others will be lighter
+$bars_color: #0B5345; // color of the darkest bar
+$squares_color: #0B5345; // color of the darkest square
+$dots_color: #0B5345; // color of the darkest pulsating dot
+
+// how much will the color lighten; when x = 0, all parts will be the same color
+$bars_scale: 5; //0 <= x <= 14
+$squares_scale: 10; // 0 <= x <= 33
+$dots_scale: 10; // 0 <= x <= 33

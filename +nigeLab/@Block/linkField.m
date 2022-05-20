@@ -42,6 +42,7 @@ switch blockObj.FieldType{fieldIndex}
       % structure
       flag = linkStreamsField(blockObj,field);
    case 'Events'
+       % this is porbably not needed anymore.
       % Events have the following fields:
       % 'type', 'value', 'tag', 'ts', 'snippet'
 %       flag = linkEventsField(blockObj,field);
