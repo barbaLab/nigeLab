@@ -140,17 +140,8 @@ classdef VidScorer < matlab.mixin.SetGet
          arrayfun(@(v)v.setActive(false),obj.nigelCamArray(2:end));
 
          obj.nigelCam = nigelCams(1);
-         obj.nigelCam.setActive(true);
-%          obj.VideoTime = obj.nigelCam.getTimeSeries;
-%          obj.VideoTime = obj.VideoTime- ...
-%              obj.nigelCam.VideoOffset- ...
-%              (1:numel(obj.VideoTime)).* obj.nigelCam.VideoStretch;
-         
+         obj.nigelCam.setActive(true);       
          obj.Block = obj.nigelCam.Parent;
-%          obj.NeuTime =obj.Block.Time(:);
-%          if isempty(obj.NeuTime)
-%              obj.NeuTime = (1:obj.Block.Samples)./obj.Block.SampleRate * 1e3;
-%          end
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
                   
          % Parse input arguments
@@ -808,7 +799,7 @@ classdef VidScorer < matlab.mixin.SetGet
                       if isempty(obj.Block.Time)
                           tt = (1:numel(dd)) ./ obj.Block.SampleRate * 1000;
                       else
-                          tt = obj.Block.Time;
+                          tt = obj.Block.Time * 1000;
                       end
                   end
               end
