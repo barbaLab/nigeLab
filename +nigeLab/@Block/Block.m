@@ -91,17 +91,6 @@ classdef Block < nigeLab.nigelObj
       TrialMask                     % Logical vector of masking for trials (if applicable)
    end
    
-   % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC
-   properties (AbortSet,Hidden,SetObservable,Access=public)
-      CurNeuralTime  (1,1) double = 0  % Current "Neural Time" for analyses
-   end
-      
-   
-   % HIDDEN,PUBLIC (flags)
-   properties (GetAccess=public,SetAccess=?nigeLab.libs.VidScorer)
-      VideoOffset      (1,1) double = 0
-   end
-   
    % PUBLIC
    properties (GetAccess=public,SetAccess=?nigeLab.nigelObj)
       Channels struct                        % Struct array of neurophysiological stream data
@@ -380,37 +369,7 @@ classdef Block < nigeLab.nigelObj
           error(['You cannot set manually the Trial field.' newline 'Please add relevant events to the Event structure.']);
       end
       
-      % [DEPENDENT]  Interact with "Trial" event file to get "Mask"
-      function value = get.TrialMask(blockObj)
-         %GET.TRIALMASK  Returns "Trial" event file Mask vector
-         %
-         %  get(blockObj,'TrialMask');
-         
-         if isempty(blockObj.TrialMask_)
-            if isempty(blockObj.Events)
-               value = [];
-               return;
-            end
-            f = blockObj.ScoringField;
-            mask = getEventData(blockObj,f,'tag','Trial');
-            mask(isnan(mask)) = true; % "NaN" masked trials are included
-            value = logical(mask);
-            blockObj.TrialMask_ = value;
-         else
-            value = blockObj.TrialMask_;
-         end
-      end
-      function set.TrialMask(blockObj,value)
-         %SET.TRIALMASK  Assign "Trial" event file Mask vector
-         %
-         %  set(blockObj,'TrialMask',value);
-         
-         value(isnan(value)) = 1; % Update "NaN" mask to true
-         blockObj.TrialMask_ = value;
-         
-      end
-      
-    
+
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
       % Overloaded method to get 'end' indexing
@@ -639,53 +598,7 @@ classdef Block < nigeLab.nigelObj
          
       end
    end
-   
-   % RESTRICTED:{?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal}
-   methods (Access={?nigeLab.nigelObj,?nigeLab.Tank,?nigeLab.Animal})
-      function updateVideosFolder(blockObj,newFolderPath)
-         %UPDATEVIDEOSFOLDER  Updates all Videos.fname with newFolderPath
-         %
-         %  updateVideosFolder(blockObj);
-         %  blockObj : nigeLab.Block object
-         %
-         %  * When only given one input argument, it automatically directly
-         %     uses the value in ~/+nigeLab/+defaults/Video.m as the value
-         %     of `newFolderPath` (pars.VidFilePath)
-         %     --> If there are more than one element, it automatically
-         %         chooses the first cell array element.
-         %
-         %  updateVideosFolder(blockObj,newFolderPath);
-         %  
-         %  newFolderPath : Char array of new video folder path.
-         %  * This path should contain all the "full" videos that had been
-         %     associated with .Videos elements. Use this method if you
-         %     moved the folder containing Videos for some reason.
-         %
-         %  * To update all Videos in a Tank, call as:
-         %    `runFun(tankObj,'updateVideosFolder',newFolderPath);`
-         %
-         %     e.g.
-         %     >> runFun(tankObj,'updateVideosFolder','new/videos/folder');
-         
-         if nargin < 2
-            newFolderPath = [];
-         end
-         
-         if numel(blockObj) > 1
-            for i = 1:numel(blockObj)
-               updateVideosFolder(blockObj(i),newFolderPath);
-            end
-            return;
-         end
-         
-         if isempty(newFolderPath)
-            updateParams(blockObj,'Video','Direct');
-            newFolderPath = blockObj.Pars.Video.VidFilePath{1};
-         end
-         
-         updateVideoFileLocation(blockObj.Videos,newFolderPath);
-      end
-   end
+  
    
    % RESTRICTED:nigeLab.libs.VideosFieldType
    methods (Access=?nigeLab.libs.VideosFieldType)
@@ -696,31 +609,17 @@ classdef Block < nigeLab.nigelObj
    % PUBLIC
    methods (Access=public)
 
-      % Scoring videos:
-      fig = scoreVideo(blockObj) % Score videos manually to get behavioral alignment points
-      fig = alignVideoManual(blockObj,digStreams,vidStreams); % Manually obtain alignment offset between video and digital records
-      offset = guessVidStreamAlignment(blockObj,digStreamInfo,vidStreamInfo);
-      addScoringMetadata(blockObj,fieldName,info); % Add scoring metadata to table for tracking scoring on a video for example
-      clearScoringMetadata(blockObj,fieldName);  % Erase "empty" scoring metadata for a given tracking field
-      info = getScoringMetadata(blockObj,fieldName,scoringID); % Retrieve row of metadata scoring
-      [tStart,tStop] = getTrialStartStopTimes(blockObj,optStart,optStop); % Returns neural times of "trial" start and stop times
-      [csvFullName,metaName,formatSpec] = getVideoFileList(blockObj,trialVideoStatus); % Returns name of .csv table file and the corresponding table field of blockObj.Meta
-      
       % Methods for data extraction:
       sig  = execStimSuppression(blockObj,nChan)          % removes stimulation pulses from raw signal and returns a cleaned one
       flag = checkActionIsValid(blockObj,nDBstackSkip);     % Throw error if appropriate processing not yet complete
       flag = doAutoClustering(blockObj,chan,unit,useSort)   % Do automatic spike clustiring
       flag = doBehaviorSync(blockObj)                       % Get sync from neural data for external triggers
       flag = doEventDetection(blockObj,behaviorData,vidOffset,forceHeaderExtraction)         % Detect "Trials" for candidate behavioral Events
-      flag = doEventHeaderExtraction(blockObj,behaviorData,vidOffset,forceHeaderExtraction)  % Create "Header" for behavioral Events
       flag = doLFPExtraction(blockObj)       % Extract LFP decimated streams
       flag = doRawExtraction(blockObj)       % Extract raw data to Matlab BLOCK
       flag = doReReference(blockObj)         % Do virtual common-average re-reference
       flag = doSD(blockObj)                  % Do spike detection for extracellular field
-      flag = doTrialVidExtraction(blockObj)  % Extract "chunks" of video frames as trial videos
       flag = doUnitFilter(blockObj)          % Apply multi-unit activity bandpass filter
-      flag = doVidInfoExtraction(blockObj,vidFileName,forceParamsUpdate) % Get video information
-      flag = doVidSyncExtraction(blockObj)   % Get sync info from video
 
       % Methods for streams info
       stream = getStream(blockObj,streamName,scaleOpts); % Returns stream data corresponding to streamName

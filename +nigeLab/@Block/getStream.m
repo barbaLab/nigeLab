@@ -62,7 +62,7 @@ if iscell(streamName)
 end
 
 matchingNames = structfun(@(x) {x(contains({x.name},streamName)).name},blockObj.Streams,'UniformOutput',false);
-matchingNames = struct2array(matchingNames);
-stream = nigeLab.libs.nigelStream(blockObj,matchingNames{1},scaleOpts);
+stream = struct2array(matchingNames);
+% stream = nigeLab.libs.nigelStream(blockObj,matchingNames{1},scaleOpts);
 
 end

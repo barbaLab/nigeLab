@@ -600,6 +600,108 @@ classdef DiskData < handle & ...
             '[DISKDATA]: Cannot concatenate DiskData objects\n');
          C = varargin{1}; % Simply returns the first element of the array
       end
+   
+   % Overloaded greater than method
+      function Out = gt(obj,b)
+         %GT  Overloaded function for greater than
+         %  Out = obj > b;
+         %  --> obj : nigeLab.libs.DiskData object
+         %  --> b   : Can be:
+         %        --> nigeLab.libs.DiskData object
+         %        --> numeric array of same size as
+         %              obj.diskfile_.(obj.name_)
+         %        --> scalar
+         %
+         %  If inputs are given correctly, returned output does NOT write
+         %  to a disk file, but instead simply returns the result of the
+         %  gt operation to the caller workspace
+         
+         varname=[ '/' obj.name_];
+         a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+         if isa(b,'nigeLab.libs.DiskData')
+            varname=[ '/' b.name_];
+            b = h5read(b.getPath,varname,[1 1],[1 inf]);
+            Out=a > b;
+         elseif isnumeric(b)
+            Out=a > b;
+         end
+      end 
+      % Overloaded greater than or equal to method
+      function Out = ge(obj,b)
+         %GT  Overloaded function for greater than
+         %  Out = obj > b;
+         %  --> obj : nigeLab.libs.DiskData object
+         %  --> b   : Can be:
+         %        --> nigeLab.libs.DiskData object
+         %        --> numeric array of same size as
+         %              obj.diskfile_.(obj.name_)
+         %        --> scalar
+         %
+         %  If inputs are given correctly, returned output does NOT write
+         %  to a disk file, but instead simply returns the result of the
+         %  gt operation to the caller workspace
+         
+         varname=[ '/' obj.name_];
+         a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+         if isa(b,'nigeLab.libs.DiskData')
+            varname=[ '/' b.name_];
+            b = h5read(b.getPath,varname,[1 1],[1 inf]);
+            Out=a >= b;
+         elseif isnumeric(b)
+            Out=a >= b;
+         end
+      end
+
+         % Overloaded greater than method
+      function Out = lt(obj,b)
+         %LT  Overloaded function for lower than
+         %  Out = obj < b;
+         %  --> obj : nigeLab.libs.DiskData object
+         %  --> b   : Can be:
+         %        --> nigeLab.libs.DiskData object
+         %        --> numeric array of same size as
+         %              obj.diskfile_.(obj.name_)
+         %        --> scalar
+         %
+         %  If inputs are given correctly, returned output does NOT write
+         %  to a disk file, but instead simply returns the result of the
+         %  lt operation to the caller workspace
+         
+         varname=[ '/' obj.name_];
+         a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+         if isa(b,'nigeLab.libs.DiskData')
+            varname=[ '/' b.name_];
+            b = h5read(b.getPath,varname,[1 1],[1 inf]);
+            Out=a < b;
+         elseif isnumeric(b)
+            Out=a < b;
+         end
+      end
+      % Overloaded greater than or equal to method
+      function Out = le(obj,b) 
+         %LE  Overloaded function for lower than
+         %  Out = obj <= b;
+         %  --> obj : nigeLab.libs.DiskData object
+         %  --> b   : Can be:
+         %        --> nigeLab.libs.DiskData object
+         %        --> numeric array of same size as
+         %              obj.diskfile_.(obj.name_)
+         %        --> scalar
+         %
+         %  If inputs are given correctly, returned output does NOT write
+         %  to a disk file, but instead simply returns the result of the
+         %  lt operation to the caller workspace
+         
+         varname=[ '/' obj.name_];
+         a = h5read(obj.getPath,varname,[1 1],[1 inf]);
+         if isa(b,'nigeLab.libs.DiskData')
+            varname=[ '/' b.name_];
+            b = h5read(b.getPath,varname,[1 1],[1 inf]);
+            Out = a <= b;
+         elseif isnumeric(b)
+            Out=a <= b;
+         end
+      end
    end
    
    % HIDDEN,PUBLIC

@@ -55,7 +55,7 @@ z(pkloc) = pars.Polarity .* data(pkloc);
 
 
 minTime = 1e-3*pars.RefrTime; % parameter in milliseconds
-[ts,pmin] = nigeLab.libs.peakseek(z,minTime*pars.fs,pars.Thresh);
+[ts,pmin] = nigeLab.utils.peakseek(z,minTime*pars.fs,pars.Thresh);
 pmin = pmin .* pars.Polarity;
 
 

@@ -94,7 +94,7 @@ data_th = zeros(size(data));
 data_th(out_>lambda_swtteo) = pars.Polarity .* data(out_>lambda_swtteo);
 
 minTime = 1e-3*pars.RefrTime; % parameter in milliseconds
-[ts,pmin] = nigeLab.libs.peakseek(data_th,minTime*pars.fs,lambda_data);
+[ts,pmin] = nigeLab.utils.peakseek(data_th,minTime*pars.fs,lambda_data);
 pmin = pmin .* pars.Polarity;
 E = out_(ts); 
 
