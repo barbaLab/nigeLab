@@ -515,17 +515,25 @@ end
            simpleVideoReader('drawROI',obj.VideoReader);
        end
 
-       function exportFrame(obj)
+       function exportFrame(obj,thisPath)
            % Exports current frame as jpeg. Path of export is defined in
            % obj.Parent.Paths.Video.dir and the jpeg name will be
            % [obj.Name]Frame[n+1].jpg where n is the number of files that
-           % follow this naming scheme in the folder,
+           % follow this naming scheme in the folder. Starts at 0;
+           
+           % thisPsth is an optional argoument. If not provided it defaults
+           % to the VidStreams folder in the Paths struct.
             if ~obj.Active
                return;
+            end
+           if nargin < 2
+               thisPath = obj.Parent.Paths.VidStreams.dir;
+           elseif ~exist(thisPath,'dir')
+               mkdir(thisPath);
            end
-           NFrames = numel(dir(fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame*.jpg',obj.Name))));
-           thisPath = fullfile(obj.Parent.Paths.VidStreams.dir,sprintf('%sFrame%.4d.jpg',obj.Name,NFrames));
-           simpleVideoReader('exportF',obj.VideoReader,thisPath);
+           NFrames = numel(dir(fullfile(thisPath,sprintf('%sFrame*.jpg',obj.Name))));
+           savePath = fullfile(thisPath,sprintf('%sFrame%.4d.jpg',obj.Name,NFrames));
+           simpleVideoReader('exportF',obj.VideoReader,savePath);
        end
 
        function [sig,t] = extractSignal(obj)
