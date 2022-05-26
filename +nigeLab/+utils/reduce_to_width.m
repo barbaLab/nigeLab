@@ -84,8 +84,8 @@ function [x_reduced, y_reduced] = reduce_to_width(x, y, width, lims)
             
             % Get the indices of the max and min.
             yt = y(left:right, k);
-            [~, max_index]     = max(yt);
-            [~, min_index]     = min(yt);
+            [~, max_index]     = max(yt,[],'omitnan');
+            [~, min_index]     = min(yt,[],'omitnan');
             
             % Record those indices.
             indices(2*z:2*z+1) = sort([min_index max_index]) + left - 1;

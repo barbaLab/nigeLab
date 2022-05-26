@@ -437,7 +437,7 @@ classdef VidScorer < matlab.mixin.SetGet
                      'macro_active',false,'xpos0',[],'xNew',[]...
                      ,'currentlinestyle',[],'currentmarker',[],...
                      'xData',[],'oldXData',nn.UserData.Obj.getTimeSeries,...
-                     'xOffs','[]','hasMoved',false);
+                     'xOffs','[]','hasMoved',false,'idx0',[]);
                  allHPlots(idx)=nn.UserData.ReducedPlot.h_plot;
                  idx = idx+1;
                  
@@ -473,27 +473,29 @@ classdef VidScorer < matlab.mixin.SetGet
                   return;
               end
               
-               % Change Events if needed
-              Question = sprintf('Do you want nigel to update the Events'' time?\n');
-              ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
-              if strcmp(ButtonName,'Yes')
-                  % Assign the new timeline to the nigelCam.
-                  % Change all Events' time accordingly.
-                  
-                 EvtsT = [obj.Evts.Time]; 
-                 if ~isempty(EvtsT)
-                     [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
-                 end
-                 % update Evts
-                 newXData = obj.nigelCam.getTimeSeries;
-                for ii=1:numel(obj.Evts)
-                    thisEventObj = obj.Evts(ii).graphicObj;
-                    OldName = obj.Evts(ii).Name;
-                    OldTime = obj.Evts(ii).Time;
-                    NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
-                    modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
-                end % ii               
-              end %fi strcmp
+              if ~isempty(obj.Evts)
+                  % Change Events if needed
+                  Question = sprintf('Do you want nigel to update the Events'' time?\n');
+                  ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
+                  if strcmp(ButtonName,'Yes')
+                      % Assign the new timeline to the nigelCam.
+                      % Change all Events' time accordingly.
+                      
+                      EvtsT = [obj.Evts.Time];
+                      if ~isempty(EvtsT)
+                          [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
+                      end
+                      % update Evts
+                      newXData = obj.nigelCam.getTimeSeries;
+                      for ii=1:numel(obj.Evts)
+                          thisEventObj = obj.Evts(ii).graphicObj;
+                          OldName = obj.Evts(ii).Name;
+                          OldTime = obj.Evts(ii).Time;
+                          NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                          modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
+                      end % ii
+                  end %fi strcmp
+              end %fi isempty
           end % fi src.Value
           
           
@@ -523,7 +525,8 @@ classdef VidScorer < matlab.mixin.SetGet
                   UDAta.xOffs =  cam.VideoOffset;
                   ThisData(idx).MvmtData = UDAta;
                   set(fig,'UserData',ThisData)
-               else
+              else
+                  UDAta.macro_active = 0;
                   ThisData(idx).MvmtData = UDAta;
                   set(fig,'UserData',ThisData)
                   disableMove(fig);
@@ -610,7 +613,7 @@ classdef VidScorer < matlab.mixin.SetGet
                       'macro_active',false,'xpos0',[],'xNew',[]...
                       ,'currentlinestyle',[],'currentmarker',[],...
                       'xData',[],'oldXData',nn.UserData.Obj.getTimeSeries,...
-                      'xOffs','[]','hasMoved',false);
+                      'xOffs','[]','hasMoved',false,'idx0',[]);
                   allHPlots(idx)=nn.UserData.ReducedPlot.h_plot;
                   idx = idx+1;
                   
@@ -647,27 +650,28 @@ classdef VidScorer < matlab.mixin.SetGet
                   return;
               end
               
-              Question = sprintf('Do you want nigel to update the Events'' time?\n');
-              ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
-              if strcmp(ButtonName,'Yes')
-                  % Assign the new timeline to the nigelCam.
-                  % Change all Events' time accordingly.
-                  
-                 EvtsT = [obj.Evts.Time]; 
-                 if ~isempty(EvtsT)
-                     [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
-                 end
-                 % update Evts
-                NewTime  = obj.nigelCam.getTimeSeries;
-                for ii=1:numel(obj.Evts)
-                    thisEventObj = obj.Evts(ii).graphicObj;
-                    OldName = obj.Evts(ii).Name;
-                    OldTime = obj.Evts(ii).Time;
-                    NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
-                    modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
-                end
-              end
-              
+              if ~isempty(obj.Evts)
+                  Question = sprintf('Do you want nigel to update the Events'' time?\n');
+                  ButtonName = questdlg(Question, 'Change Event Time?', 'Yes', 'No', 'Yes');
+                  if strcmp(ButtonName,'Yes')
+                      % Assign the new timeline to the nigelCam.
+                      % Change all Events' time accordingly.
+                      
+                      EvtsT = [obj.Evts.Time];
+                      if ~isempty(EvtsT)
+                          [~,EvtsS] = min(abs(EvtsT*1e3 - oldXData(:)));
+                      end
+                      % update Evts
+                      NewTime  = obj.nigelCam.getTimeSeries;
+                      for ii=1:numel(obj.Evts)
+                          thisEventObj = obj.Evts(ii).graphicObj;
+                          OldName = obj.Evts(ii).Name;
+                          OldTime = obj.Evts(ii).Time;
+                          NewTime = newXData(EvtsS(ii))./1e3; % get corresponding shifted time. From ms to s
+                          modifyEventEntry(obj,thisEventObj,OldName,OldTime,OldName,NewTime)
+                      end
+                  end % fi strcmp
+              end % fi isempty
    
               obj.sigFig.UserData = [];
           end
@@ -805,8 +809,8 @@ classdef VidScorer < matlab.mixin.SetGet
               end
               
               % We have all the data, let's plot it with LinePlotReducer
-              idx = ~isnan(tt(:)');     % LinePlotReducer does not get along with nan, let's get rid of those
-              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt(idx), dd(idx));
+%               idx = ~isnan(tt(:)');     % LinePlotReducer does not get along with nan, let's get rid of those
+              plotStruct.ReducedPlot = nigeLab.utils.LinePlotReducer(obj.sigAxes, tt, dd);
               
               % these are usefull to make the click-to-seek feature work
               plotStruct.ReducedPlot.h_plot.HitTest = 'off';        
@@ -1387,12 +1391,15 @@ classdef VidScorer < matlab.mixin.SetGet
              'Tooltip','Start timer');
          
          
-         
+         cm = uicontextmenu(obj.sigFig);
+         m1 = uimenu(cm,'Text','Reset','ButtonDownFcn',@(src,evt)zoom(obj.sigAxes,'out'));
+
          obj.ZoomButton = uibutton(obj.FigComPanel,'state',...
              'Position',[10 10 24 24],...
              'Text','',...
              'Icon',obj.icons.zoom.path,...
-             'Tooltip','Toggles zoom');
+             'Tooltip','Toggles zoom',...
+             'ContextMenu',cm);
          
          obj.PanButton = uibutton(obj.FigComPanel,'state',...
              'Position',[40 10 24 24],...

@@ -542,7 +542,12 @@ end
 %                return;
 %            end
            [sig,t] =  simpleVideoReader('getMeanVal',obj.VideoReader);
-
+           if any(isnan(t))
+               t = obj.TS;
+               if numel(sig)~=numel(t)
+                   error('nigeLab:nigelCam:signalDimensionMismatch','Something went wrong. Extracted time and signal lenghts do not match.');
+               end
+           end
 
        end
 
