@@ -128,8 +128,9 @@ for ii=1:numel(Needed)
    NameFields = fieldnames(Paths);
    rmdir(Paths.(NameFields{ii}).dir,'s');
    blockObj.Channels = rmfield(blockObj.Channels,NameFields{ii});
-   blockObj.updateStatus(NameFields{ii},false);
+   blockObj.updateStatus(NameFields{ii},false,blockObj.Mask);
    fprintf(1,'-> %s data folder and contents deleted.\n',NameFields{ii});
+   delete(usrchoice(ii));
 end
 flag = true;
 end

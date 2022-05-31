@@ -46,6 +46,11 @@ end
 if nargin < 2 % If 1 input, need to specify default fields
    fields_to_extract = blockObj.RecSystem.Fields;
 else % otherwise just make sure it is correct orientation
+    if ischar(fields_to_extract)
+        fields_to_extract = {fields_to_extract};
+    elseif ~iscell(fields_to_extract)
+       error('Invalid data type. Second argument must be char or cellarray of chars.') 
+    end
    fields_to_extract = reshape(fields_to_extract,1,numel(fields_to_extract));
 end
 
@@ -114,6 +119,7 @@ nCh.Standard = struct('Raw',struct('Data',header.NumRawChannels),...
 nCh.Dig = struct('DigIO',struct('DigIn',header.NumDigInChannels,'DigOut',header.NumDigOutChannels));
 native_order = struct; % For `Streams` fieldType
 stimCurr = 0; % Initialize to 0 amps
+trigCh = nan;
 for f = fields_to_extract
    idx = find(strcmpi(blockObj.Fields,f),1,'first');
    if isempty(idx) % Check if field is present (+defaults/Block config)

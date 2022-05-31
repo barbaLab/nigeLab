@@ -658,7 +658,7 @@ classdef Block < nigeLab.nigelObj
               case 'nigeLab.evt.evtChanged'
                   thisEvent = thisEvent.toStruct;
           end
-          evtFields = fieldnames(obj.Events(1));
+          evtFields = fieldnames(obj.Events);
           str = strjoin(evtFields,', ');
           if ~isstruct(thisEvent)
               error('Events needs to be structures with the fields: %s',str);
@@ -669,6 +669,7 @@ classdef Block < nigeLab.nigelObj
           end
           fToRemove = setdiff(thisFields,evtFields);
           obj.Events = [obj.Events rmfield(thisEvent,fToRemove)];
+          flag = true;
       end
       function flag = deleteEvent(obj,thisEvent)
           if ~isscalar(thisEvent)
@@ -937,7 +938,7 @@ classdef Block < nigeLab.nigelObj
             
             % Parse for both old and new versions of file naming convention
             paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
-               paths.(F{iF}).dir,[p.File]);
+               paths.(F{iF}).dir,[p.File{:}]);
             paths.(F{iF}).f_expr = p.File;
             paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
             paths.(F{iF}).info = nigeLab.utils.getUNCPath(...
