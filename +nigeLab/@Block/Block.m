@@ -1116,7 +1116,7 @@ classdef Block < nigeLab.nigelObj
          if nargin < 1
             n = [0, 0];
          else
-            n = nanmax(n,0);
+            n = max(n,0,'omitnan');
             if isscalar(n)
                n = [0, n];
             end
