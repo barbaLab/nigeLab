@@ -938,7 +938,7 @@ classdef Block < nigeLab.nigelObj
             
             % Parse for both old and new versions of file naming convention
             paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
-               paths.(F{iF}).dir,[p.File{:}]);
+               paths.(F{iF}).dir,[p.File]);
             paths.(F{iF}).f_expr = p.File;
             paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
             paths.(F{iF}).info = nigeLab.utils.getUNCPath(...
