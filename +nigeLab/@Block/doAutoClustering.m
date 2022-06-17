@@ -45,9 +45,12 @@ if numel(blockObj) > 1
 else
    flag = false;
 end
-[~,par] = blockObj.updateParams('AutoClustering');
+
+[~,par] = blockObj.updateParams('AutoClustering','KeepPars');
 blockObj.checkActionIsValid();
-SuppressText = ~blockObj.Verbose; 
+SuppressText = ~blockObj.Verbose;
+blockObj.updateStatus('Clusters',false,blockObj.Mask);
+
 % runs automatic clustering algorithms
 if isempty(unit)
    unit = 0:par.NMaxClus;
@@ -57,6 +60,7 @@ elseif ischar(unit)
    error(['nigeLab:' mfilename ':BadString'],...
       'Unexpected "unit" value: %s (should be ''all'' or numeric)\n',unit);
 end
+
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
       par.MethodName);
@@ -94,7 +98,7 @@ for iCh = chan
       continue;
    end
    
-   % if unit is porvided, match sikes and classes with the unit
+   % if unit is porvided, match spikes and classes with the unit
    SubsetIndx = ismember(classes,unit);
    classesSubset = classes(SubsetIndx);
    
@@ -105,13 +109,15 @@ for iCh = chan
    par.NMaxClus = numel(freeLabels);
    
    % actually do the clustering
-   switch par.MethodName
-      case 'KMEANS'
-         [classes_,temp] = runKMEANSclustering(inspk,par);
-      case 'SPC'
-         [classes_,temp] = runSPCclustering(inspk,par);
-      otherwise
-   end
+
+ 
+      SortFun = ['SORT_' par.MethodName];
+      SortPars = par.(SortFun);
+      Artargsout = cell(1,nargout(SortFun));
+      [Artargsout{:}] = feval(SortFun,inspk,SortPars);
+      classes_ = Artargsout{1};
+      temp = unique(Artargsout{2});
+      
    
    % Attach correct/free labels to newly clustered spks
    newLabels = unique(classes_);
@@ -140,60 +146,6 @@ else
    blockObj.reportProgress('Done',100,'toEvent');
 end
 flag = true;
-end
-
-function [classes,temp] = runSPCclustering(inspk,par)
-[classes,temp] = nigeLab.utils.SPC.DoSPC(par.SPC,inspk);
-end
-
-function [classes,temp] = runKMEANSclustering(inspk,par)
-warning off
-GPUavailable = false;
-if par.KMEANS.UseGPU
-   try
-      inspk = gpuArray(inspk(:,:));     % we need inspk as column for KMEANS
-      GPUavailable = true;
-   catch
-      warning('gpuArray non available. Computing on CPU;');
-   end
-end
-
-switch par.KMEANS.NClus
-   % set Klist, list of K to try with KMEANS
-   case 'best'
-      Klist = 1:pars.MaxNClus;
-      if GPUavailable
-         % sadly evalcluster is broken with gpuArrays, at least on 2017a
-         % workarouund, compute the cluster solution outside evalclust and
-         % use it only to evaluate the solution.
-         
-         ClustSolutions = zeros(numel(inspk),numel(Klist));
-         for ii=Klist
-            ClustSolutions(:,ii) = gather(kmeans(inspk,Klist(ii)));
-         end
-         evals = evalclusters(inspk,ClustSolutions,'Silhouette');
-         classes = evals.OptimalY;
-      else
-         inspk = inspk(:);
-         evals = evalclusters(inspk,'kmeans','Silhouette','Klist',Klist);
-         classes = evals.OptimalY;
-      end
-      
-   case 'max'
-      Klist = min(par.NMaxClus,ceil(size(inspk,1)/100));
-%       if GPUavailable
-%          % sadly evalcluster is broken with gpuArrays, at least on 2017a
-%          % workarouund, compute the cluster solution outside evalclust and
-%          % use it only to evaluate the solution.
-%          
-%          classes = gather(kmeans(inspk,Klist));
-%       else
-%          classes = kmeans(inspk,Klist);
-%       end
-      classes = kmeans(inspk,Klist);
-end
-
-temp = par.NMaxClus;
 end
 
 function saveClusters(blockObj,classes,iCh,temperature)

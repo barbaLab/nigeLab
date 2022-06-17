@@ -5,9 +5,9 @@ function varargout = AutoClustering(varargin)
 
 %% PARAMS YOU MIGHT CHANGE
 pars = struct;
-pars.MethodName     = 'KMEANS';     % Can be: 'KMEANS' or 'SPC'
+pars.MethodName     = 'skwedt';     % Can be: 'kmenas','spc' or 'skewdt'
 pars.NMaxClus       = 9;            % Maximum # of clusters
-pars.ID.Clusters    = 'kmeans';      % Attached to the cluster folder
+pars.ID.Clusters    = 'skwedt';      % Attached to the cluster folder
 
 
 
