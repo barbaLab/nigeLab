@@ -93,11 +93,31 @@ switch S(1).type
       % Should only reference a single block at a time, since if the first
       % index is numeric, it would reference the channels.
       if ~isscalar(blockObj)
-         varargout = cell(1,nargout);
-         for i = 1:numel(blockObj)
-            varargout{i} = subsref(blockObj(i),S);
-         end
-         return;
+          subs = S(1).subs;
+          switch numel(subs)
+              case 1
+                  if isnumeric(subs{1})
+                    % error. Single blocks in array should be referenced
+                    % with ()
+                    error(['nigeLab:' mfilename ':badReference'],...
+                        ['[BLOCK/SUBSREF]: To access blocks from ' ...
+                        'an array, use () instead of {}']);
+                  elseif blockObj(1).IsRightKeyFormat(subs{1})
+                      varargout{1} = blockObj.findByKey(subs{1});
+                      return
+                  end
+              otherwise
+                  if isQuery(subs)
+                    idx = arrayfun(@(bb)filterMeta(bb,subs{:}),blockObj);
+                    varargout{1} = blockObj(idx);
+                    return
+                  end
+                  varargout{1} = arrayfun(@(bb)subsref(bb,S),blockObj,'UniformOutput',false);
+%                   for i = 1:numel(blockObj)
+%                       varargout{1}{i} = subsref(blockObj(i),S);
+%                   end
+                  return;
+          end
       end
       
       %%% Input 1 defines which shortcut we're going to use. It needs to be
@@ -237,4 +257,9 @@ end
 function value = checkInputArgsCoherence(prevElNum,args)
 %CHECKINPUTARGSCOHERENCE  Ensure that subscript args "work" together
 value = isnumeric(args) || (iscell(args) && (numel(args) == prevElNum)) || (ischar(args) && strcmp(args,':'));
+end
+
+function val = isQuery(subs)
+    val = ~mod(numel(subs),2);
+    val = val & all(cellfun(@ischar,subs(1:2:end)));
 end

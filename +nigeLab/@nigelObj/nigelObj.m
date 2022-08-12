@@ -1855,7 +1855,9 @@ end
                end
                obj(i).Name = getKey(obj(i),'Name');
             end
+            [obj(i).Children.InBlindMode] = deal(value);
          end
+
       end
 
       % [ASSIGN CHILDREN] Sets .Index property (to assign all children)
@@ -4206,6 +4208,42 @@ end
          end
             
       end
+   
+      % filters obj based on Meta values
+      function val = checkMeta(nigelObj,varargin)
+%           CheckMETA return true if the values in varargin are present in
+%           MEta property. Varargin needs to be even and takes struct-field
+%           values pairs.           
+%  example
+%  checkMeta(nigelObj,'RecData','010121')
+% 
+%       This function is used in combination with subsref to implement the
+%       metadata indexing
+          if ~isQuery(varargin)
+              error(['nigeLab:' mfilename ':badSubscriptReference'],...
+                  'Wrong input format for queries.');
+          end
+          if numel(varargin) == 2
+              val = compare(nigelObj.Meta.(varargin{1}), varargin{2});
+              return
+          end
+
+          val = checkMeta(nigelObj,varargin{1:2}) & checkMeta(nigelObj,varargin{3:end});
+      end
+
+      function val = isQuery(subs)
+          val = ~mod(numel(subs),2);
+          val = val & all(cellfun(@ischar,subs(1:2:end)));
+      end
+
+      function val = compare(val1,val2)
+          if isnumeric(val1) && isnumeric(val2)
+              val = all(val1 == val2);
+          elseif (ischar(val1) || isstring(val1)) && (ischar(val2) || isstring(val2))
+              val = strcmpi(val1,val2);
+          end
+end
+
    end
    
    % PROTECTED
@@ -5294,19 +5332,6 @@ end
           if ~isfield( obj.Pars.(obj.Type),'Parsing')
                     obj.Meta = obj.parseNamingMetadata;
           end
-%           
-%           pars = obj.Pars.(obj.Type).Parsing;
-%           meta = obj.Meta;
-%           % Last, concatenate parsed (included) variables to get .Name
-%           str = [];
-%           nameCon = pars.NamingConvention;
-%           for ii = 1:numel(nameCon)
-%               if isfield(meta,nameCon{ii})
-%                   str = [str,meta.(nameCon{ii}),pars.Concatenater];
-%               end
-%           end
-%           name = str(1:(end-numel(pars.Concatenater)));
-
         name = obj.Meta.(sprintf('%sID',obj.Type));
       end
       

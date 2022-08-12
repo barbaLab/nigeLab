@@ -197,3 +197,9 @@ function value = IsColon(subs)
 
 value = ischar(subs) && strcmp(subs,':');
 end
+
+function val = isQuery(subs)
+    val = ~mod(numel(subs),2);
+    val = val & all(cellfun(@ischar,subs(1:2:end)));
+end
+

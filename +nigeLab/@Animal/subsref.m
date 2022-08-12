@@ -82,6 +82,9 @@ switch S(1).type
                    'please use array notation on indices ([]).\n']);
             end
             s = substruct('()',subs(1));
+         elseif isQuery(subs)
+             idx = arrayfun(@(bb)filterMeta(bb,subs{:}),animalObj.Children);
+             s = substruct('()',{idx});
          else
             error(['nigeLab:' mfilename ':badSubscriptReference'],...
                '[ANIMAL/SUBSREF]: Invalid subscipt reference. ');
@@ -136,7 +139,28 @@ switch S(1).type
                elseif IsColon(subs{1})
                   s = substruct('()',{1, ':'});
                elseif isnumeric(subs{1})
-                  s = substruct('()',subs(1));
+                   s = substruct('()',subs(1));
+               elseif isQuery(subs)
+                   % In this case we only have one query and will return
+                   % animals
+                   idx = arrayfun(@(aa)filterMeta(aa,subs{:}),animalObj);
+                   s = substruct('()',{idx});
+                   an = subsref(animalObj,s);
+                   i = 1;
+                   while i <= numel(an)
+                       if isempty(an(i).Children)
+                           an(i) = [];
+                       else
+                           i = i + 1;
+                       end
+                   end
+                   varargout{1} = an;
+                   return;
+               elseif isQuery(subs{1}) 
+                   %                    in this case two cells with queries for respecticely
+                   %                    animals and blocks were passed
+                   idxA = arrayfun(@(aa)filterMeta(aa,subs{1}{:}),animalObj);
+                   s = substruct('()',{idxA});
                else
                   error(['nigeLab:' mfilename ':badReference'],...
                      ['[ANIMAL/SUBSREF]: Unrecognized index element; '...
@@ -198,6 +222,16 @@ switch S(1).type
                         error(['nigeLab:' mfilename ':VerticalDimensionsMismatch'],...
                            'Dimensions of arrays being concatenated are not consistent.');
                      end
+                  elseif isQuery(subs{2})
+                      idxB = arrayfun(@(aa) find(arrayfun(@(bb)filterMeta(bb,subs{2}{:}),aa.Children)), ...
+                          an,'UniformOutput',false);
+                      f = {'type','subs'};
+                      c = repmat({'()'},1,numel(an));
+                      for ii=1:numel(idxB)
+                          c(2,ii) = {idxB(ii)};
+                      end
+                      s = cell2struct(c,f,1);
+                      s = s(:); % just to be sure is a column
                   else
                      checkCellInputCoherence(subs{2},2);
                   end
@@ -263,6 +297,11 @@ if numel(unique(cellfun(@(x) class(x), subs, 'UniformOutput', false))) ~= 1
       ['Shortcut indexing using {} does not support different index types (numeric,char). \n'...
       'Index %d is composed of %s.'],indxNum,classStr);
 end
+end
+
+function val = isQuery(subs)
+    val = ~mod(numel(subs),2);
+    val = val & all(cellfun(@ischar,subs(1:2:end)));
 end
 
 % function checkCellInputCoherence(subs)

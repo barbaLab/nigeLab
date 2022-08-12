@@ -385,7 +385,7 @@ classdef Block < nigeLab.nigelObj
       end
       
       % Overloaded NUMARGUMENTSFROMSUBSCRIPT method for parsing indexing.
-      function n = numArgumentsFromSubscriptUNUSED(blockObj,s,indexingContext)
+      function n = numArgumentsFromSubscript(blockObj,s,indexingContext)
          % NUMARGUMENTSFROMSUBSCRIPT  Parse # args based on subscript type
          %
          %  n = blockObj.numArgumentsFromSubscript(s,indexingContext);
@@ -393,26 +393,44 @@ classdef Block < nigeLab.nigelObj
          %  s  --  struct from SUBSTRUCT method for indexing
          %  indexingContext  --  matlab.mixin.util.IndexingContext Context
          %                       in which the result applies.
-         
-         dot = strcmp({s(1:min(length(s),2)).type}, '.');
-         if sum(dot) < 2
-            isValidForArgsOut = ...
-               (indexingContext == matlab.mixin.util.IndexingContext.Statement) || ...
-               (indexingContext == matlab.mixin.util.IndexingContext.Expression);
-            if  isValidForArgsOut &&...
-                  any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
-               
-               mc = metaclass(blockObj);
-               calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
-               n = numel(mc.MethodList(calledmethod).OutputNames);
-            else
+         switch indexingContext
+             case 'Statement'
+                 if numel(s)==1 && strcmpi(s.type,'{}') 
+                         n = 1;
+                         return;
+                 elseif numel(s)>1 && strcmpi(s(1).type,'{}') 
+                     % illegal, error handling is offloaded tu subsref
+                     n = 1;
+                     return;
+                 else
+%                      n = numel(blockObj);
                n = builtin('numArgumentsFromSubscript',...
-                  blockObj,s,indexingContext);
-            end
-         else
-            n = builtin('numArgumentsFromSubscript',...
-               blockObj,s,indexingContext);
+                     blockObj,s,indexingContext);
+                 end
+             otherwise
+                 n = builtin('numArgumentsFromSubscript',...
+                     blockObj,s,indexingContext);
          end
+
+%          dot = strcmp({s(1:min(length(s),2)).type}, '.');
+%          if sum(dot) < 2
+%             isValidForArgsOut = ...
+%                (indexingContext == matlab.mixin.util.IndexingContext.Statement) || ...
+%                (indexingContext == matlab.mixin.util.IndexingContext.Expression);
+%             if  isValidForArgsOut &&...
+%                   any(dot) && any(strcmp(s(dot).subs,methods(blockObj)))
+%                
+%                mc = metaclass(blockObj);
+%                calledmethod=(strcmp(s(dot).subs,{mc.MethodList.Name}));
+%                n = numel(mc.MethodList(calledmethod).OutputNames);
+%             else
+%                n = builtin('numArgumentsFromSubscript',...
+%                   blockObj,s,indexingContext);
+%             end
+%          else
+%             n = builtin('numArgumentsFromSubscript',...
+%                blockObj,s,indexingContext);
+%          end
       end
    end
    
