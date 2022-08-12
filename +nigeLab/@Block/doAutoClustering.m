@@ -83,13 +83,15 @@ for iCh = chan
       if blockObj.getStatus('Sorted',iCh)
          inspk = getSpikeFeatures(blockObj,iCh,{'Sorted',unit});
       else
-         inspk = getSpikeFeatures(blockObj,iCh,{'Sorted',nan});
+%          inspk = getSpikeFeatures(blockObj,iCh,{'Sorted',nan});
+            inspk = getSpikes(blockObj,iCh);
       end
    else
       if blockObj.getStatus('Clusters',iCh)
          inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',unit});
       else
-         inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
+%          inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
+         inspk = getSpikes(blockObj,iCh);
       end
    end
    classes =  getClus(blockObj,iCh,SuppressText);

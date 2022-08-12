@@ -245,12 +245,8 @@ classdef Animal < nigeLab.nigelObj
    
    % HIDDEN,PUBLIC
    methods (Hidden,Access=public)      
-%       flag = genPaths(animalObj,tankPath) % Generate paths property struct
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = getSaveLocation(animalObj,saveLoc) % Prompt to set save dir
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doAutoClustering(animalObj,chan,unit) % Runs spike autocluster
-%       --> Deprecated (inherited from `nigelObj`)
+      flag = doAutoClustering(animalObj,chan,multiBlock) % Runs spike autocluster
+
       N = getNumBlocks(animalObj); % Gets total number of blocks 
       mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together  % -- Is it deprecated? (MM to FB 2020-Feb-01)
    end
