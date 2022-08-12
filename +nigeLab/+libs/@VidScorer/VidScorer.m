@@ -87,9 +87,9 @@ classdef VidScorer < matlab.mixin.SetGet
    % Other nigeLab linked obj
    properties (Transient,Access=private)
 
-       nigelCam             % preferred camera
-       nigelCamArray        % Array of nigelCam obj
-       Block                % "Parent" nigeLab.Block object
+       nigelCam             nigeLab.libs.nigelCamera    % preferred camera
+       nigelCamArray        nigeLab.libs.nigelCamera    % Array of nigelCam obj
+       Block                nigeLab.Block    % "Parent" nigeLab.Block object
 
        listeners            % All listeners
        AutoSaveTimer        % Timer obj to autosave

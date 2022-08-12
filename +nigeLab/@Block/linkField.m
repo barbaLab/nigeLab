@@ -48,7 +48,7 @@ switch blockObj.FieldType{fieldIndex}
 %       flag = linkEventsField(blockObj,field);
    case 'Videos'
       if blockObj.Pars.Video.HasVideo
-         flag = linkVideosField(blockObj,field);
+%         flag = linkVideosField(blockObj,field);
       else
          flag = true;
       end

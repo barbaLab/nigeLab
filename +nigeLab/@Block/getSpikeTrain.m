@@ -33,6 +33,10 @@ function idx = getSpikeTrain(blockObj,ch,clusterIndex)
 % By: MAECI 2018 collaboration (Federico Barban & Max Murphy)
 
 %% CHECK ERRORS
+if nargin < 2
+   ch = 1:blockObj(1).Mask;
+end
+
 if ~ParseMultiChannelInput(blockObj,ch)
    error('Check ''ch'' input argument.');
 end

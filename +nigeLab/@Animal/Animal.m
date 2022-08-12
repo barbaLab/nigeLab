@@ -238,32 +238,6 @@ classdef Animal < nigeLab.nigelObj
    
    % SEALED,PUBLIC
    methods (Sealed,Access=public)
-%       setProp(animalObj,varargin); % Set property for all Animals in array
-%       --> Deprecated (inherits from nigelObj)
-%       [animalObj,idx] = findByKey(animalObjArray,keyStr,keyType); % Find animal from animal array based on public or private hash
-%       --> Deprecated (inherits from nigelObj)      
-%       flag = updateParams(animalObj,paramType) % Update parameters of Animal and Blocks
-%       --> Deprecated (inherits from nigelObj)
-%       flag = checkParallelCompatibility(animalObj) % Check if parallel can be run
-%       --> Deprecated (inherits from nigelObj)
-%       flag = linkToData(animalObj)                    % Link disk data of all Blocks in Animal
-%       --> Deprecated (inherits from nigelObj)
-%       addChildBlock(animalObj,blockPath,idx) % Add child BLOCK
-%       --> Deprecated (inherits `nigeLab.nigelObj/addChild` from nigelObj)
-%       removeBlocks(animalObj,ind)         % Disassociate a Block from Animal
-%       --> Deprecated (inherits `nigeLab.nigelObj/removeChild` from nigelObj)
-%       flag = updatePaths(animalObj,SaveLoc)     % Update folder tree of all Blocks
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doUnitFilter(animalObj)      % Apply Unit Bandpass filter to all raw data in Blocks of Animal
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doReReference(animalObj)     % Re-reference all filtered data in Blocks of Animal
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doRawExtraction(animalObj)   % Extract Raw Data for all Blocks in Animal
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doLFPExtraction(animalObj)   % Extract LFP for all Blocks in Animal
-%       --> Deprecated (inherited from `nigelObj`)
-%       flag = doSD(animalObj)              % Extract spikes for all Blocks in Animal
-%       --> Deprecated (inherited from `nigelObj`)
       table = list(animalObj,keyIdx)        % List of recordings currently associated with the animal
       parseProbes(animalObj) % Parse probes from child BLOCKS
       flag = splitMultiAnimals(animalObj,varargin) % Split recordings that have multiple animals to separate recs
