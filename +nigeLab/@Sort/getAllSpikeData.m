@@ -35,7 +35,7 @@ spikes = [];
 feat = [];
 class = [];
 tag = [];
-ts = [];
+ts = []; maxTs = 0;
 blockIdx = [];
 for ii = vec
    % If multiple sample rates, warn the user and exit
@@ -65,8 +65,9 @@ for ii = vec
    tag = [tag; tmp];
    
    % Retrieve associated ts
-   tmp = getSpikeTimes(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
-   ts = [ts; tmp];
+   tmp = getSpikeTimes(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii)) + maxTs;
+   ts = [ts; tmp]; 
+   maxTs = max(ts);
    
    % Make sure to associate each element with the corresponding block
    blockIdx = [blockIdx; ones(size(tmp)).*ii];
