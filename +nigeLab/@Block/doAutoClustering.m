@@ -90,8 +90,8 @@ for iCh = chan
       if blockObj.getStatus('Clusters',iCh)
          inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',unit});
       else
-%          inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
-         inspk = getSpikes(blockObj,iCh);
+         inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
+%          inspk = getSpikes(blockObj,iCh);
       end
    end
    classes =  getClus(blockObj,iCh,SuppressText);

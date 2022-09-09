@@ -56,8 +56,9 @@ for ii = vec
    
    % Retrieve associated class
    tmp = getSort(sortObj.Blocks(ii),sortObj.Channels.Idx(ch,ii));
-   tmp(tmp < 1) = 1; % Anything less than 1 is assigned to 'OUT' cluster
-   tmp(tmp > sortObj.pars.SpikePlotN) = 1; % Any too large is also 'OUT'
+   tmp( tmp > 0) = mod(tmp( tmp > 0) - 1, sortObj.pars.SpikePlotN-2) + 2; % everything is brought back to the clusters 1-9.
+   tmp(tmp < 1 | isnan(tmp)) = 1; % Anything less than 1 is assigned to 'OUT' cluster
+% TODO add a warning in case there are more then 8 clusters
    class = [class; tmp];
    
    % Retrieve associated tag
