@@ -72,7 +72,7 @@ for iCh = allChan
     nSpk{iCh} = zeros(1,1+numel(blockObj));
     nSpk{iCh}([false BlocksNotMasked]) = arrayfun(@(b)b.Channels(iCh).Spikes.size(1),blockObj(BlocksNotMasked)); % returns the numbers of spikes present in each block, only for unmasked blocks
     nSpk{iCh} = cumsum(nSpk{iCh}); % this way it can be used as index when retrieving spikes from each block
-    nFeat = arrayfun(@(b)b.Channels(iCh).Spikes.size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
+    nFeat = arrayfun(@(b)b.Channels(iCh).SpikeFeatures.size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
     nFeat = unique(nFeat); % number of features present in each block 
     if length(nFeat) ~= 1 % if it's not the same number in all blocks something went wrong
         error('Classification feature are dishomogeneous across blocks.\nJoint clustering is not possible.')
@@ -89,8 +89,8 @@ for iCh = allChan
             continue;
         end
         % TODO a switch to pass from spikes waveforms to features
-        %          inspk = getSpikeFeatures(blockObj,iCh,{'Clusters',nan});
-        inspk(idx,:) = getSpikes(blockObj(bb),iCh);
+        inspk(idx,:)  = getSpikeFeatures(blockObj(bb),iCh,{'Clusters',nan});
+%         inspk(idx,:) = getSpikes(blockObj(bb),iCh);
     end % bb
     
     % Finally we store all the spikes in a cell array for each channel
