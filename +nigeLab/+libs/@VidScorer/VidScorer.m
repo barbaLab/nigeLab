@@ -1194,7 +1194,7 @@ classdef VidScorer < matlab.mixin.SetGet
                  % get time and convert it from samples to ms without loading data in memory
                  pltData.Time = @(t) obj.Block.Time(:).* 1000; 
                  pltData.Data = obj.Block.Streams.(blkStreams{ss})(tt).data;
-                 if obj.Block.Time.length ~= pltData.Data.length
+                 if length(obj.Block.Time) ~= length(pltData.Data)
                      pltData.Time = [1:length(pltData.Data)]./obj.Block.Streams.(blkStreams{ss})(tt).fs * 1000;
                  end
                  pltData.Type = 'ePhys';
@@ -1207,7 +1207,8 @@ classdef VidScorer < matlab.mixin.SetGet
                  % finally make the node
                  strmNode = uitreenode(strmTypeNode,...
                      'Text',obj.Block.Streams.(blkStreams{ss})(tt).name,...
-                     'UIContextMenu',mm);
+                     'UIContextMenu',mm,...
+                     'UserData',pltData);
                  set(m1,'MenuSelectedFcn',@(evt,src)obj.treecheckchange(evt,src,strmNode));
              end
          end
