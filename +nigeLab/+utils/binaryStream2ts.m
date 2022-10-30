@@ -75,7 +75,7 @@ elseif isstruct(stream)
       fs = stream.fs;
       stream = stream.data;
    end
-elseif ~isa(stream,'nigeLab.libs.DiskData')
+elseif ~(isa(stream,'nigeLab.libs.DiskData') || isa(stream,'double'))
     error('Undefined function binaryStream2ts for input class %s.\n First input must be either struct (from blockObj.Streams) or nigeLab.libs.DiskData.'...
         ,class(stream));
 end
