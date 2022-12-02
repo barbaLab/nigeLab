@@ -1198,7 +1198,7 @@ classdef VidScorer < matlab.mixin.SetGet
                      pltData.Time = [1:length(pltData.Data)]./obj.Block.Streams.(blkStreams{ss})(tt).fs * 1000;
                  end
                  pltData.Type = 'ePhys';
-                 
+                  
                  % create the menu to plut or hide
                  mm = uicontextmenu(obj.sigFig);
                  m1 = uimenu(mm,'Text','Plot signal',...
@@ -1302,8 +1302,8 @@ classdef VidScorer < matlab.mixin.SetGet
              'BackgroundColor',nigeLab.defaults.nigelColors('onsurface'),...
              'Value','1',...
              'Tooltip','Trial Index');
-         fcnlist = {{@(src,evt)set(obj,'TrialIdx',str2double(src.String))},...
-             {@(src,evt)obj.sigAxClick([],struct('IntersectionPoint',obj.Block.Trial(round(str2double(src.String)),1)*1e3)) }};
+         fcnlist = {{@(src,evt)set(obj,'TrialIdx',str2double(src.Value))},...
+             {@(src,evt)obj.sigAxClick([],struct('IntersectionPoint',obj.Block.Trial(round(str2double(src.Value)),1)*1e3)) }};
          
         obj.TrialLabel.ValueChangedFcn = @(src,evt)nigeLab.utils.multiCallbackWrap(src,evt,fcnlist);         
          
