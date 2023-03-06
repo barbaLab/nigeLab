@@ -76,6 +76,24 @@ for iCh = blockObj.Mask
       for ii=1:L
          data = (ff(b,a,data,nfact,zi));
       end
+
+      % Downsample data to reduce their size, since they went through
+      % filtering. Params are defined in defaults.Filt
+      if pars.DOWNSAMPLE_AUTO
+         minFreqNyqst = round(2.2*pars.FPASS2);
+         if mod(pars.DOWNSAMPLE_FREQ, 1) == 0
+            if pars.DOWNSAMPLE_FREQ >= minFreqNyqst
+               data = resample(data, pars.DOWNSAMPLE_FREQ, blockObj.Channels(iCh).fs);
+               blockObj.SampleRate = pars.DOWNSAMPLE_FREQ;
+            else
+               warning(sprintf('The downsampling frequency is smaller than %dHz.\n Downsampling at %dHz.',minFreqNyqst,minFreqNyqst);
+               data = resample(data, minFreqNyqst, blockObj.Channels(iCh).fs);
+               blockObj.SampleRate = minFreqNyqst;
+            end
+         else
+            warning('The downsampling frequency must be an integer. Skipped.');
+         end
+      end
       
       blockObj.Channels(iCh).Filt = DiskData(...
          fType,fName,data,...

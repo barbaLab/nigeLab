@@ -47,6 +47,9 @@ APASS  = 0.1;        % Passband Ripple (dB)
 METHOD = 'ellip';    % filter type
 ORDER = 4;
 
+DOWNSAMPLE_AUTO = true;    % set true to downsample data after filtering
+DOWNSAMPLE_FREQ = 5000;   % new sampling frequency (30 kHz --> 5 kHz)
+
 STIM_SUPPRESS = true;  % set true to do stimulus artifact suppression
 STIM_BLANK = [1 3];     % milliseconds prior and after to blank on stims
 STIM_P_CH = [nan, nan]; % [probe #, channel #] for channel delivering stims
@@ -71,6 +74,9 @@ pars.FPASS2 = FPASS2;
 pars.ASTOP  = ASTOP;         
 pars.APASS  = APASS;   
 pars.ORDER  = ORDER;
+
+pars.DOWNSAMPLE_AUTO = DOWNSAMPLE_AUTO;
+pars.DOWNSAMPLE_FREQ = DOWNSAMPLE_FREQ;
 
 pars.METHOD = METHOD;
 
