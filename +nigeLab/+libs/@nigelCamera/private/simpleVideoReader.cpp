@@ -153,7 +153,10 @@ public:
         PathsIndex = videoPaths.begin();
         cap.open(*PathsIndex, CAP_FFMPEG);
 
-        cap >> thumb;
+        bool success = cap.read(thumb);
+        double ms = cap.get(CAP_PROP_POS_MSEC);
+        buffer.push_back(thumb);
+        bufferMs.push_back(ms);
     }
 
     ~SimpleVideoReader() {
@@ -186,8 +189,11 @@ public:
                     Mat frame_;
 
                     bool success = cap.read(frame_);
+                    success = success && !empty(frame_);
                     double ms = cap.get(CAP_PROP_POS_MSEC) + lastDuration->count();
+                    success = success && (ms != 0);
                     double fr = cap.get(CAP_PROP_POS_FRAMES);
+                    success = success && (fr != 0);
                     diskIndex = fr;
 
                     // check if we have reached the end of file
@@ -206,6 +212,12 @@ public:
                         cap.open(*PathsIndex, CAP_FFMPEG);
                         
                     }
+
+                    if (!success) 
+                        ms = bufferMs.back();
+                    
+
+
                     // lock the mutex and push frame to the buffer
                     mtx.lock();
                     buffer.push_back(frame_);
@@ -277,7 +289,7 @@ void dispFrames(bool frameStepping = false){
             this_thread::sleep_until(start + std::chrono::seconds(2));
             continue;
         }
-        Mat frame_ = buffer.at(bufferIndex + direction);
+        Mat frame_ = buffer.at(bufferIndex + direction).clone();
         double ms = bufferMs.at(bufferIndex + direction);
         bufferIndex += direction;
 
@@ -292,7 +304,7 @@ void dispFrames(bool frameStepping = false){
         mtx.unlock();
         if (frame_.size().width >= ROI.width && frame_.size().height >= ROI.height && 
             ((++frameCounter % MetaIndex->fpsScaleFactor == 0) || frameStepping )) {
-            thumb = frame_;
+            thumb = frame_.clone();
             string str = to_string(ms);
             putText(frame_, str.substr(0, str.find(".")), Point(ROI.x +5,ROI.y + ROI.height - 5), FONT_HERSHEY_SIMPLEX, 2, Scalar(255, 255, 255), 2, LINE_8, false);
             imshow(PlayerName, frame_(ROI));
@@ -317,10 +329,9 @@ void dispFrames(bool frameStepping = false){
  void showThumb(const string videoName) {
         PlayerName = videoName;
         namedWindow(PlayerName, WINDOW_NORMAL | WINDOW_KEEPRATIO);// Create a window for display.
-        imshow(PlayerName, thumb);                   // Show our image inside it.
+        imshow(PlayerName, thumb);
+        
         startWindowThread();
-
-
     }
 
  void seek(double msTime) {
@@ -330,16 +341,23 @@ void dispFrames(bool frameStepping = false){
         this_thread::sleep_for(chrono::milliseconds(1));
      
      double msXframe = chrono::duration_cast<chrono::milliseconds>(MetaIndex->frameInterval).count();
-     msTime = msTime - msXframe * seekNFramesLoad;
-    int thisShift = round((msTime - *bufferMs.begin()) / msXframe);
+     msTime = max(msTime - msXframe * seekNFramesLoad, msXframe);
+    int thisShift = ceil((msTime - *bufferMs.begin()) / msXframe);
     //deque<double>::iterator thisFrame = bufferMs.begin() + thisShift;
     double refine = true;
 
-    if (thisShift > 0 && thisShift < bufferMs.size()) {
-        while (bufferMs.at(thisShift) -msTime > 0){
+    double distThisFrame, distPrevFrame, distNextFrame, distThisFrameSigned;
+    if (thisShift >= 0 && thisShift < bufferMs.size()) {
+        distThisFrameSigned = bufferMs.at(thisShift) - msTime;
+        while ((distThisFrameSigned > 0) && (thisShift > 0)){
             // we are ahead, check if the previous frame is closer.
-            if (abs(bufferMs.at(thisShift) - msTime) > abs(bufferMs.at(--thisShift) - msTime))
+            distThisFrame = abs(bufferMs.at(thisShift) - msTime);
+            distPrevFrame = abs(bufferMs.at(--thisShift) - msTime);
+            if (distThisFrame >= distPrevFrame) {
+                if (thisShift == 0)
+                    refine = false;
                 continue;// Nothing to do here
+            }
             else {
                 thisShift++;             //go back to where we were
                 refine = false;
@@ -347,9 +365,12 @@ void dispFrames(bool frameStepping = false){
             }
         }
 
-        while ((bufferMs.at(thisShift) - msTime < 0) && refine) {
+        distThisFrameSigned = bufferMs.at(thisShift) - msTime;
+        while ((distThisFrameSigned < 0) && refine) {
             // we are behind, check if the next frame is closer.
-            if (abs(bufferMs.at(thisShift) - msTime) > abs(bufferMs.at(++thisShift) - msTime))
+            distThisFrame = abs(bufferMs.at(thisShift) - msTime);
+            distNextFrame = abs(bufferMs.at(++thisShift) - msTime);
+            if (distThisFrame >= distNextFrame)
                 continue;// Nothing to do here
             else {
                 thisShift--;             //go back to where we were
@@ -398,6 +419,7 @@ void dispFrames(bool frameStepping = false){
          showThumb("ROI Selection");
 
      ROI = selectROI("ROI Selection", thumb, true, false);
+     destroyWindow("ROI Selection");
  }
 
  getMeanValReturnStr getMeanVal() {
@@ -525,7 +547,7 @@ void dispFrames(bool frameStepping = false){
 
  void exportF(string outPath) {
      Mat frame_ = buffer.at(bufferIndex);
-     imwrite(outPath, frame_);
+     imwrite(outPath, frame_(ROI));
  }
 
 private:
@@ -660,7 +682,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         break;
 
     case startBuffer_: {
-        //thisVideoReader->startBuffer();
+       // thisVideoReader->startBuffer(); // debug, does never end
         if (thisVideoReader->bufferRunning)
             return;
         thread bufferThread(&SimpleVideoReader::startBuffer, ref(*thisVideoReader));
@@ -705,6 +727,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         break;
     case seek_:
         thisVideoReader->seek((float)mxGetScalar(prhs[2]));
+
         if (!thisVideoReader->bufferRunning) {
             thread bufferThread(&SimpleVideoReader::startBuffer, ref(*thisVideoReader));
             while (thisVideoReader->buffer.size() < thisVideoReader->seekNFramesLoad*2)

@@ -86,10 +86,7 @@ if isempty(Videos)
       end
       
    else
-      flag = true; % Indicate this is fine; there are just no videos for 
-                   % this particular Block (probably from a batch
-                   % initialization where some blocks have video and others
-                   % do not)
+      flag = false; 
       return;
    end
 end

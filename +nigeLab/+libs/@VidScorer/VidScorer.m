@@ -91,7 +91,8 @@ classdef VidScorer < matlab.mixin.SetGet
        nigelCamArray        nigeLab.libs.nigelCamera    % Array of nigelCam obj
        Block                nigeLab.Block    % "Parent" nigeLab.Block object
 
-       listeners            % All listeners
+       Listeners            % All listeners
+       CamListeners         % Time listeners
        AutoSaveTimer        % Timer obj to autosave
 
        PerformanceTimer struct = struct('T_elaps',0,'Trial_scored',0,'Timer',[]);   % Structure with timer and fields to evaluate scoring time and ETAs on scoring a block
@@ -138,9 +139,9 @@ classdef VidScorer < matlab.mixin.SetGet
          % assigns construcotr values
          obj.nigelCamArray = nigelCams;
          arrayfun(@(v)v.setActive(false),obj.nigelCamArray(2:end));
+         arrayfun(@(v)v.setSpeed(1),obj.nigelCamArray);
 
-         obj.nigelCam = nigelCams(1);
-         obj.nigelCam.setActive(true);       
+         obj.nigelCam = nigelCams(1);      
          obj.Block = obj.nigelCam.Parent;
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
                   
@@ -180,22 +181,24 @@ classdef VidScorer < matlab.mixin.SetGet
              addNewEvent(obj,this.Name,this.Ts,this.Trial,false)
          end
         
+        obj.setMainView(1);
         updateTimeMarker(obj);
         
         obj.AutoSaveTimer = timer('TimerFcn',@(~,~)save(obj.Block),'Period',300,'ExecutionMode','fixedDelay');
         setToLoading(obj,false);
+        
       end
       
       % destructor
       function delete(obj)
           % destructor, takes care of removing all listeners, timers and
           % proplinks as well as closing all video figures.
-          if ~isempty(obj.listeners)
-              for o = obj.listeners
+          if ~isempty(obj.Listeners)
+              for o = obj.Listeners
                  o.Enabled = false; 
               end
-              delete(obj.listeners);
-              obj.listeners = [];
+              delete(obj.Listeners);
+              obj.Listeners = [];
           end
           
           
@@ -321,6 +324,13 @@ classdef VidScorer < matlab.mixin.SetGet
           elseif obj.Now.XData(1) < xl(1)
               xlim(obj.sigAxes,diff(xl)/2*[-1 1]+obj.Now.XData(1))
           end
+
+          [m,idx]=min(abs([obj.Evts.Time]*1e3 - obj.nigelCam.Time));
+          if m < .5/obj.nigelCam.Meta(1).frameRate*1e3
+              eventSelect(obj,obj.evtElementList(idx));
+          else
+              eventSelect(obj);
+          end
       end
       function updateSigAxLimits(obj,dir)
           % changes the limits of the sigAxes accordingly to where time
@@ -402,12 +412,15 @@ classdef VidScorer < matlab.mixin.SetGet
       
       % Skip to next or previous trial depending on direction
       function skipToNext(obj,direction)
-          if (obj.TrialIdx+direction <= 0) || (obj.TrialIdx+direction > size(obj.Block.Trial,1))
+          if (obj.TrialIdx+direction <= 0) ||...                            % Be sure not to skip out of the valid video time
+                  (obj.TrialIdx+direction > size(obj.Block.Trial,1))
               return;
           end
-          trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3;
+          frameTime = 1000/(obj.nigelCam.Meta(1).frameRate);
+          trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3 +...
+              frameTime/2;                                                  % retrieve time of trial initiation and add 1/2 frametime to be sure to be 'inside'the trial
           evt.IntersectionPoint = trialTime;
-          obj.sigAxClick([],evt);   % as if the user clicked on the timeline.
+          obj.sigAxClick([],evt);                                           % as if the user clicked on the timeline.
       end
       
       % Enables synch mode
@@ -792,6 +805,7 @@ classdef VidScorer < matlab.mixin.SetGet
              % let's gather some data
               tt = plotStruct.Time();  % function handle returning the full time vector in ms       
               dd = plotStruct.Data(:);
+              dd = dd - min(dd);
               dd = dd./max(dd);
               if isempty(tt)
                 % let's make this foolproof. If for whatever reason time is
@@ -832,6 +846,10 @@ classdef VidScorer < matlab.mixin.SetGet
       % functions to highlight and set the relevant indexes of selcted events and
       % labels. This is useful to delete or rename the selcted stuff.
       function eventSelect(obj,src,~)
+          if nargin == 1 || isempty(src)
+              [obj.evtElementList.UserData] = deal(false);
+              [obj.evtElementList.BackgroundColor] = deal(nigeLab.defaults.nigelColors('sfc'));
+          end
           k = obj.evtFigure.UserData;
           switch k
               case 'control'
@@ -945,11 +963,17 @@ classdef VidScorer < matlab.mixin.SetGet
        end
        function nextFrame(obj)
            % NEXTFRAME advances one frame in all active views
-           arrayfun(@(v) v.frameF, obj.nigelCamArray);
+           idx = obj.nigelCamArray ~= obj.nigelCam;
+           obj.nigelCam.frameF;
+           t = obj.nigelCam.Time;
+           arrayfun(@(v) v.seek(t), obj.nigelCamArray(idx));
        end
        function previousFrame(obj)
            % PREVIOUSFRAME backs one frame in all active views
-           arrayfun(@(v) v.frameB, obj.nigelCamArray);
+           idx = obj.nigelCamArray ~= obj.nigelCam;
+           obj.nigelCam.frameB;
+           t = obj.nigelCam.Time;
+           arrayfun(@(v) v.seek(t), obj.nigelCamArray(idx));
        end
        function nextTrial(obj)
            % NEXTTRIAL jumps to the next trial in all active views
@@ -1055,21 +1079,23 @@ classdef VidScorer < matlab.mixin.SetGet
    methods (Access=private)
       % Add Listeners
       function addListeners(obj)
-          obj.listeners = addlistener(obj.nigelCam,'timeChanged',@(src,evt)obj.updateTimeMarker);
-          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.updateEvtGraphicList)];
-          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.updateLblGraphicList)];
+          obj.CamListeners = addlistener(obj.nigelCamArray,'timeChanged',@(src,evt)obj.updateTimeMarker);
+          [obj.CamListeners.Enabled] = deal(false);
+
+          obj.Listeners = addlistener(obj,'evtDeleted',@(src,evt)obj.updateEvtGraphicList);
+          obj.Listeners = [obj.Listeners addlistener(obj,'lblDeleted',@(src,evt)obj.updateLblGraphicList)];
 
           camList = arrayfun(@(cam) addlistener(cam,'streamAdded',@(src,evt)obj.updateStreams(evt,src)),obj.nigelCamArray);
-          obj.listeners = [obj.listeners camList];
+          obj.Listeners = [obj.Listeners camList];
           
-          obj.listeners = [obj.listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
+          obj.Listeners = [obj.Listeners addlistener(obj,'TrialIdx','PostSet',@obj.TrialIdxChanged)];
           
-          obj.listeners = [obj.listeners addlistener(obj,'evtAdded',@(src,evt)obj.Block.addEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'lblAdded',@(src,evt)obj.Block.addEvent(evt))];
-          obj.listeners = [obj.listeners addlistener(obj,'lblDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
+          obj.Listeners = [obj.Listeners addlistener(obj,'evtAdded',@(src,evt)obj.Block.addEvent(evt))];
+          obj.Listeners = [obj.Listeners addlistener(obj,'evtDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
+          obj.Listeners = [obj.Listeners addlistener(obj,'lblAdded',@(src,evt)obj.Block.addEvent(evt))];
+          obj.Listeners = [obj.Listeners addlistener(obj,'lblDeleted',@(src,evt)obj.Block.deleteEvent(evt))];
           
-          obj.listeners = [obj.listeners addlistener(obj,'evtModified',@(src,evt)obj.Block.modifyEvent(evt))];
+          obj.Listeners = [obj.Listeners addlistener(obj,'evtModified',@(src,evt)obj.Block.modifyEvent(evt))];
 
       end
         
@@ -1192,7 +1218,7 @@ classdef VidScorer < matlab.mixin.SetGet
              for tt =1:numel(obj.Block.Streams.(blkStreams{ss}))
                  
                  % get time and convert it from samples to ms without loading data in memory
-                 pltData.Time = @(t) obj.Block.Time(:).* 1000; 
+                 pltData.Time = @(t) obj.Block.Time(:)./ obj.Block.SampleRate .* 1000; 
                  pltData.Data = obj.Block.Streams.(blkStreams{ss})(tt).data;
                  if length(obj.Block.Time) ~= length(pltData.Data)
                      pltData.Time = [1:length(pltData.Data)]./obj.Block.Streams.(blkStreams{ss})(tt).fs * 1000;
@@ -1393,7 +1419,7 @@ classdef VidScorer < matlab.mixin.SetGet
          
          
          cm = uicontextmenu(obj.sigFig);
-         m1 = uimenu(cm,'Text','Reset','ButtonDownFcn',@(src,evt)zoom(obj.sigAxes,'out'));
+         m1 = uimenu(cm,'Text','Reset','MenuSelectedFcn',@(src,evt)zoom(obj.sigAxes,'out'));
 
          obj.ZoomButton = uibutton(obj.FigComPanel,'state',...
              'Position',[10 10 24 24],...
@@ -1557,7 +1583,7 @@ classdef VidScorer < matlab.mixin.SetGet
              'FontColor',nigeLab.defaults.nigelColors('onsfc'));
          
          camNames = {obj.nigelCamArray.Name};
-         
+         mainCamName = obj.nigelCam.Name;
          
          for ii=1:numel(camNames)
              if isempty(camNames{ii})
@@ -1566,11 +1592,11 @@ classdef VidScorer < matlab.mixin.SetGet
              
              camBoxes(ii)=uicheckbox(obj.camPanel,...
                  'Position',[10 130-(ii-1)*20 100 30],...
-                 'Value',ii==1,...
+                 'Value',strcmp(mainCamName,camNames{ii}),...
                  'Text',camNames{ii},...
                  'FontSize',10,...
                  'FontColor',nigeLab.defaults.nigelColors('onsfc'),...
-                 'ValueChangedFcn',@(src,evt)obj.setViewActive(src,evt,ii));
+                 'ValueChangedFcn',@(src,evt)obj.setViewActive(src,evt.Value,ii));
          end
          
          
@@ -1581,7 +1607,6 @@ classdef VidScorer < matlab.mixin.SetGet
                  'Text','Main view');
          
          fcnList = {{@(src,evt)set(camBoxes(src.Value),'Value',true)}
-                   {@(src,evt)obj.setViewActive(camBoxes(src.Value),evt,src.Value)}
                    {@(src,evt)obj.setMainView(src.Value)}};
          uidropdown(obj.camPanel,...
                  'Position',[127 100 80 30],...
@@ -1590,17 +1615,23 @@ classdef VidScorer < matlab.mixin.SetGet
                  'BackgroundColor',nigeLab.defaults.nigelColors('sfc'),...
                  'Items',camNames,...
                  'ItemsData',1:numel(camNames),...
-                 'ValueChangedFcn',{@nigeLab.utils.multiCallbackWrap, fcnList});
+                 'ValueChangedFcn',{@nigeLab.utils.multiCallbackWrap, fcnList},...
+                 'Value',find(strcmp(mainCamName,camNames)));
          
       end
-      function setMainView(obj,ii)   
-         obj.nigelCam  = obj.nigelCamArray(ii);
+      function setMainView(obj,ii)
+          obj.setViewActive([],true,ii);
+          obj.nigelCam  = obj.nigelCamArray(ii);
+
+         [obj.CamListeners.Enabled] = deal(false);
+         obj.CamListeners(ii).Enabled = true;
+         obj.SpeedSlider.ValueChangedFcn(obj.SpeedSlider);
       end
-      function setViewActive(obj,~,src,ii)
-          obj.nigelCamArray(ii).setActive(src.Value);
+      function setViewActive(obj,~,Value,ii)
+          obj.nigelCamArray(ii).setActive(Value);
           obj.nigelCamArray(ii).seek(obj.nigelCam.Time);
           
-          obj.exportFrom(ii).Value = src.Value;
+          obj.exportFrom(ii).Value = Value;
       end
       
       function buildExportPanel(obj)
@@ -1781,7 +1812,7 @@ classdef VidScorer < matlab.mixin.SetGet
           end
 
           if ~isempty(obj.getEvtByKey(Time,Name))
-              warning(sprintf('Only one label with ID %s is permitted for trial %d.\nOperation aborted.\n',Name,obj.TrialIdx));
+              warning(sprintf('Only one Event with ID %s is permitted for at %f.\nOperation aborted.\n',Name,Time));
               return;
           end
 

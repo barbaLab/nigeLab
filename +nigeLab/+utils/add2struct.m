@@ -19,7 +19,17 @@ function augmentedStruct = add2struct(structToKeep,structToAdd,nameKey)
 %  augmentedStruct : `structToKeep` with updated data from `structToAdd`
 
 % If `structToAdd` has nothing to add, then simply return `structToKeep`
-augmentedStruct = structToKeep;
+if isempty(structToAdd) && ~isempty(structToKeep)
+    augmentedStruct = structToKeep;
+    return;
+elseif isempty(structToKeep)
+    augmentedStruct = structToAdd;
+    return;
+else
+    augmentedStruct =structToKeep;
+%     return;
+end
+
 f = fieldnames(structToAdd);
 if isempty(f)
    return;
@@ -39,6 +49,17 @@ if nargin < 3
    f = reshape(f,1,numel(f));
    fieldValuePairs = [f; f];
    nameKey = struct(fieldValuePairs{:});
+end
+
+if ~isscalar(structToKeep)
+    if numel(structToAdd) == numel(structToKeep)
+        for ii=1:numel(structToKeep)
+            augmentedStruct(ii) = nigeLab.utils.add2struct(structToKeep(ii),structToAdd(ii),nameKey);
+        end
+    else
+        error('Structarray detected as input. In this case the dimensions of both inputs must match.');
+    end
+    return;
 end
 
 % Iterate on field names of `structToAdd`, using `nameKey` to match the

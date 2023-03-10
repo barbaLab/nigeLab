@@ -25,10 +25,11 @@ elseif ~any(cellfun(@isempty,regexp(nameList,regexp2)))
     % Hero 2 to 5
     Chapters = cellfun(@(x) x(5:8),nameList,'UniformOutput',false);
     uChap = unique(Chapters);
-    for Ch = uChap
+    for Ch = uChap(:)'
         thisChapsIdx = find(contains(nameList,Ch));
         thisChaps = nameList(thisChapsIdx);
         ChapNum = cellfun(@(x) x(3:4),thisChaps,'UniformOutput',false);
+%         ChapNum = regexprep(ChapNum,'\D{2}','00');
         [~,i] = sort(ChapNum);
         i = circshift(i,1);
         index = [index thisChapsIdx(i)'];

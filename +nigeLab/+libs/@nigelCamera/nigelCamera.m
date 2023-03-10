@@ -82,8 +82,8 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
    
    properties (Transient,SetAccess=private,Hidden)
-      VideoReader                             % Array of video objects interface (c++ mex function)
-      TS                   double = [];    % Hidden, readonly property with the original video timebased in [ms] (untransformed by VideoOffset and VideoStretch).
+      VideoReader_                             % Array of video objects interface (c++ mex function)
+      TS_                   double = [];    % Hidden, readonly property with the original video timebased in [ms] (untransformed by VideoOffset and VideoStretch).
    end
    
    % TRANSIENT
@@ -92,10 +92,15 @@ classdef nigelCamera < matlab.mixin.SetGet
    end
       
    properties(Dependent,SetAccess=private)
-       Time   % This frame's time
-       Name   % camera name
-       FrameIdx %This frame index
-       Paths % All videos paths
+       Time                                                                 % This frame's time
+       Name                                                                 % camera name
+       FrameIdx                                                             %This frame index
+       Paths                                                                % All videos paths
+   end
+
+      properties(Dependent,SetAccess=private,Hidden)
+       VideoReader                                                          % Pointer pointing to c++ obj
+       TS                                                                   % Returning the video TimeBase
    end
    
    properties(GetAccess=public,SetAccess=private,Hidden)
@@ -164,6 +169,31 @@ classdef nigelCamera < matlab.mixin.SetGet
       function value = get.Paths(obj)
           value = obj.VideoPaths;
       end
+
+       % [DEPENDENT]  .VideoReader references VideoReader_. Takes care of
+       % reinitializing the c++ object if it's invalid
+      function set.VideoReader(~,~)
+      end
+      function value = get.VideoReader(obj)
+            if isempty(obj.VideoReader_)
+                obj.addVideos();
+            end
+            value = obj.VideoReader_;
+      end
+
+      % [DEPENDENT]  .VideoReader references VideoReader_. Takes care of
+       % reinitializing the c++ object if it's invalid
+      function set.TS(~,~)
+      end
+      function value = get.TS(obj)
+          if isempty(obj.TS_)
+              nFrames = cumsum([0 obj.Meta.nFrames]);
+              tt = arrayfun(@(idx) (nFrames(idx):nFrames(idx+1)-1) .* (1000./obj.Meta(idx).frameRate)  ,1:numel(nFrames)-1 ,'UniformOutput' ,false);
+              obj.TS_ = [tt{:}];
+          end
+
+          value = obj.TS_;
+      end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 end
    
@@ -227,11 +257,11 @@ methods
     function delete(obj)
         %DELETE  Destructor for object. Also takes care of destroying video
         %objects.
-        if ~isempty(obj.VideoReader)
+        if ~isempty(obj.VideoReader_)
             simpleVideoReader('closeFig', obj.VideoReader);
             simpleVideoReader('delete', obj.VideoReader);
         end
-        obj.VideoReader = [];
+        obj.VideoReader_ = [];
     end
 
     % Class loader
@@ -239,7 +269,7 @@ methods
     %LOAD override function. Takes care of reinitializing all c++
     %videoreader objects
         if isa(a, 'nigeLab.libs.nigelCamera')
-            a.addVideos(a.VideoPaths);
+...
         end
     end
 end
@@ -286,18 +316,14 @@ end
           Paths = Paths(obj.Parent.Pars.Video.CustomSort(Paths));
 
           obj.VideoPaths = nigeLab.utils.getUNCPath(Paths);
-          obj.VideoReader = simpleVideoReader('new',Paths);
-          obj.Meta = simpleVideoReader('getMeta',obj.VideoReader);
+          obj.VideoReader_ = simpleVideoReader('new',Paths);
+          thisMeta = simpleVideoReader('getMeta',obj.VideoReader);
+          obj.Meta = nigeLab.utils.add2struct(obj.Meta,thisMeta);
           obj.getTimeSeries;
 %           obj.Lags = cumsum([obj.Meta.duration]);
        end
        
        function TS = getTimeSeries(obj)
-           if isempty(obj.TS)
-               nFrames = cumsum([0 obj.Meta.nFrames]);
-               TS = arrayfun(@(idx) (nFrames(idx):nFrames(idx+1)-1) .* (1000./obj.Meta(idx).frameRate)  ,1:numel(nFrames)-1 ,'UniformOutput' ,false);
-               obj.TS = [TS{:}];
-           end
            TS = obj.TS  -  obj.VideoOffset - (1:numel(obj.TS)).* obj.VideoStretch;
        end
        
@@ -319,38 +345,51 @@ end
               thisStream.time = nigeLab.libs.DiskData('Hybrid',thisPath,t,'overwrite', true);
           else
               [path,name,ext] = fileparts(PathToFile);
+              if nargin < 3
+                  varname = '';
+              end
               switch ext
                   case '.mat'
-                      if nargin <3
-                            variables = who('-file', PathToFile);
-                            if numel(variables) == 1
-                                varname = variables{:};
-                                quest = 'No Time vector detected!\nDo you have a time vector stored somewhere for this signal?\n(Time has to be expressed in ms.)';
-                                answer = questdlg(sprintf(quest),'Where is time?','Yes!','No...','Yes!');
-                                if strcmp(answer,'Yes!')
-                                    [Tfile,Tpath] = uigetfile(fullfile(obj.Parent.Out.Folder,'*.*'),'Select the Time vector.');
-                                    t_varname = who('-file', PathToFile);
-                                    if numel(t_varname) ~= 1
-                                        error('Variable to load is unclear.\n Please provide a time matfile with only one variable in it.\n');
-                                    end
-                                    t_varname = t_varname{1};
-                                    t = load(fullfile(Tpath,Tfile),t_varname);
-                                    t = t.(t_varname);
-                                elseif strcmp(answer,'No...')
-                                    f = msgbox(sprintf('No problem, Nigel will create one for you!\n(Time basis will be the same as video.)')...
-                                        ,'Fine.');
-                                    t = obj.TS;
-                                else
-                                    return;
-                                end
-                            elseif numel(variables) == 2 && any( cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables ) )
-                                t_varname = variables{cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables )};
-                                t = load(PathToFile,t_varname);
-                                t = t.(t_varname);
-                            else
-                                error('Variable to load is unclear.\n Please specify as third input which variable in the provided file you want to add as a Stream.\n');
-                            end
+                      variables = who('-file', PathToFile);
+                       t_varname = variables(cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables ));
+                      if ~isempty(t_varname) && ~strcmp(t_varname,varname)
+                          t_varname = variables{cellfun( @(s)any( strcmp(s,{'t','time'}) ),variables )};
+                          t = load(PathToFile,t_varname);
+                          t = t.(t_varname);
+                      else
+                          quest = 'No Time vector detected!\nDo you have a time vector stored somewhere for this signal?\n(Time has to be expressed in ms.)';
+                          answer = questdlg(sprintf(quest),'Where is time?','Yes!','No...','Yes!');
+                          if strcmp(answer,'Yes!')
+                              [Tfile,Tpath] = uigetfile(fullfile(obj.Parent.Out.Folder,'*.*'),'Select the Time vector.');
+                              t_varname = who('-file', PathToFile);
+                              if numel(t_varname) ~= 1
+                                  error('Variable to load is unclear.\n Please provide a time matfile with only one variable in it.\n');
+                              end
+                              t_varname = t_varname{1};
+                              t = load(fullfile(Tpath,Tfile),t_varname);
+                              t = t.(t_varname);
+                              t_varname = {'t','time'};
+                          elseif strcmp(answer,'No...')
+                              f = msgbox(sprintf('No problem, Nigel will create one for you!\n(Time basis will be the same as video.)')...
+                                  ,'Fine.');
+                              t = obj.TS;
+                          else
+                              return;
+                          end
                       end
+
+                      variables = setdiff(variables,t_varname);
+
+                      if strcmp(varname,'') && numel(variables) == 1
+                         varname = variables{1};
+                      elseif ~strcmp(varname,'')
+                         varname = variables{strcmpi(variables, varname)};
+                      end
+
+                      if strcmp(varname,'')
+                          error(sprintf('Variable to load is unclear.\n Please specify as third input which variable in the provided file you want to add as a Stream.\n'));
+                      end
+
                       sig = load(PathToFile,varname);
                       sig = sig.(varname);
                   otherwise
@@ -362,7 +401,7 @@ end
               nigelSig = nigeLab.utils.signal('vid',numel(sig),'VidStreams','Streams');
               thisStream = struct('name',varname,'signal',nigelSig,'Key',nigeLab.utils.makeHash,'fs',mean([obj.Meta.frameRate]));
               thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,thisStream.name,'mat'));
-              thisStream.data = nigeLab.libs.DiskData('Hybrid',thisPath,sig,'overwrite', true);
+              thisStream.data = nigeLab.libs.DiskData('Hybrid',thisPath,sig(:)','overwrite', true);
               
               thisPath = fullfile(sprintf(obj.Parent.Paths.VidStreams.file,obj.Name,[thisStream.name '_Time'],'mat'));
               thisStream.time = nigeLab.libs.DiskData('Hybrid',thisPath,t,'overwrite', true);
@@ -375,8 +414,8 @@ end
 
        function setActive(obj,val)
            % SETACTIVE(obj,val) sets Active (private) property to <strong>val</strong>. 
-           %
-           % If Active isfalse the video does not  respond to the mex 
+           % 
+           % If Active is false the video does not  respond to the mex 
            % interface commands.
            % See also PLAY, PAUSE, FRAMEF, FRAMEB, SEEK, CROP, EXPORTFRAME,
            % SHOWTHUMB.
@@ -391,7 +430,7 @@ end
            end
        end
 
-       function tt = getSynchedTime(obj,t,direction)
+       function [tt, tt_idx] = getSynchedTime(obj,t,direction)
            % TT = GETSYNCHEDTIME(obj,t,direction)
             % When VideoOffset and VideoStretch are set returns input <strong>t</strong>
             % properly transformed to reflect <strong>direction</strong>. This method is
@@ -401,16 +440,22 @@ end
             % <strong>direction</strong> can be:
             % <strong>video2ext</strong> - converts t from video time to world time
             % <strong>ext2video</strong> - converts t from world time to video time
-           switch direction
-               case 'video2ext'
-                   [~,idx] = min( abs(obj.TS - t));
-                   tt = obj.TS(idx) -  obj.VideoOffset - idx.* obj.VideoStretch;
-               case 'ext2video'
-                   trueVideoTime = obj.TS;
-                   [~,idx] = min( abs( trueVideoTime - obj.VideoOffset-(1:numel(obj.TS)).*obj.VideoStretch...
-                       - t));
-                   tt = trueVideoTime(idx);
-           end
+            if diff(size(t))>0,t = t';end
+            tt = nan(size(t));
+            tt_idx = tt;
+            for ii=1:size(t,2)
+                switch direction
+                    case 'video2ext'
+                        [~,idx] = min( abs(obj.TS - t));
+                        tt = obj.TS(idx) -  obj.VideoOffset - idx.* obj.VideoStretch;
+                    case 'ext2video'
+                        trueVideoTime = obj.TS;
+                        [~,idx] = min( abs( trueVideoTime - obj.VideoOffset-(1:numel(obj.TS)).*obj.VideoStretch...
+                            - t(:,ii)),[],2);
+                        tt(:,ii) = trueVideoTime(idx);
+                        tt_idx(:,ii) = idx;
+                end
+            end%ii
        end
    end % methods public
    
@@ -490,10 +535,13 @@ end
            % SETSPEED(obj,s)
            % Sets video reproduction speed to <strong>s</strong>. No limit is set but for
            % reproduction speeds higher than 30 fps frame skipping is
-           % implemented (which is finne - it is doneonly during play,
+           % implemented (which is fine - it is done only during play,
            % frameF/B always show all frames) and for reproduction speeds
            % higher than 240 fps there are usually buffering problems (i.e.
            % the video stops to replenish the buffer, like YT in the 90's).
+           if ~obj.Active
+               return;
+           end
            simpleVideoReader('setSpeed',obj.VideoReader,s);
        end
 
@@ -566,38 +614,36 @@ end
 
    end % methods public - c++ interface
    
-%%    Probably deprecated
-%    % PROTECTED,STATIC
-%    methods (Static,Access=protected)
-%       function idx = getSeriesIndex(seriesTime,seriesTimeInfo)
-%          %GETSERIESINDEX  Returns index based on series start/stop times
-%          %
-%          %  idx = nigeLab.libs.nigelCamera(seriesTime,seriesTimeInfo);
-%          %
-%          %  seriesTime : Scalar -- time to update series to
-%          %  seriesTimeInfo : nSeries x 3 matrix
-%          %     * Column 1 -- "Enabled" (1) or "Disabled" (0)
-%          %     * Column 2 -- Start times (SERIES) (greater than or equals)
-%          %     * Column 3 -- Stop times (SERIES)  (less than)
-%          %
-%          
-%          if isempty(seriesTime) || isempty(seriesTimeInfo)
-%             idx = [];
-%             return;
-%          end
-%          
-%          % Uses mask:
-%          % idx = find(seriesTimeInfo(:,1) & ...
-%          %           (seriesTime >= seriesTimeInfo(:,2)) & ...
-%          %           (seriesTime <  seriesTimeInfo(:,3)),1,'first');
-%          
-%          % Disregards mask:
-%          idx = find( ...
-%                    (seriesTimeInfo(:,2) <= seriesTime) & ...
-%                    (seriesTimeInfo(:,3) > seriesTime),1,'last');
-%                 % Note: in case of overlap in times, use "later" video.
-%       end
-%    end
+ 
+   % Hidden function to manually adjust offset & stretch
+   methods (Access=public,Hidden)
+       function flag = setOffset(obj,offs)
+            flag = false;
+           try
+               obj.VideoOffset = offs;
+               flag = true;
+           catch er
+               %TODO unify error handling
+               warning(er.identifier,'%s\n\nError in %s (%s) (line %d)\n', ...
+                   er.message, er.stack(1).('name'), er.stack(1).('file'), ...
+                   er.stack(1).('line'));
+           end
+       end
+
+       function flag = setStretch(obj,strtc)
+           flag = false;
+           try
+               obj.VideoStretch = strtc;
+               flag = true;
+           catch er
+               %TODO unify error handling
+               warning(er.identifier,'%s\n\nError in %s (%s) (line %d)\n', ...
+                   er.message, er.stack(1).('name'), er.stack(1).('file'), ...
+                   er.stack(1).('line'));
+           end
+       end
+
+   end
    % % % % % % % % % % END METHODS% % %
 end
 
