@@ -123,7 +123,7 @@ MarkerFormat.LineStyle = 'none';
 
 p = inputParser;
 p.addRequired('spikes',@(x) islogical(x) || iscell(x));
-p.addParamValue('FigHandle',gcf,@isinteger);
+p.addParamValue('FigHandle',gcf,@(f)isa(f,'matlab.ui.Figure'));
 p.addParamValue('PlotType','horzLine',@ischar);
 p.addParamValue('LineFormat',LineFormat,@isstruct)
 p.addParamValue('MarkerFormat',MarkerFormat,@isstruct);

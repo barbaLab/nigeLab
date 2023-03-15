@@ -199,12 +199,18 @@ for kk=1:size(Tree_,1)
          switch C.Name
             case 'Streams'
                Stff = [C.Children];
+               if isempty(Stff)
+                    Stff.UserData = zeros(0,2);
+               end
                field = C.Name;
                [trgtStuff] = getUpdatedStreams(T.UserData,Stff,Tree_(kk,:),ii);
                
             case 'Channels'
                field = C.Name;
                Stff = [C.Children.Children];
+               if isempty(Stff)
+                    Stff.UserData = zeros(0,2);
+               end
                [trgtStuff,trgtMask] = getUpdateChans(T.UserData,Stff,Tree_(kk,:),ii);
             case 'Events'
                field = C.Name;

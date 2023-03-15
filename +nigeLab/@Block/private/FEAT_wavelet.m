@@ -25,7 +25,7 @@ function [feat,featName] = FEAT_wavelet(spikes,pars)
 % Based on previous design by Max Murphy
 
 %% GET VARIABLES
-N =size(spikes,1);   % # spikes
+N = size(spikes,1);   % # spikes
 
 if N <= 10
 

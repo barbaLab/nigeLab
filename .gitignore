@@ -58,3 +58,5 @@ resources/project/
 \+nigeLab/\+defaults/Animal.m
 
 \+nigeLab/\+libs/\@nigelCamera/private/include/
+
+*.pdb

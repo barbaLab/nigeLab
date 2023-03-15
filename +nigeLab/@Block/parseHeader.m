@@ -56,9 +56,10 @@ else
       case 'TDT'
          header = ReadTDTHeader(blockObj.Input,blockObj.Verbose);
       otherwise
-         error(['nigeLab:' mfilename ':missingCase'],...
+         warning(['nigeLab:' mfilename ':missingCase'],...
             'blockObj.RecSystem.Name == ''%s'' not yet handled.',...
             blockObj.RecSystem.Name);
+         header = struct();
    end
 end
 

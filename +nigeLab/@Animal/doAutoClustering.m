@@ -75,7 +75,7 @@ for iCh = allChan
     nFeat = arrayfun(@(b)b.Channels(iCh).SpikeFeatures.size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
     nFeat = unique(nFeat); % number of features present in each block 
     if length(nFeat) ~= 1 % if it's not the same number in all blocks something went wrong
-        error('Classification feature are dishomogeneous across blocks.\nJoint clustering is not possible.')
+        error('Classification feature are dishomogeneous across blocks. Joint clustering is not possible.')
     end
 
     %Then we retrieve spikes and put them in the right place inside inspk 

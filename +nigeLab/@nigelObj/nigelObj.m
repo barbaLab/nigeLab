@@ -4081,6 +4081,61 @@ end
          end         
       end
       
+       % Method to export data subset from nigeLab
+       % TODO add other export formats (as kilosort)
+      function flag = exportFiles(obj,SaveFolder,Fields)
+
+          % Argin validation
+          if isempty(obj)
+            flag = true;
+            return;
+          end
+          flag = false;
+          if nargin < 2
+              SaveFolder = fullfile(obj.Output,'Exported');
+          elseif nargin <3
+              Fields = obj.Fields';
+          end
+
+          if ~exist(SaveFolder,'dir')
+              mkdir(SaveFolder);
+          end
+
+          % Main part: go down the tree and export Fields ince it gets to
+          % block level.
+          try
+              
+              oldPath = obj.Output;
+              obj.Output = SaveFolder;
+              obj.save;
+
+              if strcmp(obj.Type,'Block')
+                  % if it's block export the files
+                      for ff = Fields
+                          try
+                              thisP = arrayfun(@(x)x.(ff{1}).getPath,bb.Channels,'UniformOutput',false);
+                              for jj=1:numel(thisP)
+                                  source = thisP{jj};
+                                  target = fullfile(bb.Paths.(ff{1}).dir);
+                                  copyfile(source,target);
+                              end
+                          catch
+                              nigeLab.utils.cprintf('Errors','No field %s detected in block %s.%s\n',ff{1},aa.Name,bb.Name)
+                          end%try
+                      end%ff
+              else
+                  % Otherwise go down one level
+                  objChl = obj.Children;
+                  flag = true & exportFiles(objChl,SaveFolder,Fields);
+              end
+              
+              obj.Output = oldPath;
+
+          catch er
+              nigeLab.utils.cprintf('Error',[er.message newline])
+          end
+      end
+
    end
    
    % HIDDEN,PUBLIC
@@ -5988,7 +6043,7 @@ end
 %                % Be sure to re-assign transient .Block property to Videos
                if ~isempty(b.Cameras)
                     [b.Cameras.Parent] = deal(b);
-                    arrayfun(@addVideos,b.Cameras);
+%                     arrayfun(@addVideos,b.Cameras);
                end
                
                if DataMoved

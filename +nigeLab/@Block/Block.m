@@ -617,13 +617,6 @@ classdef Block < nigeLab.nigelObj
       end
    end
   
-   
-   % RESTRICTED:nigeLab.libs.VideosFieldType
-   methods (Access=?nigeLab.libs.VideosFieldType)
-      s = parseVidFileExpr(blockObj,ext)        % Get expression to match for video files and wipe Block.Meta.Video table
-      index = parseVidFileName(blockObj,fName,keyIndex,forceTrials)  % Add to Block.Meta.Video table and return corresponding index
-   end
-   
    % PUBLIC
    methods (Access=public)
 
@@ -690,6 +683,10 @@ classdef Block < nigeLab.nigelObj
           flag = true;
       end
       function flag = deleteEvent(obj,thisEvent)
+          if isempty(thisEvent)
+            flag = false;
+            return;
+          end
           if ~isscalar(thisEvent)
               flag = deleteEvent(obj,thisEvent(1)) & deleteEvent(obj,thisEvent(2:end));
               return;
@@ -709,9 +706,10 @@ classdef Block < nigeLab.nigelObj
               idx = Alltimes == thisEvent.Ts;
           end
           if ~any(idx)
+              flag = false;
               return;
           end
-          idx2 = strcmp([obj.Events(idx).Name],thisEvent.Name);          
+          idx2 = strcmp({obj.Events(idx).Name},thisEvent.Name);          
           idx(idx) = idx(idx) & idx2;
           obj.Events(idx) = [];
           flag = true;
@@ -744,7 +742,46 @@ classdef Block < nigeLab.nigelObj
           obj.Events(idx) = rmfield(thisEvent,{'OldEvt','Idx'});
           flag = true;
       end
-      
+      function evt  = filterEvt(blockObj,varargin)
+          % Returns events filtered on values given in input
+          ev = [blockObj.Events];
+
+          for jj=1:(nargin-1)
+              thisFilt = varargin{jj};
+              ev_ = ev;
+              for ii = 1:2:numel(thisFilt)
+                  if isempty(ev_)
+                      break;
+                  end
+                  field = thisFilt{ii};
+                  val = thisFilt{ii+1};
+                  if ischar(val)
+                      idx = strcmp([ev_.(field)],val);
+                  else
+                      if iscell([ev_.(field)])
+                          idx = cellfun(@(x) all(x==val),[ev_.(field)]);
+                      else
+                          idx = arrayfun(@(x) all(x==val),[ev_.(field)]);
+                      end
+                  end
+                  ev_=ev_(idx);
+              end
+              isLabel = all(isnan([ev_.Ts]));
+              if isLabel
+                  allTrials = [ev.Trial];
+                  theseTrials = [ev_.Trial];
+                  idx = ismember(allTrials,theseTrials);
+                  ev = ev(idx);
+              else
+                  ev = ev(idx);
+              end
+          end
+
+          [~,idx] = sort([ev.Trial]);
+          evt = ev(idx);
+
+      end
+
       % Computational methods:
       [tf_map,times_in_ms] = analyzeERS(blockObj,options) % Event-related synchronization (ERS)
       analyzeLFPSyncIndex(blockObj)  % LFP synchronization index
@@ -1119,9 +1156,35 @@ classdef Block < nigeLab.nigelObj
    methods (Hidden,Access=private)
       eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp,matchValue)
       eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,matchValue)
-      flag = updateVidInfo(blockObj,forceExtraction) % Update video info
+      
+      % used to filter blovks based on Metadata values, from {} interface
+      function val = filterMeta(nigelObj,varargin)
+          if ~isQuery(varargin)
+              error(['nigeLab:' mfilename ':badSubscriptReference'],...
+                  'Wrong input format for queries.');
+          end
+          if numel(varargin) == 2
+              val = compare(nigelObj.Meta.(varargin{1}), varargin{2});
+              return
+          end
+          val = filterMeta(nigelObj,varargin{1:2}) & filterMeta(nigelObj,varargin{3:end});
+
+          function val = isQuery(subs)
+              val = ~mod(numel(subs),2);
+              val = val & all(cellfun(@ischar,subs(1:2:end)));
+          end
+          function val = compare(val1,val2)
+              if isnumeric(val1) && isnumeric(val2)
+                  val = all(val1 == val2);
+              elseif (ischar(val1) || isstring(val1)) && (ischar(val2) || isstring(val2))
+                  val = strcmpi(val1,val2);
+              end
+          end
+
+      end
+
    end
-   
+
    % STATIC,PUBLIC
    methods (Static,Access=public)
       % Overloaded method to instantiate "Empty" Blocks from constructor
