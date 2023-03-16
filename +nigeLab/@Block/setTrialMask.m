@@ -1,45 +1,45 @@
-function flag = setTrialMask(blockObj,includedChannelIndices)
-%SETCHANNELMASK    Set included channels to use for subsequent analyses
+function flag = setTrialMask(blockObj,includedTrialIndices)
+%SETTRIALMASK    Set the trials to consider for analysis and scoring 
 %
-%  flag = blockObj.SETCHANNELMASK(includedChannelIndices); % no UI
+%  flag = blockObj.SETTRIALMASK(includedTrialIndices); % no UI
 %
 %  inputs --
-%  --> includedChannelIndices : (double) indexing array for .Channels, or
-%                               (logical) mask of same size as .Channels,
+%  --> includedTrialIndices :   (double) indexing array for .Trial, or
+%                               (logical) mask of same length as .Trial,
 %                                         where TRUE denotes that the
-%                                         .Channels element should be kept
+%                                         .Trial element should be kept
 %                                         for further processing.
+%                               (empty or non existing) set mask to all
+%                               Trials;
 %
-%     --> If blockObj is an array, then includedChannelIndices may be
+%     --> If blockObj is an array, then includedTrialIndices may be
 %           specified as a cell array of indexing vectors, which must 
 %           contain one cell per block in the array.
 %
 %  Sets blockObj.TrialMask property, which is an indexing array (double) that
-%  specifies the indices of the blockObj.Channels struct array that are to
-%  be included for subsequent analyses 
-%     (e.g. blockObj.Channels(blockObj.Mask).(fieldOfInterest) ... would
-%           return only the "good" channels for that recording).
+%  specifies the indices of the Trials to use for analysis
+% 
 
 % PARSE INPUT
 if nargin < 2
-   includedChannelIndices = nan;
+   includedTrialIndices = [];
 end
 
 if numel(blockObj) > 1
    flag = true;
-   if iscell(includedChannelIndices)
-      if numel(blockObj) ~= numel(includedChannelIndices)
+   if iscell(includedTrialIndices)
+      if numel(blockObj) ~= numel(includedTrialIndices)
          error(['nigeLab:' mfilename ':BlockArrayInputMismatch'],...
             ['%g elements in blockObj array input, ' ...
              'but only %g elements in channel index cell array input'],...
-             numel(blockObj),numel(includedChannelIndices));
+             numel(blockObj),numel(includedTrialIndices));
       end
    end   
    for i = 1:numel(blockObj)
-      if iscell(includedChannelIndices)
-         flag = flag && blockObj(i).setChannelMask(includedChannelIndices{i});
+      if iscell(includedTrialIndices)
+         flag = flag && blockObj(i).setChannelMask(includedTrialIndices{i});
       else
-         flag = flag && blockObj(i).setChannelMask(includedChannelIndices);
+         flag = flag && blockObj(i).setChannelMask(includedTrialIndices);
       end
    end
    return;
@@ -48,13 +48,19 @@ else
 end
 
 % If it is logical, make sure the number of logical elements makes sense
-if islogical(includedChannelIndices)
-   numel(includedChannelIndices) == size(blockObj.Trial,1)
+if isempty(includedTrialIndices)
+    maskVal = 1:size(blockObj.Trial,1);
+elseif islogical(includedTrialIndices) && ...
+        (numel(includedTrialIndices) == size(blockObj.Trial,1))
+    maskVal = find(includedTrialIndices);
+elseif isnumeric(includedTrialIndices) &&...
+        max(includedTrialIndices) <= size(blockObj.Trial,1)
+    maskVal = includedTrialIndices;
+else
+    error(['nigeLab:' mfilename ':TrialMaskError'],...
+        'Trial mask has wrong format.');
 end
-blockObj.TrialMask = find(maskVal);
-
-
-waitfor(h);
+blockObj.TrialMask = maskVal;
 flag = true;
 
 end

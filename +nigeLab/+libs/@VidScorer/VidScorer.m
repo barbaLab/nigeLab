@@ -32,7 +32,8 @@ classdef VidScorer < matlab.mixin.SetGet
    % DEPENDENT,PUBLIC
    properties (Access=private)
       nTrial      (1,1) double  = 0     % Total number of trials in blockObj
-      
+      Trial
+      TrialMask
    end
    
    properties (SetObservable,Access=private)
@@ -141,10 +142,15 @@ classdef VidScorer < matlab.mixin.SetGet
          arrayfun(@(v)v.setActive(false),obj.nigelCamArray(2:end));
          arrayfun(@(v)v.setSpeed(1),obj.nigelCamArray);
 
-         obj.nigelCam = nigelCams(1);      
+         obj.nigelCam = nigelCams(1);
          obj.Block = obj.nigelCam.Parent;
          obj.XLim = [0 obj.nigelCam.Meta(end).duration*1.05];
-                  
+
+         Mask = obj.Block.TrialMask;
+         if isempty(Mask),Mask = 1:size(obj.Block.Trial,1);end
+         obj.Trial = obj.Block.Trial(Mask,:);
+         obj.TrialMask = Mask;
+
          % Parse input arguments
          for iV = 1:2:numel(varargin)
             obj.(varargin{iV}) = varargin{iV+1};
@@ -314,7 +320,7 @@ classdef VidScorer < matlab.mixin.SetGet
           % on axes
           obj.Now.XData = ones(2,1)*obj.nigelCam.Time;
 
-          thisTrial = find(obj.Block.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last'); % maybe change with min(abs()) ?
+          thisTrial = obj.TrialMask(find(obj.Trial(:,1)*1e3 <= (obj.Now.XData(1)+5),1,'last')); % maybe change with min(abs()) ?
           if isempty(thisTrial),thisTrial = 0;end
           obj.TrialIdx = thisTrial;
           xl = xlim(obj.sigAxes);
@@ -383,7 +389,7 @@ classdef VidScorer < matlab.mixin.SetGet
                fprintf('The mean scoring time was %d.\n',...
                     obj.PerformanceTimer.T_elaps./numel(obj.PerformanceTimer.Trial_scored));
                
-               trialsLeft = size(obj.Block.Trial,1)-numel(unique([obj.TrialLbls.Trial]));
+               trialsLeft = max(obj.TrialMask)-numel(unique([obj.TrialLbls.Trial]));
                fprintf('Estimated time of arrival for this Block is %f seconds.\n',...
                    obj.PerformanceTimer.T_elaps./numel(obj.PerformanceTimer.Trial_scored)*trialsLeft);
            else
@@ -413,11 +419,11 @@ classdef VidScorer < matlab.mixin.SetGet
       % Skip to next or previous trial depending on direction
       function skipToNext(obj,direction)
           if (obj.TrialIdx+direction <= 0) ||...                            % Be sure not to skip out of the valid video time
-                  (obj.TrialIdx+direction > size(obj.Block.Trial,1))
+                  (obj.TrialIdx+direction > max(obj.TrialMask))
               return;
           end
           frameTime = 1000/(obj.nigelCam.Meta(1).frameRate);
-          trialTime = obj.Block.Trial(obj.TrialIdx+direction,1)*1e3 +...
+          trialTime = obj.Trial(obj.getValidTrial(obj.TrialIdx,'idx')+direction,1)*1e3 +...
               frameTime/2;                                                  % retrieve time of trial initiation and add 1/2 frametime to be sure to be 'inside'the trial
           evt.IntersectionPoint = trialTime;
           obj.sigAxClick([],evt);                                           % as if the user clicked on the timeline.
@@ -1077,6 +1083,22 @@ classdef VidScorer < matlab.mixin.SetGet
    
    % PRIVATE, build graphical objects and add listeners
    methods (Access=private)
+       % returns closest valid trial
+       function T=getValidTrial(obj,trial,type)
+           if nargin < 3
+               type = '';
+           end
+           [~,closestIndex] = min(abs(obj.TrialMask-trial));
+           switch type
+               case 'idx'
+                   T = closestIndex;
+               case 'val'
+                   T = obj.TrialMask(closestIndex);
+               otherwise
+                   T = obj.TrialMask(closestIndex);
+           end
+       end
+
       % Add Listeners
       function addListeners(obj)
           obj.CamListeners = addlistener(obj.nigelCamArray,'timeChanged',@(src,evt)obj.updateTimeMarker);
@@ -1326,10 +1348,16 @@ classdef VidScorer < matlab.mixin.SetGet
         obj.TrialLabel = uitextarea(obj.VidComPanel,...
              'Position',[80 10 30 30],...
              'BackgroundColor',nigeLab.defaults.nigelColors('onsurface'),...
-             'Value','1',...
+             'Value',num2str(obj.TrialMask(1)),...
              'Tooltip','Trial Index');
-         fcnlist = {{@(src,evt)set(obj,'TrialIdx',str2double(src.Value))},...
-             {@(src,evt)obj.sigAxClick([],struct('IntersectionPoint',obj.Block.Trial(round(str2double(src.Value)),1)*1e3)) }};
+
+          function val = returnClosest(array,N)
+              [~,closestIndex] = min(abs(array-N));
+              val = array(closestIndex);
+          end
+         fcnlist = {{@(src,evt)set(src,'Value',num2str(getValidTrial(obj, str2double(src.Value), 'val')) )},...
+             {@(src,evt)set(obj,'TrialIdx',str2double(src.Value))},...
+             {@(src,evt)obj.sigAxClick([],struct('IntersectionPoint',obj.Trial(obj.TrialIdx == obj.TrialMask,1)*1e3)) }};
          
         obj.TrialLabel.ValueChangedFcn = @(src,evt)nigeLab.utils.multiCallbackWrap(src,evt,fcnlist);         
          
@@ -2180,7 +2208,7 @@ classdef VidScorer < matlab.mixin.SetGet
 
       % Plots trial ovelay on the signal axes
       function paintTrials(obj)
-          HasTrials = ~isempty(obj.Block.Trial);
+          HasTrials = ~isempty(obj.Trial);
           if isempty(obj.trialsOverlayChk )
               if HasTrials,Status = 'on';else,Status = 'off';end
                   obj.trialsOverlayChk = uicheckbox(obj.FigComPanel,...
@@ -2190,12 +2218,21 @@ classdef VidScorer < matlab.mixin.SetGet
                   'FontColor',nigeLab.defaults.nigelColors('onsfc'));
           end
           if HasTrials
-              
-              X = [obj.Block.Trial fliplr(obj.Block.Trial)]'*1e3;
+             
+              Mask_ = setdiff(1:size(obj.Block.Trial,1),obj.TrialMask);
+
+              X = [obj.Trial fliplr(obj.Trial)]'*1e3;
               obj.nTrial = size(X,2);
               Y = [zeros(obj.nTrial,2) ones(obj.nTrial,2)]';
               P = patch(obj.sigAxes,X,Y,nigeLab.defaults.nigelColors('primary'),'EdgeColor','none','FaceAlpha',0.75,'HitTest','off');
-              obj.trialsOverlayChk.ValueChangedFcn = @(src,evt)set(P,'Visible',src.Value);
+
+              X_ = [obj.Block.Trial(Mask_,:) fliplr(obj.Block.Trial(Mask_,:))]'*1e3;
+              nTrial_ = size(X_,2);
+              Y_ = [zeros(nTrial_,2) ones(nTrial_,2)]';
+              P_ = patch(obj.sigAxes,X_,Y_,nigeLab.defaults.nigelColors(4),'EdgeColor','none','FaceAlpha',0.75,'HitTest','off');
+
+
+              obj.trialsOverlayChk.ValueChangedFcn = @(src,evt)set([P; P_],'Visible',src.Value);
               obj.trialsOverlayChk.Value = true;
           end
       end

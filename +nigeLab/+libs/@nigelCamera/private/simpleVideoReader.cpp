@@ -299,7 +299,7 @@ void dispFrames(bool frameStepping = false){
             bufferMs.pop_front();
         }
         else
-            bufferIndex = max(0, min(bufferIndex, (int)buffer.size()-2));
+            bufferIndex = max(1, min(bufferIndex, (int)buffer.size()-2));
 
         mtx.unlock();
         if (frame_.size().width >= ROI.width && frame_.size().height >= ROI.height && 

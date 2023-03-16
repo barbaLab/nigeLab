@@ -80,15 +80,12 @@ classdef Block < nigeLab.nigelObj
    end
    
    % HIDDEN,TRANSIENT,DEPENDENT,PUBLIC
-   properties (Hidden,Transient,Dependent,Access=public)
+   properties (Dependent,Access=public)
       ChannelID            double   % [NumChannels x 2] array of channel and probe numbers
-      EventTimes           double   % Timestamps of different scored events
-      HasROI      (1,1)    logical = false   % Do all the video cameras have ROI set?
       NumChannels (1,1)    double   % Total number of channels 
       NumProbes   (1,1)    double   % Total number of Probes
       Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
-      TrialMask                     % Logical vector of masking for trials (if applicable)
    end
    
    % PUBLIC
@@ -97,13 +94,13 @@ classdef Block < nigeLab.nigelObj
       Events   struct                        % Struct array of asynchronous events
       Streams  struct                        % Struct array of non-electrode data streams
       Cameras                                % Array of nigeLab.libs.nigelCamera
-      Videos
    end
    
    % RESTRICTED:nigelObj/PUBLIC
    properties (GetAccess = public,SetAccess=?nigeLab.nigelObj)
       FileType       cell  =  nigeLab.nigelObj.Default('FileType','Block')  % Indicates DiskData file type for each Field
       Mask           {logical,double}        % Vector of indices of included elements of Channels
+      TrialMask      {logical,double}        % Logical vector of masking for trials (if applicable)
       Notes          struct                  % Notes from text file
       Probes         struct                  % Probe configurations associated with saved recording
       Paths          struct                  % Struct containing all paths for data
@@ -236,56 +233,6 @@ classdef Block < nigeLab.nigelObj
          obj.ChannelID_ = value;
       end
            
-      % [DEPENDENT]  Returns .EventTimes property (write to DiskData)
-      function value = get.EventTimes(blockObj)
-         %GET.EVENTTIMES  Returns .EventTimes property
-         %
-         %  value = get(obj,'EventTimes');
-         
-         v = blockObj.Pars.Video.VarsToScore(blockObj.Pars.Video.VarType == 1);
-         value = nan(numel(blockObj.Trial),numel(v));
-         for iV = 1:numel(v)
-            value(:,iV) = getEventData(blockObj,blockObj.ScoringField,...
-               'ts',v{iV});
-         end
-      end
-      function set.EventTimes(blockObj,value)
-         %SET.EVENTTIMES  Assigns .EventTimes property
-         %
-         %  set(blockObj,'EventTimes',__);
-         
-         v = blockObj.Pars.Video.VarsToScore(...
-            blockObj.Pars.Video.VarType == 1);  
-         for iV = 1:numel(v)
-            setEventData(blockObj,blockObj.ScoringField,...
-               'ts',v{iV},value(:,iV));
-         end
-      end
-      
-      % [DEPENDENT]  Returns .HasROI property: are all Videos ROI set?
-      function value = get.HasROI(blockObj)
-         %GET.HASROI  Returns .HasROI property: are all Videos ROI set?
-         value = false;
-         if isempty(blockObj)
-            return;
-         elseif isempty(blockObj.Videos)
-            return;
-         end
-         ROI = {blockObj.Videos.ROI};
-         value = true;
-         for i = 1:numel(ROI)
-            if ~blockObj.Videos(i).Masked
-               continue;
-            end
-            flag = ~ischar(ROI{i}{1}) && ~ischar(ROI{i}{2});
-            value = value && flag;
-         end
-      end
-      function set.HasROI(~,~)
-         %SET.HASROI  Cannot set READ-ONLY property
-         warning('Cannot set READ-ONLY property: <strong>HASROI</strong>');
-      end
-      
       % [DEPENDENT] Returns .NumChannels property
       function value = get.NumChannels(blockObj)
          %GET.NUMCHANNELS  Returns total number of Channels
@@ -365,11 +312,10 @@ classdef Block < nigeLab.nigelObj
          idx = (TrialEnd - TrialStrt) > blockObj.Pars.Event.Trial.MinDistance;
          value = [TrialStrt(idx)' TrialEnd(idx)'];
       end
-      function set.Trial(blockObj,value)
+      function set.Trial(~,~)
           error(['You cannot set manually the Trial field.' newline 'Please add relevant events to the Event structure.']);
       end
       
-
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
       % Overloaded method to get 'end' indexing
@@ -709,7 +655,7 @@ classdef Block < nigeLab.nigelObj
               flag = false;
               return;
           end
-          idx2 = strcmp({obj.Events(idx).Name},thisEvent.Name);          
+          idx2 = strcmp([obj.Events(idx).Name],thisEvent.Name);          
           idx(idx) = idx(idx) & idx2;
           obj.Events(idx) = [];
           flag = true;
