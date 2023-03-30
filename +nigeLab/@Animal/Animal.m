@@ -192,6 +192,10 @@ classdef Animal < nigeLab.nigelObj
    
    % PUBLIC
    methods (Access=public)
+        % Runs spike autocluster on all blocks at the same time, not taking
+        % into account time. This helps with unit tracking
+       flag = doAutoClustering(animalObj,chan,multiBlock)
+
       % Returns Status for each Operation/Block pairing
       function flag = getStatus(animalObj,opField,~)
          % GETSTATUS  Returns Status Flag for each Operation/Block pairing
@@ -245,10 +249,8 @@ classdef Animal < nigeLab.nigelObj
    
    % HIDDEN,PUBLIC
    methods (Hidden,Access=public)      
-      flag = doAutoClustering(animalObj,chan,multiBlock) % Runs spike autocluster
-
       N = getNumBlocks(animalObj); % Gets total number of blocks 
-      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together  % -- Is it deprecated? (MM to FB 2020-Feb-01)
+      mergeBlocks(animalObj,ind,varargin) % Concatenate two Blocks together  % TODO
    end
     
    % PRIVATE 

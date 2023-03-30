@@ -73,14 +73,21 @@ for iCh = allChan
     nSpk{iCh}([false BlocksNotMasked]) = arrayfun(@(b)b.Channels(iCh).Spikes.size(1),blockObj(BlocksNotMasked)); % returns the numbers of spikes present in each block, only for unmasked blocks
     nSpk{iCh} = cumsum(nSpk{iCh}); % this way it can be used as index when retrieving spikes from each block
     nFeat = arrayfun(@(b)b.Channels(iCh).SpikeFeatures.size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
-    nFeat = unique(nFeat); % number of features present in each block 
-    if length(nFeat) ~= 1 % if it's not the same number in all blocks something went wrong
-        error('Classification feature are dishomogeneous across blocks. Joint clustering is not possible.')
+    
+    uFeat = unique(nFeat); % number of features present in each block 
+    if length(uFeat) ~= 1 % if it's not the same number in all blocks something went wrong
+        if par.Interpolate
+            maxFeat = max(nFeat);
+            blocks2resample = find(nFeat == maxFeat);
+        else
+            error(sprintf('Classification feature are dishomogeneous across blocks. Joint clustering is not possible.\nNigel can handle this: set the ''Interpolate'' parameter to true.'))
+        end
     end
+
 
     %Then we retrieve spikes and put them in the right place inside inspk 
 
-    inspk = zeros(nSpk{iCh}(end),nFeat); % preinitialize matrix to store all features from all spikes
+    inspk = zeros(nSpk{iCh}(end),maxFeat); % preinitialize matrix to store all features from all spikes
     for bb = find(BlocksNotMasked)  
         blockObj(bb).updateStatus('Clusters',false,blockObj(bb).Mask); % We are overwriting any previous clustering operation, thus presetting the status to false
 
@@ -88,9 +95,17 @@ for iCh = allChan
         if isempty(idx)
             continue;
         end
-        % TODO a switch to pass from spikes waveforms to features
-        inspk(idx,:)  = getSpikeFeatures(blockObj(bb),iCh,{'Clusters',nan});
-%         inspk(idx,:) = getSpikes(blockObj(bb),iCh);
+        if strcmpi(par.clusteringTraget,'Features')
+            inspk(idx,:)  = getSpikeFeatures(blockObj(bb),iCh,{'Clusters',nan});
+        elseif strcmpi(par.clusteringTraget,'Spikes')
+            theseSpikes = getSpikes(blockObj(bb),iCh);
+            if ay(bb==blocks2resample)
+                t0 = linspace(blocksObj(bb).Pars.SD.WPre,blocksObj(bb).Pars.SD.WPost,nFeat(bb));
+                t  = linspace(blocksObj(bb).Pars.SD.WPre,blocksObj(bb).Pars.SD.WPost,maxFeat);
+                theseSpikes = interp1(t0,theseSpikes,t,par.InterpolateMethod);
+            end
+            inspk(idx,:) = theseSpikes;
+        end
     end % bb
     
     % Finally we store all the spikes in a cell array for each channel

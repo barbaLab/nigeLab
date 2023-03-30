@@ -9,6 +9,9 @@ pars.MethodName     = 'skwedt';     % Can be: 'kmenas','spc' or 'skewdt'
 pars.NMaxClus       = 9;            % Maximum # of clusters
 pars.ID.Clusters    = 'skwedt';      % Attached to the cluster folder
 
+pars.Interpolate       = true;
+pars.InterpolateMethod = 'spline';
+
 
 
 
