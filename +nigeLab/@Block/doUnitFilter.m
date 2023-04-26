@@ -86,7 +86,7 @@ for iCh = blockObj.Mask
                data = resample(data, pars.DOWNSAMPLE_FREQ, blockObj.Channels(iCh).fs);
                blockObj.SampleRate = pars.DOWNSAMPLE_FREQ;
             else
-               warning(sprintf('The downsampling frequency is smaller than %dHz.\n Downsampling at %dHz.',minFreqNyqst,minFreqNyqst);
+               warning(sprintf('The downsampling frequency is smaller than %dHz.\n Downsampling at %dHz.',minFreqNyqst,minFreqNyqst));
                data = resample(data, minFreqNyqst, blockObj.Channels(iCh).fs);
                blockObj.SampleRate = minFreqNyqst;
             end
