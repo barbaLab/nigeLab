@@ -34,7 +34,7 @@ switch S(1).type
       % . also could reference something like __.Block.Raw as a shortcut.
       % All Channels fields are adressable this way.
       %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
-      fixed_fields = blockObj(1).Pars.Block.Fields;
+      fixed_fields = blockObj(1).Fields;
       Exceptions = {'Time'};
       fixed_fields = setdiff(fixed_fields,Exceptions);
       idx = strcmpi(fixed_fields,S(1).subs);

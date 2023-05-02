@@ -1611,7 +1611,10 @@ classdef VidScorer < matlab.mixin.SetGet
              'FontColor',nigeLab.defaults.nigelColors('onsfc'));
          
          camNames = {obj.nigelCamArray.Name};
-         mainCamName = obj.nigelCam.Name;
+         emptyCamNames = cellfun(@isempty,camNames);
+         camNames(emptyCamNames) = arrayfun(@(x)sprintf('UnnamedCam%.2d',x),1:sum(emptyCamNames),...
+             'UniformOutput',false);
+         mainCamName = camNames{1};
          
          for ii=1:numel(camNames)
              if isempty(camNames{ii})

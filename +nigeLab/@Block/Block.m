@@ -91,7 +91,8 @@ classdef Block < nigeLab.nigelObj
    % PUBLIC
    properties (GetAccess=public,SetAccess=?nigeLab.nigelObj)
       Channels struct                        % Struct array of neurophysiological stream data
-      Events   struct                        % Struct array of asynchronous events
+      Events   struct = repmat(struct('Ts',[],'Tag',[],'Name',[],'Duration',[],...
+                                'Data',[],'Trial',[]),0,1);                        % Struct array of asynchronous events
       Streams  struct                        % Struct array of non-electrode data streams
       Cameras                                % Array of nigeLab.libs.nigelCamera
    end
@@ -270,6 +271,8 @@ classdef Block < nigeLab.nigelObj
                value = numel(unique(C(:,1)));
             case 'Matfile'
                value = blockObj.MatFileWorkflow.Pars.NumProbes;
+             case ''
+                 value = 0;
             otherwise
                error(['nigeLab:' mfilename ':UnsupportedRecType'],...
                   '''%s'' is not a supported RecType.',blockObj.RecType);
@@ -689,7 +692,25 @@ classdef Block < nigeLab.nigelObj
           flag = true;
       end
       function evt  = filterEvt(blockObj,varargin)
-          % Returns events filtered on values given in input
+      % FILTEREVT Returns events filtered on queries given as input.
+      % Queries are provided as an arbitrary number of cellarrays
+      % containing an arbitrary number of key-values couples. Each
+      % additional filter provides an additional layer of selection on the
+      % previously filtered event data.
+      % Events typically contain the following fields: 
+      %     Ts          -> Timestamp in seconds
+      %     Name        -> Human readable Event name
+      %     Tag         -> Shorter version of Name
+      %     Duration    -> Duration in samples of the Event. Usually 1 for
+      %                    most events (impulsive events)
+      %     Data        -> Additional data if needed (like 1 or 0).
+      %     Trial       -> Trial # associated w/ the Event
+      %
+      % Examples:
+      %
+      % evt = blockObj.filterEvt({'Name','Success','Data',1},... Filter 1
+      %                         {'Name','Grasp'});             % Filter 2
+      
           ev = [blockObj.Events];
 
           for jj=1:(nargin-1)

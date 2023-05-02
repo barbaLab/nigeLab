@@ -357,6 +357,10 @@ end
                   obj(i,k) = copy(obj(1,1));
                end
             end
+            if all(inPath ~= 0) && any(~obj.updateParams('init'))
+                error(['nigeLab:' mfilename ':BadInit'],...
+                    'Could not properly initialize parameters.');
+            end
             return;
          end
          
@@ -2086,6 +2090,7 @@ end
          %  --> Skips `updateParams('Queue')` call
          
          if isempty(obj)
+             flag = false;
             return;
          end
          
@@ -3808,10 +3813,7 @@ end
          end
          
          % Handle empty or invalid objects
-         if isempty(obj)
-            flag = true;
-            return;
-         elseif ~isvalid(obj)
+         if ~isvalid(obj)
             flag = true;
             return;
          end         
@@ -6056,16 +6058,16 @@ end
                    b.Output = path;
                    b.genPaths;
                end
-               
+
              case {'Animal'}
                  b.PropListener(1).Enabled = false;
                  % Adds Children if it finds them
                  [C,varName] = b.searchForChildren();
                  if isempty(C)
                      st = dbstack;
-% here we use dbstack to determine if the fucntion was called by the top
-% workspace or by the tankObj loading function. In the forst case we prompt
-% the user to select the correct path, otherwise we use the tankObj path 
+                     % here we use dbstack to determine if the fucntion was called by the top
+                     % workspace or by the tankObj loading function. In the forst case we prompt
+                     % the user to select the correct path, otherwise we use the tankObj path
                      if length(st) == 2
                          tankObj = evalin('caller','b');
                          path = tankObj.Out.Folder;
