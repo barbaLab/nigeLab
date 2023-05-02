@@ -2546,8 +2546,10 @@ end
          thisObj = nigeLab.nigelObj.getValidObj(obj,1);
          
          if isempty(thisObj)
-            nigeLab.utils.cprintf('Errors*',...
-               '\t->\t[GETFIELDTYPE]: No valid nigelObj\n');
+             if obj.Verbose
+                 nigeLab.utils.cprintf('Errors*',...
+                     '\t->\t[GETFIELDTYPE]: No valid nigelObj\n');
+             end
             fieldType = '';
             n = 0;
             return;
@@ -2591,8 +2593,10 @@ end
          thisObj = nigeLab.nigelObj.getValidObj(obj,1);
          
          if isempty(thisObj)
-            nigeLab.utils.cprintf('Errors*',...
-               '\t->\t[GETFIELDTYPEINDEX]: No valid nigelObj\n');
+             if obj.Verbose
+                 nigeLab.utils.cprintf('Errors*',...
+                     '\t->\t[GETFIELDTYPEINDEX]: No valid nigelObj\n');
+             end
             fieldIdx = [];
             n = 0;
             return;
@@ -2627,8 +2631,10 @@ end
          
          thisObj = nigeLab.nigelObj.getValidObj(obj,1);
          if isempty(thisObj)
-            nigeLab.utils.cprintf('Errors*',...
-               '\t->\t[GETFILETYPE]: No valid nigelObj\n');
+             if obj.Verbose
+                 nigeLab.utils.cprintf('Errors*',...
+                     '\t->\t[GETFILETYPE]: No valid nigelObj\n');
+             end
             fileType = '';
             return;
          end
@@ -6241,10 +6247,12 @@ end
          end
          if numel(thisObj) < n
             thisObj = [];
-            nigeLab.utils.cprintf('Errors*',...
-               ['\t->\t[GETVALIDOBJ]: Could not find (%g) valid ' ...
-               'nigelObj in (%g object) array\n'],...
-               n,numel(objArray));
+            if any([objArray.Verbose])
+                nigeLab.utils.cprintf('Errors*',...
+                    ['\t->\t[GETVALIDOBJ]: Could not find (%g) valid ' ...
+                    'nigelObj in (%g object) array\n'],...
+                    n,numel(objArray));
+            end
          end
       end
       

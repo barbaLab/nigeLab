@@ -47,7 +47,7 @@ if nargin < 1
    end
    return;
 end
-
+flag = false;
 %% If more than one input is given
 switch class(obj)
    case 'char'
