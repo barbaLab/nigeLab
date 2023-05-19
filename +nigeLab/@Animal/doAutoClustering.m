@@ -72,12 +72,14 @@ for iCh = allChan
     nSpk{iCh} = zeros(1,1+numel(blockObj));
     nSpk{iCh}([false BlocksNotMasked]) = arrayfun(@(b)b.Channels(iCh).Spikes.size(1),blockObj(BlocksNotMasked)); % returns the numbers of spikes present in each block, only for unmasked blocks
     nSpk{iCh} = cumsum(nSpk{iCh}); % this way it can be used as index when retrieving spikes from each block
-    nFeat = arrayfun(@(b)b.Channels(iCh).SpikeFeatures.size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
+    nFeat = arrayfun(@(b)b.Channels(iCh).(par.ClusteringTarget).size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
     
     uFeat = unique(nFeat); % number of features present in each block 
+    maxFeat = max(nFeat);
+    blocks2resample = false(size(nFeat));
+
     if length(uFeat) ~= 1 % if it's not the same number in all blocks something went wrong
         if par.Interpolate
-            maxFeat = max(nFeat);
             blocks2resample = find(nFeat == maxFeat);
         else
             error(sprintf('Classification feature are dishomogeneous across blocks. Joint clustering is not possible.\nNigel can handle this: set the ''Interpolate'' parameter to true.'))
@@ -95,13 +97,13 @@ for iCh = allChan
         if isempty(idx)
             continue;
         end
-        if strcmpi(par.clusteringTraget,'Features')
+        if strcmpi(par.ClusteringTarget,'SpikeFeatures')
             inspk(idx,:)  = getSpikeFeatures(blockObj(bb),iCh,{'Clusters',nan});
-        elseif strcmpi(par.clusteringTraget,'Spikes')
+        elseif strcmpi(par.ClusteringTarget,'Spikes')
             theseSpikes = getSpikes(blockObj(bb),iCh);
-            if ay(bb==blocks2resample)
-                t0 = linspace(blocksObj(bb).Pars.SD.WPre,blocksObj(bb).Pars.SD.WPost,nFeat(bb));
-                t  = linspace(blocksObj(bb).Pars.SD.WPre,blocksObj(bb).Pars.SD.WPost,maxFeat);
+            if any(bb==blocks2resample)
+                t0 = linspace(blockObj(bb).Pars.SD.WPre,blockObj(bb).Pars.SD.WPost,nFeat(bb));
+                t  = linspace(blockObj(bb).Pars.SD.WPre,blockObj(bb).Pars.SD.WPost,maxFeat);
                 theseSpikes = interp1(t0,theseSpikes,t,par.InterpolateMethod);
             end
             inspk(idx,:) = theseSpikes;
@@ -177,7 +179,7 @@ for iCh = allChan
             continue;
         end
         
-       classes_ = classes{iCh}(idx);
+       classes_ = classes{curCh}(idx);
        temp = temp_;
        % save classes
        saveClusters(blockObj(bb),classes_,iCh,temp);
