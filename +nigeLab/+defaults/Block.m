@@ -67,7 +67,7 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 
 %% Common DynamicVarExp values
 % pars.NamingConvention={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
-% pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$Phase','$RecDate','$RecTime'}; % demo
+% pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$ExpPhase','$RecDate','$RecTime'}; % demo
 pars.NamingConvention={'$AnimalID' '$ExpPhase' '$RecDate' '$RecTime'}; % iit acute
 
 % OPTIONAL: To parse "RecID" from combination of meta vars, specify here
