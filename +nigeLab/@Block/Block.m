@@ -1120,7 +1120,7 @@ classdef Block < nigeLab.nigelObj
    end
    
    % HIDDEN,PRIVATE
-   methods (Hidden,Access=private)
+   methods (Hidden,Access=?nigeLab.nigelObj)
       eventData = getStreamsEventData(blockObj,field,prop,eventName,matchProp,matchValue)
       eventData = getChannelsEventData(blockObj,field,prop,ch,matchProp,matchValue)
       
