@@ -43,7 +43,7 @@ function varargout = subsref(tankObj,S)
 %             element of tankObj.Children indexed by idx1.
 
 varargout = cell(1,nargout);
-if isempty([tankObj.Children])
+if isempty([tankObj.Children]) & strcmp(S(1).type,'{}') %#ok<AND2> 
    return;
 end
 

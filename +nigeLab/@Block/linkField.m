@@ -61,13 +61,8 @@ switch blockObj.FieldType{fieldIndex}
          case 'probes'
             flag = blockObj.linkProbe;
             % blockObj.updateStatus called in linkProbe method
-         case 'time'
-            flag = blockObj.linkTime;
-            % blockObj.updateStatus is called in linkTime method
          otherwise
-            warning('Parsing is not configured for FieldType: %s',...
-               blockObj.FieldType{fieldIndex});
-            return;
+             flag = blockObj.linkMetaField(field);
       end
       
    otherwise

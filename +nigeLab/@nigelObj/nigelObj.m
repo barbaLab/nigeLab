@@ -121,6 +121,10 @@ end
       Parent
    end
    
+   properties (Dependent,SetAccess=private)
+       MultiAnimals logical    % Flag signaling the presence of multinimal flag in Meta
+   end
+
    % HIDDEN,ABORTSET,SETOBSERVABLE,PUBLIC (Flags)
    properties (Hidden,AbortSet,SetObservable,Access=public)
       InBlindMode(1,1)logical = false  % True if "blind mode" is activated
@@ -370,7 +374,7 @@ end
                continue;
             end
             if strcmp(varargin{iV}(1),'$')
-               obj.assignPars(varargin{iV}(2:end),varargin{iV+1});
+               obj.updateParams(varargin{iV}(2:end),'Inherit',varargin{iV+1});
             else
                % Check to see if it matches any of the listed properties
                set(obj,varargin{iV},varargin{iV+1});
@@ -423,11 +427,6 @@ end
                'Both inPath and savePath must be `char`');
          end
          
-         % Initialize parameters
-         if any(~obj.updateParams('init'))
-            error(['nigeLab:' mfilename ':BadInit'],...
-               'Could not properly initialize parameters.');
-         end
          % Handle I/O path specifications
          if ~obj.parseInputPath(inPath)
             nigeLab.utils.cprintf('Errors*',...
@@ -438,6 +437,12 @@ end
             nigeLab.utils.cprintf('Errors*',...
                '[constructor canceled]: Output file/folder not given\n');
             return;
+         end
+
+          % Initialize parameters
+         if any(~obj.updateParams('all','initOnly'))
+            error(['nigeLab:' mfilename ':BadInit'],...
+               'Could not properly initialize parameters.');
          end
       end
       
@@ -668,6 +673,34 @@ end
             return;
          end
          obj.ParentContainer = value;
+      end
+      
+      % [DEPENDENT]  .MultiAnimals 
+      function value = get.MultiAnimals(obj)
+          %GET.MULTIANIMALS Get method for .MultiAnimals 
+          %
+          %  value = get(obj,'MultiAnimals');
+          %  --> Checks metadata for the multianimal flag, singaling many
+          %  animals are present in one block. This happens when two
+          %  aniamals are recorded from the same amplifier 
+          value = false;
+          switch obj.Type
+              case 'Tank'
+                  return;
+          end
+          fields = fieldnames(obj.Meta);
+          fields = setdiff(fields,...
+              [{'Header','FileExt','OrigName','OrigPath'} obj.Pars.(obj.Type).SpecialMeta.SpecialVars]);
+          for ff = fields(:)'
+              if contains(obj.Meta.(ff{:}),obj.Pars.(obj.Type).MultiAnimalsChar)
+                  value = true;
+                  break;
+              end
+          end
+      end
+      function set.MultiAnimals(obj,value)
+         %SET.MULTIANIMALS  Set method for .MultiAnimals property (Index)
+         ...
       end
       
       
@@ -1819,16 +1852,16 @@ end
             end
          end
          
-         % save multianimals if present
-         if strcmp(obj.Type,'Block')
-            if obj.MultiAnimals
-               for bl = obj.MultiAnimalsLinkedBlocks
-                  bl.MultiAnimalsLinkedBlocks(:) = [];
-                  bl.MultiAnimals = 0;
-                  flag = flag && bl.save();
-               end
-            end
-         end
+%          % save multianimals if present
+%          if strcmp(obj.Type,'Block')
+%             if obj.MultiAnimals
+%                for bl = obj.MultiAnimalsLinkedBlocks
+%                   bl.MultiAnimalsLinkedBlocks(:) = [];
+%                   bl.MultiAnimals = 0;
+%                   flag = flag && bl.save();
+%                end
+%             end
+%          end
          
       end
       
@@ -1929,9 +1962,14 @@ end
                   % Create the Children Block objects
                   switch obj.Type
                      case 'Animal'
-                        childObj = nigeLab.Block(childData,obj.Out.Folder);
+                        childObj = nigeLab.Block(childData,obj.Out.Folder,...
+                            '$Block',obj.Pars.Block,...
+                            'Parent',obj);
                      case 'Tank'
-                        childObj = nigeLab.Animal(childData,obj.Out.Folder);
+                        childObj = nigeLab.Animal(childData,obj.Out.Folder,...
+                            '$Animal',obj.Pars.Animal,...
+                            '$Block',obj.Pars.Block,...
+                            'Parent',obj);
                   end
 
                case {'nigeLab.Block', 'nigeLab.Animal'}
@@ -2009,7 +2047,7 @@ end
             end
          end % i
          if strcmp(obj.Type,'Animal') && ~obj.MultiAnimals
-            obj.parseProbes();
+%             obj.parseProbes();
          end
          
          
@@ -4574,8 +4612,13 @@ end
             obj.HasParsFile = false;
             return;
          end
-         allUsers = who(m);
-         obj.HasParsFile = ismember(userName,allUsers);
+         allUsers = who(m); 
+         if ~ismember(userName,allUsers)
+            m.Properties.Writable = true;
+            m.(userName) = m.(allUsers{1});
+            m.Properties.Writable = false;
+         end
+         obj.HasParsFile = true;
          if nargin > 1
             if obj.HasParsFile
                flag = isfield(m.(userName),parsField);
@@ -5904,10 +5947,7 @@ end
              end
          end
          flag = true;
-         for jj = 1:numel(OldFN)
-             obj.linkField(OldFN{jj});
-         end
-%          flag = flag && obj.linkToData;
+         flag = flag && obj.linkToData(OldFN);
          flag = flag && obj.save;
          flag = flag && obj.saveParams;
          
@@ -6051,6 +6091,7 @@ end
          b.addPropListeners();
          b.loadIDFile();
          b.checkParsInit();
+         flag = b.updateParams('all','KeepPars');
          
          % global variable to inform children if they need to refresh their
          % paths

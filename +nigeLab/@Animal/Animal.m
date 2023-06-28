@@ -33,11 +33,7 @@ classdef Animal < nigeLab.nigelObj
 %     Empty - Create an Empty ANIMAL object or array
    
    % % % PROPERTIES % % % % % % % % % %   
-   % HIDDEN,PUBLIC/RESTRICTED:nigelObj
-   properties (Hidden,GetAccess=public,SetAccess=?nigeLab.nigelObj)
-      MultiAnimals logical = false           % flag to signal if it's a single animal or a joined animal recording
-   end
-   
+  
    % HIDDEN,TRANSIENT,PUBLIC/RESTRICTED:nigelObj
    properties (Hidden,Transient,GetAccess=public,SetAccess=?nigeLab.nigelObj)
       MultiAnimalsLinkedAnimals  nigeLab.Animal % Array of "linked" animals

@@ -35,7 +35,7 @@ switch S(1).type
       % All Channels fields are adressable this way.
       %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
       fixed_fields = blockObj(1).Fields;
-      Exceptions = {'Time'};
+      Exceptions = {'Time','Stim'};
       fixed_fields = setdiff(fixed_fields,Exceptions);
       idx = strcmpi(fixed_fields,S(1).subs);
       % Shortcut case:
@@ -124,7 +124,8 @@ switch S(1).type
       %%% either a char that matches the fieldname in the shortcuts struct
       %%% or an index
       subs = S(1).subs;
-      if ischar(subs{1})
+      shortKey = fields(blockObj.Shortcut);
+      if ischar(subs{1}) 
          shrtName = subs{1};
          shrtStruct = blockObj.Shortcut.(shrtName);
       elseif isnumeric(subs{1}) && isscalar(subs{1})
@@ -173,7 +174,11 @@ switch S(1).type
       end
       
       TargetObj = subsref(blockObj,substruct(substructInArgs{:}));
-      
+      if ii == numel(shrtStruct.subfields)
+          %there was only one level. Let's return!
+          varargout = {TargetObj};
+          return;
+      end
       % we imposed only 2 levels of depth:
       % --> this means subs has to be only one cell after this
       subs = subs(end);     

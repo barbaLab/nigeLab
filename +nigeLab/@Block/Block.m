@@ -110,12 +110,10 @@ classdef Block < nigeLab.nigelObj
       Samples        double                  % Total number of samples in original record
       Scoring (1,1)  struct                  % Metadata about any scoring done
       Status  (1,1)  struct                  % Completion status for each element of BLOCK/FIELDS
-      Time           nigeLab.libs.DiskData   % DiskFile reference to neural time record
    end
    
    % RESTRICTED:nigelObj
    properties (Access=?nigeLab.nigelObj)
-      MultiAnimals = 0      % Flag for many animals contained in one block
       % Handles ad hoc workflows
       MatFileWorkflow struct = nigeLab.Block.Default('MatFileWorkflow');   
       %                           Struct with fields below:
@@ -766,6 +764,7 @@ classdef Block < nigeLab.nigelObj
       flag = linkEventsField(blockObj,field)    % Link Events field data
       flag = linkStreamsField(blockObj,field)   % Link Streams field data
       flag = linkVideosField(blockObj,field)    % Link Videos field data
+      flag = linkMetaField(blockObj,field)    % Link Videos field data
       flag = linkTime(blockObj)     % Link Time stream
       flag = linkNotes(blockObj)    % Link notes metadata
       flag = linkProbe(blockObj)    % Link probe metadata
@@ -962,34 +961,11 @@ classdef Block < nigeLab.nigelObj
             paths.(F{iF}).file = nigeLab.utils.getUNCPath(...
                paths.(F{iF}).dir,[p.File]);
             paths.(F{iF}).f_expr = p.File;
-            paths.(F{iF}).old = getOldFiles(p,paths.(F{iF}),'dir');
             paths.(F{iF}).info = nigeLab.utils.getUNCPath(...
                paths.(F{iF}).dir,[p.Info]);
             
          end
          
-         function old = getOldFiles(p,fieldPath,type)
-            %GETOLDFILES Get struct with file info for possible old files
-            old = struct;
-            for iO = 1:numel(p.OldFile)
-               f = strsplit(p.OldFile{iO},'.');
-               f = deblank(strrep(f{1},'*',''));
-               if isempty(f)
-                  continue;
-               end
-               O = dir(fullfile(fieldPath.(type),p.OldFile{iO}));
-               if isempty(O)
-                  old.(f) = O;
-               else
-                  if O(1).isdir
-                     old.(f) = dir(fullfile(O(1).folder,O(1).name,...
-                        p.OldFile{iO}));
-                  else
-                     old.(f) = O;
-                  end
-               end
-            end
-         end
       end
 
        function flag = genPaths(obj)

@@ -1,4 +1,4 @@
-function status = getStatus(blockObj,field,channel)
+function status = getStatus(blockObj,varargin)
 % GETSTATUS  Returns the operations performed on the block to date
 %
 %  status = GETSTATUS(blockObj);
@@ -33,155 +33,80 @@ function status = getStatus(blockObj,field,channel)
 %                          it's complete. If stage is invalid, Status is
 %                          returned as empty.
 
-% Handle array of block objects
 if ~isscalar(blockObj)
-   switch nargin
-      case 1
-         status = cell(size(blockObj));
-         keepvec = true(numel(status),1);
-         for i = 1:numel(blockObj)
-            if isvalid(blockObj(i))
-               status{i} = blockObj(i).getStatus;
-            else
-               keepvec(i) = false;
+    stat = cell(size(blockObj(:)));
+    for bb = 1:numel(blockObj)
+        stat{bb,1} = getStatus(blockObj(bb),varargin{:});
+    end
+    switch nargin
+        case 1
+            status = stat;
+        case 2
+            if isempty(varargin{1})
+                status = cat(1,stat{:});
+            elseif iscell(varargin{1})
+                if isscalar(varargin{1})
+                    status = cellfun(@all,stat);
+                else
+                    status = cat(1,stat{:});
+                end
+            elseif ischar(varargin{1})
+                status = cellfun(@all,stat);
             end
-         end
-         status = status(keepvec);
-         if isempty(status)
-            status = [];
-         end
-         return;
-      case 2
-         if isempty(field)
-            status = [];
-            for i = 1:numel(blockObj)
-               if isvalid(blockObj(i))
-                  status = getStatus(blockObj,blockObj(i).Fields);
-                  break;
-               end
-            end
-            return;
-         end
-         thisObj = nigeLab.nigelObj.getValidObj(blockObj,1);
-         fieldType = getFieldType(thisObj,field);
-         if isempty(fieldType)
-            status = false(1,numel(field));
-            return;
-         end
-         switch fieldType
-            case {'Channels','Streams'}
-               if iscell(field)
-                  status = false(numel(blockObj),numel(field));
-                  if numel(field) > 1
-                     % "Expanded" representation for channels
-                     for k = 1:numel(blockObj)
-                        if isvalid(blockObj(k))
-                           status(k,:) = blockObj(k).getStatus(field);
-                        end
-                     end
-                  else
-                     % "Condensed" representation for channels
-                     for k = 1:numel(blockObj)
-                        if isvalid(blockObj(k))
-                           status(k) = all(blockObj(k).getStatus(field));
-                        end
-                     end
-                  end
-               else
-                  status = true(numel(blockObj),1);
-                  for k = 1:numel(blockObj)
-                     if isvalid(blockObj(k))
-                        status(k) = all(blockObj(k).getStatus(field));
-                     end
-                  end
-               end               
-            case 'Meta' % 'Time'
-               status = false(numel(blockObj),1);
-               if strcmpi(field,'Time') % Special case
-                  for k = 1:numel(blockObj)
-                     if isvalid(blockObj(k))
-                        status(k) = ~isempty(blockObj(k).Time);
-                     end
-                  end
-               else
-                  nigeLab.utils.cprintf('Errors*',...
-                     '\t\t->\t[GETSTATUS]: Not configured for .Probes yet\n');
-               end
-            otherwise
-               if ~iscell(field)
-                  status = false(numel(blockObj),1);
-                  for k = 1:numel(blockObj)
-                     if isvalid(blockObj(k))
-                        if isfield(blockObj(k).Status,field)
-                           status(k) = all(blockObj(k).Status.(field));
-                        end
-                     end
-                  end
-               else
-                  status = false(numel(blockObj),numel(field));
-                  for k = 1:numel(blockObj)
-                     if isvalid(blockObj(k))
-                        for i = 1:numel(field)
-                           if isfield(blockObj(k).Status,field{i})
-                              status(k) = all(blockObj(k).Status.(field{i}));
-                           end
-                        end
-                     end
-                  end
-               end
-         end
-      case 3
-         if iscell(field)
-            status = false(numel(blockObj),numel(field));
-         else
-            status = false(numel(blockObj),1);
-         end
-         for i = 1:numel(blockObj)
-            status(i,:) = blockObj(i).getStatus(field,channel);
-         end
-      otherwise
-         error(['nigeLab:' mfilename ':tooManyInputArgs'],...
-            'Too many input arguments (%d; max: 3).',nargin);
-   end
-   
-   return;
+        otherwise
+            status = cat(2,stat{:});
+    end
+    return;
 end
+
+switch nargin
+    case 1
+        field = blockObj.Fields;
+        channel = 'all';
+    case 2
+        channel = 'all';
+        field = varargin{1};
+        if isempty(field) || any(strcmp(field,'all'))
+            field = blockObj.Fields;
+        end
+    case 3
+        field = varargin{1};
+        channel = varargin{2};
+        if isempty(field) || any(strcmp(field,'all'))
+            field = blockObj.Fields;
+        end
+        if isempty(channel) 
+            channel = 'all';
+        end
+end
+if ~iscell(field),field = {field};end
+% Handle array of block objects
+stat = parseStatus(blockObj,field);
+
+
 
 %% Behavior depends on total number of inputs
 switch nargin
    case 1 % Only blockObj is given (1 input)
-      f = fieldnames(blockObj.Status);
-      stat = false(size(f));
-      for i = 1:numel(f)
-         stat(i) = ~any(~blockObj.Status.(f{i}));
+
+      status = field(stat)';
+      if isempty(status)
+          status = {'none'};
       end
-      
-      % Give names of all completed operations
-      if any(stat)
-         status = blockObj.Fields(stat)';
-      else
-         status={'none'};
-      end
-      
-   case 2 % field is given (2 inputs, including blockObj)
-      
-      % If given [] field input, return all fields
-      if isempty(field)
-         status = getStatus(blockObj,blockObj.Fields);
-         return;         
-      end
-      
-      status = parseStatus(blockObj,field);
-      
-   case 3 % If channel is given (3 inputs, including blockObj)
-      status = parseStatus(blockObj,field);
-      status = ~any(~status(channel));
-      
+    case 2
+        status = stat;
+    case 3 
+     if isscalar(field)
+         if strcmp(channel,'all')
+             idx = ismember(field,blockObj.Fields);
+             channel = 1:numel(blockObj.(blockObj.FieldType{idx}));
+         end
+        status = all(stat(channel),2);
+     end
    otherwise
       error(['nigeLab:' mfilename ':tooManyInputArgs'],...
          'Too many input arguments (%d; max: 3).',nargin);
 end
-
    function status = parseStatus(blockObj,stage)
       % PARSESTATUS  Check that it is a valid stage and return the output
       %
