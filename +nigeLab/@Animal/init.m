@@ -122,7 +122,7 @@ for bb=1:numel(Recordings)
    
    if  addThisBlock
       animalObj.addChild(RecFile,bb);
-      animalObj.MultiAnimals = any([animalObj.Children.MultiAnimals]);
+%       animalObj.MultiAnimals = any([animalObj.Children.MultiAnimals]);
    end
    skipVec(bb) = ~addThisBlock;
 end

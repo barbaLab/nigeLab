@@ -98,7 +98,7 @@ end
 
 arrayfun(@(x) x.splitMultiAnimals('init'), animalObj.Children);
 AllSplittedBlocks = [animalObj.Children.MultiAnimalsLinkedBlocks];
-animalNames = arrayfun(@(x) x.AnimalID, [AllSplittedBlocks.Meta],'UniformOutput',false);
+animalNames = arrayfun(@(x) x.Meta.AnimalID, AllSplittedBlocks,'UniformOutput',false);
 
 splittedAnimals = [];
 % Main cycle, create all MultiAnimalsLinkedObjects
@@ -108,6 +108,7 @@ for ii = 1:numel(SplittedMeta)
     if ismember(ff,'AnimalID') && any(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID))
         an = copy(Sieblings(strcmp({Sieblings.Name},SplittedMeta(ii).AnimalID)));
         an.Children = [];
+        an.MultiAnimals = false;
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);
     else
         an = copy(animalObj);
@@ -121,7 +122,6 @@ for ii = 1:numel(SplittedMeta)
  
         an.Name =  an.genName;
         an.Children = [];
-        an.MultiAnimals = 2;
         an.MultiAnimalsLinkedAnimals(:) = [];
         an.Output = fullfile(an.Out.SaveLoc);
         [AllSplittedBlocks(strcmp(animalNames,an.Name)).Parent] = deal(an);

@@ -126,14 +126,12 @@ TAG.Events = ... % Events: asynchronous events with associated values
    [pars.Delimiter '%s', ...
    pars.Delimiter 'Events.mat'];
 TAG.Meta = ... % Meta: generic recording metadata (notes, probe configs)
-   [pars.Delimiter '%s'];
+   [pars.Delimiter '%s.mat'];
 TAG.Streams = ... % Streams: for example, stream of zeros/ones for event
    [pars.Delimiter '%s', ...
    pars.Delimiter '%s', ...
    pars.Delimiter 'Stream.mat'];
-TAG.Videos = ... % Videos: behavioral videos
-   [pars.Delimiter '%s', ...
-    pars.Delimiter '%s.%s']; % "Video_Left-A_0.mp4" "Video_Left-A_1.mp4"
+
 
 Fields =  { ...
    'Raw';            % 1  - hard-coded for extraction
@@ -147,15 +145,12 @@ Fields =  { ...
    'Sorted';         % 9 - hard-coded to match terms from defaults.SD
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
-   'DigEvents';      % 12
-   'VidStreams';     % 13
-   'Stim';           % 14 - hard-coded for extraction in RHS
-   'DC';             % 15 - hard-coded for extraction in RHS
-   'Time';           % 16
-%    'Notes'           % 17
-   'Probes';         % 18
-   'Video';          % 19
-   'ScoredEvents';   % 20 - for manually-scored sync and alignment
+   'VidStreams';     % 12
+   'Stim';           % 13 - hard-coded for extraction in RHS
+   'DC';             % 14 - hard-coded for extraction in RHS
+   'Time';           % 15
+%    'Notes'           % 16
+   'Probes';         % 17
    };
 
 FieldType = { ...
@@ -170,39 +165,15 @@ FieldType = { ...
    'Channels'; % 9
    'Streams';  % 10
    'Streams';  % 11
-   'Events';   % 12
-   'Videos';  % 13
-   'Events';   % 14
-   'Channels'; % 15
-   'Meta';     % 16
-%    'Meta';     % 17
-   'Meta'      % 18
-   'Videos';   % 19  -- 2019-11-21 Introduce new FieldType for Videos
-   'Events';   % 20
+   'Streams';  % 12
+   'Meta';     % 13
+   'Meta';     % 14
+   'Meta';     % 15
+%    'Meta';     % 16
+   'Meta'      % 17
+
    };
 
-OldNames       =  { ...
-   {'*Raw*'};                       % 1
-   {'*Filt*'};                      % 2
-   {'*FiltCAR*'};                   % 3
-   {'*LFP*'};                       % 4
-   {'*art*'};                       % 5
-   {'*ptrain*'};                    % 6
-   {'*SpikeFeatures*'};             % 7
-   {'*clus*'};                      % 8
-   {'*sort*'};                      % 9
-   {'*DIG*'};                       % 10
-   {'*ANA*'};                       % 11
-   {'*Press.mat';'*Beam.mat'};      % 12
-   {'*Paw.mat';'*Kinematics.mat'};  % 13
-   {'*STIM*'};                      % 14
-   {'*DC*'};                        % 15
-   {'*Time*'};                      % 16
-%    {'*experiment.txt'};             % 17
-   {'*probes.xlsx'};                % 18
-   {'*.mp4','*.avi'};               % 19
-   {'*Scoring*','*VideoAlignment*'} % 20
-   };
 
 FolderNames     = {  ...
    'RawData';           % 1
@@ -216,15 +187,12 @@ FolderNames     = {  ...
    '%s_Sorted';         % 9
    'Digital';           % 10
    'Digital';           % 11
-   'Digital';           % 12
-   'Video';             % 13 - for streams parsed from Video
+   'Video';             % 12 - for streams parsed from Video
+   'StimData';          % 13
    'StimData';          % 14
-   'StimData';          % 15
-   'Digital';           % 16
-%    'Metadata';          % 17
-   'Metadata';          % 18
-   'Video';             % 19 - for actual Video
-   'Video';             % 20 - Events from behavioral scoring
+   'Digital';           % 15
+%    'Metadata';          % 16
+   'Metadata';          % 17
    };
 
 FileNames =  { ...
@@ -239,15 +207,12 @@ FileNames =  { ...
    'Sorted';         % 9 - hard-coded to match terms from defaults.SD
    'DigIO';          % 10 - hard-coded for extraction
    'AnalogIO';       % 11 - hard-coded for extraction
-   'DigEvents';      % 12
-   'VidStream';          % 13 - for streams parsed from Videos
-   'Stim';           % 14 - hard-coded for extraction in RHS
-  'DC';             % 15 - hard-coded for extraction in RHS
-   'Time';           % 16
-%    'Notes'           % 17
-   'Probes';         % 18
-   'Video';          % 19 - for actual Videos
-   'Curated';        % 20 - from behavioral scoring or manual alignment 
+   'VidStream';      % 12 - for streams parsed from Videos
+   'Stim';           % 13 - hard-coded for extraction in RHS
+   'DC';             % 14 - hard-coded for extraction in RHS
+   'Time';           % 15
+%    'Notes'           % 16
+   'Probes';         % 17
    };
 
 FileType = { ...
@@ -262,15 +227,12 @@ FileType = { ...
    'Event';    % 9
    'Hybrid';   % 10
    'Hybrid';   % 11
-   'Event';    % 12
-   'Hybrid';   % 13
-   'Event';    % 14
+   'Hybrid';   % 12
+   'Event';    % 13
+   'Hybrid';   % 14
    'Hybrid';   % 15
-   'Hybrid';   % 16
-%    'Other';    % 17
-   'Other';    % 18
-   'Other';    % 19
-   'Hybrid';   % 20
+%    'Other';    % 16
+   'Other';    % 17
    };
 
 %% DO ERROR PARSING
@@ -279,9 +241,6 @@ N = numel(Fields);
 if numel(FieldType)~=N
    error('FieldType (%d) must have same # elements as Fields (%d).',...
       numel(FieldType),N);
-elseif numel(OldNames)~=N
-   error('OldNames (%d) must have same # elements as Fields (%d).',...
-      numel(OldNames),N);
 elseif numel(FolderNames)~=N
    error('FolderNames (%d) must have same # elements as Fields (%d).',...
       numel(FolderNames),N);
@@ -321,7 +280,6 @@ Del = pars.Delimiter;
 pars.PathExpr = struct;
 for ii=1:numel(Fields)
    pars.PathExpr.(Fields{ii}).Folder     = FolderNames{ii};
-   pars.PathExpr.(Fields{ii}).OldFile    = OldNames{ii};
    pars.PathExpr.(Fields{ii}).File = [FileNames{ii} TAG.(FieldType{ii})];
    pars.PathExpr.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end

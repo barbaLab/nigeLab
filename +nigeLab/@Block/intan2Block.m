@@ -172,40 +172,48 @@ for f = fields_to_extract
       case 'Events' % 'Event' metadata should be ad hoc format, in 'info'       
          % Anything that goes here is just '<EventName>Triggers'
          
-         if strcmp(curDataField,'Stim')
-            nCh.Standard.Stim = 1; % 'Event' field acts as flag
-            stimCurr = header.StimParameters.stim_step_size;
-            info = struct('StimParameters',header.StimParameters,...
-               'StimTriggers',header.StimTriggers);
-            if ~isempty(info.StimTriggers)
-               trigCh = unique([info.StimTriggers.amp_trigger_channel]);
-               if ~any([info.StimTriggers.voltage_threshold]) % then it's not FSM version
-                  trigCh = nan;
-               end
-            else
-               trigCh = nan;
-            end
-         else
-            infofield = [curDataField 'Triggers'];
-            info = header.(infofield);
-            group = info(1).signal.Group;
-            nCh.Standard.(curDataField).(group) = numel(info);
-         end
-         save(paths.(curDataField).info,'info','-v7.3'); % Small file
          
-      case 'Meta' % Each "Meta" file should only have one "channel"
-         fName = sprintf(paths.(curDataField).file,[curDataField '.mat']);
+       case 'Meta' % Each "Meta" file should only have one "channel"
+           if strcmp(curDataField,'Stim')
+               nCh.Standard.Stim = 1; % 'Event' field acts as flag
+               stimCurr = header.StimParameters.stim_step_size;
+               info = struct('StimParameters',header.StimParameters,...
+                   'StimTriggers',header.StimTriggers);
+               if ~isempty(info.StimTriggers)
+                   trigCh = unique([info.StimTriggers.amp_trigger_channel]);
+                   if ~any([info.StimTriggers.voltage_threshold]) % then it's not FSM version
+                       trigCh = nan;
+                   end
+               else
+                   trigCh = nan;
+               end
+
+               save(paths.(curDataField).info,'info','-v7.3'); % Small file
+           end
+         
+         fName = sprintf(paths.(curDataField).file,blockObj.Meta.BlockID);
+         switch blockObj.FileType{idx}
+             case {'Hybrid','Matfile'}
+                 fileC = header.NumRawSamples;
+                 fileR = 1;
+                 cls = 'int32';
+                 data = zeros([fileR fileC],cls);
+             case {'Event'}
+                 fileC = 10+numel(trigCh);
+                 fileR = inf;
+                 cls = 'single';
+                 data = zeros([1 fileC],cls);
+         end
          diskPars = struct(...
-            'format','Hybrid',...
+            'format',blockObj.FileType{idx},...
             'name',fName,...
-            'size',[1 header.NumRawSamples],...
+            'size',[fileR fileC],...
             'access','w',...
-            'class','int32',...
+            'class',cls,...
             'verbose',blockObj.Verbose && ~blockObj.OnRemote);
          % Do not need the substruct here because of the fact it is just
          % 'Time' and is handled differently
-         data = zeros(diskPars.size,diskPars.class);
-         Files.Time = nigeLab.utils.makeDiskFile(diskPars,data);
+         Files.(curDataField) = nigeLab.utils.makeDiskFile(diskPars,data);
          
       case 'Streams'
          infofield = [curDataField 'Channels'];
@@ -331,17 +339,17 @@ if nCh.Standard.Stim > 0 % Then there is 'Stim' data on all channels
    buffer.Standard.Stim = zeros(1,nDataPoints,'uint16');
    [buffer.Standard.Stim,end_] = getBufferIndex(buffer.Standard.Stim,end_,...
       nCh.Standard.Stim,nPerBlock,nChunks);
-   fName = sprintf(paths.Stim.file,'Stim');  
-   nColStimEventFile = 10 + numel(trigCh); 
-   data = zeros(1,nColStimEventFile,'single');
-   diskPars = struct(...
-      'format','Event',...
-      'name',fName,...
-      'size',[inf, 10 + numel(trigCh)],...
-      'access','w',...
-      'class','single',...
-      'verbose',blockObj.Verbose && ~blockObj.OnRemote);
-   Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars,data); 
+%    fName = sprintf(paths.Stim.file,'Stim');  
+%    nColStimEventFile = 10 + numel(trigCh); 
+%    data = zeros(1,nColStimEventFile,'single');
+%    diskPars = struct(...
+%       'format','Event',...
+%       'name',fName,...
+%       'size',[inf, 10 + numel(trigCh)],...
+%       'access','w',...
+%       'class','single',...
+%       'verbose',blockObj.Verbose && ~blockObj.OnRemote);
+%    Files.Standard.Stim = nigeLab.utils.makeDiskFile(diskPars,data); 
 
 end
 
@@ -483,7 +491,7 @@ for iChunk=1:nChunkMax
       chMask = buffer.Standard.(field_)(1:dataPointsToRead) == iCh;
       inData = single(dataBuffer(chMask)); 
       outData = single(scaleStimData(inData,stimCurr,blockObj.SampleRate,iCh,trigCh,t));
-      append(Files.Standard.Stim,outData);
+      append(Files.Stim,outData);
    end
    
    % Write digIO to file (slightly different handling): Since `digIO` gets
@@ -535,7 +543,7 @@ fclose(fid);
 % Link to data
 reportProgress(blockObj,'Linking Data.',95,'toEvent');
 reportProgress(blockObj,'Linking Data.',95,'toWindow','Linking');
-blockObj.linkToData(intersect({'Raw','AnalogIO','DigIO','Stim'},...
+blockObj.linkToData(intersect({'Raw','AnalogIO','DigIO','Stim','Time','DC'},...
    blockObj.Fields));
 flag = true;
 
