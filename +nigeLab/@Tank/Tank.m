@@ -49,9 +49,7 @@ classdef Tank < nigeLab.nigelObj
 %     list - List Block objects in the TANK.
 %
 %     Empty - Create an Empty TANK object or array
-    properties 
-          MultiAnimals logical = false           % flag to signal if it's a single animal or a joined animal recording
-    end
+   
    % % % METHODS% % % % % % % % % % % %
    % NO ATTRIBUTES
    methods
