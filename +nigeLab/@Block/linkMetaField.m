@@ -67,7 +67,7 @@ str = nigeLab.utils.printLinkFieldString(blockObj.getFieldType(field),field);
 reportProgress(blockObj,str,0);
 
 % Get file name
-fName = sprintf(blockObj.Paths.(field).file,[blockObj.Meta.BlockID]);
+fName = sprintf(blockObj.Paths.(field).file,[blockObj.Meta.AnimalID blockObj.Meta.BlockID]);
 % Increment counter and update progress
 
 

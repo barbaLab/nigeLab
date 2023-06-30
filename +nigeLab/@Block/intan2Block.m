@@ -191,7 +191,7 @@ for f = fields_to_extract
                save(paths.(curDataField).info,'info','-v7.3'); % Small file
            end
          
-         fName = sprintf(paths.(curDataField).file,blockObj.Meta.BlockID);
+         fName = sprintf(paths.(curDataField).file,[blockObj.Meta.AnimalID blockObj.Meta.BlockID]);
          switch blockObj.FileType{idx}
              case {'Hybrid','Matfile'}
                  fileC = header.NumRawSamples;
