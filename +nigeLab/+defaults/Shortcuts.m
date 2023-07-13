@@ -15,6 +15,10 @@ if strcmpi(out_mode,'cell')
          'spk',         'Channels(%d).Spikes';                   % 5
          'srt',         'Channels(%d).Sorted';                   % 6
          'clst',        'Channels(%d).Clusters';                 % 7
+         'digio',       'Streams.DigIO(%d).data';                % 8
+         'anio',        'Streams.AnalogIO(%d).data';             % 9
+         'time',        'Meta.Time.data';                        % 10
+         'stim',        'Meta.Stim';                             % 11
                                                     };
 else
    pars = struct;
@@ -38,9 +42,18 @@ else
    
    pars.clst.subfields = {'Channels', 'Clusters'};
    pars.clst.indexable = [true      , true];
-   
-   pars.digIO.subsfield = {'Streams', 'DigIO', 'data'};
+
+   pars.digIO.subfields = {'Streams', 'DigIO', 'data'};
    pars.digIO.indexable = [false    , true   , true];
+
+   pars.anIO.subfields = {'Streams', 'AnalogIO', 'data'};
+   pars.anIO.indexable = [false    , true   , true];
+
+   pars.time.subfields = {'Meta', 'Time'};
+   pars.time.indexable = [false  , true];
+
+   pars.stim.subfields = {'Meta', 'Stim'};
+   pars.stim.indexable = [false  , true];
 end
 
 end

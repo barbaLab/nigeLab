@@ -30,10 +30,10 @@ for b = B
       continue;
    end
    if isempty(C)
-      C = b.ChannelID;
+      C = b.Mask;
       C_red = C;
    else
-      C = union(C,b.ChannelID,'rows');
+      C = union(C,b.Mask,'rows');
       C_red = intersect(C_red,b.ChannelID,'rows');
    end
 end

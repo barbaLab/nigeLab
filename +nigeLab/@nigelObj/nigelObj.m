@@ -1913,6 +1913,10 @@ end
             idx = [];
          end
          
+         if ischar(idx)
+             error(['nigeLab:' mfilename ':BadInputValue'],...
+                 'idx must be numeric.');
+         end
 
          if ~isscalar(obj) % Require that Parent is scalar
             error(['nigeLab:' mfilename ':BadInputSize'],...
@@ -3812,8 +3816,9 @@ end
          if numel(obj) > 1
             flag = true;
             for i = 1:numel(obj)
-               flag = flag && obj.updateParams(paramType,method,p);
+               flag = flag && obj(i).updateParams(paramType,method,p);
             end
+            return;
          else
             flag = false;
          end

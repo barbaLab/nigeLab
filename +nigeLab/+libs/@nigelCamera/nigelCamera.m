@@ -565,11 +565,11 @@ end
 
        function exportFrame(obj,thisPath)
            % Exports current frame as jpeg. Path of export is defined in
-           % obj.Parent.Paths.Video.dir and the jpeg name will be
+           % obj.Parent.Paths.VidStreams.dir and the jpeg name will be
            % [obj.Name]Frame[n+1].jpg where n is the number of files that
            % follow this naming scheme in the folder. Starts at 0;
            
-           % thisPsth is an optional argoument. If not provided it defaults
+           % thisPath is an optional argoument. If not provided it defaults
            % to the VidStreams folder in the Paths struct.
             if ~obj.Active
                return;

@@ -47,7 +47,10 @@ classdef namingConfigurator < handle
             obj.NamePanel= uipanel(obj.Fig,'Scrollable','on','Units','normalized','Position',[ 0 .7 1 .3],'Scrollable','on');
             obj.SaveBtn = uibutton(obj.Fig,'Text','Save','Position',[320 10 100 20],'ButtonPushedFcn',@(src,evt)obj.save);
             obj.Save2AllBtn = uibutton(obj.Fig,'Text','Save to all','Position',[430 10 200 20],'ButtonPushedFcn',@(src,evt)obj.save2all,...
-                'Enable',false); % TODO fix the save to all
+                'Enable',false); 
+            if ~isa(obj.nigelObj,'nigeLab.Tank')
+                set(obj.Save2AllBtn,'Enable',true);
+            end
             % build Name panel
             obj.NamePanel.Units = 'pixels';
             pos = obj.NamePanel.Position;
@@ -239,7 +242,10 @@ classdef namingConfigurator < handle
             
         end
         
-        function pars = save(obj)
+        function pars = save(obj,closeFig)
+            if nargin < 2
+                closeFig = false;
+            end
             type = obj.nigelObj.Type;
             pars = struct();
             pars.NamingConvention = obj.NamingConvention;
@@ -283,18 +289,26 @@ classdef namingConfigurator < handle
             for f = ff'
                 obj.nigelObj.Pars.(type).(f{:}) = pars.(f{:});
             end
-            
+            if closeFig
+                CloseFig(obj);
+            end
         end
         
         function save2all(obj)
-            pars = obj.save;
-            for oo = obj.nigelObj.Parent.Children
-                type = oo.Type;
-                ff = fieldnames(pars.(type));
+            pars = obj.save(false);
+            type = obj.nigelObj.Type;
+            parent =  obj.nigelObj.Parent;
+            grandparent = [parent.Parent];
+            for oo = parent
+                ff = fieldnames(pars);
                 for f = ff'
-                    oo.Pars.(type).(f{:}) = pars.(type).(f{:});
+                    oo.Pars.(type).(f{:}) = pars.(f{:});
+                    for ooP = grandparent
+                        ooP.Pars.(type).(f{:}) = pars.(f{:});
+                    end
                 end
             end
+            CloseFig(obj);
         end
         
         function CloseFig(obj)
