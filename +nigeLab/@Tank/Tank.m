@@ -54,7 +54,7 @@ classdef Tank < nigeLab.nigelObj
    % NO ATTRIBUTES
    methods
       % Class constructor
-      function tankObj = Tank(tankRecPath,tankSavePath,varargin)
+      function tankObj = Tank(tankRecPath,tankSavePath,TankPars,varargin)
          % TANK  Construct Tank Class object
          %
          %  tankObj = nigeLab.Tank();
@@ -90,7 +90,12 @@ classdef Tank < nigeLab.nigelObj
          if nargin < 2
             tankSavePath = '';
          end
-         tankObj@nigeLab.nigelObj('Tank',tankRecPath,tankSavePath,varargin{:}); 
+         if nargin < 3
+            TankPars = nigeLab.defaults.Tank;
+         end
+         tankObj@nigeLab.nigelObj('Tank',tankRecPath,tankSavePath,...
+             '$Tank',TankPars,...
+             varargin{:}); 
          if isempty(tankObj) % Handle Empty case
             return;
          end
