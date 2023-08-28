@@ -171,7 +171,7 @@ else
     str = sprintf('AutoClustering-(%s)',par.MethodName);
 end
 
-curCh = 0;
+curCh = 1;
 for iCh = allChan
     for bb = find(BlocksNotMasked)
         idx = nSpk{iCh}(bb)+1:nSpk{iCh}(bb+1);
