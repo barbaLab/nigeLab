@@ -86,6 +86,7 @@ classdef Block < nigeLab.nigelObj
       NumProbes   (1,1)    double   % Total number of Probes
       Shortcut             struct   % nigeLab.defaults.Shortcuts() output (transient)
       Trial                double   % Timestamp list of trials
+%       Time
    end
    
    % PUBLIC
@@ -317,6 +318,25 @@ classdef Block < nigeLab.nigelObj
           error(['You cannot set manually the Trial field.' newline 'Please add relevant events to the Event structure.']);
       end
       
+%       % [DEPENDENT] Returns .Time property
+%       function value = get.Time(blockObj)
+%           if isfield(blockObj.Meta,'Time')
+%             value = blockObj.Meta.Time;
+%           else
+%               nigeLab.utils.cprintf('Error','The Meta field');
+%               nigeLab.utils.cprintf('*Error','Time');
+%               nigeLab.utils.cprintf('Error',['is not present.\n' ...
+%                   'It might have never been extracted or is not correctly linked.'...
+%                   'Please use <a href="matlab:help nigeLab.Block.linkToData">blockObj.linkToData(''Time'')</a>'...
+%                   ' or consider rerunning <a href="matlab:help nigeLab.Block.doRawExtraction">blockObj.doRawExtraction</a>\n']);
+%           end
+%       end
+%       function set.Time(~,~)
+%         mess = ['Error setting the Block property Time.\n' ...
+%             'Please use <a href="matlab:help nigeLab.Block.linkToData">blockObj.linkToData(''Time'')</a>'...
+%             ' or consider rerunning <a href="matlab:help nigeLab.Block.doRawExtraction">blockObj.doRawExtraction</a>\n'];
+%         nigeLab.utils.cprintf('Error',mess);
+%       end
       % % % % % % % % % % END (DEPENDENT) GET/SET.PROPERTY METHODS % % %
 
       % Overloaded method to get 'end' indexing
