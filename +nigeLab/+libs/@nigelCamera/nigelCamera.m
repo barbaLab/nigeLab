@@ -457,6 +457,33 @@ end
                 end
             end%ii
        end
+
+       function flag = setVideoAlignmentData(obj,varargin)
+           try
+               validateIn1 = cellfun(@(a)ischar(a) | isstring(a),varargin(1:2:end));
+               validateIn2 = cellfun(@isdouble,varargin(2:2:end));
+               validateIn = validateIn1 & validateIn2;
+               if not(all(validateIn))
+                   error('Wrong input. Please provide valid name,value pairs.');
+               end
+               for aa = 1:2:(nargin-1)
+                   thisName = varargin{aa};
+                   thisValue = varargin{aa+1};
+                   switch lower(thisName)
+                       case {'videooffset','offset'}
+                           obj.VideoOffset = thisValue;
+                       case {'videostretch','stretch'}
+                           obj.VideoStretch = thisValue;
+                   end
+               end
+               flag = true;
+           catch me
+               flag = false;
+               mess = getReport( me, 'extended', 'hyperlinks', 'on' );
+               nigeLab.utils.cprintf('Errors',mess)
+           end
+       end
+   
    end % methods public
    
    % Mex interface methods. Methods in this section are used to comunicate
