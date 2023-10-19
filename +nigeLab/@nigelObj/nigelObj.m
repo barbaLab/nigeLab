@@ -4139,18 +4139,38 @@ end
       
        % Method to export data subset from nigeLab
        % TODO add other export formats (as kilosort)
-      function flag = exportFiles(obj,SaveFolder,Fields)
+       function flag = exportFiles(obj,varargin)
+% Input: - obj, required. NigelObj to export
+%        - SaveFolder, optional. Folder to extract the dat to. If not
+%        provided it saves it in obj.Output/Exported
+%        - Fields, optional. Block fields to export. If not provided it
+%        extracts all. 
 
           % Argin validation
           if isempty(obj)
             flag = true;
             return;
+          elseif numel(obj)~=1
+            flag = true;
+            for ii=1:numel(obj)
+                flag = flag && exportFiles(obj(ii),varargin{:});
+            end
+            return;
           end
+
           flag = false;
           if nargin < 2
               SaveFolder = fullfile(obj.Output,'Exported');
+              Fields_ = obj.Fields';
           elseif nargin <3
-              Fields = obj.Fields';
+              SaveFolder = varargin{1};
+              Fields_ = obj.Fields';
+          else
+              SaveFolder = varargin{1};
+              Fields_ = varargin{2};
+              if not(iscell(Fields_))
+                  Fields_ = {Fields_};
+              end
           end
 
           if ~exist(SaveFolder,'dir')
@@ -4162,33 +4182,37 @@ end
           try
               
               oldPath = obj.Output;
-              obj.Output = SaveFolder;
+              if ~strcmp(fullfile(oldPath),fullfile(SaveFolder))
+                  [obj.Output] = deal(SaveFolder);
+              end
               obj.save;
 
               if strcmp(obj.Type,'Block')
                   % if it's block export the files
-                      for ff = Fields
+                      for ff = Fields_
                           try
-                              thisP = arrayfun(@(x)x.(ff{1}).getPath,bb.Channels,'UniformOutput',false);
+                              thisP = arrayfun(@(x)x.(ff{1}).getPath,obj.Channels,'UniformOutput',false);
                               for jj=1:numel(thisP)
                                   source = thisP{jj};
-                                  target = fullfile(bb.Paths.(ff{1}).dir);
+                                  target = fullfile(obj.Paths.(ff{1}).dir);
                                   copyfile(source,target);
                               end
                           catch
-                              nigeLab.utils.cprintf('Errors','No field %s detected in block %s.%s\n',ff{1},aa.Name,bb.Name)
+                              nigeLab.utils.cprintf('Errors','No field %s detected in block %s.%s\n',ff{1},obj.Parent.Name,obj.Name)
                           end%try
                       end%ff
               else
                   % Otherwise go down one level
                   objChl = obj.Children;
-                  flag = true & exportFiles(objChl,SaveFolder,Fields);
+                  flag = true & exportFiles(objChl,fullfile(SaveFolder,obj.Name),Fields_);
               end
               
               obj.Output = oldPath;
+              flag = true;
 
           catch er
-              nigeLab.utils.cprintf('Error',[er.message newline])
+              nigeLab.utils.cprintf('Error',[er.message newline]);
+              flag = false;
           end
       end
 
