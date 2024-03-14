@@ -6,7 +6,7 @@ function varargout = StimSuppression(varargin)
 %
 % By: MAECI 2020 collaboration (Max Murphy & Federico Barban)
 
-pars.Method = 'softpoly';
+pars.Method = 'logLIRA';   % softpoly, SALPA3, logLIRA, spline
 
 pars.StimIdx = 'all';       % index of the stimultation pulses to correct. 
 pars.stimL = 400e-6;        % Stimulation legth [s] 
