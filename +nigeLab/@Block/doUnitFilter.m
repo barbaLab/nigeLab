@@ -58,7 +58,7 @@ for iCh = blockObj.Mask
    if blockObj.Channels(iCh).Raw.length <= nfact
       continue; % It should leave the updateFlag as false for this channel
    end
-   if pars.STIM_SUPPRESS && isfield(blockObj.Events,'Stim')
+   if pars.STIM_SUPPRESS && ismember('Stim',{blockObj.Events.Tag})
        data = blockObj.execStimSuppression(iCh);
    else
        data = blockObj.Channels(iCh).Raw(:);

@@ -8,7 +8,7 @@ function varargout = logLIRA(varargin)
 
 
 
-pars.blankingPeriod=1e-3;                             %optional
+pars.blankingPeriod=1.5e-3;                             %optional
 
 pars.saturationVoltage=0.95;                          %optional
                                                       %It specifies the recording system operating range
@@ -16,16 +16,17 @@ pars.saturationVoltage=0.95;                          %optional
                                                       %to properly detect saturation. By default it si the 95% of the absolute
                                                       %value of the input signal default it si the 95% of the absolute value of the input signal
 
-pars.minClippedNSamples=[];                           %optional
+pars.minClippedNSamples=2;                           %optional
                                                       %It is the minimum number of consecutive clipped samples
                                                       %to mark the artifact as a clipped one. It should be a
                                                       %1x1 positive integer. By default, it is 2.
 
-pars.randomSeed=randi(1e5);                           %optional 
+pars.randomSeed=42;                                   %optional 
                                                       %It is the random seed provided to Matlab's Random
                                                       %Number Generator to ensure reproducibility. It must
                                                       %be a positive integer.
 
+pars.verbose = false;
 
 
 
