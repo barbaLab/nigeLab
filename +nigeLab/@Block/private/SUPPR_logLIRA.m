@@ -42,6 +42,10 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
 %   [...] = LOGLIRA(..., 'PARAM1', val1, 'PARAM2', val2, ...) specifies optional
 %   parameter name/value pairs. Parameters are:
 %
+%  'NegativeBlankingPeriod' - If provided, it specifies the time before the stimulus
+%                             onset that is discarded. It must be expressed in
+%                             seconds. By default it is 0 ms.
+%
 %       'SaturationVoltage' - It specifies the recording system operating range
 %                             in mV as specified in the datasheet. This is useful
 %                             to properly detect saturation. Choices are:
@@ -71,6 +75,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     addRequired(parser, 'stimIdxs', @(x) isnumeric(x) && all(x > 0));
     addRequired(parser, 'sampleRate', validNumPosCheck);
     addOptional(parser, 'blankingPeriod', 1e-3, validNumPosCheck);
+    addParameter(parser, 'negativeBlankingPeriod', 0, validNumPosCheck);
     addParameter(parser, 'saturationVoltage', 0.95 * max(abs(signal)) / 1e3, @isnumeric);
     addParameter(parser, 'minClippedNSamples', [], validNumPosCheck);
     addParameter(parser, 'randomSeed', randi(1e5), @(x) x >= 0);
@@ -82,10 +87,14 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     stimIdxs = parser.Results.stimIdxs;
     sampleRate = parser.Results.sampleRate;
     blankingPeriod = parser.Results.blankingPeriod;
+    negativeBlankingPeriod = parser.Results.negativeBlankingPeriod;
     saturationVoltage = parser.Results.saturationVoltage;
     minClippedNSamples = parser.Results.minClippedNSamples;
     randomSeed = parser.Results.randomSeed;
     verbose = parser.Results.verbose;
+
+    signal = signal(:)';
+    stimIdxs = sort(stimIdxs(:))';
 
     output = signal;
     varargout{1} = zeros(size(stimIdxs));
@@ -105,6 +114,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     checkStdThreshold = 2;
 
     blankingNSamples = round(blankingPeriod * sampleRate);
+    negativeBlankingNSamples = round(negativeBlankingPeriod * sampleRate);
     IAI = [diff(stimIdxs), length(signal) - stimIdxs(end)];
 
     checkNSamples = round(checkDuration * sampleRate);
@@ -176,17 +186,21 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
             varargout{2}(idx) = true;
         end
 
+        % Pad artifact according to negative blanking period
+        stimShift = -negativeBlankingNSamples + stimIdxs(idx) - 1;
+        paddedArtifact = horzcat(signal((1:negativeBlankingNSamples) + stimShift), artifact);
+
         % Correct artifact to avoid discontinuities
         if ~hasArtifact(idx) || IAI(idx) > endIdx
-            correctionX = [0, length(artifact) + 1];
-            correctionY = [output(correctionX(1) + stimIdxs(idx) - 1), output(correctionX(end) + stimIdxs(idx) - 1)];
-            correction = interp1(correctionX, correctionY, 1:length(artifact), 'linear');
+            correctionX = [0, length(paddedArtifact) + 1];
+            correctionY = [output(correctionX(1) + stimShift), output(correctionX(end) + stimShift)];
+            correction = interp1(correctionX, correctionY, 1:length(paddedArtifact), 'linear');
         else
-            correction = output(stimIdxs(idx) - 1) * ones(1, length(artifact));
+            correction = output(stimShift) * ones(1, length(paddedArtifact));
         end
 
         % Update output signal
-        output((1:length(artifact)) + stimIdxs(idx) - 1) = data(1:length(artifact)) - artifact + correction;
+        output((1:length(paddedArtifact)) + stimShift) = signal((1:length(paddedArtifact)) + stimShift) - paddedArtifact + correction;
 
         % Update progress bar
         if verbose
@@ -204,18 +218,18 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
         waitbar(0, waitbarFig, 'Mitigating secondary artifacts...');
     end
     
-    minClusterSize = 100;
+    minClusterSize = 20;
     rng(randomSeed);
     
     warning('off', 'all');
-    clusterCommand = "run_umap(SARemovalData, 'metric', 'correlation', 'cluster_detail', 'very low', 'verbose', 'none', 'randomize', 'false')";
+    clusterCommand = "run_umap(SARemovalData, 'metric', 'correlation', 'cluster_detail', 'adaptive', 'verbose', 'none', 'randomize', 'false')";
     [~, ~, ~, labels, ~] = evalc(clusterCommand);
-    
+
     for clusterIdx = 1:max(labels)
         if sum(labels == clusterIdx) >= minClusterSize
             selectedSARemovalSamples = SARemovalSamples(labels == clusterIdx, :) + stimIdxs(labels == clusterIdx)' - 1;
             selectedSARemovalSamples = reshape(selectedSARemovalSamples', [1, numel(selectedSARemovalSamples)]);
-            
+
             % fig = figure();
             % tiledlayout(3, 1);
             % nexttile();
@@ -292,33 +306,12 @@ function [peakIdx, varargout] = findArtifactPeak(data, sampleRate, blankingPerio
     saturationVoltage = [min(saturationVoltage), max(saturationVoltage)] * 1e3;
 
     %% 1) Find peakIdx
-    blankingSamples = 1:round(blankingPeriod * sampleRate);
-
-    maxValue = max(data(blankingSamples)) * 0.975;
-    minValue = min(data(blankingSamples)) * 0.975;
-    
-    [~, maxIdx] = findpeaks([0, flip(data(blankingSamples))], 'NPeaks', 1, 'MinPeakHeight', maxValue);
-    [~, minIdx] = findpeaks([0, -flip(data(blankingSamples))], 'NPeaks', 1, 'MinPeakHeight', abs(minValue));
-
-    maxIdx = (length(blankingSamples) + 1) - maxIdx + 1;
-    minIdx = (length(blankingSamples) + 1) - minIdx + 1;
-
-    peakIdx = [minIdx, maxIdx];
-    polarity = [-1, 1];
-    peakCheck = islocalmax(data) | islocalmin(data);
-    peakCheck = peakCheck(peakIdx);
-
-    peakIdx = peakIdx(peakCheck);
-    polarity = polarity(peakCheck);
-    
-    if length(peakIdx) > 1    
-        polarity = maxIdx > minIdx;
-        peakIdx = peakIdx(polarity + 1);
-
-        if polarity == 0
-            polarity = -1;
-        end
-    end
+    selectedSamples = 1:round(2 * blankingPeriod * sampleRate);
+    dy = diff(data(selectedSamples));
+    dy = abs([0, dy]);
+    labels = ones(size(data));
+    labels(selectedSamples) = dbscan(dy', 150, 5);
+    peakIdx = find(labels == -1, 1, 'last');
 
     %% 2) Detect clipping
     startClippingIdxs = [];
@@ -344,9 +337,10 @@ function [peakIdx, varargout] = findArtifactPeak(data, sampleRate, blankingPerio
         if ~isempty(startClippingIdxs) && ~isempty(endClippingIdxs)
             isClipped = true;
             peakIdx = max([peakIdx, max(endClippingIdxs)]);
-            polarity = sign(data(peakIdx) - median(data));
         end
     end
+
+    polarity = sign(data(peakIdx) - median(data));
 
     %% 3) Return output values
     varargout{1} = isClipped;
@@ -482,10 +476,10 @@ function [artifact, varargout] = fitArtifact(data, sampleRate, varargin)
     %% 5) Plot
     % t = 0:1/sampleRate:(length(data)/sampleRate - 1/sampleRate);
     % t = t*1e3;
-
+    % 
     % fig = figure();
     % tiledlayout(2, 1);
-
+    % 
     % ax = nexttile();
     % hold('on');
     % plot(t, data);
@@ -495,7 +489,7 @@ function [artifact, varargout] = fitArtifact(data, sampleRate, varargin)
     % title('Raw Data');
     % xlabel('Time (ms)');
     % ylabel('Voltage (\mu{V})');
-
+    % 
     % residuals = data-artifact;
     % ax = nexttile();
     % hold('on')
