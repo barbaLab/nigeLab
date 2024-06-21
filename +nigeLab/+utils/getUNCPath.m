@@ -55,8 +55,8 @@ if isempty(pathParts{1})
 end
 
 try
-   rootPath = getUncPathFromMappedDrive(pathParts{1});
-catch
+   rootPath = nigeLab.utils.getUncPathFromMappedDrive(pathParts{1});
+catch er
    rootPath = [];
 end
 
