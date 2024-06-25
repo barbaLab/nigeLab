@@ -8,7 +8,7 @@ function varargout = logLIRA(varargin)
 
 
 
-pars.blankingPeriod=1.5e-3;                             %optional
+pars.blankingPeriod=2e-3;                             %optional
 
 pars.saturationVoltage=0.95;                          %optional
                                                       %It specifies the recording system operating range
