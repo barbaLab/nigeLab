@@ -598,11 +598,32 @@ classdef splitMultiAnimalsUI < handle
             thisBlock.splitMultiAnimals(Tree_(1,:));
             thisSplittedBlocks = thisBlock.MultiAnimalsLinkedBlocks;
             
+            % Copy Time and StimData
+            origPath = thisBlock.Meta.Time.getPath;
+            arrayfun(@(B) copyfile(origPath,...
+                fullfile(sprintf(B.Paths.Time.file,B.Meta.BlockID))),...
+                thisSplittedBlocks);
+%             origPath = thisBlock.Meta.Stim.getPath;
+%             arrayfun(@(B) copyfile(origPath,fullfile(B.Paths.Stim.dir)), thisSplittedBlocks);
+            thisSplittedBlocks.linkMetaField('Time');
+
             % add the splitted blocks back to the splitted animals
             arrayfun(@(B) B.Parent.addChild(B), thisSplittedBlocks);
-           obj.tankObj.addChild([thisSplittedBlocks.Parent]);
-           arrayfun(@(B) B.updatePaths(B.Parent.Out.Folder,true), thisSplittedBlocks);
+            obj.tankObj.addChild([thisSplittedBlocks.Parent]);
+            arrayfun(@(B) B.updatePaths(B.Parent.Out.Folder,true), thisSplittedBlocks);
            
+%             % fix stim data
+%             StimData = thisBlock.Stim(:,:);
+%             for ii = 1:numel(thisSplittedBlocks)
+%                 stChan = StimData(:,2);
+%                 stChanPorts = thisSplittedBlocks(ii).ChannelID(stChan(2:end),1);
+%                 stChansNum = thisSplittedBlocks(ii).ChannelID(stChan(2:end),2);
+%                 idx = ismember(stChanPorts,[thisSplittedBlocks(ii).Channels.probe]) & ...
+%                     ismember(stChansNum,[thisSplittedBlocks(ii).Channels.chNum]);
+%                 DataPath = fullfile(sprintf(thisSplittedBlocks(ii).Paths.Stim.file,'Stim'));
+%                 thisSplittedBlocks(ii).Stim = nigeLab.libs.DiskData('Event',DataPath,StimData(idx,:));
+%             end
+
            an = thisBlock.Parent;
            delete(Tree_(1,:));
            Tree_(1,:) = [];

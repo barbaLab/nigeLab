@@ -13,13 +13,13 @@ blockObj.saveIDFile();
 
 blockObj.checkParallelCompatibility(true);
 
-%CHECK FOR MULTI-ANIMALS
-for ii = fieldnames(blockObj.Meta)'
-   if contains(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar)
-       blockObj.MultiAnimals = true;
-       break;
-   end
-end
+% %CHECK FOR MULTI-ANIMALS
+% for ii = fieldnames(blockObj.Meta)'
+%    if contains(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar)
+%        blockObj.MultiAnimals = true;
+%        break;
+%    end
+% end
 
 %GET/CREATE SAVE LOCATION FOR BLOCK
 % blockObj.AnimalLoc is empty [] at this point, if no output path was given

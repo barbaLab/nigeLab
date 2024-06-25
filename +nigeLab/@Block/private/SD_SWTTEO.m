@@ -60,7 +60,7 @@ for k=1:pars.wavLevel
     lf = length(lo_D);
     ss = extendswt(ss,lf);
     %convolution
-    swa = conv2(ss,lo_D','valid');
+    swa = conv(ss,lo_D,'valid');
     swa = swa(2:end,:); %even number of filter coeffcients
     %apply teo to swt output
     
@@ -71,7 +71,7 @@ for k=1:pars.wavLevel
     
     if pars.smoothN
         wind = window(pars.winType,pars.smoothN,pars.winPars{:});
-        temp2 = conv2(temp,wind','same');
+        temp2 = conv(temp,wind','same');
     else
         temp2 = temp;
     end

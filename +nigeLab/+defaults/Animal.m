@@ -40,6 +40,18 @@ pars.VarExprDelimiter = {'_'}; % Delimiter for parsing "special" vars (FB)
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
+%% Many animals in one block 
+%
+% Modern recording amplifiers usually have the capabilities to record from
+% many channels  simultaneously. This can be exploited to record from many
+% animals simultaneously and save eveything in only one datafile. 
+% You can signal this to nigel by interposing the here defined character
+% between different animal names in the AnimalID field of the recording
+% file
+%
+% Example 
+% R18-68&&R18-69
+pars.MultiAnimalsChar='&&';
 %% Parse output
 if nargin < 1
    varargout = {pars};

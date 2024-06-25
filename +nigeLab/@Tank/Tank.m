@@ -49,14 +49,12 @@ classdef Tank < nigeLab.nigelObj
 %     list - List Block objects in the TANK.
 %
 %     Empty - Create an Empty TANK object or array
-    properties 
-          MultiAnimals logical = false           % flag to signal if it's a single animal or a joined animal recording
-    end
+   
    % % % METHODS% % % % % % % % % % % %
    % NO ATTRIBUTES
    methods
       % Class constructor
-      function tankObj = Tank(tankRecPath,tankSavePath,varargin)
+      function tankObj = Tank(tankRecPath,tankSavePath,TankPars,varargin)
          % TANK  Construct Tank Class object
          %
          %  tankObj = nigeLab.Tank();
@@ -92,7 +90,12 @@ classdef Tank < nigeLab.nigelObj
          if nargin < 2
             tankSavePath = '';
          end
-         tankObj@nigeLab.nigelObj('Tank',tankRecPath,tankSavePath,varargin{:}); 
+         if nargin < 3
+            TankPars = nigeLab.defaults.Tank;
+         end
+         tankObj@nigeLab.nigelObj('Tank',tankRecPath,tankSavePath,...
+             '$Tank',TankPars,...
+             varargin{:}); 
          if isempty(tankObj) % Handle Empty case
             return;
          end

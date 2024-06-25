@@ -99,10 +99,11 @@ function CreateChildrenBlocks(blockObj)
 
 % split meta that contains MultiAnimalsChar
 ff = fieldnames(blockObj.Meta)';
-ff = setdiff(ff,[{'Header','FileExt','OrigName','OrigPath'} blockObj.Pars.Block.SpecialMeta.SpecialVars]);
+ff = setdiff(ff,...
+    [{'Header','FileExt','OrigName','OrigPath'} blockObj.Pars.Block.SpecialMeta.SpecialVars]);
 types =  structfun(@(x) class(x),blockObj.Meta,'UniformOutput',false);
 for ii = ff
-   if ~strcmp(types.(ii{:}),'char'),continue;end
+   if ~contains(types.(ii{:}),{'char'}),continue;end
    if contains(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar)
       str = strsplit(blockObj.Meta.(ii{:}),blockObj.Pars.Block.MultiAnimalsChar);
       if exist('SplittedMeta','var')
@@ -169,7 +170,6 @@ for ii=1:numel(SplittedMeta)
 %    bl.NumProbes = 0;
    bl.Mask = [];
    bl.Output = fullfile(bl.Out.SaveLoc);
-   bl.MultiAnimals = 2;
    bl.MultiAnimalsLinkedBlocks(:) = [];
    bl.Key = bl.InitKey();
    bl.PropListener =  bl.PropListener([]);
@@ -230,29 +230,56 @@ end
 
 % Actually modify the blocks
 for kk=1:size(Tree_,1)
-   for ii=1:size(Tree_,2)
-      bl = Tree_(kk,ii).UserData;
-      
-      Stuff = AllTrgtStuff{kk,ii};
-      ff = fieldnames(Stuff);
-      for jj=1:numel(ff)
-         bl.(ff{jj})=Stuff.(ff{jj});
-      end
-%       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
-      bl.setChannelMask(1:numel(bl.Channels));
-      fixPortsAndNumbers(bl);
-      bl.MultiAnimals = 0;
-%       bl.Move(bl.Paths.SaveLoc);
-      bl.updateStatus('init');
-      bl.updateStatus('Raw',true(1,bl.NumChannels));
-%       bl.linkToData;
-      bl.save();
-   end
-end
+    origChans = Tree_(kk,1).UserData.Channels;
+    origChansNames = {origChans.native_channel_name};
+    for ii=1:size(Tree_,2)
+        bl = Tree_(kk,ii).UserData;
+        
+
+        Stuff = AllTrgtStuff{kk,ii};
+        ff = fieldnames(Stuff);
+        for jj=1:numel(ff)
+            bl.(ff{jj})=Stuff.(ff{jj});
+        end %jj
+
+        %       bl.setChannelMask(AllTrgtMask{kk,ii}-min(AllTrgtMask{kk,ii})+1);
+        bl.setChannelMask(1:numel(bl.Channels));
+        fixPortsAndNumbers(bl,ii);
+        % fix Stim data if present
+        if bl.getStatus('Stim')
+            st = bl.Meta.Stim(:,:);
+            stChan = st(:,2);
+            zeroPaduStimChan = unique([0; stChan]);
+            uStimChan = zeroPaduStimChan(zeroPaduStimChan>0);
+            thisChansNames = {bl.Channels.native_channel_name};
+            [~,oldNewStimChanMatch] = ismember(thisChansNames,origChansNames(uStimChan));
+            oldNewStimChanMatch = zeroPaduStimChan(oldNewStimChanMatch+1);
+            for ch = uStimChan(:)'
+                newStimChan = find(oldNewStimChanMatch == ch);
+                if isempty(newStimChan),continue;end
+                idx = stChan == ch;
+                st(idx,2) = newStimChan;
+            end
+            delIdx = ismember(stChan, setxor(oldNewStimChanMatch,zeroPaduStimChan) );
+            st(delIdx,:) = [];
+            DataPath = fullfile(sprintf(bl.Paths.Stim.file,bl.Meta.BlockID));
+            
+            bl.Meta.Stim = nigeLab.libs.DiskData('Event',DataPath,st,'Complete',true);
+        end %fi
+
+        %       bl.Move(bl.Paths.SaveLoc);
+        bl.updateStatus('init');
+        bl.updateStatus('Raw',true(1,bl.NumChannels));
+        %       bl.linkToData;
+        bl.save();
+    end %ii
+end %kk
+
+
 end
 
 % Fix ports and numbering that are messed up due to splitting
-function fixPortsAndNumbers(bl)
+function fixPortsAndNumbers(bl,blID)
 % FIXPORTSANDNUMBERS   Ports and Numbering will be messed up since some may
 %                       start with "Port C" but that is actually equivalent
 %                       to configuration where "Port A" is plugged in,
@@ -270,8 +297,21 @@ bl.NumChannels = numel(bl.Channels);
 if isempty(bl.Mask)
    bl.Mask=1:bl.NumChannels;
 else
-   bl.Mask = bl.Mask - min(bl.Mask) + 1;
+    bl.Mask = bl.Mask - min(bl.Mask) + 1;
 end
+
+% % fix stim data
+% StimData = bl.Meta.Stim(2:end,:);
+% stChan = StimData(:,2);
+% stChanPorts = bl.ChannelID(stChan(2:end),1);
+% stChansNum = bl.ChannelID(stChan(2:end),2);
+% idx = ismember(stChanPorts,[bl.Channels.probe]) & ...
+%     ismember(stChansNum,[bl.Channels.chNum]);
+% DataPath = fullfile(sprintf(bl.Paths.Stim.file,bl.Meta.BlockID));
+% 
+% bl.Meta.Stim = nigeLab.libs.DiskData('Event',DataPath,StimData(idx,:));
+
+
 end
 
 % Update the channels due to change in masking etc
