@@ -66,7 +66,6 @@ classdef configSD < handle
            
            % Build UI
            obj.getIcons();
-           obj.buildGUI();
            
            obj.Channels.Name = {obj.ExBlock.Channels.name};
            obj.Channels.Selected = 1;
@@ -80,7 +79,7 @@ classdef configSD < handle
                addlistener(obj.UI.ChannelSelector,'NewChannel',...
                @obj.setChannel)];
            
-           
+           obj.buildGUI();
            obj.sampleData()
            
            
@@ -285,8 +284,9 @@ classdef configSD < handle
               
            end
         end
+        thisChan = obj.Channels.Selected;
          obj.SDParsPanel.SelectedTab = findobj(obj.SDParsPanel,...
-             'Title',obj.Pars.SDMethodName);
+             'Title',obj.Pars(thisChan).SDMethodName);
         
         % fill artefact rejection panel
          for ii = 1:numel(obj.ARTMethods)
@@ -316,12 +316,14 @@ classdef configSD < handle
               
            end
          end
+         thisChan = obj.Channels.Selected;
          obj.ArtRejParsPanel.SelectedTab = findobj(obj.ArtRejParsPanel,...
-             'Title',obj.Pars.ArtefactRejMethodName);
+             'Title',obj.Pars(thisChan).ArtefactRejMethodName);
          
        end
        
        function ExportPars(obj)
+           % TODO deal with export
            SDAlgName = obj.SDParsPanel.SelectedTab.Title;
            ArtRejAlgName = obj.ArtRejParsPanel.SelectedTab.Title;
 
@@ -334,7 +336,8 @@ classdef configSD < handle
        
        function textBoxCallback(obj,hObj,MethodName,ParName)
            val = get(hObj,'String');
-           thiPar = obj.ExBlock.Pars.SD.(MethodName).(ParName);
+           thisChan = obj.Channels.Selected;
+           thiPar = obj.ExBlock.Pars.SD(thisChan).(MethodName).(ParName);
            
            if isnumeric(thiPar)
                convertedVal = str2double(val);
@@ -351,7 +354,7 @@ classdef configSD < handle
                
            end
            
-           obj.Pars.(MethodName).(ParName) = convertedVal;
+           obj.Pars(thisChan).(MethodName).(ParName) = convertedVal;
        end
        
        function AllObjs = lockUnlockGui(obj,objs,status)
@@ -411,7 +414,7 @@ classdef configSD < handle
            
            AlgName = obj.SDParsPanel.SelectedTab.Title;
            SDFun = ['SD_' AlgName];
-           SDPars = obj.Pars.(SDFun);
+           SDPars = obj.Pars(thisChan).(SDFun);
            SDPars.fs = obj.ExBlock.SampleRate;
            SDargsout = obj.ExBlock.testSD(SDFun,obj.artRejData,SDPars);
            
@@ -433,7 +436,8 @@ classdef configSD < handle
            AlgName = obj.ArtRejParsPanel.SelectedTab.Title;
 
            ArtFun = ['ART_' AlgName];
-           ArtPars = obj.Pars.(ArtFun);
+           thisChan = obj.Channels.Selected;
+           ArtPars = obj.Pars(thisChan).(ArtFun);
            ArtPars.fs =  obj.ExBlock.SampleRate;
            Artargsout = obj.ExBlock.testSD(ArtFun,obj.data,ArtPars);
            obj.artRejData = Artargsout{1};
@@ -462,8 +466,9 @@ classdef configSD < handle
            fs = obj.ExBlock.SampleRate;
            t = (obj.startIdx:obj.endIdx)./fs;
            
-           WindowPreSamples =  floor(obj.Pars.WPre * 1e-3 * fs);
-           WindowPostSamples =  floor(obj.Pars.WPost * 1e-3 * fs);
+           thisChan = obj.Channels.Selected;
+           WindowPreSamples =  floor(obj.Pars(thisChan).WPre * 1e-3 * fs);
+           WindowPostSamples =  floor(obj.Pars(thisChan).WPost * 1e-3 * fs);
            out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(obj.data) - WindowPostSamples - 2;
           
            peakAmpl(out_of_record) = [];

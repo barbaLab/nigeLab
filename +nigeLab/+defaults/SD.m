@@ -58,11 +58,24 @@ pars.FeatureExtractionMethodName = 'wavelet'; % implemented to date (2020/06/16)
 
 
 
+%% UNLIKELY TO CHANGE
+% Parameters for each type stored as individual files in ~/+SD
+SDPath = fullfile(nigeLab.utils.getNigelPath,...
+   '+nigeLab','+defaults','+SD');
+% Load all the method-specific parameters:
+SDConfigFiles = dir(fullfile(SDPath,'*.m'));
+for ff = SDConfigFiles(:)'
+   parName = ff.name(1:end-2); % dropping .m
+   pars.(parName) = eval(sprintf('nigeLab.defaults.SD.%s',...
+      parName));
+end
+
+%% Parse Input
 nIdx = find(cellfun(@isnumeric,varargin));
 if isempty(nIdx) % if n is not provided
     n = 1;
-    argstoout = {varargin{1:end}};
-elseif ~(nIdx == 1)
+    argstoout = varargin;
+elseif nIdx ~= 1
     error("Syntax error, n should be at the first position as input args")
 else
     n = varargin{1};
@@ -75,20 +88,6 @@ else
             error("Syntax error: other parameters apart from n should be all strings")
         end
     end
-end
-
-
-
-%% UNLIKELY TO CHANGE
-% Parameters for each type stored as individual files in ~/+SD
-SDPath = fullfile(nigeLab.utils.getNigelPath,...
-   '+nigeLab','+defaults','+SD');
-% Load all the method-specific parameters:
-SDConfigFiles = dir(fullfile(SDPath,'*.m'));
-for ff = SDConfigFiles(:)'
-   parName = ff.name(1:end-2); % dropping .m
-   pars.(parName) = eval(sprintf('nigeLab.defaults.SD.%s',...
-      parName));
 end
 
 %% Parse output
