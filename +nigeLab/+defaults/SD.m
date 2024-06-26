@@ -9,6 +9,9 @@ function varargout = SD(varargin)
 %
 %
 % By: MAECI 2018 collaboration (Max Murphy & Federico Barban)
+% Modified by: Tommaso Lambresa 2024. Added the possibility to have a
+%       pars struct that is repeated many times as indicated by an input
+%       scalar n (to have a different SD parametrization for each channel)
 
 pars = struct;
 
@@ -55,7 +58,24 @@ pars.FeatureExtractionMethodName = 'wavelet'; % implemented to date (2020/06/16)
 
 
 
-
+nIdx = find(cellfun(@isnumeric,varargin));
+if isempty(nIdx) % if n is not provided
+    n = 1;
+    argstoout = {varargin{1:end}};
+elseif ~(nIdx == 1)
+    error("Syntax error, n should be at the first position as input args")
+else
+    n = varargin{1};
+    
+    if nargin == 1
+        argstoout = [];
+    else
+        argstoout = {varargin{2:end}};
+        if ~(all(cellfun(@ischar,argstoout)))
+            error("Syntax error: other parameters apart from n should be all strings")
+        end
+    end
+end
 
 
 
@@ -72,13 +92,13 @@ for ff = SDConfigFiles(:)'
 end
 
 %% Parse output
-if nargin < 1
-   varargout = {pars};
+if length(argstoout) < 1
+   varargout = {repmat(pars,1,n)};
 else
-   varargout = cell(1,nargin);
+   varargout = cell(1,length(argstoout));
    f = fieldnames(pars);
-   for i = 1:nargin
-      idx = ismember(lower(f),lower(varargin{i}));
+   for i = 1:length(argstoout) 
+      idx = ismember(lower(f),lower(argstoout{i}));
       if sum(idx) == 1
          varargout{i} = pars.(f{idx});
       end
