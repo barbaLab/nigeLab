@@ -5128,7 +5128,7 @@ end
                   'Unexpected case: %s',displayType);
          end
       end
-      
+            
       % Return list of initialized parameters
       function [s_init,s_miss,s_all] = listInitializedParams(obj)
          %LISTINITIALIZEDPARAMS  Return list of initialized parameters
@@ -5144,15 +5144,19 @@ end
          end
          
          % Get a list of all properties
-         PropsToSkip ={'nigelColors','Tempdir','Contents'};
-         tmp = dir(fullfile(nigeLab.utils.getNigelPath('UNC'),...
-            '+nigeLab','+defaults','*.m'));
-         s_all = cellfun(@(x)x(1:(end-2)),{tmp.name},...
-            'UniformOutput',false);
-         s_all = setdiff(s_all,PropsToSkip);
+         defaultsPath = fullfile(nigeLab.utils.getNigelPath('UNC'),...
+            '+nigeLab','+defaults');                                        % Finds path for defaults
+         ParsToSkip = nigeLab.defaults.Ignore('Ignore');                    % Loads ignore defautls, where the pars to globally ingore are listed
+         ParsToLoad = unique([nigeLab.defaults.(obj.Type)('ParsToLoad'),...
+             {obj.Type}]);                                                  % Make sure the pars to load are unique and the type-specific pars are also listed
+         allPars = dir(fullfile(defaultsPath,'*.m'));                       % Looks for all the scripts in defautls folder.
+         s_all = cellfun(@(x)x(1:(end-2)),{allPars.name},...
+            'UniformOutput',false);                                         % Parses the name of the pars out of the scripts' name
+         s_all =  intersect(ParsToLoad,...                                  % Looks for parameters defined within the type file, not listed in Ignore  
+             setdiff(s_all,ParsToSkip));                                    % and present as a script in the defualts folder
          
          
-         s_miss = setdiff(s_all,s_init);
+         s_miss = setdiff(s_all,s_init);                                    % returns parameters not yet initialized
       end
       
       % Load/parse ID file and associated parameters
