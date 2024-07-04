@@ -63,6 +63,8 @@ pars.FeatPointsMax = 2000;    % Max. # feature points to plot
 pars.FeatView = [-5 13];      % 3-D view angle
 pars.FeatMinSpikes = 30;      % Minimum # spikes in order to plot
 
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

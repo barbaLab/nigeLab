@@ -13,6 +13,8 @@ pars.ProbeIndexParseFcn = @(str)(str2double(str(2))-1); % Current syntax: 'Probe
 % Note: for Intan, the probe number (after '_A') corresponds to 
 %        [board_stream + 1]. 
 
+pars.n = 1; %length of the struct pars set to 1
+
 % Parse output
 if nargin < 1
    varargout = {pars};

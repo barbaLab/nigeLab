@@ -22,6 +22,8 @@ pars.Bregma = [5100 1750]; % pixel location of bregma
 pars.XScale = 350; % pixels for 1 mm
 pars.YScale = 150; % pixels for 1 mm
 pars.Size = 18;    % pixels
+%%
+pars.n = 1; %length of the struct pars set to 1
 
 %% Parse output
 if nargin < 1

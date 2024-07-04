@@ -10,6 +10,7 @@ pars.DecimateCascadeN=[3 5 5]; % Chebyshev LPF order
 pars.STIM_SUPPRESS = false;
 pars.ReReference = true;
 pars.NotchF = 50;
+pars.n = 1; %length of the struct pars set to 1
 
 %% DO NOT CHANGE
 pars.DecimationFactor=prod(pars.DecimateCascadeM);

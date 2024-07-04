@@ -35,6 +35,7 @@ pars.Trial.Fields       = {'BeginTrial','EndTrial'};
  pars.Trial.MinDistance = .5;      
 
 
+pars.n = 1; %length of the struct pars set to 1
 
 
 %% Error parsing (do not change)

@@ -153,7 +153,8 @@ pars.ScoringHotkeyHelpFcn = @nigeLab.workflow.defaultHotkeyHelpFcn;
 %    
 % end
 
-
+%%
+pars.n = 1; %length of the struct pars set to 1
 
 %% Parse output
 if nargin < 1

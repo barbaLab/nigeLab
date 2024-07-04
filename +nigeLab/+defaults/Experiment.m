@@ -23,6 +23,8 @@ pars.StandardPortNames = {'A','B','C','D'};
 pars.DefaultAcquisitionSystem = 'RHD';  % Important if things go wrong
 pars.SupportedFormats = {'.rhs','.rhd','.tdt'};
 pars.User = ''; % Default user is now parsed from local machine
+%%
+pars.n = 1; %length of the struct pars set to 1
 
 %% Parse output
 if nargin < 1

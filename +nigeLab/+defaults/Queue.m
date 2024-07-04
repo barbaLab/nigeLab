@@ -40,6 +40,8 @@ pars.RemoteRepoPath = ...
 % install the package on the remote repository as well, and set that path
 % here (in pars.RemoteRepoPath)
 
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

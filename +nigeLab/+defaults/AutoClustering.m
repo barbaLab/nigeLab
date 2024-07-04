@@ -15,6 +15,7 @@ pars.ID.Clusters    = 'skwedt';     % Attached to the cluster folder
 pars.Interpolate       = true;
 pars.InterpolateMethod = 'spline';
 
+pars.n = 'NumChannels'; % length of the pars.SD struct as the number of channels
 
 
 

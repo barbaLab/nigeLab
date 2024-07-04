@@ -8,6 +8,8 @@ pars = struct;
 pars.DeBounce = 250;    % de-bounce time (milliseconds)
 pars.ID = 'sync';       % file identifier (for digital input file)
 
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

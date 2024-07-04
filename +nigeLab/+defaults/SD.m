@@ -15,7 +15,7 @@ function varargout = SD(varargin)
 
 pars = struct;
 
-
+pars.n = 'NumChannels'; % length of the pars.SD struct as the number of channels
 %% User defined parameters for spike detection
 
 pars.STIM_TS  = [];            % Pre-specified stim times
@@ -71,33 +71,33 @@ for ff = SDConfigFiles(:)'
 end
 
 %% Parse Input
-nIdx = find(cellfun(@isnumeric,varargin));
-if isempty(nIdx) % if n is not provided
-    n = 1;
-    argstoout = varargin;
-elseif nIdx ~= 1
-    error("Syntax error, n should be at the first position as input args")
-else
-    n = varargin{1};
-    
-    if nargin == 1
-        argstoout = [];
-    else
-        argstoout = {varargin{2:end}};
-        if ~(all(cellfun(@ischar,argstoout)))
-            error("Syntax error: other parameters apart from n should be all strings")
-        end
-    end
-end
+% nIdx = find(cellfun(@isnumeric,varargin));
+% if isempty(nIdx) % if n is not provided
+%     n = 1;
+%     argstoout = varargin;
+% elseif nIdx ~= 1
+%     error("Syntax error, n should be at the first position as input args")
+% else
+%     n = varargin{1};
+% 
+%     if nargin == 1
+%         argstoout = [];
+%     else
+%         argstoout = {varargin{2:end}};
+%         if ~(all(cellfun(@ischar,argstoout)))
+%             error("Syntax error: other parameters apart from n should be all strings")
+%         end
+%     end
+% end
 
 %% Parse output
-if length(argstoout) < 1
-   varargout = {repmat(pars,1,n)};
+if nargin < 1
+   varargout = {pars};
 else
-   varargout = cell(1,length(argstoout));
+   varargout = cell(1,nargin);
    f = fieldnames(pars);
-   for i = 1:length(argstoout) 
-      idx = ismember(lower(f),lower(argstoout{i}));
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
       if sum(idx) == 1
          varargout{i} = pars.(f{idx});
       end

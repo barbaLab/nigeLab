@@ -25,6 +25,7 @@ function pars = Filt(varargin)
 %                    -> 'STIM_BLANK' [def: [1,3] ms] // prior and post stim
 %                                                        blanking period
 %
+%                    -> 'n' length of the struct output pars
 %  --------
 %   OUTPUT
 %  --------
@@ -53,6 +54,7 @@ DOWNSAMPLE_FREQ = 5000;   % new sampling frequency (30 kHz --> 5 kHz)
 STIM_SUPPRESS = true;  % set true to do stimulus artifact suppression
 STIM_BLANK = [1 3];     % milliseconds prior and after to blank on stims
 STIM_P_CH = [nan, nan]; % [probe #, channel #] for channel delivering stims
+n = 'NumChannels'; % length of the pars.SD struct as the number of channels
 
 %% PARSE VARARGIN
 if numel(varargin)==1
@@ -83,6 +85,7 @@ pars.METHOD = METHOD;
 pars.STIM_SUPPRESS = STIM_SUPPRESS;
 pars.STIM_BLANK = STIM_BLANK;
 pars.STIM_P_CH = STIM_P_CH;
+pars.n = n;
 
 pars.getFilterCoeff = @(f) getFilterCoeff(pars,f);
 end

@@ -29,7 +29,7 @@ pars.doTrialVidExtraction = doAction({},false,{'Raw','Video'});
 pars.doUnitFilter = doAction({'Raw'},true);
 pars.doVidInfoExtraction = doAction({},true,{});
 pars.doVidSyncExtraction = doAction({},false,{'Raw','Video'});
-
+pars.n = 1; %length of the struct pars set to 1
 %% Parse output
 if nargin < 1
    varargout = {pars};

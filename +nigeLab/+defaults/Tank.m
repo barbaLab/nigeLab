@@ -45,6 +45,9 @@ pars.VarExprDelimiter = {'_'}; % Delimiter for parsing "special" vars
 pars.IncludeChar='$'; % Delimiter for INCLUDING vars in name
 pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in meta either)
 
+%%
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

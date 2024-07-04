@@ -35,6 +35,8 @@ pars.evsSource = {{'STIM.name', 'STIM.onset',  'STIM.offset',  'TrCh.data',  'St
 pars.evsTarget = {{'lbl',       'onset',       'offset',       'trigger',    'target',     'value'      };
                   {'lbl',       'onset',       'value'}};
                     
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

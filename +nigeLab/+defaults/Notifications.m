@@ -34,6 +34,8 @@ pars.CompleteKey = 'Done'; % Keyword for "JOB DONE" state
 
 % Fixed "normalized" prog bar height
 pars.FixedProgBarHeightNormUnits = 0.12; 
+%%
+pars.n = 1; %length of the struct pars set to 1
 
 %% Error checking and assignment
 if nargin > 0

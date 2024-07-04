@@ -24,6 +24,7 @@ for ff = SDConfigFiles(:)'
       parName));
 end
 
+pars.n = 'NumChannels'; %length of the struct pars set to num channels
 
 %% Parse output
 if nargin < 1

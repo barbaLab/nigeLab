@@ -298,6 +298,9 @@ for ii=1:numel(Fields)
    pars.PathExpr.(Fields{ii}).Info = [FileNames{ii} '-Info.mat'];
 end
 
+%%
+pars.n = 1; %length of the struct pars set to 1
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

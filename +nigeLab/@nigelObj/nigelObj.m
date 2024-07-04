@@ -3981,7 +3981,15 @@ end
          doComparison = false; % By default, skip comparison
          switch lower(method)
             case {'keepdefs'}% Check both, keep +defaults over _Pars file
-               doComparison = true; 
+               doComparison = true;
+               % control that n is a scalar or 'NumChannels'
+               if isscalar(nigeLab.defaults.(field)('n'))
+                    len = 1;
+               elseif ischar(nigeLab.defaults.(field)('n'))
+                    len = obj.(nigeLab.defaults.(field)('n'));
+               else
+                   error("default n is not specified correctly")
+               end    
                p = nigeLab.defaults.(field)(); % Load parameter defaults
             case {'inherit'} % "Inherit" from extra input 'p'
                flag = true;
@@ -4035,6 +4043,14 @@ end
                return;
             case {'keeppars'} % Keep params over +defaults
                doComparison = true;
+               % control that n is a scalar or 'NumChannels'
+               if isscalar(nigeLab.defaults.(field)('n'))
+                    len = 1;
+               elseif ischar(nigeLab.defaults.(field)('n'))
+                    len = obj.(nigeLab.defaults.(field)('n'));
+               else
+                   error("default n is not specified correctly")
+               end    
                p = nigeLab.defaults.(field)(); % Load parameter defaults
             case {'loadonly'} % Load direct from _Pars.mat
                nigeLab.utils.cprintf(fmt,obj.Verbose,...
@@ -4049,6 +4065,14 @@ end
                   return;
                end
             case {'direct'}  % Load direct from +defaults
+                % control that n is a scalar or 'NumChannels'
+                if isscalar(nigeLab.defaults.(field)('n'))
+                    len = 1;
+                elseif ischar(nigeLab.defaults.(field)('n'))
+                    len = obj.(nigeLab.defaults.(field)('n'));
+                else
+                    error("default n is not specified correctly")
+                end
                p = nigeLab.defaults.(field)(); % Load parameter defaults
                flag = true;
                obj.HasParsInit.(field) = true;
@@ -4057,7 +4081,8 @@ end
                else
                   obj.HasParsSaved.(field) = ~isequal(obj.Pars.(field),p);
                end
-               obj.Pars.(field) = p;
+               
+               obj.Pars.(field) = repmat(p,1,len);
                nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Loaded directly from +defaults/%s.m file\n',...
                   field);
@@ -4071,7 +4096,7 @@ end
          % If necessary, try to load (and compare) _Pars.mat
          if doComparison
             if loadParams(obj,field) % If successful load:
-               if isequal(obj.Pars.(field),p)
+               if isequal(obj.Pars.(field),repmat(p,1,len))
                   if obj.Verbose
                      % dbstack();
                      nigeLab.utils.cprintf([0.35 0.35 0.35],...

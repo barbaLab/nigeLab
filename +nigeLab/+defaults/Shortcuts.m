@@ -54,6 +54,8 @@ else
 
    pars.stim.subfields = {'Meta', 'Stim'};
    pars.stim.indexable = [false  , true];
+
+   pars.n = 1;
 end
 
 end
