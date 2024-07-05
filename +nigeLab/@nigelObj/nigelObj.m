@@ -427,15 +427,10 @@ end
                'Both inPath and savePath must be `char`');
          end
          
-         % Handle I/O path specifications
+         % Handle I path specifications
          if ~obj.parseInputPath(inPath)
             nigeLab.utils.cprintf('Errors*',...
                '[constructor canceled]: Input file/folder not given\n');
-            return;
-         end
-         if ~obj.parseSavePath(savePath)
-            nigeLab.utils.cprintf('Errors*',...
-               '[constructor canceled]: Output file/folder not given\n');
             return;
          end
 
@@ -443,6 +438,13 @@ end
          if any(~obj.updateParams('all','initOnly'))
             error(['nigeLab:' mfilename ':BadInit'],...
                'Could not properly initialize parameters.');
+         end
+
+         % Handle O path specifications
+         if ~obj.parseSavePath(savePath)
+             nigeLab.utils.cprintf('Errors*',...
+                 '[constructor canceled]: Output file/folder not given\n');
+             return;
          end
       end
       
@@ -4066,10 +4068,11 @@ end
                end
             case {'direct'}  % Load direct from +defaults
                 % control that n is a scalar or 'NumChannels'
-                if isscalar(nigeLab.defaults.(field)('n'))
-                    len = 1;
-                elseif ischar(nigeLab.defaults.(field)('n'))
-                    len = obj.(nigeLab.defaults.(field)('n'));
+                ParsLen = nigeLab.defaults.(field)('n');
+                if ischar(ParsLen)
+                    len = max(1,obj.(ParsLen));
+                elseif isnumeric(ParsLen)
+                    len = max(1,ParsLen);
                 else
                     error("default n is not specified correctly")
                 end

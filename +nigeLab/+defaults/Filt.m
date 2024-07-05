@@ -1,4 +1,4 @@
-function pars = Filt(varargin)
+function varargout = Filt(varargin)
 %FILT  Initialize filter parameters for bandpass filter
 %
 %  pars = defaults.Filt('NAME',value,...);
@@ -56,18 +56,17 @@ STIM_BLANK = [1 3];     % milliseconds prior and after to blank on stims
 STIM_P_CH = [nan, nan]; % [probe #, channel #] for channel delivering stims
 n = 'NumChannels'; % length of the pars.SD struct as the number of channels
 
-%% PARSE VARARGIN
-if numel(varargin)==1
-    varargin = varargin{1};
-    if numel(varargin) ==1
-        varargin = varargin{1};
-    end
-end
-
-for iV = 1:2:length(varargin)
-    eval([upper(varargin{iV}) '=varargin{iV+1};']);
-end
-
+% %% PARSE VARARGIN
+% if numel(varargin)==1
+%     varargin = varargin{1};
+%     if numel(varargin) ==1
+%         varargin = varargin{1};
+%     end
+% end
+% 
+% for iV = 1:2:length(varargin)
+%     eval([upper(varargin{iV}) '=varargin{iV+1};']);
+% end
 
 %% INITIALIZE PARAMETERS STRUCTURE OUTPUT
 pars=struct;
@@ -88,6 +87,21 @@ pars.STIM_P_CH = STIM_P_CH;
 pars.n = n;
 
 pars.getFilterCoeff = @(f) getFilterCoeff(pars,f);
+
+%% Parse output
+if nargin < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin);
+   f = fieldnames(pars);
+   for i = 1:nargin
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
+end
+
 end
 
 function [b,a,zi,nfact,L] = getFilterCoeff(pars,fs)

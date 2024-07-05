@@ -62,8 +62,8 @@ pars.DiscardChar='~'; % Delimiter for excluding vars entirely (don't keep in met
 % Example 
 % R18-68&&R18-69
 pars.MultiAnimalsChar='&&';
-
 pars.n = 1;
+
 %% Parse output
 if nargin < 1
    varargout = {pars};

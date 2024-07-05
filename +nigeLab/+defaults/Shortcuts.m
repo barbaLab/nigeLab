@@ -1,12 +1,13 @@
-function pars = Shortcuts(out_mode)
+function varargout = Shortcuts(varargin)
 % nigeLab.defaults.SHORTCUTS  Short-hand for indexing workflow stuff
 %
 %	pars = nigeLab.defaults.SHORTCUTS();
 
 if nargin < 1
-   out_mode = 'struct';
+   varargin{1} = 'struct';
 end
-if strcmpi(out_mode,'cell')
+if strcmpi(varargin{1},'cell')
+    varargin(1)=[];
    pars = {                                                    % Index
          'raw',         'Channels(%d).Raw.data';                 % 1
          'filt',        'Channels(%d).Filt.data';                % 2
@@ -20,7 +21,8 @@ if strcmpi(out_mode,'cell')
          'time',        'Meta.Time.data';                        % 10
          'stim',        'Meta.Stim';                             % 11
                                                     };
-else
+elseif strcmpi(varargin{1},'struct')
+    varargin(1)=[];
    pars = struct;
    pars.raw.subfields = {'Channels', 'Raw'};
    pars.raw.indexable = [true      , true];
@@ -56,6 +58,23 @@ else
    pars.stim.indexable = [false  , true];
 
    pars.n = 1;
+else
+    pars = nigeLab.defaults.Shortcuts('struct');
+end
+
+%% Parse output
+nargin_ = length(varargin);
+if nargin_ < 1
+   varargout = {pars};
+else
+   varargout = cell(1,nargin_);
+   f = fieldnames(pars);
+   for i = 1:nargin_
+      idx = ismember(lower(f),lower(varargin{i}));
+      if sum(idx) == 1
+         varargout{i} = pars.(f{idx});
+      end
+   end
 end
 
 end

@@ -17,6 +17,7 @@ pars = struct;
 
 pars.n = 'NumChannels'; % length of the pars.SD struct as the number of channels
 %% User defined parameters for spike detection
+pars.n = 'NumChannels';
 
 pars.STIM_TS  = [];            % Pre-specified stim times
 pars.ARTIFACT = [];            % Pre-specified artifact times
