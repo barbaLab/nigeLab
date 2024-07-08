@@ -238,7 +238,7 @@ classdef Block < nigeLab.nigelObj
          %
          %  value = get(blockObj,'NumChannels');
          %  --> Returns number of elements in .Channels array
-         if isempty(blockObj.NumChannels_)
+         if isempty(blockObj.NumChannels_) || (blockObj.NumChannels_ == 0)
             value = numel(blockObj.Channels);
             blockObj.NumChannels_ = value;
          else
@@ -247,7 +247,8 @@ classdef Block < nigeLab.nigelObj
       end
       function set.NumChannels(blockObj,value)
          % Does nothing
-         blockObj.NumChannels_ = value;
+         %blockObj.NumChannels_ = value;
+         ...
       end
       
       % [DEPENDENT] Returns .NumProbes property
@@ -924,34 +925,34 @@ classdef Block < nigeLab.nigelObj
          
          for iF = 1:numel(F) % For each field, update field type
             p = obj.Pars.Block.PathExpr.(F{iF});
-            
-            if contains(p.Folder,'%s') % Parse for spikes stuff
-               % Get the current "Spike Detection method," which gets
-               % added onto the front part of the _Spikes and related
-               % folders
-               
-               % default. No attribute in teh name
-               p.Folder = sprintf(strrep(p.Folder,'\','/'),...
-                   '');
-               if ~isfield(obj.HasParsInit,'SD')
-                  obj.updateParams('SD');
-               elseif ~obj.HasParsInit.SD
-                  obj.updateParams('SD');
-               end
-               
-               % Look for ID in Pars
-               ParsFields = fieldnames(obj.Pars);
-               ParsWithID = find(cellfun(@(F) isfield(obj.Pars.(F),'ID'),ParsFields))';
-               for ii=ParsWithID
-                   if isfield(obj.Pars.(ParsFields{ii}).ID,(F{iF}))
-                       % if found put the ID in the foldername path
-                       p.Folder = sprintf(strrep(p.Folder,'\','/'),...
-                           obj.Pars.(ParsFields{ii}).ID.(F{iF}));
-                       break;
-                   end
-               end
-                             
-            end
+            % 
+            % if contains(p.Folder,'%s') % Parse for spikes stuff
+            %    % Get the current "Spike Detection method," which gets
+            %    % added onto the front part of the _Spikes and related
+            %    % folders
+            % 
+            %    % default. No attribute in teh name
+            %    p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+            %        '');
+            %    if ~isfield(obj.HasParsInit,'SD')
+            %       obj.updateParams('SD');
+            %    elseif ~obj.HasParsInit.SD
+            %       obj.updateParams('SD');
+            %    end
+            % 
+            %    % Look for ID in Pars
+            %    ParsFields = fieldnames(obj.Pars);
+            %    ParsWithID = find(cellfun(@(F) isfield(obj.Pars.(F),'ID'),ParsFields))';
+            %    for ii=ParsWithID
+            %        if isfield(obj.Pars.(ParsFields{ii})(1).ID,(F{iF}))
+            %            % if found put the ID in the foldername path
+            %            p.Folder = sprintf(strrep(p.Folder,'\','/'),...
+            %                obj.Pars.(ParsFields{ii}).ID.(F{iF}));
+            %            break;
+            %        end
+            %    end
+            % 
+            % end
             
             % Set folder name for this particular Field
             paths.(F{iF}).dir = nigeLab.utils.getUNCPath(...

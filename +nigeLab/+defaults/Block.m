@@ -81,8 +81,8 @@ pars.FolderIdentifier = '.nigelBlock'; % for file "flag" in block folder
 
 %% Common DynamicVarExp values
 % pars.NamingConvention={'$SurgYear' '$SurgNumber' '$RecDate' '$RecTime'}; % KUMC R03
-% pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$ExpPhase','$RecDate','$RecTime'}; % demo
-pars.NamingConvention={'$AnimalID' '$ExpPhase' '$RecDate' '$RecTime'}; % iit acute
+pars.NamingConvention={'$AnimalID','$Year','$Month','$Day','$ExpPhase','$RecDate','$RecTime'}; % demo
+% pars.NamingConvention={'$AnimalID' '$ExpPhase' '$RecDate' '$RecTime'}; % iit acute
 
 % OPTIONAL: To parse "RecID" from combination of meta vars, specify here
 % (otherwise, if RecID is normally present, or if this is empty, it is not
@@ -194,11 +194,11 @@ FolderNames     = {  ...
    'Filtered';          % 2
    'FilteredCAR';       % 3
    'LFPData';           % 4
-   '%s_Artifact';       % 5
-   '%s_Spikes';         % 6
-   '%s_SpikeFeatures';  % 7
-   '%s_Clusters';       % 8
-   '%s_Sorted';         % 9
+   'Artifact';       % 5
+   'Spikes';         % 6
+   'SpikeFeatures';  % 7
+   'Clusters';       % 8
+   'Sorted';         % 9
    'Digital';           % 10
    'Digital';           % 11
    'Video';             % 12 - for streams parsed from Video
