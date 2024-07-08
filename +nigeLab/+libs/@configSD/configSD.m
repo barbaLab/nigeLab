@@ -37,7 +37,11 @@ classdef configSD < handle
    end
    
    properties(Access=private)
-       icons       (1,1)struct = struct();
+       icons            (1,1)struct = struct();
+       SDParsGUI        cell
+       SDMethodsGUI     matlab.ui.container.Tab
+       ARTParsGUI      	cell
+       ARTMethodsGUI    matlab.ui.container.Tab
    end
    
    methods
@@ -75,9 +79,14 @@ classdef configSD < handle
            obj.UI.ChannelSelector = nigeLab.libs.ChannelUI(obj.UI);
            obj.UI.ChannelSelector.Figure.Name =...
                sprintf('configSD - %s',obj.UI.ChannelSelector.Figure.Name);
+
+           ChanChangeCallbacks = {{@obj.setChannel},...
+               {@(src,evt)obj.updateParsPanel}};
            obj.Listeners = [obj.Listeners, ...
                addlistener(obj.UI.ChannelSelector,'NewChannel',...
-               @obj.setChannel)];
+               @(ObjH, EventData)...
+               nigeLab.utils.multiCallbackWrap(ObjH, EventData,...
+               ChanChangeCallbacks))];
            
            obj.buildGUI();
            obj.sampleData()
@@ -250,16 +259,21 @@ classdef configSD < handle
          
          obj.SDParsPanel = uitabgroup(fig,...
             'Units','normalized',...
-            'Position',[.05 .25  .65 .4]);
+            'Position',[.05 .25  .65 .4],...
+            'SelectionChangedFcn',...
+            @(~,~)obj.assignPreferredMethod('SD'));
         
         obj.ArtRejParsPanel = uitabgroup(fig,...
             'Units','normalized',...
-            'Position',[.05 .05  .65 .18]);
+            'Position',[.05 .05  .65 .18],...
+            'SelectionChangedFcn',...
+            @(~,~)obj.assignPreferredMethod('ART'));
         
         % fill SD panel
         for ii = 1:numel(obj.SDMethods)
            % Add all uitabs
-           thisTab = uitab(obj.SDParsPanel,'Title',obj.SDMethods{ii});
+           obj.SDMethodsGUI(ii) = uitab(obj.SDParsPanel,'Title',obj.SDMethods{ii});
+           thisTab = obj.SDMethodsGUI(ii);
            thisPars = (obj.ExBlock.Pars.SD.(['SD_' obj.SDMethods{ii}]));
            thisParsNames = fieldnames(thisPars);
            thisTab.Units = 'pixels';
@@ -268,19 +282,20 @@ classdef configSD < handle
            for jj=1:numel(thisParsNames)
                Hoff = floor(Width/3)*mod(jj-1,3);
                Woff = -40*idivide(int16(jj-1),3);
-             thisParText =  uicontrol('Style','edit',...
-                  'Parent',thisTab,...
-                  'Units','pixels',...
-                  'Position',[38 + Hoff   215 + Woff   37   18],...
-                  'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
-                  'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['SD_' obj.SDMethods{ii}],thisParsNames{jj}));
-              
-              thisParLbl =  uicontrol('Style','text',...
-                  'Parent',thisTab,...
-                  'Units','pixels',...
-                  'Position',[38 + Hoff  235 + Woff   70   18],...
-                  'String',thisParsNames{jj},...
-                  'HorizontalAlignment','left');
+               obj.SDParsGUI{ii}{jj} =  uicontrol('Style','edit',...
+                   'Parent',thisTab,...
+                   'Units','pixels',...
+                   'Position',[38 + Hoff   215 + Woff   37   18],...
+                   'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
+                   'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['SD_' obj.SDMethods{ii}],thisParsNames{jj}),...
+                   'Tag',thisParsNames{jj});
+
+               thisParLbl =  uicontrol('Style','text',...
+                   'Parent',thisTab,...
+                   'Units','pixels',...
+                   'Position',[38 + Hoff  235 + Woff   70   18],...
+                   'String',thisParsNames{jj},...
+                   'HorizontalAlignment','left');
               
            end
         end
@@ -291,28 +306,30 @@ classdef configSD < handle
         % fill artefact rejection panel
          for ii = 1:numel(obj.ARTMethods)
            % Add all uitabs
-           thisTab = uitab(obj.ArtRejParsPanel,'Title',obj.ARTMethods{ii});
+           obj.ARTMethodsGUI(ii) = uitab(obj.ArtRejParsPanel,'Title',obj.ARTMethods{ii});
            thisPars = (obj.ExBlock.Pars.SD.(['ART_' obj.ARTMethods{ii}]));
            thisParsNames = fieldnames(thisPars);
+           thisTab = obj.ARTMethodsGUI(ii);
            thisTab.Units = 'pixels';
            Width = thisTab.InnerPosition(3);
            thisTab.Units = 'normalized';
            for jj=1:numel(thisParsNames)
                Hoff = floor(Width/3)*mod(jj-1,3);
                Woff = -40*idivide(int16(jj-1),3);
-             thisParText =  uicontrol('Style','edit',...
-                  'Parent',thisTab,...
-                  'Units','pixels',...
-                  'Position',[38 + Hoff   60 + Woff   37   18],...
-                  'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
-                  'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['ART_' obj.ARTMethods{ii}],thisParsNames{jj}));
-              
-              thisParLbl =  uicontrol('Style','text',...
-                  'Parent',thisTab,...
-                  'Units','pixels',...
-                  'Position',[38 + Hoff  78 + Woff   70   18],...
-                  'String',thisParsNames{jj},...
-                  'HorizontalAlignment','left');
+               obj.ARTParsGUI{ii}{jj} =  uicontrol('Style','edit',...
+                   'Parent',thisTab,...
+                   'Units','pixels',...
+                   'Position',[38 + Hoff   60 + Woff   37   18],...
+                   'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj})),...
+                   'Callback',@(hObj,~,~)textBoxCallback(obj,hObj,['ART_' obj.ARTMethods{ii}],thisParsNames{jj}),...
+                   'Tag',thisParsNames{jj});
+
+               thisParLbl =  uicontrol('Style','text',...
+                   'Parent',thisTab,...
+                   'Units','pixels',...
+                   'Position',[38 + Hoff  78 + Woff   70   18],...
+                   'String',thisParsNames{jj},...
+                   'HorizontalAlignment','left');
               
            end
          end
@@ -322,16 +339,77 @@ classdef configSD < handle
          
        end
        
+       function assignPreferredMethod(obj,type)
+           switch type
+               case 'SD'
+                   tabgroup = 'SDParsPanel';
+                   field = 'SDMethodName';
+               case 'ART'
+                   tabgroup = 'ArtRejParsPanel';
+                   field = 'ArtefactRejMethodName';
+               otherwise
+           end
+           thisChan = obj.Channels.Selected;
+           obj.Pars(thisChan).(field) = obj.(tabgroup).SelectedTab.Title;
+       end
+
+       function updateParsPanel(obj)
+
+           thisChan = obj.Channels.Selected;
+
+           obj.SDParsPanel.SelectedTab = findobj(obj.SDParsPanel,...
+               'Title',obj.Pars(thisChan).SDMethodName);
+           for ii = 1:numel(obj.SDMethods)
+               % Add all uitabs
+               thisPars = (obj.Pars(thisChan).(['SD_' obj.SDMethods{ii}]));
+               thisParsNames = fieldnames(thisPars);
+               for jj=1:numel(thisParsNames)
+                   set(obj.SDParsGUI{ii}{jj},...
+                       'String',...
+                       nigeLab.utils.ToString(thisPars.(thisParsNames{jj}))...
+                       );
+               end%jj
+           end%ii
+
+           obj.ArtRejParsPanel.SelectedTab = findobj(obj.ArtRejParsPanel,...
+               'Title',obj.Pars(thisChan).ArtefactRejMethodName);
+           for ii = 1:numel(obj.ARTMethods)
+               thisPars = (obj.Pars(thisChan).(['ART_' obj.ARTMethods{ii}]));
+               thisParsNames = fieldnames(thisPars);
+               for jj=1:numel(thisParsNames)
+                   set(obj.ARTParsGUI{ii}{jj},...
+                       'String',nigeLab.utils.ToString(thisPars.(thisParsNames{jj}))...
+                       );
+               end%jj
+           end%ii
+
+       end
+
        function ExportPars(obj)
            % TODO deal with export
-           SDAlgName = obj.SDParsPanel.SelectedTab.Title;
-           ArtRejAlgName = obj.ArtRejParsPanel.SelectedTab.Title;
+          answer = 'Export';
+          if numel(unique({obj.Pars.SDMethodName})) > 1
+              msg = sprintf(['SD throughout channels is not consistent.\n',...
+                  'Do you want still to proceed?']);
+              title = 'Multiple SD detected';
+            answer = questdlg(msg,title,'Export','Cancel','Cancel');
+          end
 
-          obj.Pars.ArtefactRejMethodName = ArtRejAlgName;
-          obj.Pars.SDMethodName = SDAlgName;
-
+          if numel(unique({obj.Pars.ArtefactRejMethodName})) > 1
+              msg = sprintf(['Artefact rejection throughout channels is not consistent.\n',...
+                  'Do you want still to proceed?']);
+              title = 'Multiple ART detected';
+            answer = questdlg(msg,title,'Export','Cancel','Cancel');
+          end
+           
+          if strcmp(answer,'Cancel')
+            f = msgbox("Operation Aborted");
+            return;
+          else
            obj.ExBlock.Pars.SD = obj.Pars;
            obj.ExBlock.saveParams;
+            f = msgbox("Operation Completed");
+          end
        end
        
        function textBoxCallback(obj,hObj,MethodName,ParName)
@@ -412,6 +490,7 @@ classdef configSD < handle
            waitFig = plotWaitFigure(obj,'Detecting spikes...');
            lockedObjs = obj.lockUnlockGui([],'off');
            
+           thisChan = obj.Channels.Selected;
            AlgName = obj.SDParsPanel.SelectedTab.Title;
            SDFun = ['SD_' AlgName];
            SDPars = obj.Pars(thisChan).(SDFun);
