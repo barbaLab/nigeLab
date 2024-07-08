@@ -37,9 +37,6 @@ fType = blockObj.FileType{strcmpi(blockObj.Fields,'Filt')};
 % ENSURE MASK IS ACCURATE
 blockObj.checkMask;
 
-% DESIGN FILTER
-[b,a,zi,nfact,L] = pars.getFilterCoeff(blockObj.SampleRate);
-
 % DO FILTERING AND SAVE
 if ~blockObj.OnRemote
    str = getNigeLink('nigeLab.Block','doUnitFilter',...
@@ -53,12 +50,15 @@ blockObj.reportProgress(str,0,'toWindow','Filtering');
 
 curCh = 0;
 nCh = numel(blockObj.Mask);
-for iCh = blockObj.Mask   
-   curCh = curCh + 1;
-   if blockObj.Channels(iCh).Raw.length <= nfact
-      continue; % It should leave the updateFlag as false for this channel
-   end
-   if pars.STIM_SUPPRESS && ismember('Stim',{blockObj.Events.Tag})
+for iCh = blockObj.Mask  
+    % DESIGN FILTER
+    [b,a,zi,nfact,L] = pars(iCh).getFilterCoeff(blockObj.SampleRate);
+
+    curCh = curCh + 1;
+    if blockObj.Channels(iCh).Raw.length <= nfact
+        continue; % It should leave the updateFlag as false for this channel
+    end
+    if pars(iCh).STIM_SUPPRESS && ismember('Stim',{blockObj.Events.Tag})
        data = blockObj.execStimSuppression(iCh);
    else
        data = blockObj.Channels(iCh).Raw(:);
@@ -79,12 +79,12 @@ for iCh = blockObj.Mask
 
       % Downsample data to reduce their size, since they went through
       % filtering. Params are defined in defaults.Filt
-      if pars.DOWNSAMPLE_AUTO
-         minFreqNyqst = round(2.2*pars.FPASS2);
-         if mod(pars.DOWNSAMPLE_FREQ, 1) == 0
-            if pars.DOWNSAMPLE_FREQ >= minFreqNyqst
-               data = resample(data, pars.DOWNSAMPLE_FREQ, blockObj.Channels(iCh).fs);
-               blockObj.SampleRate = pars.DOWNSAMPLE_FREQ;
+      if pars(iCh).DOWNSAMPLE_AUTO
+         minFreqNyqst = round(2.2*pars(iCh).FPASS2);
+         if mod(pars(iCh).DOWNSAMPLE_FREQ, 1) == 0
+            if pars(iCh).DOWNSAMPLE_FREQ >= minFreqNyqst
+               data = resample(data, pars(iCh).DOWNSAMPLE_FREQ, blockObj.Channels(iCh).fs);
+               blockObj.SampleRate = pars(iCh).DOWNSAMPLE_FREQ;
             else
                warning(sprintf('The downsampling frequency is smaller than %dHz.\n Downsampling at %dHz.',minFreqNyqst,minFreqNyqst));
                data = resample(data, minFreqNyqst, blockObj.Channels(iCh).fs);
