@@ -3985,14 +3985,15 @@ end
             case {'keepdefs'}% Check both, keep +defaults over _Pars file
                doComparison = true;
                % control that n is a scalar or 'NumChannels'
-               if isscalar(nigeLab.defaults.(field)('n'))
-                    len = 1;
-               elseif ischar(nigeLab.defaults.(field)('n'))
-                    len = obj.(nigeLab.defaults.(field)('n'));
-               else
-                   error("default n is not specified correctly")
-               end    
-               p = nigeLab.defaults.(field)(); % Load parameter defaults
+               ParsLen = nigeLab.defaults.(field)('n');
+                if ischar(ParsLen)
+                    len = max(1,obj.(ParsLen));
+                elseif isnumeric(ParsLen)
+                    len = max(1,ParsLen);
+                else
+                    error("default n is not specified correctly")
+                end   
+                p = repmat(nigeLab.defaults.(field)(),1,len); % Load parameter defaults
             case {'inherit'} % "Inherit" from extra input 'p'
                flag = true;
                obj.HasParsInit.(field) = true;
@@ -4046,14 +4047,15 @@ end
             case {'keeppars'} % Keep params over +defaults
                doComparison = true;
                % control that n is a scalar or 'NumChannels'
-               if isscalar(nigeLab.defaults.(field)('n'))
-                    len = 1;
-               elseif ischar(nigeLab.defaults.(field)('n'))
-                    len = obj.(nigeLab.defaults.(field)('n'));
-               else
-                   error("default n is not specified correctly")
-               end    
-               p = nigeLab.defaults.(field)(); % Load parameter defaults
+               ParsLen = nigeLab.defaults.(field)('n');
+                if ischar(ParsLen)
+                    len = max(1,obj.(ParsLen));
+                elseif isnumeric(ParsLen)
+                    len = max(1,ParsLen);
+                else
+                    error("default n is not specified correctly")
+                end  
+               p = repmat(nigeLab.defaults.(field)(),1,len); % Load parameter defaults
             case {'loadonly'} % Load direct from _Pars.mat
                nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Loading %sObj.Pars.%s directly from %s_Pars.mat\n\t',...
@@ -4076,7 +4078,7 @@ end
                 else
                     error("default n is not specified correctly")
                 end
-               p = nigeLab.defaults.(field)(); % Load parameter defaults
+               p = repmat(nigeLab.defaults.(field)(),1,len); % Load parameter defaults
                flag = true;
                obj.HasParsInit.(field) = true;
                if ~isfield(obj.Pars,field)
@@ -4085,7 +4087,7 @@ end
                   obj.HasParsSaved.(field) = ~isequal(obj.Pars.(field),p);
                end
                
-               obj.Pars.(field) = repmat(p,1,len);
+               obj.Pars.(field) = p;
                nigeLab.utils.cprintf(fmt,obj.Verbose,...
                   'Loaded directly from +defaults/%s.m file\n',...
                   field);
@@ -4096,10 +4098,11 @@ end
                return;
          end % switch lower(method)
          
+
          % If necessary, try to load (and compare) _Pars.mat
          if doComparison
             if loadParams(obj,field) % If successful load:
-               if isequal(obj.Pars.(field),repmat(p,1,len))
+               if isequal(obj.Pars.(field),p)
                   if obj.Verbose
                      % dbstack();
                      nigeLab.utils.cprintf([0.35 0.35 0.35],...
@@ -4115,7 +4118,7 @@ end
                if ~isempty(fmiss)
                   % Then our loaded params are missing parameter variables
                   for i = 1:numel(fmiss)
-                     obj.Params.Pars.(field).(fmiss{i}) = p.(fmiss{i}); % So add
+                     obj.Params.Pars.(field).(fmiss{i}) = [p.(fmiss{i})]; % So add
                   end
                   obj.HasParsInit.(field) = true;
                   if obj.Verbose

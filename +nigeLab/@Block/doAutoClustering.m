@@ -53,9 +53,9 @@ blockObj.updateStatus('Clusters',false,blockObj.Mask);
 
 % runs automatic clustering algorithms
 if isempty(unit)
-   unit = 0:par.NMaxClus;
+   unit = 0:par(1).NMaxClus;
 elseif strcmpi(unit,'all') % Returns false if unit is numeric
-   unit = 0:par.NMaxClus;
+   unit = 0:par(1).NMaxClus;
 elseif ischar(unit)
    error(['nigeLab:' mfilename ':BadString'],...
       'Unexpected "unit" value: %s (should be ''all'' or numeric)\n',unit);
@@ -63,10 +63,10 @@ end
 
 if ~blockObj.OnRemote
    str = nigeLab.utils.getNigeLink('nigeLab.Block','doAutoClustering',...
-      par.MethodName);
+      par(1).MethodName);
    str = sprintf('AutoClustering-(%s)',str);
 else
-   str = sprintf('AutoClustering-(%s)',par.MethodName);
+   str = sprintf('AutoClustering-(%s)',par(1).MethodName);
 end
 blockObj.reportProgress(str,0,'toWindow');
 curCh = 0;
@@ -105,16 +105,16 @@ for iCh = chan
    classesSubset = classes(SubsetIndx);
    
    % make sure not to overwrite/assign already used labels
-   allLabels = 1:par.NMaxClus;
+   allLabels = 1:par(iCh).NMaxClus;
    usedLabels = setdiff(classes,unit);
    freeLabels = setdiff(allLabels, usedLabels);
-   par.NMaxClus = numel(freeLabels);
+   par(iCh).NMaxClus = numel(freeLabels);
    
    % actually do the clustering
 
  
-      SortFun = ['SORT_' par.MethodName];
-      SortPars = par.(SortFun);
+      SortFun = ['SORT_' par(iCh).MethodName];
+      SortPars = par(iCh).(SortFun);
       Artargsout = cell(1,nargout(SortFun));
       [Artargsout{:}] = feval(SortFun,inspk,SortPars);
       classes_ = Artargsout{1};
@@ -135,7 +135,7 @@ for iCh = chan
    pct = round((curCh/numel(chan)) * 90);
    blockObj.updateStatus('Clusters',true,iCh);
    blockObj.reportProgress(str,pct,'toWindow');
-   blockObj.reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
+   blockObj.reportProgress(par(iCh).MethodName,pct,'toEvent',par(iCh).MethodName);
 end
 if blockObj.OnRemote
    str = 'Saving-Block';

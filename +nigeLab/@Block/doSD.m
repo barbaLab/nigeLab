@@ -33,7 +33,7 @@ if ~genPaths(blockObj)
 end
 
 [~,pars] = blockObj.updateParams('SD','KeepPars');
-pars.fs = blockObj.SampleRate;
+[pars.fs] = deal(blockObj.SampleRate);
 
 % UPDATE STATUS FOR THESE STAGES
 blockObj.updateStatus('Spikes',false,blockObj.Mask);
@@ -58,9 +58,9 @@ for iCh = blockObj.Mask
    
    % Do the detection:
    if (curCh == 1)
-      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars);
+      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars(iCh));
    else
-      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD);
+      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD(iCh));
    end
 
    if isempty(spk)

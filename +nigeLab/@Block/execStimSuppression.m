@@ -39,26 +39,26 @@ end
 
 fs = blockObj.SampleRate;
 SUPPRpars = blockObj.Pars.StimSuppression;
-SupprName = SUPPRpars.Method;
+SupprName = SUPPRpars(nChan).Method;
 
 % convert 'all' to numeric index
-if strcmp(SUPPRpars.StimIdx,'all')
-    SUPPRpars.StimIdx = 1:numel(StimTS);
+if strcmp(SUPPRpars(nChan).StimIdx,'all')
+    SUPPRpars(nChan).StimIdx = 1:numel(StimTS);
 end
 
-% check that a length for teh stimulation pulse is  provided
-if ~ismember('stimL',fieldnames(SUPPRpars)) || isempty(SUPPRpars.stimL)
+% check that a length for teh stimulation pulse is  provided7
+if ~ismember('stimL',fieldnames(SUPPRpars)) || isempty(SUPPRpars(nChan).stimL)
     stimLength = [blockObj.Events(stimIdx).Duration];
-elseif isscalar(SUPPRpars.stimL)
-    stimLength = ones(size(StimTS))*SUPPRpars.stimL;
-elseif size(SUPPRpars.stimL,1) ~= size(StimTS,1)
+elseif isscalar(SUPPRpars(nChan).stimL)
+    stimLength = ones(size(StimTS))*SUPPRpars(nChan).stimL;
+elseif size(SUPPRpars(nChan).stimL,1) ~= size(StimTS,1)
     error('nigelab:removeStim','Number of stimulation pulses(stimTS) and stimulation durations(stimL) does not correspond!');
 end
 [StimI,I] = unique(floor(StimTS*fs));
 stimLength = ceil(stimLength(I)*fs);
 stimSamples = arrayfun(@(i) StimI(i):StimI(i)+stimLength(i),1:numel(StimI),'UniformOutput',false);
 
-SUPPRpars = blockObj.Pars.StimSuppression.(SupprName);
+SUPPRpars = blockObj.Pars.StimSuppression(nChan).(SupprName);
 
 SUPPRpars.StimLength = stimLength;
 SUPPRpars.StimSamples = stimSamples;

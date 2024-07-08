@@ -54,6 +54,8 @@ else
          blockObj.Name,class(blockObj.Mask));
 end
 
+blockObj.NumChannels = length(blockObj.Channels);
+
 flag = true;
 
 end

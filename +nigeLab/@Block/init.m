@@ -60,6 +60,9 @@ end
 %    return;
 % end
 
+%UPDATE THE PARAMETERS AS LONG AS THE NUMBER OF CHANNELS
+blockObj.updateParams('all', 'direct');
+
 %INITIALIZE STATUS
 blockObj.updateStatus('init');
 
