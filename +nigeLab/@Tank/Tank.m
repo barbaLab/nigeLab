@@ -117,7 +117,7 @@ classdef Tank < nigeLab.nigelObj
          %  flag = save(tankObj);
          
          flag = save@nigeLab.nigelObj(tankObj);
-         if ~tankObj.Verbose % Then it might run for a while without notifying
+         if tankObj.Verbose % Then it might run for a while without notifying
             [fmt,idt,~] = getDescriptiveFormatting(tankObj);
             nigeLab.utils.cprintf(fmt,true,'%s[TANK]: ',idt);
             nigeLab.utils.cprintf(fmt(1:(end-1)),...

@@ -50,13 +50,14 @@ classdef nigelObj < handle & ...
    properties (Access=public)
       Meta     (1,1)   struct      % Metadata struct
       UserData                     % Allow UserData property to exist
+      Verbose     (1,1)  logical = false           % Display debug output?
    end
 
    % PUBLIC/PROTECTED
    properties (GetAccess=public,SetAccess=protected)
       Fields            cell                    % Specific things to record
       FieldType         cell                    % "Types" corresponding to Fields elements
-      Name              char           % Name of the obj (char array)
+      Name              char                    % Name of the obj (char array)
       ViableFieldTypes  cell
       IDInfo      (1,1) struct                  % Struct parsed from ID file
       HasParsFile (1,1) logical=false           % Flag --> True if _Pars.mat exists
@@ -137,7 +138,6 @@ end
       IsDashOpen (1,1)logical         % Is nigeLab.libs.DashBoard GUI open?
       PathIsSet  (1,1)logical = false % Has temporary environment path been set?
       RemoteFlag (1,1)logical = false % "Container" for .OnRemote prop
-      Verbose    (1,1)logical = false % Display debug output?
    end
    
    % HIDDEN,TRANSIENT,PUBLIC (Listeners and Object "Containers")
@@ -3056,7 +3056,9 @@ end
             flag = false;
          end
          [fmt,idt,type] = obj.getDescriptiveFormatting();
-         nigeLab.utils.cprintf(fmt,'%s[LOADPARAMS]: ',idt);
+         if obj.Verbose
+             nigeLab.utils.cprintf(fmt,'%s[LOADPARAMS]: ',idt);
+         end
          fmt = fmt(1:(end-1));
          if nargin < 2
             if ~obj.HasParsFile
@@ -3106,16 +3108,20 @@ end
                   flag(idx) = true;
                end
             end
-            nigeLab.utils.cprintf(fmt,...
-                  '%sObj.Pars.(ALL) loaded for %s (.User: %s)\n',...
-                  lower(type),obj.Name,obj.User);
+            if obj.Verbose
+                nigeLab.utils.cprintf(fmt,...
+                    '%sObj.Pars.(ALL) loaded for %s (.User: %s)\n',...
+                    lower(type),obj.Name,obj.User);
+            end
          else
             obj.Pars.(parsField) = in.(obj.User).(parsField);
             obj.HasParsInit.(parsField) = true;
             obj.HasParsSaved.(parsField) = true;
-            nigeLab.utils.cprintf(fmt,...
-                  '%sObj.Pars.%s loaded for %s (.User: %s)\n',...
-                  lower(type),parsField,obj.Name,obj.User);
+            if obj.Verbose
+                nigeLab.utils.cprintf(fmt,...
+                    '%sObj.Pars.%s loaded for %s (.User: %s)\n',...
+                    lower(type),parsField,obj.Name,obj.User);
+            end
             flag = true; % Only 1 field: it was loaded, so returns true
          end
       end
@@ -3418,7 +3424,9 @@ end
          fname = nigeLab.utils.shortenedName([fname ext]);
          
          [fmt,idt,type] = obj.getDescriptiveFormatting();
-         nigeLab.utils.cprintf(fmt,'%s[SAVEPARAMS]: ',idt);
+         if obj.Verbose
+             nigeLab.utils.cprintf(fmt,'%s[SAVEPARAMS]: ',idt);
+         end
          fmt = fmt(1:(end-1));
          if ~ismember(lower(parsField),{'all','reset'})
             if ~isfield(obj.HasParsSaved,parsField)
@@ -3426,9 +3434,11 @@ end
             elseif obj.HasParsSaved.(parsField) && ~forceSave
                flag = true;
                dbstack();
-               nigeLab.utils.cprintf(fmt,...
-                  '%s is up-to-date for Pars.%s\n',...
-                  fname_params,parsField);
+               if obj.Verbose
+                   nigeLab.utils.cprintf(fmt,...
+                       '%s is up-to-date for Pars.%s\n',...
+                       fname_params,parsField);
+               end
                return;
             end
          end
@@ -3436,9 +3446,11 @@ end
          if exist(fname_params,'file')==0
             out = struct;
             out.(userName) = obj.Pars;
-            nigeLab.utils.cprintf(fmt,...
-               'Creating new %sObj.Pars file: %s%s (User: %s)\n',...
-               lower(type),pname,fname,userName);
+            if obj.Verbose
+                nigeLab.utils.cprintf(fmt,...
+                    'Creating new %sObj.Pars file: %s%s (User: %s)\n',...
+                    lower(type),pname,fname,userName);
+            end
             f = fieldnames(obj.Pars);
             for i = 1:numel(f)
                obj.HasParsSaved.(f{i}) = true;
@@ -3452,9 +3464,11 @@ end
             switch parsField
                case 'all'
                   [~,~,s_all] = listInitializedParams(obj);
-                  nigeLab.utils.cprintf(fmt,...
-                     'Merging %sObj.Pars into %s%s (User: %s)\n',...
-                     lower(type),pname,fname,userName);
+                  if obj.Verbose
+                      nigeLab.utils.cprintf(fmt,...
+                          'Merging %sObj.Pars into %s%s (User: %s)\n',...
+                          lower(type),pname,fname,userName);
+                  end
                   for i = 1:numel(s_all)
                      if isfield(obj.Pars,s_all{i})
                         out.(userName).(s_all{i})=obj.Pars.(s_all{i});
@@ -3462,14 +3476,18 @@ end
                      end
                   end
                case 'reset'
-                  nigeLab.utils.cprintf(fmt,...
-                     'Clearing %s%s (User: %s)\n',...
-                     type,pname,fname,userName);
+                   if obj.Verbose
+                       nigeLab.utils.cprintf(fmt,...
+                           'Clearing %s%s (User: %s)\n',...
+                           type,pname,fname,userName);
+                   end
                   out.(userName)=struct;
-               otherwise
-                  nigeLab.utils.cprintf(fmt,...
-                     'Overwriting Pars.%s in %s%s (User: %s)\n',...
-                     parsField,pname,fname,userName);
+                otherwise
+                    if obj.Verbose
+                        nigeLab.utils.cprintf(fmt,...
+                            'Overwriting Pars.%s in %s%s (User: %s)\n',...
+                            parsField,pname,fname,userName);
+                    end
                   out.(userName).(parsField)=obj.getParams(parsField);
                   obj.HasParsSaved.(parsField) = true;
             end
@@ -4055,7 +4073,7 @@ end
             if loadParams(obj,field) % If successful load:
                if isequal(obj.Pars.(field),p)
                   if obj.Verbose
-                     dbstack();
+                     % dbstack();
                      nigeLab.utils.cprintf([0.35 0.35 0.35],...
                         '%sObj.%s (%s_Pars.mat) parameters up-to-date\n',...
                         lower(type),field,obj.Name);
@@ -5651,7 +5669,7 @@ end
                      strrep(obj.Out.(f{iF}),'\','/'));
                end               
             end
-            fprintf(fid,'RecDir|%s\n',obj.Input);
+            fprintf(fid,'Input|%s\n',obj.Input);
             fprintf(fid,'User|%s\n', obj.User);
             for i = 1:numel(propList)
                fprintf(fid,'%s|%s\n',...
