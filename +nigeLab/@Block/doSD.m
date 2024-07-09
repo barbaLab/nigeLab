@@ -34,6 +34,7 @@ end
 
 [~,pars] = blockObj.updateParams('SD','KeepPars');
 [pars.fs] = deal(blockObj.SampleRate);
+[pars.FEAT_NAMES] = deal({});
 
 % UPDATE STATUS FOR THESE STAGES
 blockObj.updateStatus('Spikes',false,blockObj.Mask);
@@ -57,11 +58,11 @@ for iCh = blockObj.Mask
    data = blockObj.Channels(iCh).CAR(:);
    
    % Do the detection:
-   if (curCh == 1)
-      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,pars(iCh));
-   else
-      [spk,feat,art,blockObj.Pars.SD] = PerChannelDetection(data,blockObj.Pars.SD(iCh));
-   end
+   % if (curCh == 1)
+   [spk,feat,art,pars(iCh)] = PerChannelDetection(data,pars(iCh));
+   % else
+   %    [spk,feat,art,blockObj.Pars.SD(iCh)] = PerChannelDetection(data,blockObj.Pars.SD(iCh));
+   % end
 
    if isempty(spk)
       spk = nan(1,size(spk,2));
@@ -87,6 +88,7 @@ for iCh = blockObj.Mask
    blockObj.reportProgress('Spike-Detection.',pct,'toEvent','Spike-Detection');
    
 end
+blockObj.Pars.SD = pars;
 % Indicate that it is finished at the end
 if blockObj.OnRemote
    str = 'Saving-Block';
