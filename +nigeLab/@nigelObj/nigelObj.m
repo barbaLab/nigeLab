@@ -4118,7 +4118,7 @@ end
                if ~isempty(fmiss)
                   % Then our loaded params are missing parameter variables
                   for i = 1:numel(fmiss)
-                     obj.Params.Pars.(field).(fmiss{i}) = [p.(fmiss{i})]; % So add
+                     [obj.Params.Pars.(field).(fmiss{i})] = deal(p.(fmiss{i})); % So add them to it
                   end
                   obj.HasParsInit.(field) = true;
                   if obj.Verbose
