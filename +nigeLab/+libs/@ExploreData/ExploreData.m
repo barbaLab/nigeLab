@@ -4,6 +4,8 @@ classdef ExploreData < handle
         ThisBlock
         UI
         ROI
+
+        loadingPanel          % Overlay panel for loading animation
     end
         
     methods
@@ -35,6 +37,7 @@ classdef ExploreData < handle
         end
         
         function plotSnippets(obj,src,evt)
+            obj.setToLoading(true);
             dataType = obj.UI.DataSelector.String{obj.UI.DataSelector.Value};
             
             switch dataType
@@ -45,6 +48,7 @@ classdef ExploreData < handle
             end
             obj.ROI = cumsum(obj.UI.DataScroller.ROIidx);
             plotData(obj);
+            obj.setToLoading(false);
         end
         
         function BuildGui(obj,Field)
@@ -67,16 +71,19 @@ classdef ExploreData < handle
             obj.ROI = cumsum(obj.UI.DataScroller.ROIidx); % DataScroller.ROIpos is [xpos ypos width height]
             
             
-            obj.UI.Fig = figure('Name','Multi-Channel Raw Snippets', ...
+            obj.UI.Fig = uifigure('Name','Multi-Channel Raw Snippets', ...
                 'Units','Normalized', ...
                 'Position',[0.05*rand+0.1,0.05*rand+0.1,0.8,0.8],...
                 'Color','w','NumberTitle','off',...
                 'CloseRequestFcn',@(~,~)obj.delete);
-            
+
+            set(obj.UI.Fig,'Units','pixels');
+            drawnow;
+            obj.setToLoading(true);
             obj.UI.MainAx = axes(obj.UI.Fig ,'NextPlot','add');            
             
             obj.plotData;
-           
+            obj.setToLoading(false);
         end
         
         function str_box = buildDataTypeSelector(obj,Fields,Default)
@@ -133,9 +140,10 @@ classdef ExploreData < handle
         end
         
         function changeDataTyoe(obj)
+            obj.setToLoading(true);
             idx = obj.UI.DataSelector.Value;
             Field = obj.UI.DataSelector.String{idx};
-            
+
             switch Field
                 case 'LFP'
                     obj.ROI = obj.ROI ./  (obj.ThisBlock.SampleRate ./ obj.ThisBlock.Pars.LFP.DownSampledRate);
@@ -151,11 +159,25 @@ classdef ExploreData < handle
                 otherwise
                     ... do nothing for now
             end
-            obj.UI.DataScroller.changeDataType(Field);
+                obj.UI.DataScroller.changeDataType(Field);
 
-            obj.plotData();
+                obj.plotData();
+                obj.setToLoading(false);
         end
-        
+
+        % Inactivate all panels and show loading screen
+        function setToLoading(obj,loading)
+            if loading
+                obj.loadingPanel = uihtml(obj.UI.Fig,...
+                    'Position',[0 0 obj.UI.Fig.Position(3:4)],...
+                    'HTMLSource',fullfile(nigeLab.utils.getNigelPath,'+nigeLab','+libs','@VidScorer','private','prova.html'));
+
+            else
+                delete(obj.loadingPanel);
+            end
+            drawnow;
+        end
+      
         
         function plotData(obj)
             

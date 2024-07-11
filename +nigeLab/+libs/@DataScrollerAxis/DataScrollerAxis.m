@@ -14,6 +14,7 @@ classdef DataScrollerAxis < handle
         ROIidx = ones(1,4)
         LinePlotExplorer
         ReducedPlot
+        loadingPanel
         
         Listeners
     end
@@ -73,14 +74,14 @@ classdef DataScrollerAxis < handle
         end
         
         function buildGui(obj)
-            obj.UI.Fig = figure('Units','normalized',...
+            obj.UI.Fig = uifigure('Units','normalized',...
                 'Position',[.1 .1 .8 .25],...
-                'DeleteFcn',@(~,~)obj.delete,...
-                'MenuBar','figure',...
+                'CloseRequestFcn',@(~,~)obj.delete,...
                 'NumberTitle','off',...
                 'WindowButtonUpFcn',@(~,~)obj.RoiChanged);
-            
-            obj.UI.MainAx = axes(obj.UI.Fig,'Units','normalized','Position',[.02 .1 .94 .85]);
+            set(obj.UI.Fig,'Units','pixels');
+
+            obj.UI.MainAx = axes(obj.UI.Fig,'Units','normalized','Position',[.03 .1 .94 .85]);
             obj.MainAxPixelSize =  getpixelposition(obj.UI.MainAx);
             
             obj.Channels.Name = {obj.ThisBlock.Channels.name};
@@ -96,7 +97,7 @@ classdef DataScrollerAxis < handle
             if nargin < 2
                 yl = ylim(obj.UI.MainAx);
                 xl = xlim(obj.UI.MainAx);
-                xmax = min(obj.sigLenght,60*obj.fs)./obj.fs;
+                xmax = min(obj.sigLenght-10,60*obj.fs)./obj.fs;
                 obj.ROIpos = [xl(1) yl(1) xmax diff(yl)];
             else
                 yl = ylim(obj.UI.MainAx);
@@ -114,6 +115,20 @@ classdef DataScrollerAxis < handle
             ylim(obj.UI.MainAx,yl);
 
         end
+        
+      % Inactivate all panels and show loading screen
+      function setToLoading(obj,loading)
+          if loading
+              obj.loadingPanel = uihtml(obj.UI.Fig,...
+                  'Position',[0 0 obj.sigFig.Position(3:4)-2],...
+                  'HTMLSource',fullfile(nigeLab.utils.getNigelPath,'+nigeLab','+libs','@VidScorer','private','prova.html'));
+              
+          else
+              delete(obj.loadingPanel);
+          end
+         drawnow;
+      end
+      
         
         function newPos = roiResizeFcn(obj,pos)
             newPos = pos;
