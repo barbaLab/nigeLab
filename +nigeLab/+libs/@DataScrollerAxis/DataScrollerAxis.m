@@ -9,7 +9,9 @@ classdef DataScrollerAxis < handle
         MainAxPixelSize
         sigLenght
         fs
+        offset
         ROIpos = zeros(1,4)
+        ROIidx = ones(1,4)
         LinePlotExplorer
         ReducedPlot
         
@@ -100,8 +102,12 @@ classdef DataScrollerAxis < handle
                 yl = ylim(obj.UI.MainAx);
                 obj.ROIpos = pos;
             end
-            % builds ROI overlay on top of the datascroller
+            
+            obj.ROIidx = round(...
+                (obj.ROIpos([1 3]) - [obj.offset 0]) ...
+                .* obj.fs) + [1 -1];
 
+            % builds ROI overlay on top of the datascroller
             obj.UI.ROI = imrect(obj.UI.MainAx,obj.ROIpos,...
                 'PositionConstraintFcn',@obj.roiResizeFcn); %#ok<IMRECT>
             setColor(obj.UI.ROI,nigeLab.defaults.nigelColors('red'));
@@ -130,7 +136,9 @@ classdef DataScrollerAxis < handle
 %             newPos(1) = min(xl(2)-newPos(3),newPos(1));       % maximum
 
             obj.ROIpos = newPos;
-            
+            obj.ROIidx = round(...
+                (obj.ROIpos([1 3]) - [obj.offset 0]) ...
+                .* obj.fs) + [1 -1];
         end
         
         function plotData(obj)
@@ -138,14 +146,14 @@ classdef DataScrollerAxis < handle
            if strcmp(obj.Field,'LFP')
                obj.fs = obj.ThisBlock.Pars.LFP.DownSampledRate;
            end
-            data = obj.ThisBlock.Channels(obj.Channels.Selected).(obj.Field)(:);
+            data = obj.ThisBlock.(obj.Field)(obj.Channels.Selected,:);
             obj.sigLenght = numel(data);
-            if any(obj.ThisBlock.getStatus('Time')) && ~isempty(obj.ThisBlock.Time)
-                tt = obj.ThisBlock.Time(:);
+            if any(obj.ThisBlock.getStatus('Time')) && ~isempty(obj.ThisBlock.Meta.Time)
+                tt = obj.ThisBlock.Meta.Time(:)./obj.fs;
             else
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
             end
-            
+            obj.offset = tt(1);
             if isempty(tt) || length(tt)~=obj.sigLenght || sum(tt==0) > 10
                 %failsafe
                 tt = linspace(0,obj.sigLenght./obj.fs,obj.sigLenght);
@@ -168,7 +176,7 @@ classdef DataScrollerAxis < handle
         end
         
         function RoiChanged(obj)
-            evt = nigeLab.evt.dataScrolled(obj.ROIpos);
+            evt = nigeLab.evt.dataScrolled(obj.ROIpos,obj.ROIidx);
             notify(obj,'roiChanged',evt);
         end
         

@@ -43,7 +43,7 @@ classdef ExploreData < handle
                 otherwise
                     fs = obj.ThisBlock.SampleRate;
             end
-            obj.ROI = cumsum(floor(evt.ROI([1 3])*fs))+1;
+            obj.ROI = cumsum(obj.UI.DataScroller.ROIidx);
             plotData(obj);
         end
         
@@ -60,9 +60,11 @@ classdef ExploreData < handle
            % Build gui
            obj.UI.DataSelector = obj.buildDataTypeSelector(Fields,find(strcmp(Fields,Field)));           
            obj.UI.DataScroller = nigeLab.libs.DataScrollerAxis(obj.ThisBlock,Field);
-            fs = obj.ThisBlock.SampleRate;
+           fs = obj.ThisBlock.SampleRate;
             
-            obj.ROI = cumsum(floor(obj.UI.DataScroller.ROIpos([1 3])*fs))+1; % DataScroller.ROIpos is [xpos ypos width height]
+           % ROI here works as index, in datascrolleraxis works with Time
+           % values
+            obj.ROI = cumsum(obj.UI.DataScroller.ROIidx); % DataScroller.ROIpos is [xpos ypos width height]
             
             
             obj.UI.Fig = figure('Name','Multi-Channel Raw Snippets', ...

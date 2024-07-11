@@ -4,8 +4,9 @@ classdef (ConstructOnLoad) dataScrolled < event.EventData
    end
    
    methods
-      function data = dataScrolled(newRoi)
-         data.ROI = newRoi;
+       function data = dataScrolled(newRoi,newRoiIDX)
+         data.ROI   = newRoi;
+         dataROIidx = newRoiIDX;
       end
    end
 end
