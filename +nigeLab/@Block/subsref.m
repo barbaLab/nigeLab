@@ -33,15 +33,14 @@ switch S(1).type
       % . means Block was referenced as __.Block.[method or property]
       % . also could reference something like __.Block.Raw as a shortcut.
       % All Channels fields are adressable this way.
-      %       idx = find(ismember(Shrt(:,1),S(1).subs),1,'first');
-      fixed_fields = blockObj(1).Fields;
-      Exceptions = {'Time','Stim'};
-      fixed_fields = setdiff(fixed_fields,Exceptions);
-      idx = strcmpi(fixed_fields,S(1).subs);
+      Shrt = fieldnames([blockObj.Shortcut]);
+      idx = find(strcmpi(Shrt(:,1),S(1).subs),1,'first');
+      
       % Shortcut case:
       if any(idx)
          % In this case, we need to deal with multiple block objects
          % slightly differently.
+         S(1).subs = Shrt(idx);
          if numel(blockObj) > 1
             varargout = arrayfun(@(x) subsref(x,S),blockObj,...
                'UniformOutput',false);
@@ -49,24 +48,23 @@ switch S(1).type
          end
          
          if numel(S)<2
-            S(2).type = '()';
-            S(2).subs = {1, ':'};
+             if sum(blockObj.Shortcut.(Shrt{idx}).indexable) == 1
+                 S(2).type = '()';
+                 S(2).subs = {':'};
+             else
+                 S(2).type = '()';
+                 S(2).subs = {1, ':'};
+             end
          end
          
-         if numel(S(2).subs) > 1
-            Chans = blockObj.Channels(S(2).subs{1});
-            S(2).subs(1) = [];
-         else
-            Chans = blockObj.Channels;
-         end
-         out = arrayfun(@(x) subsref(x.(fixed_fields{idx}),S(2)),...
-            Chans,...
-            'UniformOutput',false);
-         varargout{1} = horzcat(out{:});
-         return;
+         S(1).type = '{}';
+         S(1).subs = [S.subs];
+         S(2) = [];
+         tmp = subsref(blockObj,S);
+         varargout{1} = cat(1,tmp{:});
       else
+          [varargout{1:nargout}] = builtin('subsref',blockObj,S);
          % Standard case:
-         [varargout{1:nargout}] = builtin('subsref',blockObj,S);
          return;
       end
       
