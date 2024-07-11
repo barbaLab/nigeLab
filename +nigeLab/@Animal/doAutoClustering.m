@@ -38,13 +38,29 @@ else
     % check if all blocks are ready
     SuppressText = false(1,numel(blockObj));
     checkActionIsValid(blockObj);
-    for bb = 1:numel(blockObj)
-        [~,par] = blockObj(bb).updateParams('AutoClustering','KeepPars');
+
+    [~,par] = blockObj(1).updateParams('AutoClustering','KeepPars');
+    SuppressText = blockObj(1).Verbose;
+    for bb = 2:numel(blockObj)
+        [~,par_] = blockObj(bb).updateParams('AutoClustering','KeepPars');
         SuppressText(bb) = ~blockObj(bb).Verbose;
-    end
-    SuppressText = any(SuppressText);
-    flag = false;
-end
+        if not(nigeLab.utils.checkStructUniformity(par,par_))
+            % if one block has different parameters from the others, ask
+            % the user
+            msg = sprintf(['Parameters throughout blocks are not consistent.\n',...
+                'Do you want still to proceed (using first block parameters)?']);
+            title = 'Multiple Pars detected';
+            answer = questdlg(msg,title,'Continue','Abort','Abort');
+            if strcmp(answer,'Abort')
+                return;
+            end %fi
+        end %fi
+    end %bb
+end% fi
+
+SuppressText = any(SuppressText);
+flag = false;
+
 
 
 %% retrieving data
@@ -55,7 +71,7 @@ if ~any([blockObj.OnRemote])
         'Retrieving data');
     str = sprintf('AutoClustering-(%s)',str);
 else
-    str = sprintf('AutoClustering-(%s)',par.MethodName);
+    str = sprintf('AutoClustering-(%s)',par(1).MethodName);
 end
 blockObj(1).reportProgress(str,0,'toWindow');
 
@@ -72,14 +88,14 @@ for iCh = allChan
     nSpk{iCh} = zeros(1,1+numel(blockObj));
     nSpk{iCh}([false BlocksNotMasked]) = arrayfun(@(b)b.Channels(iCh).Spikes.size(1),blockObj(BlocksNotMasked)); % returns the numbers of spikes present in each block, only for unmasked blocks
     nSpk{iCh} = cumsum(nSpk{iCh}); % this way it can be used as index when retrieving spikes from each block
-    nFeat = arrayfun(@(b)b.Channels(iCh).(par.ClusteringTarget).size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
+    nFeat = arrayfun(@(b)b.Channels(iCh).(par(iCh).ClusteringTarget).size(2),blockObj(BlocksNotMasked)) -4; % -4 is due to the reserved spots for ts and other values in the file format
     
     uFeat = unique(nFeat); % number of features present in each block 
     maxFeat = max(nFeat);
     blocks2resample = false(size(nFeat));
 
     if length(uFeat) ~= 1 % if it's not the same number in all blocks something went wrong
-        if par.Interpolate
+        if par(iCh).Interpolate
             blocks2resample = find(nFeat == maxFeat);
         else
             error(sprintf('Classification feature are dishomogeneous across blocks. Joint clustering is not possible.\nNigel can handle this: set the ''Interpolate'' parameter to true.'))
@@ -97,14 +113,14 @@ for iCh = allChan
         if isempty(idx)
             continue;
         end
-        if strcmpi(par.ClusteringTarget,'SpikeFeatures')
+        if strcmpi(par(iCh).ClusteringTarget,'SpikeFeatures')
             inspk(idx,:)  = getSpikeFeatures(blockObj(bb),iCh,{'Clusters',nan});
-        elseif strcmpi(par.ClusteringTarget,'Spikes')
+        elseif strcmpi(par(iCh).ClusteringTarget,'Spikes')
             theseSpikes = getSpikes(blockObj(bb),iCh);
             if any(bb==blocks2resample)
                 t0 = linspace(blockObj(bb).Pars.SD.WPre,blockObj(bb).Pars.SD.WPost,nFeat(bb));
                 t  = linspace(blockObj(bb).Pars.SD.WPre,blockObj(bb).Pars.SD.WPost,maxFeat);
-                theseSpikes = interp1(t0,theseSpikes,t,par.InterpolateMethod);
+                theseSpikes = interp1(t0,theseSpikes,t,par(iCh).InterpolateMethod);
             end
             inspk(idx,:) = theseSpikes;
         end
@@ -116,9 +132,9 @@ for iCh = allChan
     % report progress to the user
    pct = round((curCh/numel(allChan)) * 50);
    blockObj(1).reportProgress(str,pct,'toWindow');
-   blockObj(1).reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
+   blockObj(1).reportProgress(par(iCh).MethodName,pct,'toEvent',par(iCh).MethodName);
    curCh = curCh +1;
-end
+end%iCh
 
 %% actually do the clustering
 if ~any([blockObj.OnRemote])
@@ -126,15 +142,15 @@ if ~any([blockObj.OnRemote])
         'Performing clustering');
     str = sprintf('AutoClustering-(%s)',str);
 else
-    str = sprintf('AutoClustering-(%s)',par.MethodName);
+    str = sprintf('AutoClustering-(%s)',par(1).MethodName);
 end
 
 curCh = 1;
 maxClass = 0;
 classes = cell(1,numel(allChan));
 for iCh = allChan
-      SortFun = ['SORT_' par.MethodName];
-      SortPars = par.(SortFun);
+      SortFun = ['SORT_' par(iCh).MethodName];
+      SortPars = par(iCh).(SortFun);
       Artargsout = cell(1,nargout(SortFun));
       [Artargsout{:}] = feval(SortFun,Allinspk{curCh},SortPars);
       classes_ = Artargsout{1};
@@ -157,9 +173,9 @@ for iCh = allChan
    % report progress to the user
    pct = round((curCh/numel(allChan)) * 90);
    blockObj(1).reportProgress(str,pct,'toWindow');
-   blockObj(1).reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
+   blockObj(1).reportProgress(par(iCh).MethodName,pct,'toEvent',par(iCh).MethodName);
    curCh = curCh +1;
-end
+end%iCh
 
 %% Save the data
 
@@ -168,7 +184,7 @@ if ~any([blockObj.OnRemote])
         'Saving Data');
     str = sprintf('AutoClustering-(%s)',str);
 else
-    str = sprintf('AutoClustering-(%s)',par.MethodName);
+    str = sprintf('AutoClustering-(%s)',par(1).MethodName);
 end
 
 curCh = 1;
@@ -189,7 +205,7 @@ for iCh = allChan
    % report progress to the user
    pct = round((curCh/numel(allChan)) * 90);
    blockObj(1).reportProgress(str,pct,'toWindow');
-   blockObj(1).reportProgress(par.MethodName,pct,'toEvent',par.MethodName);
+   blockObj(1).reportProgress(par(iCh).MethodName,pct,'toEvent',par(iCh).MethodName);
    curCh = curCh +1;
 end % iCh
 
