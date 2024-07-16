@@ -184,6 +184,10 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
             artifact = data;
             varargout{1}(idx) = length(artifact);
             varargout{2}(idx) = true;
+            if idx < length(stimIdxs)
+                % This avoids false negatives for very close saturated trials
+                hasArtifact(idx + 1) = true;
+            end
         end
 
         % Pad artifact according to negative blanking period
@@ -435,34 +439,42 @@ function [artifact, varargout] = fitArtifact(data, sampleRate, varargin)
 
     interpX(interpX > length(output)) = [];
     
-    largestIPI = interpX(end) - interpX(end-1);
-    nExtraInterpX = floor((length(output) - interpX(end)) / largestIPI);
-    if nExtraInterpX > 0
-        interpX = [interpX, interpX(end) + largestIPI * (1:nExtraInterpX)];
-    end
-
-    IPI = [interpX(1), diff(interpX), length(output) - interpX(end)];
-
-    minHalfInterval = 2;
-    maxHalfInterval = 15;
-    interpY = zeros(1, numel(interpX));
-    for i = 1:numel(interpY)
-        if floor(IPI(i) / 2) >= minHalfInterval && floor(IPI(i + 1) / 2) >= minHalfInterval
-            intervalSamples = -min(maxHalfInterval, floor(IPI(i) / 2)):min(maxHalfInterval, floor(IPI(i + 1) / 2));
-        else
-            intervalSamples = 0;
+    if length(interpX) > 1
+        largestIPI = interpX(end) - interpX(end-1);
+        nExtraInterpX = floor((length(output) - interpX(end)) / largestIPI);
+        if nExtraInterpX > 0
+            interpX = [interpX, interpX(end) + largestIPI * (1:nExtraInterpX)];
         end
-        interpY(i) = mean(output(intervalSamples + interpX(i)));
+
+        IPI = [interpX(1), diff(interpX), length(output) - interpX(end)];
+
+        minHalfInterval = 2;
+        maxHalfInterval = 15;
+        interpY = zeros(1, numel(interpX));
+        for i = 1:numel(interpY)
+            if floor(IPI(i) / 2) >= minHalfInterval && floor(IPI(i + 1) / 2) >= minHalfInterval
+                intervalSamples = -min(maxHalfInterval, floor(IPI(i) / 2)):min(maxHalfInterval, floor(IPI(i + 1) / 2));
+            else
+                intervalSamples = 0;
+            end
+            interpY(i) = mean(output(intervalSamples + interpX(i)));
+        end
+
+        keyX = [blankingNSamples + 1, length(output)];
+        keyY = output(keyX);
+
+        [interpX, keptIdxs, ~] = unique([keyX, interpX]);   % Unique automatically sorts
+        interpY = [keyY, interpY];
+        interpY = interpY(keptIdxs);
+        
+        output = interp1(interpX, interpY, 1:length(output), 'linear');
+    else
+        % Skip the current trial if there are not enough interpolation points
+        artifact = output;
+        varargout{1} = [];
+        varargout{2} = peakIdx;
+        return;
     end
-
-    keyX = [blankingNSamples + 1, length(output)];
-    keyY = output(keyX);
-
-    [interpX, keptIdxs, ~] = unique([keyX, interpX]);   % Unique automatically sorts
-    interpY = [keyY, interpY];
-    interpY = interpY(keptIdxs);
-    
-    output = interp1(interpX, interpY, 1:length(output), 'linear');
 
     %% 3) Restore original data in the blanking period
     blankingSamples = 1:blankingNSamples;
