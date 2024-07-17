@@ -27,8 +27,8 @@ function sig = execStimSuppression(blockObj,nChan)
 % check for stimTS to exist. If not provided load from disk. If not present
 % in the nigelObj throw an error
 
-if ismember('Stim',{blockObj.Events.Tag})
-    stimIdx = ismember({blockObj.Events.Tag},'Stim');
+if ismember('Stim',[blockObj.Events.Tag])
+    stimIdx = any(ismember([blockObj.Events.Tag],'Stim'));
     StimTS = [blockObj.Events(stimIdx).Ts];
     % often times a lien of zeros is created at the beginning of the
     % file for allocation purposes. This takes care of it.
