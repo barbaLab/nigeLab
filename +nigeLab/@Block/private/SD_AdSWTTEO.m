@@ -102,7 +102,7 @@ minTime = 1e-3*pars.RefrTime; % parameter in milliseconds
 % [ts,pmin] = nigeLab.utils.peakseek(data_th,minTime*pars.fs,lambda_data);
 [ts_tmp,~] = nigeLab.utils.peakseek(abs(data_th),minTime*pars.fs);
 % pmin = pmin .* pars.Polarity;
-E = out_(ts_tmp);
+
 
 %% GET MAX VALUE AROUND THE DETECTION
 h = 1;
@@ -195,7 +195,7 @@ if h > 1
         end
     end
 
-
+    E = out_(ts);
 
     %% GET PEAK-TO-PEAK VALUES
     PLP = round(pars.PeakDur*1e-3*pars.fs); % from ms to samples
