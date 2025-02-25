@@ -1,7 +1,7 @@
 function pars = ART_PowerThresh()
 %% function defining defualt parameters for POWER THRESHOLD artefact rejection algorithm
 
-pars.MultCoeff  = 25;   % [V^2] Fixed power threshold for detection;
+pars.MultCoeff  = 60;   % [V^2] Fixed power threshold for detection;
 pars.Samples    = 1;   % [ms] Window to ignore around artifact 
                        % (suggest: 4 ms MIN for stim rebound) 
 

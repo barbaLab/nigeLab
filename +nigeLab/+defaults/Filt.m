@@ -47,7 +47,7 @@ APASS  = 0.1;        % Passband Ripple (dB)
 METHOD = 'ellip';    % filter type
 ORDER = 4;
 
-DOWNSAMPLE_AUTO = true;    % set true to downsample data after filtering
+DOWNSAMPLE_AUTO = false;    % set true to downsample data after filtering
 DOWNSAMPLE_FREQ = 5000;   % new sampling frequency (30 kHz --> 5 kHz)
 
 STIM_SUPPRESS = true;  % set true to do stimulus artifact suppression

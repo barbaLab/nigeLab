@@ -24,8 +24,8 @@ pars.MinSpikes = 100;          % Minimum number of spikes to compute feature det
 pars.WPre = 0.4;  % Pre-spike window  (ms)
 pars.WPost = 0.8;  % Post-spike window (ms)
 
-pars.SDMethodName = 'SWTTEO';
-pars.ID.Spikes = 'SWTTEO';               % implemented to date (2020/06/16):
+pars.SDMethodName = 'AdSWTTEO';
+pars.ID.Spikes = 'AdSWTTEO';               % implemented to date (2020/06/16):
                                         % SNEO, SWTTEO, WTEO, TIFCO, SWT, 
                                         % PTSD, fixed and variable Threshold.
                                         % See documentation for references.
@@ -35,8 +35,8 @@ pars.ID.Spikes = 'SWTTEO';               % implemented to date (2020/06/16):
 %%%% Artefact Rejection
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%                                        
                             
-pars.ArtefactRejMethodName = 'HardThresh';  
-pars.ID.Artifact = 'HardThresh';        % implemented to date (2020/06/16):
+pars.ArtefactRejMethodName = 'PowerThresh';  
+pars.ID.Artifact = 'PowerThresh';        % implemented to date (2020/06/16):
                                         % HardThresh (hard threshold) and
                                         % PowerThresh (power threshold)
 

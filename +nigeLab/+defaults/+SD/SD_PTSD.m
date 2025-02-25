@@ -4,6 +4,6 @@ function pars = SD_PTSD()
 pars.MultCoeff  = 4;  % Multiplication coefficient for noise
 % pars.Thresh     = 50;
 pars.RefrTime   = 0.5;  % [ms] Refractory time. 
-pars.PeakDur    =  2;   % [ms] Peak duration or pulse lifetime period
+pars.PeakDur    =  2.3;   % [ms] Peak duration or pulse lifetime period
 pars.AlignFlag  = 0; 
 end
