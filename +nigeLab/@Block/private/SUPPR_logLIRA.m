@@ -72,7 +72,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     
     parser = inputParser();
     addRequired(parser, 'signal', @isnumeric);
-    addRequired(parser, 'stimIdxs', @(x) isnumeric(x) && all(x > 0));
+    addRequired(parser, 'stimIdxs', @(x) isnumeric(x) && all(x > 0) && isa(x,"uint64"));
     addRequired(parser, 'sampleRate', validNumPosCheck);
     addOptional(parser, 'blankingPeriod', 1e-3, validNumPosCheck);
     addParameter(parser, 'negativeBlankingPeriod', 0, validNumPosCheck);
@@ -118,7 +118,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     IAI = [diff(stimIdxs), length(signal) - stimIdxs(end)];
 
     checkNSamples = round(checkDuration * sampleRate);
-    checkSamples = repmat(0:(checkNSamples - 1), [1, numel(stimIdxs)]);
+    checkSamples = repmat(0:uint64(checkNSamples - 1), [1, numel(stimIdxs)]);
     artifactSamples = reshape(repmat(stimIdxs, [checkNSamples, 1]), 1, []);
 
     % Pad signal begin and end
@@ -145,16 +145,16 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
                     std(postArtifacts, 0, 1) > checkStdThreshold * std(preArtifacts, 0, 1) | ...
                     blankingNSamples >= IAI;
 
-    SARemovalNSamples = round(SARemovalDuration * sampleRate);
-    SARemovalData = zeros(numel(stimIdxs), SARemovalNSamples);
-    SARemovalSamples = zeros(numel(stimIdxs), SARemovalNSamples);
+    SARemovalNSamples = uint64(round(SARemovalDuration * sampleRate));
+    SARemovalData = zeros(numel(stimIdxs), SARemovalNSamples,'double');
+    SARemovalSamples = zeros(numel(stimIdxs), SARemovalNSamples,'uint64');
 
     %% 2) Clean each artifact iteratively
     minArtifactNSamples = round(minArtifactDuration * sampleRate) + blankingNSamples;
 
     for idx = 1:numel(stimIdxs)
         % Identify samples to clean
-        data = signal((1:IAI(idx)) + stimIdxs(idx) - 1);
+        data = signal(uint64(1:IAI(idx)) + stimIdxs(idx) - 1);
 
         if hasArtifact(idx)
             endIdx = [];
@@ -192,7 +192,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
 
         % Pad artifact according to negative blanking period
         stimShift = -negativeBlankingNSamples + stimIdxs(idx) - 1;
-        paddedArtifact = horzcat(signal((1:negativeBlankingNSamples) + stimShift), artifact);
+        paddedArtifact = horzcat(signal(uint64(1:negativeBlankingNSamples) + stimShift), artifact);
 
         % Correct artifact to avoid discontinuities
         if ~hasArtifact(idx) || IAI(idx) > endIdx
@@ -204,7 +204,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
         end
 
         % Update output signal
-        output((1:length(paddedArtifact)) + stimShift) = signal((1:length(paddedArtifact)) + stimShift) - paddedArtifact + correction;
+        output(uint64(1:length(paddedArtifact)) + stimShift) = signal(uint64(1:length(paddedArtifact)) + stimShift) - paddedArtifact + correction;
 
         % Update progress bar
         if verbose

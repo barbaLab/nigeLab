@@ -27,9 +27,9 @@ function sig = execStimSuppression(blockObj,nChan)
 % check for stimTS to exist. If not provided load from disk. If not present
 % in the nigelObj throw an error
 
-if ismember('Stim',[blockObj.Events.Tag])
-    stimIdx = any(ismember([blockObj.Events.Tag],'Stim'));
-    StimTS = [blockObj.Events(stimIdx).Ts];
+if any(ismember('Stim',[blockObj.Events.Tag]))
+    stimIdx = ismember([blockObj.Events.Tag],'Stim');
+    StimTS = double([blockObj.Events(stimIdx).Ts]);
     % often times a lien of zeros is created at the beginning of the
     % file for allocation purposes. This takes care of it.
     StimTS(StimTS==0) = [];
@@ -54,7 +54,7 @@ elseif isscalar(SUPPRpars.stimL)
 elseif size(SUPPRpars.stimL,1) ~= size(StimTS,1)
     error('nigelab:removeStim','Number of stimulation pulses(stimTS) and stimulation durations(stimL) does not correspond!');
 end
-[StimI,I] = unique(floor(StimTS*fs));
+[StimI,I] = unique(uint64(floor(StimTS*fs)));
 stimLength = ceil(stimLength(I)*fs);
 stimSamples = arrayfun(@(i) StimI(i):StimI(i)+stimLength(i),1:numel(StimI),'UniformOutput',false);
 
