@@ -115,7 +115,7 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
 
     blankingNSamples = round(blankingPeriod * sampleRate);
     negativeBlankingNSamples = round(negativeBlankingPeriod * sampleRate);
-    IAI = [diff(stimIdxs), length(signal) - stimIdxs(end)];
+    IAI = [diff(stimIdxs), length(signal) - stimIdxs(end) + 1];
 
     checkNSamples = round(checkDuration * sampleRate);
     checkSamples = repmat(0:uint64(checkNSamples - 1), [1, numel(stimIdxs)]);
@@ -130,8 +130,8 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
         artifactSamples = artifactSamples + padSize;
     end
 
-    if IAI(end) < checkNSamples
-        padSize = checkNSamples - IAI(end) + 1;
+    if IAI(end) < checkNSamples + blankingNSamples
+        padSize = checkNSamples + blankingNSamples - IAI(end) + 1;
         padVector = ones(1, padSize) * paddedSignal(end);
         paddedSignal = [paddedSignal, padVector];
     end
@@ -310,7 +310,7 @@ function [peakIdx, varargout] = findArtifactPeak(data, sampleRate, blankingPerio
     saturationVoltage = [min(saturationVoltage), max(saturationVoltage)] * 1e3;
 
     %% 1) Find peakIdx
-    selectedSamples = 1:round(2 * blankingPeriod * sampleRate);
+    selectedSamples = 1:min([round(2 * blankingPeriod * sampleRate), numel(data)]);
     dy = diff(data(selectedSamples));
     dy = abs([0, dy]);
     labels = ones(size(data));
