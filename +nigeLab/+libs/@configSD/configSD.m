@@ -299,7 +299,7 @@ classdef configSD < handle
               
            end
         end
-        thisChan = obj.Channels.Selected;
+        thisChan = 1;% obj.Channels.Selected;
          obj.SDParsPanel.SelectedTab = findobj(obj.SDParsPanel,...
              'Title',obj.Pars(thisChan).SDMethodName);
         
@@ -333,7 +333,7 @@ classdef configSD < handle
               
            end
          end
-         thisChan = obj.Channels.Selected;
+         thisChan = 1;% obj.Channels.Selected;
          obj.ArtRejParsPanel.SelectedTab = findobj(obj.ArtRejParsPanel,...
              'Title',obj.Pars(thisChan).ArtefactRejMethodName);
          
@@ -349,13 +349,13 @@ classdef configSD < handle
                    field = 'ArtefactRejMethodName';
                otherwise
            end
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;% obj.Channels.Selected;
            obj.Pars(thisChan).(field) = obj.(tabgroup).SelectedTab.Title;
        end
 
        function updateParsPanel(obj)
 
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;% obj.Channels.Selected;
 
            obj.SDParsPanel.SelectedTab = findobj(obj.SDParsPanel,...
                'Title',obj.Pars(thisChan).SDMethodName);
@@ -414,7 +414,7 @@ classdef configSD < handle
        
        function textBoxCallback(obj,hObj,MethodName,ParName)
            val = get(hObj,'String');
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;% obj.Channels.Selected;
            thiPar = obj.ExBlock.Pars.SD(thisChan).(MethodName).(ParName);
            
            if isnumeric(thiPar)
@@ -490,7 +490,7 @@ classdef configSD < handle
            waitFig = plotWaitFigure(obj,'Detecting spikes...');
            lockedObjs = obj.lockUnlockGui([],'off');
            
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;%obj.Channels.Selected;
            AlgName = obj.SDParsPanel.SelectedTab.Title;
            SDFun = ['SD_' AlgName];
            SDPars = obj.Pars(thisChan).(SDFun);
@@ -515,7 +515,7 @@ classdef configSD < handle
            AlgName = obj.ArtRejParsPanel.SelectedTab.Title;
 
            ArtFun = ['ART_' AlgName];
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;%obj.Channels.Selected;
            ArtPars = obj.Pars(thisChan).(ArtFun);
            ArtPars.fs =  obj.ExBlock.SampleRate;
            Artargsout = obj.ExBlock.testSD(ArtFun,obj.data,ArtPars);
@@ -545,7 +545,7 @@ classdef configSD < handle
            fs = obj.ExBlock.SampleRate;
            t = (obj.startIdx:obj.endIdx)./fs;
            
-           thisChan = obj.Channels.Selected;
+           thisChan = 1;% obj.Channels.Selected;
            WindowPreSamples =  floor(obj.Pars(thisChan).WPre * 1e-3 * fs);
            WindowPostSamples =  floor(obj.Pars(thisChan).WPost * 1e-3 * fs);
            out_of_record = tIdx <= WindowPreSamples+1 | tIdx >= length(obj.data) - WindowPostSamples - 2;
