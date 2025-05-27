@@ -221,6 +221,12 @@ function [output, varargout] = logLIRA(signal, stimIdxs, sampleRate, varargin)
     if verbose
         waitbar(0, waitbarFig, 'Mitigating secondary artifacts...');
     end
+
+    % Remove all zero entries from SARemovalData
+    allzeros_idx = all(not(SARemovalData),2);
+    SARemovalData(allzeros_idx,:) = [];
+    SARemovalSamples(allzeros_idx,:) = [];
+    stimIdxs(allzeros_idx,:) = [];
     
     minClusterSize = 20;
     rng(randomSeed);
