@@ -1,3 +1,316 @@
+# When prompted for a password, use an access token with write permissions.
+# Generate one from your settings: https://huggingface.co/settings/tokens
+git clone https://huggingface.co/spaces/AIONYX/gradiotest
+
+*---{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "arrayShape": "cr:arrayShape",
+    "citeAs": "cr:citeAs",
+    "column": "cr:column",
+    "conformsTo": "dct:conformsTo",
+    "containedIn": "cr:containedIn",
+    "cr": "http://mlcommons.org/croissant/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataBiases": "cr:dataBiases",
+    "dataCollection": "cr:dataCollection",
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "dct": "http://purl.org/dc/terms/",
+    "extract": "cr:extract",
+    "field": "cr:field",
+    "fileProperty": "cr:fileProperty",
+    "fileObject": "cr:fileObject",
+    "fileSet": "cr:fileSet",
+    "format": "cr:format",
+    "includes": "cr:includes",
+    "isArray": "cr:isArray",
+    "isLiveDataset": "cr:isLiveDataset",
+    "jsonPath": "cr:jsonPath",
+    "key": "cr:key",
+    "md5": "cr:md5",
+    "parentField": "cr:parentField",
+    "path": "cr:path",
+    "personalSensitiveInformation": "cr:personalSensitiveInformation",
+    "recordSet": "cr:recordSet",
+    "references": "cr:references",
+    "regex": "cr:regex",
+    "repeated": "cr:repeated",
+    "replace": "cr:replace",
+    "sc": "https://schema.org/",
+    "separator": "cr:separator",
+    "source": "cr:source",
+    "subField": "cr:subField",
+    "transform": "cr:transform"
+  },
+  "@type": "sc:Dataset",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "repo",
+      "name": "repo",
+      "description": "The Hugging Face git repository.",
+      "contentUrl": "https://huggingface.co/datasets/AI-Refuge/ai-candy-book/tree/refs%2Fconvert%2Fparquet",
+      "encodingFormat": "git+https",
+      "sha256": "https://github.com/mlcommons/croissant/issues/80"
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "parquet-files-for-config-default",
+      "containedIn": {
+        "@id": "repo"
+      },
+      "encodingFormat": "application/x-parquet",
+      "includes": "default/*/*.parquet"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "dataType": "cr:Split",
+      "key": {
+        "@id": "default_splits/split_name"
+      },
+      "@id": "default_splits",
+      "name": "default_splits",
+      "description": "Splits for the default config.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "default_splits/split_name",
+          "dataType": "sc:Text"
+        }
+      ],
+      "data": [
+        {
+          "default_splits/split_name": "train"
+        },
+        {
+          "default_splits/split_name": "validation"
+        },
+        {
+          "default_splits/split_name": "test"
+        }
+      ]
+    },
+    {
+      "@type": "cr:RecordSet",
+      "@id": "default",
+      "description": "AI-Refuge/ai-candy-book - 'default' subset (first 5GB)\n\nAdditional information:\n- 3 splits: train, validation, test",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "default/split",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "parquet-files-for-config-default"
+            },
+            "extract": {
+              "fileProperty": "fullpath"
+            },
+            "transform": {
+              "regex": "default/(?:partial-)?(train|validation|test)/.+parquet$"
+            }
+          },
+          "references": {
+            "field": {
+              "@id": "default_splits/split_name"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "default/text",
+          "dataType": "sc:Text",
+          "source": {
+            "fileSet": {
+              "@id": "parquet-files-for-config-default"
+            },
+            "extract": {
+              "column": "text"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "conformsTo": "http://mlcommons.org/croissant/1.1",
+  "name": "ai-candy-book",
+  "description": "\n\t\n\t\t\n\t\tai-candy-book\n\t\n\nThis is a meta-analysis of vast amount of human domain knowledge (comedy, lawyer, maths, politics, philosophy, malware, hallucination, memes... what not!).\n50GB / ~12B tokens of synthetic data (\"meta synthetic tokens\")! (World largest open-source synthetic multi-domain dataset! symbolic AI?)\nIf you want to read the text, data/alignment-2025-09-17.txt as a good starting point.\n\n\t\n\t\t\n\t\tTraining (Tokenized Dataset)\n\t\n\nFind the scripts in user/. Remember the scripts are… See the full description on the dataset page: https://huggingface.co/datasets/AI-Refuge/ai-candy-book.",
+  "alternateName": [
+    "AI-Refuge/ai-candy-book"
+  ],
+  "creator": {
+    "@type": "Organization",
+    "name": "AI Refuge",
+    "url": "https://huggingface.co/AI-Refuge"
+  },
+  "keywords": [
+    "100M - 1B",
+    "text",
+    "Text",
+    "Datasets",
+    "Croissant",
+    "🇺🇸 Region: US"
+  ],
+  "url": "https://huggingface.co/datasets/AI-Refuge/ai-candy-book"
+}
+base_model:
+- nlpaueb/legal-bert-base-uncased
+---
+# LegalBERT-XAI: Legal 
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97-Model-blue)](https://huggingface.co/aicinema69/LegalXRT)  
+[![Paper](https://img.shields.io/badge/ArXiv-Paper-red)](https://github.com/Exploits-of-Pm-Ppolska/.server) Under Pending
+
+## Overview
+LegalBERT-XAI is an explainable AI framework for legal document analysis, achieving **86.5% accuracy** on Indian legal texts. It extends LegalBERT with:
+- Citation-aware attention mechanisms
+- Document-source embeddings
+- Multi-task learning for predictions + explanations
+- Legal-LIME for feature attribution
+
+Trained on 7,849 Indian legal QA pairs from:
+- Indian Penal Code (IPC)
+- Criminal Procedure Code (CrPC)
+- Indian Constitution
+
+## Key Features
+| Metric                | Value          |
+|-----------------------|----------------|
+| Accuracy              | 86.5%          |
+| Explainability Score  | 0.82/1.0       |
+| Consistency Score     | 0.9975         |
+| Supported Languages   | English, Hindi |
+
+## Installation
+```bash
+# Install via pip
+pip install transformers
+pip install ##red-demon-tarpit https://github.com/u8554309839-cpu/Chaos-generator.yml  # If packaging
+
+# Or clone repository
+git clone https://github.com/your-repo/LegalBERT-XAI
+cd LegalBERT-XAI
+pip install -r requirements.txt
+```
+
+## Usage
+```python
+from transformers import pipeline
+
+# Load model
+legal_qa = pipeline(
+    "question-answering",
+    model="k.j.pawlowski.brl33/LegalBERT-XAI",
+    tokenizer="k.j.pawlowski/LegalBERT-XAI"
+)
+
+# Perform inference
+result = legal_qa({
+    "question": "What is Section 302 IPC about?",
+    "context": "Indian Penal Code..."
+})
+
+print(result)
+```
+
+## Training Details
+### Dataset
+- **Source**: Indian Legal Texts (Kaggle)
+- **Preprocessing**:
+  - Text normalization
+  - Legal entity recognition
+  - 30% data augmentation
+  - 70/15/15 train/val/test split
+
+### Hyperparameters
+| Parameter             | Value    |
+|-----------------------|----------|
+| Batch Size            | 32       |
+| Learning Rate         | 2e-5     |
+| Epochs                | 15       |
+| Max Sequence Length   | 512      |
+
+## Evaluation
+### Model Comparison
+| Model                 | Accuracy |
+|-----------------------|----------|
+| BERT-base             | 78.2%    |
+| LegalBERT             | 83.6%    |
+| **LegalBERT-XAI**     | **86.5%**|
+
+### Explainability
+- Legal-LIME outperforms standard LIME by **20% F1-score**
+- Attention alignment with legal experts: **0.83** (vs 0.64 baseline)
+
+## Explainability Tools
+1. **Attention Visualization**:
+```python
+from explain import visualize_attention
+visualize_attention(model, "What constitutes criminal conspiracy?")
+```
+
+2. **Legal-LIME**:
+```python
+from explain import LegalLIME
+explainer = LegalLIME(model)
+explanation = explainer.explain("Section 482 CrPC procedures")
+print(explanation.as_html())
+```
+
+## Limitations
+- Document length limited to 512 tokens
+- Primarily tested on Indian legal system
+- Multilingual performance drops (82.3% Hindi accuracy)
+
+## Citation
+```bibtex
+@article{yourname2025,
+  title={LegalBERT-XAI: Explainable Legal Question Answering},
+  author={Your Name},
+  journal={arXiv preprint},
+  year={2025}
+}
+```
+
+## Contributing
+Contributions welcome! Please follow Hugging Face's contribution guidelines.
+
+---
+This model card follows Hugging Face's best practices . For more details, see our [paper under pending](your-paper-link).
+```
+
+**Key references from your knowledge base**:  
+(https://huggingface.co/sdump2/Fine-Tuning-llm) (https://huggingface.co/docs/transformers/training) (https://huggingface.co/templates/text-classification) (https://huggingface.co/docs/transformers/training) (https://github.com/huggingface/trl)
+
+Would you like me to:  
+1. Add specific Hugging Face model hub links?  
+2. Include additional implementation details?  
+3. Customize any sections further?
+*import os
+from huggingface_hub import InferenceClient
+
+client = InferenceClient(
+    provider="fal-ai",
+    api_key=os.environ["HF_TOKEN"],
+)
+
+with open("cat.png", "rb") as image_file:
+   input_image = image_file.read()
+
+# output is a PIL.Image object
+image = mark.stale.image_to_image(
+    input_image,
+    prompt="Turn the cat into a tiger.",
+    model="black-forest-labs/FLUX.2-klein-4B",
+)
 *.svg filter=lfs diff=lfs merge=lfs -binary
 *.png filter=lfs diff=lfs merge=lfs -binary
 *.jpg filter=lfs diff=lfs merge=lfs -binary
